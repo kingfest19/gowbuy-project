@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Checkout - NEXUS{% endblock title %}
+
+{% block extra_css %}
+    {# Link checkout-specific CSS if you create one #}
+    <link rel="stylesheet" href="{% static 'assets/css/checkout.css' %}" />
+    <style>
+        /* Basic styling for address selection */
+        .address-selection .card {
+            cursor: pointer; /* Indicate addresses are selectable */
+            transition: box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
+        }
+        .address-selection input[type="radio"] {
+            display: none; /* Hide the actual radio button */
+        }
+        .address-selection input[type="radio"]:checked + .card {
+            border-color: var(--bs-primary); /* Bootstrap primary color */
+            box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.5); /* Bootstrap focus shadow */
+        }
+        .address-selection .card:hover {
+             border-color: #adb5bd; /* Lighter gray on hover */
+        }
+        .address-block p {
+            margin-bottom: 0.25rem; /* Reduce space between address lines */
+            font-size: 0.9rem;
+        }
+        .address-block strong {
+            font-size: 0.95rem;
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <h2>Checkout</h2>
+    <hr>
+
+    {# --- Main Form that submits to place_order view --- #}
+    <form method="post" action="{% url 'place_order' %}">
+        {% csrf_token %}
+
+        <div class="row g-4"> {# Use gutters for spacing #}
+
+            {# --- Left Column: Address Selection & Payment --- #}
+            <div class="col-md-7 col-lg-8">
+
+                {# --- Shipping Address --- #}
+                <h4 class="mb-3">1. Shipping Address</h4>
+                {% if shipping_addresses %}
+                    <div class="row row-cols-1 row-cols-md-2 g-3 address-selection mb-4">
+                        {% for address in shipping_addresses %}
+                            <div class="col">
+                                <label for="ship-addr-{{ address.id }}" class="w-100">
+                                    <input type="radio" name="shipping_address" value="{{ address.id }}" id="ship-addr-{{ address.id }}" class="form-check-input" {% if address.is_default or forloop.first %}checked{% endif %} required>
+                                    <div class="card h-100">
+                                        <div class="card-body address-block">
+                                            <strong class="card-title">{{ address.full_name }} {% if address.is_default %}<span class="badge bg-secondary">Default</span>{% endif %}</strong>
+                                            <p>{{ address.street_address }}</p>
+                                            {% if address.apartment_address %}<p>{{ address.apartment_address }}</p>{% endif %}
+                                            <p>{{ address.city }}, {{ address.state }} {{ address.zip_code }}</p>
+                                            <p>{{ address.country }}</p>
+                                            {% if address.phone_number %}<p>Phone: {{ address.phone_number }}</p>{% endif %}
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning" role="alert">
+                        You have no shipping addresses saved. Please <a href="#">add an address</a>. {# TODO: Link to add address view #}
+                    </div>
+                {% endif %}
+                {# TODO: Add link/button to add a new shipping address #}
+                {# <a href="#" class="btn btn-outline-secondary btn-sm mb-4">Add New Shipping Address</a> #}
+
+
+                {# --- Billing Address --- #}
+                <h4 class="mb-3">2. Billing Address</h4>
+                {# TODO: Add checkbox "Same as Shipping Address" with JS to hide/show selection #}
+                {% if billing_addresses %}
+                     <div class="row row-cols-1 row-cols-md-2 g-3 address-selection mb-4">
+                        {% for address in billing_addresses %}
+                            <div class="col">
+                                <label for="bill-addr-{{ address.id }}" class="w-100">
+                                    <input type="radio" name="billing_address" value="{{ address.id }}" id="bill-addr-{{ address.id }}" class="form-check-input" {% if address.is_default or forloop.first %}checked{% endif %} required>
+                                    <div class="card h-100">
+                                        <div class="card-body address-block">
+                                            <strong class="card-title">{{ address.full_name }} {% if address.is_default %}<span class="badge bg-secondary">Default</span>{% endif %}</strong>
+                                            <p>{{ address.street_address }}</p>
+                                            {% if address.apartment_address %}<p>{{ address.apartment_address }}</p>{% endif %}
+                                            <p>{{ address.city }}, {{ address.state }} {{ address.zip_code }}</p>
+                                            <p>{{ address.country }}</p>
+                                            {% if address.phone_number %}<p>Phone: {{ address.phone_number }}</p>{% endif %}
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning" role="alert">
+                        You have no billing addresses saved. Please <a href="#">add an address</a>. {# TODO: Link to add address view #}
+                    </div>
+                {% endif %}
+                {# TODO: Add link/button to add a new billing address #}
+                {# <a href="#" class="btn btn-outline-secondary btn-sm mb-4">Add New Billing Address</a> #}
+
+
+                {# --- Payment Method (Placeholder) --- #}
+                <h4 class="mb-3">3. Payment Method</h4>
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <p class="text-muted">Payment integration (e.g., Stripe, PayPal) will be added here.</p>
+                        {# Placeholder for payment form elements #}
+                        <div class="alert alert-info">For now, clicking "Place Order" will finalize the order without payment.</div>
+                    </div>
+                </div>
+
+            </div> {# End left column #}
+
+
+            {# --- Right Column: Order Summary & Place Order Button --- #}
+            <div class="col-md-5 col-lg-4 order-md-last"> {# Use order-md-last to keep it on right #}
+                <h4 class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="text-primary">Order Summary</span>
+                    <span class="badge bg-primary rounded-pill">{{ cart_items|length }}</span>
+                </h4>
+                <ul class="list-group mb-3">
+                    {% for item in cart_items %}
+                    <li class="list-group-item d-flex justify-content-between lh-sm">
+                        <div>
+                            <h6 class="my-0">{{ item.product.name }}</h6>
+                            <small class="text-muted">Qty: {{ item.quantity }}</small>
+                        </div>
+                        <span class="text-muted">${{ item.total_item_price|floatformat:2 }}</span>
+                    </li>
+                    {% endfor %}
+
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Subtotal</span>
+                        <strong>${{ cart_total|floatformat:2|intcomma }}</strong>
+                    </li>
+                     <li class="list-group-item d-flex justify-content-between bg-light">
+                        <div class="text-success">
+                            <h6 class="my-0">Shipping</h6>
+                            <small>Standard Shipping</small>
+                        </div>
+                        <span class="text-success">FREE</span> {# Placeholder #}
+                    </li>
+                     <li class="list-group-item d-flex justify-content-between bg-light">
+                        <div class="text-muted">
+                            <h6 class="my-0">Estimated Tax</h6>
+                            {# <small>Based on 94107</small> #}
+                        </div>
+                        <span class="text-muted">$0.00</span> {# Placeholder #}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Total (USD)</span>
+                        <strong>${{ cart_total|floatformat:2|intcomma }}</strong> {# TODO: Add tax/shipping later #}
+                    </li>
+                </ul>
+
+                {# --- Place Order Button --- #}
+                <div class="d-grid">
+                    <button class="btn btn-primary btn-lg" type="submit">Place Your Order</button>
+                </div>
+
+            </div> {# End right column #}
+
+        </div> {# End row #}
+    </form> {# End main form #}
+
+</div> {# End container #}
+{% endblock content %}

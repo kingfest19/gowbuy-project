@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Sell on NEXUS" %} - NEXUS{% endblock title %}
+
+{% block extra_css %}
+    {# Add specific styles for this page #}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"> {# Ensure Bootstrap Icons are loaded #}
+    <style>
+        .benefit-card .card-body {
+            padding: 2rem 1.5rem; /* Increase padding inside the card */
+        }
+        .benefit-card .card-title {
+            margin-top: 0.5rem; /* Add space below icon */
+            margin-bottom: 0.75rem;
+            font-weight: 600; /* Make title slightly bolder */
+        }
+        .benefit-card i { /* Style the icons */
+            font-size: 2.5rem !important; /* Make icons larger */
+            opacity: 0.85; /* Slightly transparent */
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h1 class="text-center mb-4">{% trans "Start Selling on NEXUS Today!" %}</h1>
+
+            <p class="lead text-center mb-4">
+                {% blocktrans %}Reach millions of customers across Ghana and beyond. Join our growing community of vendors and expand your business online.{% endblocktrans %}
+            </p>
+
+            {# --- START: Added Benefit Sections --- #}
+            <div class="row g-4 mb-5">
+                {# Benefit 1: Wide Reach #}
+                <div class="col-md-6">
+                    {# Added benefit-card class #}
+                    <div class="card benefit-card h-100 text-white" style="background-color: #16a085;">
+                        <div class="card-body text-center d-flex flex-column justify-content-center"> {# Centering content #}
+                            <i class="bi bi-people-fill fs-1 mb-3"></i> {# Icon color inherits text-white #}
+                            <h3 class="card-title h5">{% trans "Expand Your Reach" %}</h3>
+                            <p class="card-text">{% blocktrans %}Connect with thousands of potential buyers actively searching for products like yours across Ghana.{% endblocktrans %}</p>
+                        </div>
+                    </div>
+                </div>
+                {# Benefit 2: Secure & Easy Payments #}
+                <div class="col-md-6">
+                    {# Added benefit-card class #}
+                    <div class="card benefit-card h-100 text-white" style="background-color: #2980b9;">
+                        <div class="card-body text-center d-flex flex-column justify-content-center">
+                             <i class="bi bi-shield-lock-fill fs-1 mb-3"></i>
+                            <h3 class="card-title h5">{% trans "Secure & Easy Payments" %}</h3>
+                            <p class="card-text">{% blocktrans %}Offer customers popular payment options like Mobile Money and Cards, securely processed through our platform.{% endblocktrans %}</p>
+                        </div>
+                    </div>
+                </div>
+                {# Benefit 3: Simple Tools #}
+                <div class="col-md-6"> {# Added benefit-card class #}
+                    <div class="card benefit-card h-100 text-white" style="background-color: #8e44ad;">
+                        <div class="card-body text-center d-flex flex-column justify-content-center">
+                            <i class="bi bi-tools fs-1 mb-3"></i>
+                            <h3 class="card-title h5">{% trans "Easy Management Tools" %}</h3>
+                            <p class="card-text">{% blocktrans %}Manage your products, inventory, orders, and earnings through our user-friendly vendor dashboard.{% endblocktrans %}</p>
+                        </div>
+                    </div>
+                </div>
+                {# TODO: Add more benefits like Marketing, Delivery Support etc. following the same pattern #}
+            </div>
+            {# --- END: Added Benefit Sections --- #}
+
+            <div class="text-center">
+                {# Link to the vendor registration page #}
+                <a href="{% url 'core:register_vendor' %}" class="btn btn-primary btn-lg">{% trans "Register as a Vendor Now" %}</a> {# <<< Updated link #}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

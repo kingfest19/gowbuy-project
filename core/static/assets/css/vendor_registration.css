@@ -1,0 +1,24 @@
+/* Styles for Vendor Registration Page */
+
+.registration-form-container {
+    background-color: #f8f9fa; /* Light background for the form area */
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Style the fieldset for the radio buttons */
+#div_id_registration_type fieldset legend {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+}
+
+#div_id_registration_type .form-check {
+    margin-bottom: 0.5rem; /* Space between radio options */
+}
+
+/* Style the terms agreement checkbox */
+#div_id_agree_to_terms {
+    margin-top: 1.5rem; /* Add some space above the terms */
+}

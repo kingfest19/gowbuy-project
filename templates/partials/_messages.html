@@ -1,0 +1,12 @@
+{% if messages %}
+<div class="container my-3"> {# Optional container for spacing #}
+    {% for message in messages %}
+    <div class="alert alert-dismissible fade show {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# Note: Ensure Bootstrap JS is loaded for the dismiss functionality #}

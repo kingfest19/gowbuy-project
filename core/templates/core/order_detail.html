@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% load i18n %}
+
+{% block title %}{% trans "Order Details" %} #{{ order.order_id }} - NEXUS{% endblock title %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'assets/css/order_detail.css' %}" /> {# Optional: Link specific CSS #}
+    <style>
+        /* Basic styling for order detail page */
+        .order-detail-header {
+            background-color: #f8f9fa;
+            padding: 1rem 1.5rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1.5rem;
+        }
+        .order-detail-section {
+            margin-bottom: 2rem;
+        }
+        .order-item-detail {
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+        .order-item-detail:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .order-item-image img {
+            max-width: 80px;
+            height: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+        }
+        .order-summary-card {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+        }
+        .order-summary-card .card-header {
+            background-color: #f8f9fa;
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container my-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'core:home' %}">{% trans "Home" %}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'core:order_history' %}">{% trans "Your Orders" %}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{% trans "Order" %} #{{ order.order_id }}</li>
+        </ol>
+    </nav>
+
+    <div class="order-detail-header d-flex flex-wrap justify-content-between align-items-center">
+        <div>
+            <h1 class="h4 mb-0">{% trans "Order Details" %}</h1>
+            <small class="text-muted">{% trans "Placed on" %} {{ order.created_at|date:"F d, Y" }} | {% trans "Order" %} #{{ order.order_id }}</small>
+        </div>
+        <div>
+            <span class="badge bg-{% if order.status == 'completed' %}success{% elif order.status == 'cancelled' %}danger{% elif order.status == 'shipped' %}info{% else %}secondary{% endif %} me-2">{{ order.get_status_display }}</span>
+            <span class="badge bg-{% if order.payment_status == 'paid' %}success{% elif order.payment_status == 'failed' %}danger{% else %}warning text-dark{% endif %}">{{ order.get_payment_status_display }}</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 order-detail-section">
+            <h2 class="h5 mb-3">{% trans "Items Ordered" %}</h2>
+            {% for item in order.items.all %}
+            <div class="order-item-detail d-flex">
+                <div class="order-item-image me-3">
+                    {% if item.product and item.product.image %}
+                        <img src="{{ item.product.image.url }}" alt="{{ item.product_name }}">
+                    {% else %}
+                        <img src="{% static 'assets/img/placeholder.png' %}" alt="Placeholder">
+                    {% endif %}
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">{{ item.product_name|default:"[Product Unavailable]" }}</h6>
+                    <small class="text-muted">{% trans "Qty" %}: {{ item.quantity }}</small>
+                </div>
+                <div class="text-end">
+                    <strong>GH₵ {{ item.total_price|floatformat:2|intcomma }}</strong><br>
+                    <small class="text-muted">(GH₵ {{ item.price|floatformat:2|intcomma }} {% trans "each" %})</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="col-lg-4 order-detail-section">
+            <div class="card order-summary-card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">{% trans "Order Summary" %}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>{% trans "Subtotal" %}:</span>
+                        <span>GH₵ {{ order.subtotal|floatformat:2|intcomma }}</span> {# Assuming you calculate subtotal #}
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>{% trans "Shipping" %}:</span>
+                        <span>GH₵ {{ order.shipping_cost|floatformat:2|intcomma }}</span> {# Assuming you have shipping cost #}
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>{% trans "Tax" %}:</span>
+                        <span>GH₵ {{ order.tax_amount|floatformat:2|intcomma }}</span> {# Assuming you have tax #}
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between fw-bold h5">
+                        <span>{% trans "Order Total" %}:</span>
+                        <span>GH₵ {{ order.total_amount|floatformat:2|intcomma }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header"><h3 class="h6 mb-0">{% trans "Shipping Address" %}</h3></div>
+                <div class="card-body small">
+                    <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ order.shipping_address_text }}</pre>
+                </div>
+            </div>
+
+             <div class="card mt-3">
+                <div class="card-header"><h3 class="h6 mb-0">{% trans "Billing Address" %}</h3></div>
+                <div class="card-body small">
+                    <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ order.billing_address_text }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+    {{ block.super }} {# <<< Make sure to include base JS #}
+{% endblock extra_js %}

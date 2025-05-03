@@ -1,0 +1,29 @@
+{% load static %}
+{% load i18n %}
+{% load humanize %} {# Load humanize for formatting price #}
+
+{% if products_list %}
+    {% for product in products_list %}
+    <div class="col">
+        <div class="card h-100 product-card">
+            {# Link to the product detail page #}
+            <a href="{{ product.get_absolute_url }}">
+                {# Display primary image or placeholder #}
+                {% if product.primary_image %}
+                    <img src="{{ product.primary_image.url }}" class="card-img-top product-card-img" alt="{{ product.name }}">
+                {% else %}
+                    <img src="{% static 'assets/placeholder_image.png' %}" class="card-img-top product-card-img" alt="{% trans 'No image available' %}">
+                {% endif %}
+            </a>
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title product-card-title"><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h5>
+                <p class="card-text product-card-vendor">{% trans "By" %} <a href="{{ product.vendor.get_absolute_url }}">{{ product.vendor.name }}</a></p>
+                <p class="card-text product-card-price mt-auto">GH₵ {{ product.price|floatformat:2|intcomma }}</p> {# Example price formatting #}
+                {# TODO: Add rating display, add to cart button etc. #}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="col-12"><p>{% trans "No products found in this category." %}</p></div>
+{% endif %}

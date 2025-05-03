@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+{% load crispy_forms_tags %} {# <<< Load crispy forms tags #}
+
+{% block title %}{% trans "Become a Vendor" %} - NEXUS{% endblock title %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'assets/css/vendor_registration.css' %}"> {# <<< Link the new CSS file #}
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <h1 class="text-center mb-4">{% trans "Vendor Registration" %}</h1>
+            <p class="text-center text-muted mb-4">
+                {% blocktrans %}Fill out the form below to apply to become a vendor on NEXUS. Your application will be reviewed by our team.{% endblocktrans %}
+            </p>
+
+            {# Added container div for styling #}
+            <div class="registration-form-container">
+                <form method="post" enctype="multipart/form-data"> {# <<< Add enctype for file uploads (logo) #}
+                    {% csrf_token %}
+                    {{ form|crispy }} {# <<< Render the form using crispy #}
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">{% trans "Submit Application" %}</button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+    {{ block.super }} {# Include base template JS (hover menu etc.) #}
+    {# Removed JavaScript for conditional fields #}
+{% endblock extra_js %}

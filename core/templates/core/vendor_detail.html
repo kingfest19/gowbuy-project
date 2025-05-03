@@ -1,0 +1,160 @@
+{# core/templates/core/vendor_detail.html #}
+{% extends "base.html" %}
+{% load humanize %} {# For formatting numbers/dates #}
+{% load static %} {# For static files if needed #}
+
+{% block title %}{{ vendor.name }} - Vendor Profile{% endblock title %}
+
+{% block content %}
+<div class="container mt-4">
+    {# Vendor Header #}
+    <div class="d-flex align-items-center mb-3">
+        {% if vendor.logo %}
+            <img src="{{ vendor.logo.url }}" alt="{{ vendor.name }} Logo" class="img-thumbnail me-3" style="max-width: 100px; max-height: 100px;">
+        {% endif %}
+        <div>
+            <h1>
+                {{ vendor.name }}
+                {% if vendor.is_verified %}
+                    <span class="badge bg-success fs-5 ms-2" title="Verified Vendor">
+                        {# Replace with actual SVG or icon font class #}
+                        <i class="bi bi-patch-check-fill"></i> Verified
+                    </span>
+                {% endif %}
+            </h1>
+            <p class="text-muted">Member since {{ vendor.created_at|date:"F Y" }}</p>
+            {% if vendor.location_city or vendor.location_country %}
+                <p><i class="bi bi-geo-alt-fill"></i> Located in {{ vendor.location_city|default:"" }}{% if vendor.location_city and vendor.location_country %}, {% endif %}{{ vendor.location_country|default:"" }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Average Rating Display #}
+    {% if average_vendor_rating %} {# Use the correct context variable name #}
+        <p class="fs-5">
+            Average Rating: {{ average_vendor_rating|floatformat:1 }} / 5.0
+            {# TODO: Add star display logic here (e.g., using loops or a template tag) #}
+            ({{ vendor_reviews.count }} review{{ vendor_reviews.count|pluralize }}) {# Use the correct context variable name #}
+        </p>
+    {% else %}
+        <p>No reviews yet.</p>
+    {% endif %}
+
+    {# Vendor Description #}
+    {% if vendor.description %}
+        <h4>About {{ vendor.name }}</h4>
+        <p>{{ vendor.description|linebreaksbr }}</p>
+    {% endif %}
+
+    {# Policies #}
+    <div class="row mt-4">
+        {% if vendor.shipping_policy %}
+        <div class="col-md-6">
+            <h5>Shipping Policy</h5>
+            <p>{{ vendor.shipping_policy|linebreaksbr }}</p>
+        </div>
+        {% endif %}
+        {% if vendor.return_policy %}
+        <div class="col-md-6">
+            <h5>Return Policy</h5>
+            <p>{{ vendor.return_policy|linebreaksbr }}</p>
+        </div>
+        {% endif %}
+    </div>
+    <hr>
+
+    {# Vendor Reviews Section #}
+    <h3 class="mt-4">Vendor Reviews</h3>
+
+    {# --- ADD VENDOR REVIEW FORM --- #}
+    {% if user.is_authenticated %}
+        {% if not user_has_reviewed %} {# Check if user already reviewed #}
+            <div class="card my-4">
+                <div class="card-header">Leave a Review for {{ vendor.name }}</div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'core:add_vendor_review' vendor.id %}">
+                        {% csrf_token %}
+                        {# Render form fields manually for better Bootstrap styling #}
+                        <div class="mb-3">
+                            <label for="{{ review_form.rating.id_for_label }}" class="form-label">{{ review_form.rating.label }}</label>
+                            <div>
+                            {% for radio in review_form.rating %}
+                                <div class="form-check form-check-inline">
+                                    <input type="radio" name="{{ radio.name }}" id="{{ radio.id_for_label }}" value="{{ radio.choice_value }}" class="form-check-input" {% if radio.choice_value == review_form.rating.value %}checked{% endif %}>
+                                    <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                                </div>
+                            {% endfor %}
+                            </div>
+                            {% if review_form.rating.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ review_form.rating.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ review_form.comment.id_for_label }}" class="form-label">{{ review_form.comment.label }}</label>
+                            {{ review_form.comment }} {# Uses widget defined in forms.py #}
+                             {% if review_form.comment.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ review_form.comment.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Review</button>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-info" role="alert">
+              You have already submitted a review for this vendor.
+            </div>
+        {% endif %}
+    {% else %}
+        <p><a href="{% url 'signin' %}?next={{ request.path }}">Log in</a> to leave a review.</p>
+    {% endif %}
+    {# --- END VENDOR REVIEW FORM --- #}
+
+    <hr class="my-4">
+
+    {# Display Existing Reviews #}
+    {% for review in vendor_reviews %} {# Use the correct context variable name #}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Rating: {{ review.rating }}/5 {% if review.user.username %}- by {{ review.user.username }}{% endif %}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">{{ review.created_at|naturaltime }}</h6>
+                {% if review.comment %}
+                    <p class="card-text">{{ review.comment|linebreaksbr }}</p>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <p>This vendor has no reviews yet.</p>
+    {% endfor %}
+
+    <hr>
+    {# Vendor Products Section #}
+    <h3 class="mt-4">Products from {{ vendor.name }}</h3>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+        {% for product in products %}
+            <div class="col">
+                <div class="card h-100">
+                    {% if product.image %}
+                    <a href="{{ product.get_absolute_url }}">
+                        <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: contain;">
+                    </a>
+                    {% endif %}
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title"><a href="{{ product.get_absolute_url }}" class="text-decoration-none text-dark">{{ product.name }}</a></h5>
+                        {# TODO: Add product rating if available #}
+                        <p class="card-text mt-auto"><strong>${{ product.price|floatformat:2 }}</strong></p>
+                        {# TODO: Add to cart button? #}
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p>This vendor has no active products listed.</p>
+        {% endfor %}
+    </div>
+
+</div> {# End container #}
+{% endblock content %}

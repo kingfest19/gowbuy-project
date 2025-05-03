@@ -1,0 +1,454 @@
+{% load static %}
+{% load i18n %} {# <<< Load the i18n tags #}
+<!DOCTYPE html>
+<html lang="{{ current_language }}"> {# <<< Make lang dynamic #}
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {# Default title, can be overridden by child templates using {% block title %} #}
+    <title>{% block title %}NEXUS{% endblock title %}</title>
+
+
+    {# --- ADD BOOTSTRAP 5 CSS --- #}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+{# --- END BOOTSTRAP CSS --- #}
+
+{# Link to CSS file(s) containing styles for nav, footer, and base layout #}
+    {# Assuming home.css contains nav/footer styles. Consider creating a dedicated base.css #}
+    <link rel="stylesheet" href="{% static 'assets/css/home.css' %}" />
+
+    {# Block for page-specific CSS links #}
+    {% block extra_css %}
+        <link rel="stylesheet" href="{% static 'assets/css/category_modal.css' %}"> {# <<< Link the new CSS file #}
+    {% endblock extra_css %}
+
+    {# Block for page-specific head content (e.g., inline styles, meta tags) #}
+    {% block extra_head %}
+    {% endblock extra_head %}
+</head>
+<body>
+
+    <!-- ==================== 1. Navigation (Copied from home.html) ==================== -->
+    <nav>
+        {# --- CORRECTED: Added 'core:' namespace --- #}
+        <a href="{% url 'core:home' %}"><img src="{% static 'assets/logo.jpg' %}" width="100" alt="NEXUS" /></a>
+        {# --- Added modal trigger --- #}
+        <div class="nav-country" data-bs-toggle="modal" data-bs-target="#locationModal" style="cursor: pointer;">
+            <img src="{% static 'assets/location_icon.png' %}" height="20" alt="" />
+            <div>
+                <p>{% trans "Deliver to" %}</p> {# <<< Mark for translation #}
+                <h1>{{ delivery_location|default:"United States" }}</h1> {# <<< Use context variable #}
+            </div>
+        </div>
+
+        {# --- START: Search Form --- #}
+        <form class="search-form" action="{% url 'core:search_results' %}" method="get">
+            <input type="text" name="q" id="searchInput" class="search-input" placeholder="Search NEXUS..." value="{{ request.GET.q|default:'' }}" />
+            <button class="search-button" type="submit" aria-label="{% trans 'Search' %}"> {# <<< Mark aria-label #}
+                <svg class="searchIcon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
+            </button>
+            <button class="mic-button" id="micSearchButton" type="button" title="Search by voice">
+                <svg class="micIcon" viewBox="0 0 384 512" height="1em" xmlns="http://www.w3.org/2000/svg"><path d="M192 0C139 0 96 43 96 96V256c0 53 43 96 96 96s96-43 96-96V96c0-53-43-96-96-96zM64 216c0-17.7 14.3-32 32-32s32 14.3 32 32v40c0 89.1 66.2 162.7 152 174.4V464H160v48h64v-48h-48v-27.6c85.8-11.7 152-85.3 152-174.4V216c0-17.7 14.3-32 32-32s32 14.3 32 32v40c0 100.7-75.4 184.5-176 197.3V480h16c17.7 0 32 14.3 32 32s-14.3 32-32 32H160c-17.7 0-32-14.3-32-32s14.3-32 32-32h16v-26.7C75.4 440.5 0 356.7 0 256v-40c0-17.7 14.3-32 32-32s32 14.3 32 32v40z"></path></svg>
+            </button>
+        </form>
+        {# --- END: Search Form --- #}
+
+        {# --- Updated Language Section --- #}
+        <div class="nav-language" data-bs-toggle="modal" data-bs-target="#languageModal" style="cursor: pointer;">
+            <img src="{% static 'assets/us_flag.png' %}" width="22px" alt="US Flag" />
+            {# Display current language from context, default to 'en-us' #}
+            <span>{{ current_language|language_name_local|upper }}</span> {# <<< Use language_name_local filter #}
+            <img src="{% static 'assets/dropdown_icon.png' %}" class="dropdown-icon" alt="" />
+        </div>
+
+        <!-- ===== UPDATED SECTION to trigger Account Modal ===== -->
+        {# --- Changed nav-text to be a modal trigger --- #}
+        <div class="nav-text" data-bs-toggle="modal" data-bs-target="#accountModal" style="cursor: pointer;">
+            {% if user.is_authenticated %}
+                <p>Hi, {{ user.username }}!</p>
+            {% else %}
+                 {# 'signin' is defined in main urls.py - NO namespace needed #}
+                <p><a href="{% url 'signin' %}">{% trans "Sign In / Register" %}</a></p> {# <<< Mark for translation #}
+            {% endif %}
+            <h1>{% trans "Account & Lists" %}</h1> {# <<< Mark for translation #}
+            <img src="{% static 'assets/dropdown_icon.png' %}" class="dropdown-icon" alt="" />
+        </div>
+        <!-- ===== END UPDATED SECTION ===== -->
+
+        <div class="nav-text">
+            {# --- CORRECTED: Renamed 'r_o' to 'order_history' and added 'core:' namespace --- #}
+            <p><a href="{% url 'core:order_history' %}">{% trans "Returns" %}</a></p> {# <<< Mark for translation #}
+            <h1>& {% trans "Orders" %}</h1> {# <<< Mark for translation #}
+        </div>
+        {# 'cart' is defined in main urls.py - NO namespace needed #}
+        <a href="{% url 'cart' %}" class="nav-cart">
+            <img src="{% static 'assets/cart_icon.png' %}" width="30px" alt="Shopping Basket" />
+            <h4>{% trans "Basket" %}</h4> {# <<< Mark for translation #}
+        </a>
+    </nav>
+    <div class="nav-bottom"> {# Keep the container for styling, but content moves to modal trigger #}
+        {# --- START: Changed Menu link to trigger modal --- #}
+        <div id="navMenuTrigger" class="nav-bottom-menu-trigger" data-bs-target="#navBottomModal" style="cursor: pointer;"> {# Removed data-bs-toggle, added id #}
+            <img src="{% static 'assets/menu_icon.png' %}" width="25px" alt="" />
+            <p>{% trans "Menu" %}</p> {# <<< Mark for translation #}
+        </div>
+        {# --- END: Changed Menu link --- #}
+        {# --- START: Restored original nav-bottom links --- #}
+        <p><a href="{% url 'core:daily_offers' %}">{% trans "Daily Offers" %}</a></p>
+        <p><a href="{% url 'help' %}">{% trans "Support Center" %}</a></p>
+
+        {# --- START: Conditional Sell/Dashboard/Help Links --- #}
+        {% if user.is_authenticated and user.vendor_profile %}
+            {# User is logged in AND is a vendor -> Show Dashboard #}
+            <p><a href="{% url 'core:vendor_dashboard' %}">{% trans "Your Dashboard" %}</a></p>
+        {% else %}
+            {# User is NOT a vendor (or not logged in) -> Show Sell link #}
+            <p><a href="{% url 'core:sell_on_nexus' %}">{% trans "Sell on NEXUS" %}</a></p>
+        {% endif %}
+        {# --- END: Conditional Sell/Dashboard/Help Links --- #}
+        {# --- END: Restored original nav-bottom links --- #}
+        <span class="nav-promo-caption">✨ WELCOME TO NEXUS! ✨</span>
+    </div>
+    <!-- ================= End Navigation ================= -->
+
+    <main> {# Wrap main content area #}
+
+        {# --- START: Django Messages Display --- #}
+        {% if messages %}
+            <div class="container mt-3"> {# Optional: Wrap messages in a container for better spacing #}
+                {% for message in messages %}
+                    {# Map Django message tags to Bootstrap alert classes #}
+                    {# Common tags: debug, info, success, warning, error #}
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {# --- END: Django Messages Display --- #}
+
+        {# This is where the unique content of each child template will be inserted #}
+        {% block content %}
+        {% endblock content %}
+    </main>
+
+    <!-- ==================== Footer (Copied from home.html) ==================== -->
+    <footer>
+        <div class="footer-back-to-top">
+            <a href="#">{% trans "Back to Top" %}</a> {# <<< Mark for translation #}
+        </div>
+        <div class="footer-content-wrapper">
+            <div class="footer-links">
+                <div class="footer-column">
+                    <h4>{% trans "Get to Know Us" %}</h4> {# <<< Mark for translation #}
+                    <ul>
+                        <li><a href="#">About NEXUS</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="#">Press Releases</a></li>
+                        <li><a href="#">NEXUS Blog</a></li>
+                        <li><a href="#">NEXUS Science</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>{% trans "Make Money with Us" %}</h4> {# <<< Mark for translation #}
+                    <ul>
+                        <li><a href="#">Sell on NEXUS</a></li> {# TODO: Link this #}
+                        <li><a href="#">Sell on NEXUS Business</a></li>
+                        <li><a href="#">Become an Affiliate</a></li>
+                        <li><a href="#">Advertise Your Products</a></li>
+                        <li><a href="#">Become a Delivery Partner</a></li>
+                        <li><a href="#">Self-Publish with Us</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>{% trans "Customer Service" %}</h4> {# <<< Mark for translation #}
+                    <ul>
+                        {# 'help' is defined in main urls.py - NO namespace needed #}
+                        <li><a href="{% url 'help' %}">Help Center</a></li>
+                        <li><a href="#">Your Account</a></li> {# TODO: Link to account page #}
+                        {# 'order_history' is in 'core' namespace #}
+                        <li><a href="{% url 'core:order_history' %}">Your Orders</a></li>
+                        <li><a href="#">Shipping Rates & Policies</a></li>
+                        <li><a href="#">Returns & Replacements</a></li>
+                        <li><a href="#">Contact Us</a></li>
+                    </ul>
+                </div>
+                 <div class="footer-column">
+                    <h4>{% trans "Policies & Info" %}</h4> {# <<< Mark for translation #}
+                    <ul>
+                        {# 'privacy' and 'terms' are defined in main urls.py - NO namespace needed #}
+                        <li><a href="{% url 'privacy' %}">Privacy Policy</a></li>
+                        <li><a href="{% url 'terms' %}">Terms of Service</a></li>
+                        <li><a href="#">Accessibility</a></li>
+                        <li><a href="#">Gift Cards</a></li>
+                        <li><a href="#">Site Map</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="footer-divider">
+            <div class="footer-secondary">
+                 <div class="footer-logo-area">
+                     {# --- CORRECTED: Added 'core:' namespace --- #}
+                     <a href="{% url 'core:home' %}">
+                         <img src="{% static 'assets/logo.jpg' %}" alt="NEXUS Logo">
+                     </a>
+                 </div>
+                 <div class="footer-social">
+                    <h4>{% trans "Connect With Us" %}</h4> {# <<< Mark for translation #}
+                    {# Add actual links #}
+                    <a href="#" aria-label="Facebook" class="social-icon fb">FB</a>
+                    <a href="#" aria-label="Twitter" class="social-icon tw">TW</a>
+                    <a href="#" aria-label="Instagram" class="social-icon ig">IG</a>
+                    <a href="#" aria-label="LinkedIn" class="social-icon li">LI</a>
+                 </div>
+                 <div class="footer-payment">
+                    <h4>{% trans "We Accept" %}</h4> {# <<< Mark for translation #}
+                    {# Replace with actual icons/images if desired #}
+                    <span class="payment-icon visa">Visa</span>
+                    <span class="payment-icon mc">MC</span>
+                    <span class="payment-icon paypal">PayPal</span>
+                    <span class="payment-icon amex">Amex</span>
+                 </div>
+                 <div class="footer-language-currency">
+                     {# Make these functional if needed #}
+                     <button>English</button>
+                     <button>USD ($)</button>
+                     <button>GHANA (GH)</button>
+                 </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; {% now "Y" %} NEXUS.com, Inc. or its affiliates. All Rights Reserved.</p>
+        </div>
+   </footer>
+    <!-- ================= End Footer ================= -->
+
+    <!-- ==================== Location Modal ==================== -->
+    <div class="modal fade" id="locationModal" tabindex="-1" aria-labelledby="locationModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <form action="{% url 'core:update_location' %}" method="post">
+              {% csrf_token %}
+              <div class="modal-header"> {# <<< Mark modal text #}
+                <h1 class="modal-title fs-5" id="locationModalLabel">{% trans "Choose your location" %}</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <p>{% trans "Delivery options and fees may vary based on your location." %}</p>
+                {# Simple text input for now - replace with dropdown/zip later #}
+                <div class="mb-3">
+                  <label for="locationInput" class="form-label">Enter Location (e.g., Country, City, Zip)</label>
+                  <input type="text" class="form-control" id="locationInput" name="location_input" placeholder="{{ delivery_location|default:'United States' }}" required>
+                </div>
+                {# TODO: Add country dropdown, zip code validation etc. here #}
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Close" %}</button>
+                <button type="submit" class="btn btn-primary">{% trans "Update Location" %}</button>
+              </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <!-- ================= End Location Modal ================= -->
+
+    <!-- ==================== Language Modal ==================== -->
+    <div class="modal fade" id="languageModal" tabindex="-1" aria-labelledby="languageModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <form action="{% url 'core:update_language' %}" method="post">
+              {% csrf_token %}
+              <div class="modal-header"> {# <<< Mark modal text #}
+                <h1 class="modal-title fs-5" id="languageModalLabel">{% trans "Choose your language" %}</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <p>{% trans "Select your preferred language." %}</p>
+                {# Simple select dropdown for now #}
+                <div class="mb-3">
+                  <label for="languageInput" class="form-label">Language</label>
+                  <select class="form-select" id="languageInput" name="language_input" required>
+                    <option value="en-us" {% if current_language == 'en-us' %}selected{% endif %}>English (US)</option>
+                    <option value="es" {% if current_language == 'es' %}selected{% endif %}>Español</option>
+                    <option value="fr" {% if current_language == 'fr' %}selected{% endif %}>Français</option>
+                    {# TODO: Add more languages as needed, potentially dynamically from settings.LANGUAGES #}
+                  </select>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Close" %}</button>
+                <button type="submit" class="btn btn-primary">{% trans "Update Language" %}</button>
+              </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <!-- ================= End Language Modal ================= -->
+
+    <!-- ==================== Nav Bottom Modal ==================== -->
+    <div class="modal fade" id="navBottomModal" tabindex="-1" aria-labelledby="navBottomModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"> {# Added scrollable #}
+        <div class="modal-content">
+          <div class="modal-header"> {# <<< Changed title to Categories #}
+            <h1 class="modal-title fs-5" id="navBottomModalLabel">{% trans "Shop by Category" %}</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            {# --- START: Display categories from context --- #}
+            <ul class="list-unstyled">
+                {% for category in modal_categories %}
+                    <li>
+                        <a href="{{ category.get_absolute_url }}">{{ category.name }}</a>
+                        {# Optionally display subcategories here if needed #}
+                    </li>
+                {% empty %}
+                    <li>{% trans "No categories available." %}</li>
+                {% endfor %}
+            </ul>
+            {# --- END: Display categories --- #}
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ================= End Nav Bottom Modal ================= -->
+
+    <!-- ==================== Account Modal ==================== -->
+    <div class="modal fade" id="accountModal" tabindex="-1" aria-labelledby="accountModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="accountModalLabel">{% trans "Your Account" %}</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            {% if user.is_authenticated %}
+                <ul class="list-unstyled">
+                    {# TODO: Add link to actual user profile/account settings page #}
+                    <li class="mb-2"><a href="#" class="text-decoration-none d-block p-2 rounded hover-bg-light">{% trans "Your Account Settings" %}</a></li>
+                    <li class="mb-2"><a href="{% url 'core:order_history' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light">{% trans "Your Orders" %}</a></li>
+                    {% if user.vendor_profile %} {# Check if user has a vendor profile #}
+                    <li class="mb-2"><a href="{% url 'core:vendor_dashboard' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light">{% trans "Vendor Dashboard" %}</a></li>
+                    {% endif %}
+                    <hr>
+                    <li class="mb-2"><a href="{% url 'logout' %}" class="text-danger text-decoration-none d-block p-2 rounded hover-bg-light">{% trans "Logout" %}</a></li>
+                </ul>
+            {% else %}
+                <p>{% trans "Please sign in to access your account." %}</p>
+                <a href="{% url 'signin' %}" class="btn btn-primary w-100">{% trans "Sign In" %}</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ================= End Account Modal ================= -->
+
+    {# --- ADD BOOTSTRAP 5 JS --- #}
+     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+    {# --- END BOOTSTRAP JS --- #}
+
+    {# Global JavaScript files - Add Bootstrap JS etc. if you use them #}
+   <script src="{% static 'assets/js/script.js' %}"></script>
+
+    {# --- START: Voice Search JS --- #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const micButton = document.getElementById('micSearchButton');
+            const searchInput = document.getElementById('searchInput'); // Ensure your search input has id="searchInput"
+
+            if (micButton && searchInput) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+                if (SpeechRecognition) {
+                    const recognition = new SpeechRecognition();
+                    recognition.continuous = false; // Only listen for a single utterance
+                    recognition.lang = 'en-US'; // Set language
+                    recognition.interimResults = false;
+                    recognition.maxAlternatives = 1;
+
+                    micButton.addEventListener('click', () => {
+                        try {
+                            recognition.start();
+                            micButton.style.color = '#dc3545'; // Indicate listening (e.g., red)
+                            console.log("Voice recognition started. Try speaking into the microphone.");
+                        } catch(e) {
+                            console.error("Voice recognition could not start:", e);
+                            micButton.style.color = ''; // Reset color on error
+                        }
+                    });
+
+                    recognition.onresult = (event) => {
+                        const transcript = event.results[0][0].transcript;
+                        searchInput.value = transcript; // Fill the search box
+                        console.log('Transcript:', transcript);
+                        // Optional: Automatically submit the form
+                        // searchInput.closest('form').submit();
+                    };
+
+                    recognition.onspeechend = () => {
+                        recognition.stop();
+                        micButton.style.color = ''; // Reset color
+                        console.log("Voice recognition stopped.");
+                    };
+
+                    recognition.onerror = (event) => {
+                        console.error('Voice recognition error:', event.error);
+                        micButton.style.color = ''; // Reset color
+                        alert('Error occurred in recognition: ' + event.error);
+                    };
+
+                } else {
+                    console.warn("Speech Recognition API not supported in this browser.");
+                    micButton.style.display = 'none'; // Hide button if not supported
+                }
+            }
+        });
+    </script>
+    {# --- END: Voice Search JS --- #}
+
+    {# Block for page-specific JavaScript files or inline scripts #}
+    {% block extra_js %}
+    {# --- Hover JS for Menu Modal --- #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const menuTrigger = document.getElementById('navMenuTrigger');
+            const menuModalElement = document.getElementById('navBottomModal');
+
+            if (menuTrigger && menuModalElement) {
+                console.log("Hover script: Trigger and Modal elements found."); // Log: Elements found
+                const menuModal = new bootstrap.Modal(menuModalElement);
+                let hoverTimeout; // To manage delays
+
+                // Show modal on hover over trigger
+                menuTrigger.addEventListener('mouseenter', () => {
+                    console.log("Hover script: Mouse entered trigger."); // Log: Enter trigger
+                    clearTimeout(hoverTimeout); // Clear any pending hide
+                    menuModal.show();
+                });
+
+                // Keep modal open if mouse enters the modal itself
+                menuModalElement.addEventListener('mouseenter', () => {
+                    console.log("Hover script: Mouse entered modal."); // Log: Enter modal
+                    clearTimeout(hoverTimeout); // Don't hide if moving into modal
+                });
+
+                // Function to start the hide timer
+                const startHideTimer = () => {
+                    hoverTimeout = setTimeout(() => {
+                        console.log("Hover script: Hiding modal (timeout)."); // Log: Hiding
+                        menuModal.hide();
+                    }, 300); // 300ms delay - slightly longer
+                };
+
+                // Start hide timer when leaving trigger OR modal
+                menuTrigger.addEventListener('mouseleave', startHideTimer);
+                menuModalElement.addEventListener('mouseleave', startHideTimer);
+
+            }
+        });
+    </script>
+    {# --- END Hover JS for Menu Modal --- #}
+    {% endblock extra_js %}
+
+</body>
+</html>

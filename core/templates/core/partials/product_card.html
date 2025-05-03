@@ -1,0 +1,18 @@
+{% load static %}
+{# Expects a 'product' variable to be passed in the context #}
+<div class="col">
+    <div class="card h-100 product-card"> {# Reuse product card styling from home.css/base.css #}
+        <a href="{% url 'core:product_detail' product.slug %}" class="text-decoration-none">
+            {# Use thumbnail if available, otherwise first gallery image, else placeholder #}
+            {% with first_image=product.images.first %}
+            <img src="{% if product.thumbnail %}{{ product.thumbnail.url }}{% elif first_image %}{{ first_image.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                 class="card-img-top"
+                 alt="{{ product.name }}">
+            {% endwith %}
+            <div class="card-body">
+                <h5 class="card-title text-dark fs-6">{{ product.name }}</h5>
+                <p class="card-text product-price fw-bold text-dark">${{ product.price|floatformat:2 }}</p>
+            </div>
+        </a>
+    </div>
+</div>

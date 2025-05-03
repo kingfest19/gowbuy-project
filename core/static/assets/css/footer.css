@@ -1,0 +1,216 @@
+/* --- Footer CSS Rules --- */
+/* Assumes :root variables from home.css are available */
+
+footer {
+    display: flex;
+    flex-direction: column;
+    /* Stack sections vertically */
+    align-items: center;
+    /* Center content */
+    background: var(--color-background-dark, #2c3e50);
+    /* Use theme variable or fallback */
+    color: #ccc;
+    /* Lighter base text */
+    padding: var(--spacing-xl, 2rem) var(--spacing-md, 1rem) var(--spacing-md, 1rem) var(--spacing-md, 1rem);
+    /* More top padding */
+    margin-top: var(--spacing-xl, 2rem);
+    /* Add space above footer */
+    border-top: 5px solid var(--color-border-dark, #495057);
+    /* Top border */
+}
+
+footer .footer-logo {
+    /* Added class to the <a> tag around the logo */
+    display: inline-block;
+    /* Allow margin auto to work if needed */
+    margin-bottom: var(--spacing-lg, 1.5rem);
+}
+
+footer .footer-logo img {
+    /* Target logo specifically */
+    width: 100px;
+    filter: brightness(0) invert(0.9);
+    /* Make logo light grey */
+    opacity: 0.9;
+    transition: opacity var(--transition-speed-normal, 0.3s) var(--transition-timing, ease-in-out);
+    display: block;
+    /* Ensure block display */
+}
+
+footer .footer-logo:hover img {
+    opacity: 1;
+}
+
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    /* Allow columns to wrap */
+    justify-content: center;
+    /* Center columns */
+    gap: var(--spacing-lg, 1.5rem) var(--spacing-xl, 2rem);
+    /* Row and column gap */
+    width: 100%;
+    max-width: 1100px;
+    /* Wider max-width */
+    margin-bottom: var(--spacing-xl, 2rem);
+    text-align: left;
+    /* Align text left in columns by default */
+}
+
+.footer-column {
+    flex: 1;
+    /* Allow columns to grow */
+    min-width: 180px;
+    /* Wider min-width */
+}
+
+.footer-column h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-light, #fff);
+    /* White heading */
+    margin-bottom: var(--spacing-md, 1rem);
+    position: relative;
+    padding-bottom: var(--spacing-xs, 0.25rem);
+}
+
+/* Underline effect for headings */
+.footer-column h4::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 30px;
+    /* Short underline */
+    height: 2px;
+    background-color: var(--color-accent, #f1c40f);
+    /* Use theme variable or fallback */
+}
+
+.footer-column ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    /* Ensure no default margin */
+}
+
+.footer-column ul li {
+    margin-bottom: var(--spacing-sm, 0.5rem);
+}
+
+.footer-column ul li a {
+    color: #ccc;
+    /* Inherit footer base color */
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: color var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out),
+        padding-left var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out);
+}
+
+.footer-column ul li a:hover {
+    color: var(--color-text-light, #fff);
+    padding-left: var(--spacing-xs, 0.25rem);
+    /* Indent slightly on hover */
+    text-decoration: underline;
+    /* Add underline on hover */
+}
+
+.footer-bottom {
+    border-top: 1px solid var(--color-border-dark, #495057);
+    /* Separator line */
+    padding-top: var(--spacing-lg, 1.5rem);
+    /* Increased padding */
+    width: 100%;
+    max-width: 1100px;
+    /* Match width of links section */
+    text-align: center;
+    font-size: 0.8rem;
+    color: #aaa;
+    /* Dimmer color */
+}
+
+.footer-bottom p {
+    margin-bottom: var(--spacing-xs, 0.25rem);
+}
+
+.footer-bottom a {
+    color: #bbb;
+    /* Slightly brighter link */
+    text-decoration: none;
+    transition: color var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out);
+}
+
+.footer-bottom a:hover {
+    color: var(--color-text-light, #fff);
+    text-decoration: underline;
+}
+
+
+/* --- Footer Responsive Adjustments --- */
+/* (These should be placed within the corresponding media query blocks in home.css) */
+
+/* Medium Devices (~992px and down) */
+@media only screen and (max-width: 992px) {
+    .footer-links {
+        gap: var(--spacing-lg, 1.2rem) var(--spacing-lg, 1.2rem);
+        /* Adjust footer link gap */
+    }
+
+    .footer-column {
+        min-width: 160px;
+        /* Adjust min-width if needed */
+    }
+}
+
+/* Small Devices (~768px and down) */
+@media only screen and (max-width: 768px) {
+    .footer-links {
+        flex-direction: column;
+        /* Stack columns */
+        align-items: center;
+        /* Center stacked columns */
+        gap: var(--spacing-lg, 1.2rem);
+        text-align: center;
+        /* Center text within columns */
+    }
+
+    .footer-column {
+        min-width: auto;
+        /* Remove min-width */
+        width: 100%;
+        max-width: 300px;
+        /* Limit width of centered columns */
+    }
+
+    .footer-column h4::after {
+        /* Center heading underline */
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+
+/* Extra Small Devices (~576px and down) */
+@media only screen and (max-width: 576px) {
+    footer {
+        padding: var(--spacing-lg, 1rem) var(--spacing-sm, 0.4rem) var(--spacing-sm, 0.4rem) var(--spacing-sm, 0.4rem);
+    }
+
+    footer .footer-logo img {
+        width: 80px;
+        margin-bottom: var(--spacing-md, 0.7rem);
+    }
+
+    .footer-column h4 {
+        font-size: 0.95rem;
+        margin-bottom: var(--spacing-sm, 0.4rem);
+    }
+
+    .footer-column ul li a {
+        font-size: 0.85rem;
+    }
+
+    .footer-bottom {
+        font-size: 0.75rem;
+        padding-top: var(--spacing-md, 0.7rem);
+    }
+}

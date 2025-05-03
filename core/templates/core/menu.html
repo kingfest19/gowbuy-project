@@ -1,0 +1,77 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">  <head>
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shop by Category - NEXUS</title>
+    <!-- Link home.css FIRST for variables AND navbar/footer styles -->
+    <link rel="stylesheet" href="{% static 'assets/css/home.css' %}" />
+    <!-- Link menu specific CSS -->
+    <link rel="stylesheet" href="{% static 'assets/css/menu.css' %}" />
+  </head>
+  <body>
+    <!-- Navigation -->
+
+    <!-- Main Menu Content -->
+    <div class="menu-page-container">
+      <h1>Shop by Category</h1>
+
+      <div class="category-grid">
+        {# Loop through categories passed from the view context #} {% for
+        category in categories %}
+        <a
+          href="{% url 'category' category.slug %}"
+          class="category-card"
+        >
+          {# Link to category detail page #}
+          <div class="category-card-image">
+            <img
+              src="{{ category.image.url|default:'#' }}"
+              alt="{{ category.name }}"
+            />
+          </div>
+          <div class="category-card-content">
+            <h3>{{ category.name }}</h3>
+            {# Optional: Display Subcategories #} {% if
+            category.subcategories.all %}
+            <ul class="subcategory-list">
+              {% for subcat in category.subcategories.all|slice:":3" %} {# Show
+              first 3 #}
+              <li>
+                <a href="{% url 'category' subcat.slug %}"
+                  >{{ subcat.name }}</a
+                >
+              </li>
+              {% endfor %} {% if category.subcategories.all|length > 3 %}
+              <li>
+                <a href="{% url 'category' category.slug %}">More...</a>
+              </li>
+              {% endif %}
+            </ul>
+            
+          </div>
+        </a>
+      
+        <p class="no-categories-message">No categories found.</p>
+       
+      </div>
+
+      {# Optional: Add other sections like featured promotions here #}
+      <!--
+        <section class="featured-section">
+            <h2>Featured Deals</h2>
+            ...
+        </section>
+        -->
+    </div>
+    <!-- End menu-page-container -->
+
+    <!-- Footer -->
+
+    {# Add any page-specific JS if needed #} {#
+    <script src="{% static 'assets/js/menu.js' %}"></script>
+    #}
+  </body>
+</html>

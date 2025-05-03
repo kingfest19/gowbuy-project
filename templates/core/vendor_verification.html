@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Vendor Verification" %} - {{ vendor.name }}{% endblock %}
+
+{% block extra_head %}
+{# Enhanced styles for form visibility and professional appearance #}
+<style>
+    #verificationForm .form-check {
+        margin-bottom: 2.5rem;  /* Doubled vertical spacing */
+        padding-left: 0;
+        display: flex;          /* Use Flexbox */
+        align-items: center;    /* Vertically center items */
+        min-height: 1.5rem;
+        font-size: 1rem;
+    }
+    #verificationForm .form-check-label {
+        color: #212529;
+        margin-left: 0;         /* Remove margin, rely on input's margin-right */
+        flex-grow: 1;           /* Allow label to take remaining space */
+        cursor: pointer; /* Indicate clickable label */
+    }
+    /* Common styles for both radio and checkbox */
+    #verificationForm .form-check-input {
+        width: 1.25em;
+        height: 1.25em;
+        margin-left: 0;         /* Align to the left */
+        margin-right: 0.6em;    /* Increased space between input and label */
+        border: 1px solid #ccc;
+        appearance: none;
+        -webkit-appearance: none;
+        outline: none;
+        cursor: pointer;
+        position: relative;     /* Change from absolute */
+        top: 0;                 /* Remove top adjustment, flex handles alignment */
+        background-color: #fff; /* Ensure background is white */
+        flex-shrink: 0; /* Prevent input from shrinking */
+    }
+    /* Specific style for radio buttons */
+    #verificationForm .form-check-input[type="radio"] {
+        border-radius: 50%; /* Make it round */
+    }
+    /* Specific style for checkboxes */
+    #verificationForm .form-check-input[type="checkbox"] {
+        border-radius: 50%; /* Make it round like radios */
+    }
+    /* Style the "checked" state of the radio button */
+    #verificationForm .form-check-input:checked {
+        background-color: #007bff; /* Highlight color when checked (Bootstrap primary) */
+        border-color: #007bff;
+        background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3ccircle cx='8' cy='8' r='3'/%3e%3c/svg%3e"); /* Custom check mark */
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    /* Removed specific background override for checked checkbox,
+       so it uses the circle SVG like the radios */
+</style>
+{% endblock extra_head %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="card-title mb-0">{% trans "Vendor Account Verification" %}</h2>
+                    <p class="card-subtitle">{% trans "Submit your documents for" %} {{ vendor.name }}</p>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <p class="mb-3 text-dark">{% trans "Please provide the necessary documentation to verify your vendor account. Select your registration type and upload the required documents." %}</p>
+
+                    <form method="post" enctype="multipart/form-data" id="verificationForm">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <p class="mb-0">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {# Registration Type Selection #}
+                        <div class="mb-4"> {# Increased bottom margin for the whole section #}
+                            <label class="form-label fw-bold">{{ form.registration_type.label }}</label>
+                            {% for radio in form.registration_type %}
+                            <div class="form-check">
+                                {{ radio.tag }}
+                                <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                            </div>
+                            {% endfor %}
+                            {% if form.registration_type.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.registration_type.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {# Conditional Fields #}
+                        <div id="businessFields" class="conditional-section mb-3" style="display: none;">
+                            <div class="mb-3"> {# Wrap each field for spacing #}
+                                <label for="{{ form.business_registration_doc.id_for_label }}" class="form-label">{{ form.business_registration_doc.label }}</label>
+                                {{ form.business_registration_doc }}
+                                {% if form.business_registration_doc.help_text %}<small class="form-text text-muted">{{ form.business_registration_doc.help_text }}</small>{% endif %}
+                                {% if form.business_registration_doc.errors %}<div class="invalid-feedback d-block">{% for error in form.business_registration_doc.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="mb-3"> {# Wrap each field for spacing #}
+                                <label for="{{ form.tax_id_number.id_for_label }}" class="form-label">{{ form.tax_id_number.label }}</label>
+                                {{ form.tax_id_number }}
+                                {% if form.tax_id_number.errors %}<div class="invalid-feedback d-block">{% for error in form.tax_id_number.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="mb-3"> {# Wrap each field for spacing #}
+                                <label for="{{ form.other_business_doc.id_for_label }}" class="form-label">{{ form.other_business_doc.label }}</label>
+                                {{ form.other_business_doc }}
+                                {% if form.other_business_doc.errors %}<div class="invalid-feedback d-block">{% for error in form.other_business_doc.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div id="individualFields" class="conditional-section mb-3" style="display: none;">
+                            {# Country Selection (Moved here) #}
+                            <div class="mb-4"> {# Use same margin as registration type #}
+                                <label for="{{ form.location_country.id_for_label }}" class="form-label fw-bold">{{ form.location_country.label }}</label>
+                                {{ form.location_country }} {# Renders the select dropdown #}
+                                {% if form.location_country.errors %}
+                                    <div class="invalid-feedback d-block">{% for error in form.location_country.errors %}{{ error }}{% endfor %}</div>
+                                {% endif %}
+                            </div>
+
+                            {# ID Fields #}
+                            <div class="mb-2">
+                                <label for="{{ form.national_id_type.id_for_label }}" class="form-label">{{ form.national_id_type.label }}</label>
+                                {{ form.national_id_type }}
+                                {% if form.national_id_type.errors %}<div class="invalid-feedback d-block">{% for error in form.national_id_type.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="mb-2">
+                                <label for="{{ form.national_id_number.id_for_label }}" class="form-label">{{ form.national_id_number.label }}</label>
+                                {{ form.national_id_number }}
+                                {% if form.national_id_number.errors %}<div class="invalid-feedback d-block">{% for error in form.national_id_number.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="mb-2">
+                                <label for="{{ form.national_id_doc.id_for_label }}" class="form-label">{{ form.national_id_doc.label }}</label>
+                                {{ form.national_id_doc }}
+                                {% if form.national_id_doc.help_text %}<small class="form-text text-muted">{{ form.national_id_doc.help_text }}</small>{% endif %}
+                                {% if form.national_id_doc.errors %}<div class="invalid-feedback d-block">{% for error in form.national_id_doc.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            {# Placeholder for Face Verification #}
+                            <div class="mt-4 p-3 border rounded bg-light text-center">
+                                <h6 class="text-muted">{% trans "Face Verification (Coming Soon)" %}</h6>
+                                <p class="small text-muted">{% trans "You will be prompted to complete face verification using your device camera after submitting your ID." %}</p>
+                                <button type="button" class="btn btn-secondary btn-sm disabled" aria-disabled="true"><i class="bi bi-camera me-1"></i> {% trans "Start Face Scan" %}</button>
+                            </div>
+                        </div>
+
+                        {# Terms Agreement #}
+                        <div class="mt-4 mb-4 form-check"> {# Increased bottom margin too #}
+                            {{ form.agree_to_terms }}
+                            <label class="form-check-label" for="{{ form.agree_to_terms.id_for_label }}">{{ form.agree_to_terms.label }}</label>
+                            {% if form.agree_to_terms.errors %}<div class="invalid-feedback d-block">{% for error in form.agree_to_terms.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100">{% trans "Submit Verification Documents" %}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const registrationTypeRadios = document.querySelectorAll('input[name="{{ form.registration_type.name }}"]');
+    const businessFields = document.getElementById('businessFields');
+    const individualFields = document.getElementById('individualFields');
+
+    function toggleFields() {
+        const selectedType = document.querySelector('input[name="{{ form.registration_type.name }}"]:checked');
+        if (selectedType) {
+            if (selectedType.value === 'business') {
+                businessFields.style.display = 'block';
+                individualFields.style.display = 'none';
+            } else if (selectedType.value === 'individual') {
+                businessFields.style.display = 'none';
+                individualFields.style.display = 'block';
+            } else {
+                businessFields.style.display = 'none';
+                individualFields.style.display = 'none';
+            }
+        } else {
+             businessFields.style.display = 'none';
+             individualFields.style.display = 'none';
+        }
+    }
+
+    registrationTypeRadios.forEach(radio => {
+        radio.addEventListener('change', toggleFields);
+    });
+
+    // Initial check in case the form is reloaded with a value selected (e.g., after validation error)
+    toggleFields();
+});
+</script>
+{% endblock %}

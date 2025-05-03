@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% load socialaccount %} {# <<< ADD THIS LINE TO LOAD SOCIAL TAGS #}
+
+{% block title %} Sign In {% endblock title %}
+
+{% block extra_css %}
+    {# Link the dedicated CSS file for this page #}
+    <link rel="stylesheet" href="{% static 'assets/css/signin.css' %}">
+    {# You might need styles from signup.css for the buttons if not already in signin.css #}
+    {# <link rel="stylesheet" href="{% static 'assets/css/signup.css' %}"> #}
+{% endblock extra_css %}
+
+{% block content %}
+  {# The message display block from base.html will appear *before* this content block #}
+
+  {# Added wrapper div with a specific class for easier CSS targeting #}
+  <div class="signin-page-container container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <h2>Sign In</h2>
+        <hr class="mb-4">
+
+        {# --- ADDED BLOCK FOR NON-FIELD ERRORS --- #}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {% for error in form.non_field_errors %}
+                    <p class="mb-0">{{ error }}</p> {# mb-0 if multiple errors #}
+                {% endfor %}
+            </div>
+        {% endif %}
+        {# --- END NON-FIELD ERROR BLOCK --- #}
+
+        {# Messages will be displayed above this point by base.html #}
+
+        <form method="post"> {# Removed class="form-group" #}
+          {% csrf_token %}
+
+          {# --- Render form using crispy tag --- #}
+          {{ form.as_p }}
+          {# --- END crispy tag --- #}
+
+          {# Optional: Add 'next' parameter if redirected here by @login_required #}
+          {% if request.GET.next %}
+              <input type="hidden" name="next" value="{{ request.GET.next }}">
+          {% endif %}
+
+          {# The submit button is often included by crispy, but we can keep it separate #}
+          {# Or you can configure crispy to add it via a FormHelper #}
+          <div class="d-grid gap-2 mt-3">
+            <button type="submit" class="btn btn-primary">Sign In</button>
+          </div>
+        </form>
+
+        {# --- START: Added Social Login Section --- #}
+        <div class="text-center mt-4">
+            <p class="mt-3 mb-2 text-muted">Or sign in with</p> {# Changed wording slightly #}
+
+            {# Social Buttons - using Bootstrap classes for basic styling #}
+            <div class="d-flex justify-content-center gap-2 mb-3">
+                {# --- Google Link --- #}
+                <a href="{% provider_login_url 'google' process='login' %}" class="btn btn-outline-secondary google"> {# Added process='login' #}
+                    <svg version="1.1" width="18" height="18" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 512 512" style="enable-background:new 0 0 512 512; vertical-align: text-bottom;" xml:space="preserve"><path style="fill:#FBBB00;" d="M113.47,309.408L95.648,375.94l-65.139,1.378C11.042,341.211,0,299.9,0,256 c0-42.451,10.324-82.483,28.624-117.732h0.014l57.992,10.632l25.404,57.644c-5.317,15.501-8.215,32.141-8.215,49.456 C103.821,274.792,107.225,292.797,113.47,309.408z"/><path style="fill:#518EF8;" d="M507.527,208.176C510.467,223.662,512,239.655,512,256c0,18.328-1.927,36.206-5.598,53.451 c-12.462,58.683-45.025,109.925-90.134,146.187l-0.014-0.014l-73.044-3.727l-10.338-64.535 c29.932-17.554,53.324-45.025,65.646-77.911h-136.89V208.176h138.887L507.527,208.176L507.527,208.176z"/><path style="fill:#28B446;" d="M416.253,455.624l0.014,0.014C372.396,490.901,316.666,512,256,512 c-97.491,0-182.252-54.491-225.491-134.681l82.961-67.91c21.619,57.698,77.278,98.771,142.53,98.771 c28.047,0,54.323-7.582,76.87-20.818L416.253,455.624z"/><path style="fill:#F14336;" d="M419.404,58.936l-82.933,67.896c-23.335-14.586-50.919-23.012-80.471-23.012 c-66.729,0-123.429,42.957-143.965,102.724l-83.397-68.276h-0.014C71.23,56.123,157.06,0,256,0 C318.115,0,375.068,22.126,419.404,58.936z"/></svg>
+                    Google
+                </a>
+                {# --- End Google Link --- #}
+
+                {# --- Apple Button (Placeholder) --- #}
+                {# <button class="btn btn-outline-secondary apple"> ... Apple ... </button> #}
+
+                {# --- Facebook Link --- #}
+                <a href="{% provider_login_url 'facebook' process='login' %}" class="btn btn-outline-secondary facebook"> {# Added process='login' #}
+                    <svg xmlns="http://www.w3.org/2000/svg" height="18" width="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-facebook" style="vertical-align: text-bottom;"><path d="M18 2h-3a4 4 0 0 0-4 4v3H8v4h3v8h4v-8h3l1-4h-4V6a1 1 0 0 1 1-1h3z"></path></svg>
+                    Facebook
+                </a>
+                {# --- End Facebook Link --- #}
+            </div>
+        </div>
+        {# --- END: Added Social Login Section --- #}
+
+        <div class="text-center mt-3"> {# Kept original links below social buttons #}
+          <p>Don't have an account? <a href="{% url 'signup' %}">Sign Up</a></p>
+          {# Link to password reset (uses django-allauth URL name) #}
+          <p><a href="{% url 'account_reset_password' %}" class="forgot-password-link">Forgot Password?</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock content %}

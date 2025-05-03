@@ -1,0 +1,20 @@
+{# Reusable template partial to render form fields with Bootstrap styling #}
+{% for field in form %}
+    {% if field.widget_type == 'checkbox' %}
+        {# Handling for CheckboxInput #}
+        <div class="mb-3 form-check">
+            {{ field }}
+            <label class="form-check-label" for="{{ field.auto_id }}">{{ field.label }}</label>
+            {% if field.help_text %}<small class="form-text text-muted d-block">{{ field.help_text }}</small>{% endif %}
+            {% if field.errors %}<div class="invalid-feedback d-block">{% for error in field.errors %}{{ error }}{% endfor %}</div>{% endif %}
+        </div>
+    {% else %}
+        {# Default handling for other fields #}
+        <div class="mb-3">
+            <label for="{{ field.auto_id }}" class="form-label">{{ field.label }}</label>
+            {{ field }} {# Render the field with its widget #}
+            {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
+            {% if field.errors %}<div class="invalid-feedback d-block">{% for error in field.errors %}{{ error }}{% endfor %}</div>{% endif %}
+        </div>
+    {% endif %}
+{% endfor %}

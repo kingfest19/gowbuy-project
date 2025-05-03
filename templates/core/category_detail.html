@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{{ category.name }} - NEXUS{% endblock title %}
+
+{% block extra_css %}
+    {# Add any specific CSS for category pages if needed #}
+    <link rel="stylesheet" href="{% static 'assets/css/category_page.css' %}"> {# Example CSS link #}
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'core:home' %}">{% trans "Home" %}</a></li>
+            {# TODO: Add parent category breadcrumbs if applicable #}
+            <li class="breadcrumb-item active" aria-current="page">{{ category.name }}</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">{{ category.name }}</h1>
+    <p>{{ category.description|safe }}</p>
+
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        {% include 'partials/product_grid.html' with products_list=products %} {# Use the partial #}
+    </div>
+
+</div>
+{% endblock content %}

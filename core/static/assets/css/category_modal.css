@@ -1,0 +1,20 @@
+/* Styles for the Category Modal (#navBottomModal) */
+
+#navBottomModal .modal-body ul {
+    padding-left: 0; /* Remove default padding */
+}
+
+#navBottomModal .modal-body li {
+    margin-bottom: 0.75rem; /* Add some space between category links */
+}
+
+#navBottomModal .modal-body li a {
+    text-decoration: none;
+    color: #333; /* Dark grey color for links */
+    font-size: 1.1rem; /* Slightly larger font */
+    transition: color 0.2s ease-in-out;
+}
+
+#navBottomModal .modal-body li a:hover {
+    color: #FF5733; /* Change color on hover - use your site's brand color */
+}

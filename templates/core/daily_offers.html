@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Daily Offers" %} - NEXUS{% endblock title %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'core:home' %}">{% trans "Home" %}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{% trans "Daily Offers" %}</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">{% trans "Today's Offers" %}</h1>
+
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        {% include 'partials/product_grid.html' with products_list=offer_products %} {# Use the partial with offer_products #}
+    </div>
+</div>
+{% endblock content %}

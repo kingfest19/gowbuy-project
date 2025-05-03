@@ -1,0 +1,657 @@
+/* Add to cart.css or create checkout.css */
+
+/* --- Google Fonts Import --- */
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap");
+
+/* --- CSS Variables (Theme Configuration) --- */
+:root {
+    --font-primary: "Outfit", sans-serif;
+    --font-secondary: "Poppins", sans-serif;
+
+    --color-primary: #007bff;
+    /* Example primary color */
+    --color-secondary: #232f3e;
+    /* Dark blue-grey */
+    --color-accent: #ff9900;
+    /* Example accent (like Amazon orange) */
+    --color-text-base: #212529;
+    /* Dark grey for text */
+    --color-text-muted: #6c757d;
+    /* Lighter grey */
+    --color-text-light: #ffffff;
+    --color-background-light: #ffffff;
+    --color-background-medium: #f8f9fa;
+    /* Light grey */
+    --color-background-dark: var(--color-secondary);
+    --color-border: #dee2e6;
+    /* Light border */
+    --color-border-dark: #495057;
+    --color-success: #28a745;
+    --color-danger: #dc3545;
+    --color-warning: #ffc107;
+
+    --border-radius-sm: 0.2rem;
+    --border-radius-md: 0.375rem;
+    --border-radius-lg: 0.5rem;
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.1), 0 3px 6px rgba(0, 0, 0, 0.07);
+
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+
+    --transition-speed-fast: 0.15s;
+    --transition-speed-normal: 0.3s;
+    --transition-timing: ease-in-out;
+}
+
+/* --- General Resets and Base Styles --- */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-primary);
+    background-color: var(--color-background-medium);
+    color: var(--color-text-base);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+    text-decoration: none;
+    color: var(--color-primary);
+    transition: color var(--transition-speed-fast) var(--transition-timing);
+}
+
+a:hover {
+    color: darken(var(--color-primary), 10%);
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    /* Remove bottom space */
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-secondary);
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-text-base);
+}
+
+/* Accessibility: Improve focus outline */
+:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    /* Optional glow */
+    border-radius: var(--border-radius-sm);
+    /* Match element's radius */
+}
+
+/* Remove default outline when :focus-visible is supported */
+*:focus:not(:focus-visible) {
+    outline: none;
+}
+
+
+
+/* --- Checkout Page Layout --- */
+.checkout-page-container {
+    max-width: 1200px;
+    margin: var(--spacing-xl, 2rem) auto;
+    padding: 0 var(--spacing-md, 1rem);
+}
+
+.checkout-main {
+    display: flex;
+    flex-wrap: wrap;
+    /* Allow wrapping */
+    gap: var(--spacing-lg, 1.5rem);
+}
+
+/* --- Left Column (Forms) --- */
+.checkout-left {
+    flex: 2;
+    /* Slightly more space than summary */
+    min-width: 320px;
+}
+
+.checkout-section {
+    background-color: var(--color-background-light, #fff);
+    padding: var(--spacing-lg, 1.5rem);
+    border-radius: var(--border-radius-lg, 0.5rem);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border, #dee2e6);
+    margin-bottom: var(--spacing-lg, 1.5rem);
+}
+
+.checkout-section h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--color-text-base, #212529);
+    margin-bottom: var(--spacing-md, 1rem);
+    border-bottom: 1px solid var(--color-border, #dee2e6);
+    padding-bottom: var(--spacing-sm, 0.5rem);
+    font-family: var(--font-secondary, "Poppins", sans-serif);
+}
+
+/* Form Grid Layout */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    /* Responsive columns */
+    gap: var(--spacing-md, 1rem);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+    /* Span full width */
+}
+
+.form-group label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--color-text-base, #212529);
+    margin-bottom: var(--spacing-xs, 0.25rem);
+}
+
+/* Reusing input styles from signup.css concept */
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="tel"],
+.form-group select {
+    width: 100%;
+    padding: 0.7rem var(--spacing-sm, 0.5rem);
+    border: 1px solid var(--color-border, #dee2e6);
+    border-radius: var(--border-radius-md, 0.375rem);
+    font-size: 0.95rem;
+    color: var(--color-text-base, #212529);
+    background-color: var(--color-background-light, #fff);
+    transition: border-color var(--transition-speed, 0.2s) var(--transition-timing, ease-in-out),
+        box-shadow var(--transition-speed, 0.2s) var(--transition-timing, ease-in-out);
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--color-primary, #007bff);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+    /* Use primary color glow */
+}
+
+.form-group select {
+    appearance: none;
+    /* For custom dropdown arrow if desired */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E");
+    /* Basic dropdown arrow */
+    background-repeat: no-repeat;
+    background-position: right var(--spacing-sm, 0.5rem) center;
+    background-size: 1em;
+    padding-right: calc(var(--spacing-sm, 0.5rem) * 2.5);
+    /* Space for arrow */
+}
+
+/* Checkbox Styling */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs, 0.25rem);
+    margin-bottom: var(--spacing-md, 1rem);
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 1em;
+    height: 1em;
+    cursor: pointer;
+}
+
+.checkbox-group label {
+    margin-bottom: 0;
+    /* Reset margin */
+    font-weight: 400;
+    font-size: 0.9rem;
+    color: var(--color-text-muted, #6c757d);
+}
+
+/* Payment Method Styling */
+.payment-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm, 0.5rem);
+    margin-bottom: var(--spacing-md, 1rem);
+}
+
+.payment-option {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm, 0.5rem);
+    padding: var(--spacing-sm, 0.5rem);
+    border: 1px solid var(--color-border, #dee2e6);
+    border-radius: var(--border-radius-md, 0.375rem);
+    cursor: pointer;
+}
+
+.payment-option input[type="radio"] {
+    cursor: pointer;
+}
+
+.payment-option label {
+    margin-bottom: 0;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.payment-option img {
+    /* For payment logos */
+    height: 24px;
+    width: auto;
+}
+
+.payment-details {
+    /* Container for card details, initially hidden */
+    border: 1px solid var(--color-border, #dee2e6);
+    border-radius: var(--border-radius-md, 0.375rem);
+    padding: var(--spacing-md, 1rem);
+    margin-top: var(--spacing-sm, 0.5rem);
+    background-color: var(--color-background-medium, #f8f9fa);
+}
+
+/* Simple hide/show - JS needed for real interaction */
+.payment-details.hidden {
+    display: none;
+}
+
+/* --- Right Column (Order Summary) --- */
+.checkout-right {
+    flex: 1;
+    min-width: 280px;
+    position: sticky;
+    top: calc(100px + var(--spacing-lg, 1.5rem));
+    /* Adjust based on nav height */
+    align-self: flex-start;
+    height: fit-content;
+}
+
+.order-summary {
+    /* Reuse cart-summary styling */
+    background-color: var(--color-background-light, #fff);
+    padding: var(--spacing-lg, 1.5rem);
+    border-radius: var(--border-radius-lg, 0.5rem);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border, #dee2e6);
+}
+
+.order-summary h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--color-text-base, #212529);
+    margin-bottom: var(--spacing-md, 1rem);
+    border-bottom: 1px solid var(--color-border, #dee2e6);
+    padding-bottom: var(--spacing-sm, 0.5rem);
+    font-family: var(--font-secondary, "Poppins", sans-serif);
+}
+
+/* Order Items List */
+.summary-items-list {
+    max-height: 300px;
+    /* Limit height and make scrollable */
+    overflow-y: auto;
+    margin-bottom: var(--spacing-md, 1rem);
+    padding-right: var(--spacing-xs, 0.25rem);
+    /* Space for scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border, #dee2e6) var(--color-background-medium, #f8f9fa);
+}
+
+.summary-items-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.summary-items-list::-webkit-scrollbar-track {
+    background: var(--color-background-medium, #f8f9fa);
+    border-radius: 3px;
+}
+
+.summary-items-list::-webkit-scrollbar-thumb {
+    background-color: var(--color-border-dark, #495057);
+    border-radius: 3px;
+}
+
+.summary-order-item {
+    display: flex;
+    gap: var(--spacing-sm, 0.5rem);
+    margin-bottom: var(--spacing-sm, 0.5rem);
+    padding-bottom: var(--spacing-sm, 0.5rem);
+    border-bottom: 1px solid var(--color-border, #dee2e6);
+    font-size: 0.9rem;
+}
+
+.summary-order-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.summary-order-item img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    border-radius: var(--border-radius-sm, 0.2rem);
+    flex-shrink: 0;
+    background-color: var(--color-background-medium, #f8f9fa);
+}
+
+.summary-item-details {
+    flex-grow: 1;
+}
+
+.summary-item-details .name {
+    font-weight: 500;
+    line-height: 1.3;
+    margin-bottom: var(--spacing-xs, 0.25rem);
+    /* Optional: Truncate long names */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.summary-item-details .qty {
+    color: var(--color-text-muted, #6c757d);
+    font-size: 0.85rem;
+}
+
+.summary-item-price {
+    font-weight: 500;
+    text-align: right;
+    white-space: nowrap;
+    /* Prevent price wrapping */
+}
+
+/* Totals Section (reuse cart summary styles) */
+.summary-item {
+    /* From cart.css */
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm, 0.5rem);
+    font-size: 0.95rem;
+}
+
+.summary-item span:first-child {
+    color: var(--color-text-muted, #6c757d);
+}
+
+.summary-item span:last-child {
+    font-weight: 500;
+    color: var(--color-text-base, #212529);
+}
+
+.order-summary hr {
+    /* From cart.css */
+    border: none;
+    border-top: 1px solid var(--color-border, #dee2e6);
+    margin: var(--spacing-md, 1rem) 0;
+}
+
+.summary-total {
+    /* From cart.css */
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--color-text-base, #212529);
+    margin-top: var(--spacing-sm, 0.5rem);
+    /* Add space above total */
+    margin-bottom: var(--spacing-lg, 1.5rem);
+}
+
+/* Place Order Button */
+.place-order-button {
+    /* Reuse checkout-button styling */
+    width: 100%;
+    padding: 0.8rem var(--spacing-md, 1rem);
+    background-color: var(--color-primary, #007bff);
+    color: var(--color-text-light, #fff);
+    border: none;
+    border-radius: var(--border-radius-md, 0.375rem);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out),
+        transform var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out);
+    text-align: center;
+}
+
+.place-order-button:hover {
+    background-color: var(--color-primary-dark, #0056b3);
+    transform: translateY(-2px);
+}
+
+.place-order-button:active {
+    transform: translateY(0);
+}
+
+.place-order-button:disabled {
+    background-color: var(--color-text-muted, #6c757d);
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 992px) {
+    .checkout-right {
+        /* Adjust sticky top if needed */
+    }
+}
+
+@media (max-width: 768px) {
+    .checkout-main {
+        flex-direction: column-reverse;
+        /* Show summary below forms on mobile */
+    }
+
+    .checkout-right {
+        position: static;
+        width: 100%;
+        top: auto;
+    }
+
+    .summary-items-list {
+        max-height: none;
+        /* Remove height limit on mobile */
+    }
+}
+
+@media (max-width: 480px) {
+
+    .checkout-section,
+    .order-summary {
+        padding: var(--spacing-md, 0.8rem);
+    }
+
+    .checkout-section h2,
+    .order-summary h2 {
+        font-size: 1.2rem;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+        /* Stack all fields */
+        gap: var(--spacing-sm, 0.4rem);
+    }
+
+    .form-group input,
+    .form-group select {
+        font-size: 0.9rem;
+        padding: 0.65rem var(--spacing-sm, 0.4rem);
+    }
+
+    .summary-order-item {
+        font-size: 0.85rem;
+    }
+
+    .summary-order-item img {
+        width: 40px;
+        height: 40px;
+    }
+
+    .summary-item,
+    .summary-total {
+        font-size: 0.9rem;
+    }
+
+    .summary-total {
+        font-size: 1.05rem;
+    }
+
+    .place-order-button {
+        font-size: 0.95rem;
+        padding: 0.7rem;
+    }
+}
+
+/* --- Footer --- */
+footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--color-background-dark);
+    color: #ccc;
+    /* Lighter base text */
+    padding: var(--spacing-xl) var(--spacing-md) var(--spacing-md) var(--spacing-md);
+    margin-top: var(--spacing-xl);
+    border-top: 5px solid var(--color-border-dark);
+}
+
+footer .footer-logo img {
+    width: 100px;
+    margin-bottom: var(--spacing-lg);
+    filter: brightness(0) invert(0.9);
+    /* Make logo light grey */
+    opacity: 0.9;
+    transition: opacity var(--transition-speed-normal) var(--transition-timing);
+}
+
+footer .footer-logo:hover img {
+    opacity: 1;
+}
+
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--spacing-lg) var(--spacing-xl);
+    /* Row and column gap */
+    width: 100%;
+    max-width: 1100px;
+    /* Wider max-width */
+    margin-bottom: var(--spacing-xl);
+    text-align: left;
+    /* Align text left in columns */
+}
+
+.footer-column {
+    flex: 1;
+    min-width: 180px;
+    /* Wider min-width */
+}
+
+.footer-column h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-light);
+    margin-bottom: var(--spacing-md);
+    position: relative;
+    padding-bottom: var(--spacing-xs);
+}
+
+/* Underline effect for headings */
+.footer-column h4::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 30px;
+    /* Short underline */
+    height: 2px;
+    background-color: var(--color-accent);
+}
+
+.footer-column ul {
+    list-style: none;
+    padding: 0;
+}
+
+.footer-column ul li {
+    margin-bottom: var(--spacing-sm);
+}
+
+.footer-column ul li a {
+    color: #ccc;
+    /* Inherit footer base color */
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: color var(--transition-speed-fast) var(--transition-timing),
+        padding-left var(--transition-speed-fast) var(--transition-timing);
+}
+
+.footer-column ul li a:hover {
+    color: var(--color-text-light);
+    padding-left: var(--spacing-xs);
+    /* Indent slightly on hover */
+    text-decoration: underline;
+    /* Add underline on hover */
+}
+
+.footer-bottom {
+    border-top: 1px solid var(--color-border-dark);
+    padding-top: var(--spacing-lg);
+    width: 100%;
+    max-width: 1100px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #aaa;
+}
+
+.footer-bottom p {
+    margin-bottom: var(--spacing-xs);
+}
+
+.footer-bottom a {
+    color: #bbb;
+    /* Slightly brighter link */
+    text-decoration: none;
+    transition: color var(--transition-speed-fast) var(--transition-timing);
+}
+
+.footer-bottom a:hover {
+    color: var(--color-text-light);
+    text-decoration: underline;
+}

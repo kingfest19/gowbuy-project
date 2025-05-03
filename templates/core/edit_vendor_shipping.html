@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Edit Shipping Information" %} - {{ vendor.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="card-title mb-0">{% trans "Edit Shipping Information" %}</h2>
+                    <p class="card-subtitle">{% trans "Update details for" %} {{ vendor.name }}</p>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <p class="mb-0">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.shipping_policy.id_for_label }}" class="form-label">{{ form.shipping_policy.label }}</label>
+                            {{ form.shipping_policy }}
+                            {% if form.shipping_policy.errors %}<div class="invalid-feedback d-block">{% for error in form.shipping_policy.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100">{% trans "Save Shipping Information" %}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

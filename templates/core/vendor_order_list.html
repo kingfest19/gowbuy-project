@@ -1,0 +1,12 @@
+--- a/c:\Users\Hp\Desktop\Nexus\templates\core\vendor_dashboard.html
++++ b/c:\Users\Hp\Desktop\Nexus\templates\core\vendor_dashboard.html
+@@ -42,7 +42,7 @@
+                 <a class="nav-link active" href="{% url 'core:vendor_dashboard' %}">📊 {% trans "Overview" %}</a>
+                 {# TODO: Add links to other dashboard sections #}
+                 <a class="nav-link" href="{% url 'core:vendor_product_list' %}">📦 {% trans "Products" %}</a> {# <<< Updated Link #}
+-                <a class="nav-link" href="#">🧾 {% trans "Orders" %}</a>
++                <a class="nav-link" href="{% url 'core:vendor_order_list' %}">🧾 {% trans "Orders" %}</a> {# <<< Updated Link #}
+                 {# --- Split Profile and Verification Links --- #}
+                 <a class="nav-link" href="{% url 'core:edit_vendor_profile' %}">✏️ {% trans "Edit Profile" %}</a>
+                 <a class="nav-link" href="{% url 'core:vendor_verification' %}">✅ {% trans "Verification" %}</a>
+

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Search Results for "{{ query }}" - NEXUS{% endblock title %}
+
+{% block extra_css %}
+    {# Add specific styles if needed, or reuse product card styles #}
+   
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container search-results-container">
+    <div class="search-results-header">
+        <h1>Search Results</h1>
+        {% if query %}
+            <p class="lead">Showing results for: <strong>"{{ query }}"</strong></p>
+        {% else %}
+            <p class="text-muted">Please enter a search term.</p>
+        {% endif %}
+    </div>
+
+    {% if results %}
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+            {% for product in results %}
+                {% include 'core/partials/product_card.html' with product=product %} {# <<< Use the partial here #}
+            {% endfor %}
+        </div>
+    {% elif query %}
+        <p>No products found matching your search criteria.</p>
+    {% endif %}
+</div>
+{% endblock content %}

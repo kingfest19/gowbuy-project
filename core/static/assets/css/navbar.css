@@ -1,0 +1,483 @@
+/* --- Navbar CSS Rules --- */
+/* Assumes :root variables from home.css are available */
+
+/* --- Main Navigation Bar (<nav>) --- */
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--color-background-light, #fff);
+    padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+    color: var(--color-text-base, #212529);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03));
+    flex-wrap: wrap;
+    /* Allow wrapping */
+    gap: var(--spacing-sm, 0.5rem);
+    /* Gap between wrapped items */
+    position: sticky;
+    /* Make nav sticky */
+    top: 0;
+    z-index: 1000;
+    /* Ensure it's above other content */
+}
+
+/* --- Logo --- */
+.nav-logo {
+    /* Class added to the <a> tag around the logo */
+    display: inline-block;
+    /* Or block if preferred */
+    line-height: 0;
+    /* Prevent extra space */
+}
+
+.nav-logo img {
+    width: 100px;
+    transition: transform var(--transition-speed-normal, 0.3s) var(--transition-timing, ease-in-out);
+    display: block;
+    /* Ensure block display */
+}
+
+.nav-logo:hover img {
+    transform: scale(1.05);
+}
+
+/* --- Country/Location Selector --- */
+.nav-country {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs, 0.25rem);
+    font-size: 0.85rem;
+    color: var(--color-text-muted, #6c757d);
+    padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+    border-radius: var(--border-radius-md, 0.375rem);
+    transition: background-color var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out);
+    cursor: pointer;
+    /* Indicate interactivity */
+}
+
+.nav-country:hover {
+    background-color: var(--color-background-medium, #f8f9fa);
+}
+
+.nav-country h1 {
+    font-size: 0.9rem;
+    margin: 0;
+    color: var(--color-text-base, #212529);
+    font-weight: 500;
+}
+
+.nav-country img {
+    height: 20px;
+    width: auto;
+    opacity: 0.8;
+    flex-shrink: 0;
+    /* Prevent icon shrinking */
+}
+
+/* --- Search Bar --- */
+.InputContainer {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    background-color: var(--color-background-light, #fff);
+    border-radius: var(--border-radius-md, 0.375rem);
+    overflow: hidden;
+    border: 1px solid var(--color-border, #dee2e6);
+    flex-grow: 1;
+    /* Allow search to take available space */
+    min-width: 250px;
+    /* Minimum width */
+    max-width: 600px;
+    /* Maximum width */
+    margin: 0 var(--spacing-md, 1rem);
+    /* Add some horizontal margin */
+    transition: border-color var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out),
+        box-shadow var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out);
+}
+
+.InputContainer:focus-within {
+    border-color: var(--color-primary, #007bff);
+    /* Use theme primary */
+    box-shadow: 0 0 0 3px rgba(32, 201, 151, 0.15);
+    /* Use theme primary glow (adjust color if needed) */
+}
+
+.input {
+    /* Search input field */
+    flex-grow: 1;
+    height: 100%;
+    border: none;
+    outline: none;
+    font-size: 0.95em;
+    padding: 0 var(--spacing-sm, 0.5rem);
+    background-color: transparent;
+    color: var(--color-text-base, #212529);
+    font-family: var(--font-primary);
+    /* Ensure font consistency */
+}
+
+.input::placeholder {
+    color: var(--color-text-muted, #6c757d);
+    opacity: 0.8;
+}
+
+.labelforsearch {
+    /* Search icon container */
+    cursor: text;
+    padding: 0 var(--spacing-sm, 0.5rem);
+    display: flex;
+    align-items: center;
+    color: var(--color-text-muted, #6c757d);
+}
+
+.searchIcon {
+    width: 16px;
+    height: 16px;
+}
+
+.searchIcon path {
+    fill: currentColor;
+}
+
+.border {
+    /* Separator inside search */
+    height: 60%;
+    width: 1px;
+    background-color: var(--color-border, #dee2e6);
+    margin: 0 var(--spacing-sm, 0.5rem);
+}
+
+.micButton {
+    /* Microphone button */
+    padding: 0 var(--spacing-sm, 0.5rem);
+    border: none;
+    background-color: transparent;
+    height: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    color: var(--color-accent, #f1c40f);
+    /* Use theme accent */
+    transition: background-color var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out);
+}
+
+.micIcon {
+    width: 15px;
+    height: 15px;
+}
+
+.micIcon path {
+    fill: currentColor;
+}
+
+.micButton:hover {
+    background-color: rgba(241, 196, 15, 0.1);
+    /* Use theme accent hover */
+}
+
+/* --- Other Nav Items (Language, Account, Orders, Cart) --- */
+.nav-language,
+.nav-text,
+.nav-cart {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+    border-radius: var(--border-radius-md, 0.375rem);
+    transition: background-color var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out);
+    cursor: pointer;
+    text-decoration: none;
+    /* Ensure links look right */
+    color: var(--color-text-base, #212529);
+    /* Base text color */
+}
+
+.nav-language:hover,
+.nav-text:hover,
+.nav-cart:hover {
+    background-color: var(--color-background-medium, #f8f9fa);
+}
+
+/* Language Selector */
+.nav-language {
+    gap: var(--spacing-xs, 0.25rem);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.nav-language img {
+    width: 25px;
+    flex-shrink: 0;
+}
+
+.nav-language .dropdown-icon {
+    width: 8px;
+    opacity: 0.7;
+    margin-left: 2px;
+    flex-shrink: 0;
+}
+
+/* Account & Orders Text Blocks */
+.nav-text {
+    margin: 0 var(--spacing-xs, 0.25rem);
+    /* Reduced margin */
+    line-height: 1.2;
+    flex-direction: column;
+    /* Stack text */
+    align-items: flex-start;
+    /* Align left */
+}
+
+.nav-text p {
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #6c757d);
+    margin-bottom: 2px;
+}
+
+.nav-text p a {
+    /* Link within the small text */
+    color: inherit;
+    text-decoration: none;
+}
+
+.nav-text p a:hover {
+    color: var(--color-primary, #007bff);
+    /* Use theme primary */
+    text-decoration: underline;
+}
+
+.nav-text h1 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--color-text-base, #212529);
+}
+
+.nav-text h1 a {
+    /* Link within the main text (e.g., & Orders) */
+    color: inherit;
+    text-decoration: none;
+}
+
+.nav-text .dropdown-icon {
+    width: 8px;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+/* Cart Link */
+.nav-cart {
+    gap: var(--spacing-xs, 0.25rem);
+}
+
+.nav-cart img {
+    width: 30px;
+    /* Adjust size as needed */
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.nav-cart h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-top: 2px;
+    /* Align better with icon */
+    white-space: nowrap;
+    /* Prevent text wrapping */
+}
+
+.nav-cart .cart-item-count {
+    /* Style the item count */
+    font-weight: bold;
+    color: var(--color-accent, #f1c40f);
+    /* Use accent color */
+    margin-left: 2px;
+}
+
+/* --- Bottom Navigation Bar (.nav-bottom) --- */
+.nav-bottom {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm, 0.5rem) var(--spacing-lg, 1.5rem);
+    /* Row and column gap */
+    padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+    background: var(--color-background-dark, #2c3e50);
+    /* Use theme secondary */
+    color: var(--color-text-light, #fff);
+    font-size: 0.9rem;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    /* Subtle inner shadow */
+}
+
+/* Common style for links/items in bottom nav */
+.nav-bottom div,
+/* Container for menu item */
+.nav-bottom p,
+/* Text-only items */
+.nav-bottom a {
+    /* Links within text items */
+    color: var(--color-text-light, #fff);
+    text-decoration: none;
+    font-weight: 500;
+    padding: var(--spacing-xs, 0.25rem) 0;
+    /* Vertical padding for touch targets */
+    position: relative;
+    /* For pseudo-element underline */
+    transition: color var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out);
+    cursor: pointer;
+}
+
+/* Underline hover effect */
+.nav-bottom div::after,
+.nav-bottom p::after,
+.nav-bottom a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--color-accent, #f1c40f);
+    /* Use theme accent */
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--transition-speed-normal, 0.3s) var(--transition-timing, ease-in-out);
+}
+
+.nav-bottom div:hover::after,
+.nav-bottom p:hover::after,
+.nav-bottom a:hover::after {
+    transform: scaleX(1);
+}
+
+.nav-bottom div:hover,
+.nav-bottom p:hover,
+.nav-bottom a:hover {
+    color: var(--color-text-light, #fff);
+    /* Keep text white on hover */
+}
+
+/* Specific style for the Menu item */
+.nav-bottom div {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs, 0.25rem);
+}
+
+.nav-bottom div img {
+    width: 20px;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+
+/* --- Navigation Responsive Adjustments --- */
+/* (These should be placed within the corresponding media query blocks in home.css) */
+
+/* Medium Devices (~992px and down) */
+@media only screen and (max-width: 992px) {
+    nav {
+        justify-content: space-around;
+        gap: var(--spacing-xs);
+    }
+
+    .InputContainer {
+        max-width: 450px;
+        margin: var(--spacing-sm, 0.5rem) auto;
+        order: 3;
+        width: calc(100% - var(--spacing-md, 0.8rem) * 2);
+    }
+
+    .nav-country,
+    .nav-language {
+        display: none;
+    }
+}
+
+/* Small Devices (~768px and down) */
+@media only screen and (max-width: 768px) {
+    nav {
+        padding: var(--spacing-sm, 0.8rem);
+        /* Use potentially reduced variable */
+    }
+
+    .InputContainer {
+        order: 1;
+        margin: var(--spacing-xs, 0.4rem) 0 var(--spacing-sm, 0.8rem) 0;
+        min-width: 200px;
+    }
+
+    .nav-logo {
+        order: 0;
+    }
+
+    .nav-text {
+        order: 2;
+        margin: 0 var(--spacing-xs, 0.4rem);
+    }
+
+    .nav-cart {
+        order: 3;
+    }
+
+    .nav-bottom {
+        font-size: 0.85rem;
+        gap: var(--spacing-sm, 0.8rem) var(--spacing-md, 1.2rem);
+        /* Use potentially reduced variables */
+        padding: var(--spacing-sm, 0.8rem);
+        justify-content: center;
+    }
+
+    .nav-bottom p {
+        display: none;
+    }
+
+    .nav-bottom div:not(:first-child) {
+        display: none;
+    }
+
+    .nav-bottom div {
+        gap: var(--spacing-xs, 0.4rem);
+    }
+}
+
+/* Extra Small Devices (~576px and down) */
+@media only screen and (max-width: 576px) {
+    nav {
+        gap: var(--spacing-xs, 0.2rem);
+    }
+
+    .nav-logo img {
+        width: 80px;
+    }
+
+    .InputContainer {
+        height: 36px;
+    }
+
+    .input {
+        font-size: 0.9em;
+    }
+
+    .nav-text {
+        display: none;
+    }
+
+    .nav-cart h4 {
+        display: none;
+    }
+
+    .nav-cart img {
+        width: 28px;
+    }
+
+    .nav-bottom {
+        padding: var(--spacing-sm, 0.4rem);
+    }
+
+    .nav-bottom div img {
+        width: 20px;
+    }
+}
