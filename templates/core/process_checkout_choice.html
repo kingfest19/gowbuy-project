@@ -1,0 +1,63 @@
+{% extends "core/base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Choose Payment Method" %} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .payment-choice-card {
+        max-width: 600px;
+        margin: 2rem auto;
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+    }
+    .payment-choice-card .card-header {
+        background-color: rgb(52, 73, 94); /* Primary Dark Blue-Grey */
+        color: white;
+    }
+    .payment-choice-card .btn-primary {
+        background-color: rgb(26, 188, 156); /* Accent Teal */
+        border-color: rgb(26, 188, 156);
+    }
+    .payment-choice-card .btn-primary:hover {
+        background-color: rgb(20, 150, 120);
+        border-color: rgb(20, 150, 120);
+    }
+    .form-check-label {
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card payment-choice-card">
+        <div class="card-header">
+            <h4 class="mb-0">{% trans "Confirm Your Payment Method" %}</h4>
+        </div>
+        <div class="card-body">
+            {% if order %}
+                <p class="lead">{% trans "Order ID" %}: <strong>{{ order.order_id }}</strong></p>
+                <p class="mb-3">{% trans "Your order total is" %} <strong class="text-success fs-5">GH₵{{ order.total_amount|floatformat:2 }}</strong>.</p>
+                <p>{% trans "Please select your preferred payment method below." %}</p>
+                
+                <form method="post" action="{% url 'core:process_checkout_choice' %}">
+                    {% csrf_token %}
+                    {% for value, name in available_payment_methods %}
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="payment_method" id="payment_{{ value }}" value="{{ value }}" 
+                                   {% if current_payment_method == value or (not current_payment_method and forloop.first) %}checked{% endif %} required>
+                            <label class="form-check-label" for="payment_{{ value }}">
+                                {{ name }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary w-100 mt-3">{% trans "Continue to Payment" %}</button>
+                </form>
+            {% else %}
+                <p class="text-danger">{% trans "No active order found to process." %}</p>
+                <a href="{% url 'core:home' %}" class="btn btn-secondary">{% trans "Return to Homepage" %}</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

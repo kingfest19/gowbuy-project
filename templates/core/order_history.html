@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+
+{% block title %}{% trans "Your Orders" %}{% endblock title %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'assets/css/order_history.css' %}" />
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container my-4">
+  <h1 class="mb-4 section-title">{% trans "Your Orders" %}</h1>
+  <div class="order-list">
+    {% if orders %}
+        {% for order in orders %}
+            <div class="card order-card mb-4 shadow-sm">
+                <div class="card-header order-header d-flex flex-wrap justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted">{% trans "ORDER PLACED" %}</small><br />
+                        {{ order.created_at|date:"M d, Y" }}
+                    </div>
+                    <div>
+                        <small class="text-muted">{% trans "TOTAL" %}</small><br />
+                        GH₵{{ order.total_amount|floatformat:2|intcomma }}
+                    </div>
+                    <div>
+                        <small class="text-muted">{% trans "ORDER #" %}</small><br />
+                        {{ order.order_id }} {# This displays the correct string ID #}
+                    </div>
+                    <div class="order-header-actions">
+                        {# THIS IS THE CRUCIAL PART FOR THE LINK #}
+                        {# It should use order.order_id (the string) for the order_id parameter #}
+                        <a href="{% url 'core:order_detail' order_id=order.order_id %}" class="btn btn-sm btn-outline-primary">{% trans "View Details" %}</a>
+                        {# Alternatively, if get_absolute_url is correctly defined on Order model: #}
+                        {# <a href="{{ order.get_absolute_url }}" class="btn btn-sm btn-outline-primary">{% trans "View Details" %}</a> #}
+                    </div>
+                </div>
+                <div class="card-body order-body">
+                    {# ... rest of your item display logic ... #}
+                    {% for item in order.items.all %}
+                        <div class="order-item d-flex align-items-center mb-3 {% if not forloop.last %}pb-3 border-bottom{% endif %}">
+                            <div class="item-image me-3">
+                                {% if item.product and item.product.images.first %}
+                                    <img src="{{ item.product.images.first.image.url }}" alt="{{ item.product.name }}" width="80" />
+                                {% elif item.service_package and item.service_package.service.images.first %}
+                                    <img src="{{ item.service_package.service.images.first.image.url }}" alt="{{ item.service_package.name }}" width="80" />
+                                {% else %}
+                                     <img src="{% static 'assets/img/placeholder.png' %}" alt="Placeholder" width="80" />
+                                {% endif %}
+                            </div>
+                            <div class="item-details flex-grow-1">
+                                {% if item.product %}
+                                <h6 class="mb-1">{{ item.product.name|default:item.product_name|default:"[Product Unavailable]" }}</h6>
+                                {% elif item.service_package %}
+                                <h6 class="mb-1">{{ item.service_package.name|default:item.service_package_name }} ({{ item.service_package.service.title }})</h6>
+                                {% else %}
+                                <h6 class="mb-1">{{ item.product_name|default:item.service_package_name|default:"[Item Unavailable]" }}</h6>
+                                {% endif %}
+                                <small class="text-muted">Qty: {{ item.quantity }}</small><br />
+                                <small class="text-muted">Price: GH₵{{ item.price|floatformat:2|intcomma }}</small>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted">{% trans "No items found for this order." %}</p>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info text-center" role="alert">
+            {% trans "You haven't placed any orders yet." %}
+            <a href="{% url 'core:home' %}" class="alert-link">{% trans "Start shopping!" %}</a>
+        </div>
+    {% endif %}
+  </div>
+  {# ... rest of your template ... #}
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+    {{ block.super }}
+{% endblock extra_js %}

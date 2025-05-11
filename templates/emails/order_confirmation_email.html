@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 80%;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #dddddd;
+            border-radius: 5px;
+        }
+        .header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eeeeee;
+        }
+        .header h1 {
+            margin: 0;
+            color: #007bff; /* Or your brand color */
+        }
+        .order-details th, .order-details td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #eeeeee;
+        }
+        .order-details th {
+            background-color: #f8f8f8;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Thank You for Your Order!</h1>
+        </div>
+        <p>Hi {{ user.username|default:"Customer" }},</p>
+        <p>Your order with NEXUS has been successfully placed. Here are the details:</p>
+
+        <p><strong>Order ID:</strong> {{ order.order_id }}</p>
+        <p><strong>Date Placed:</strong> {{ order.created_at|date:"F d, Y H:i" }}</p>
+
+        <h3>Order Summary:</h3>
+        <table class="order-details" width="100%">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items.all %}
+                <tr>
+                    <td>{{ item.product.name|default:item.service_package.name|default:item.product_name|default:item.service_package_name|default:"Item" }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>GH₵{{ item.price|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                    <th colspan="2" style="text-align:right;">Total:</th>
+                    <td><strong>GH₵{{ order.total_amount|floatformat:2 }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        {% if order.shipping_address_text %}
+        <h3>Shipping Address:</h3>
+        <p>{{ order.shipping_address_text|linebreaksbr }}</p>
+        {% endif %}
+
+        <p>You can view your order details and status by visiting your account on our website: <a href="{{ site_url }}{{ order.get_absolute_url }}">View Order</a></p>
+
+        <p>Thank you for shopping with NEXUS!</p>
+
+        <div class="footer">
+            <p>&copy; {% now "Y" %} NEXUS. All rights reserved.</p>
+            <p>If you have any questions, please contact our support team.</p>
+        </div>
+    </div>
+</body>
+</html>

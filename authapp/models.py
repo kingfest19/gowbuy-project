@@ -1,9 +1,7 @@
+# c:\Users\Hp\Desktop\Nexus\authapp\models.py
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-
-# Remove the incorrect/misplaced form imports below:
-# from django import UserCreationForm  # REMOVE THIS LINE
-# from django.contrib.auth.forms import UserChangeForm # REMOVE THIS LINE
+from django.utils.translation import gettext_lazy as _ # For verbose names
 
 # Define your CustomUser model here, inheriting from AbstractUser
 class CustomUser(AbstractUser):
@@ -12,7 +10,22 @@ class CustomUser(AbstractUser):
     # Add any extra fields you want your user to have beyond the defaults.
     # Example (optional fields):
     bio = models.TextField(blank=True, null=True, help_text="A short biography.")
-    date_of_birth = models.DateField(blank=True, null=True)
+    date_of_birth = models.DateField(blank=True, null=True, verbose_name=_("Date of Birth"))
+    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True, verbose_name=_("Profile Picture")) # Added from a previous version
+
+    # --- START: Public Contact Information for Service Providers (and general users) ---
+    public_phone_number = models.CharField(max_length=20, blank=True, null=True, verbose_name=_("Public Phone Number"))
+    public_email_contact = models.EmailField(max_length=255, blank=True, null=True, verbose_name=_("Public Contact Email")) # Renamed to avoid clash with user's login email
+    website_url = models.URLField(max_length=255, blank=True, null=True, verbose_name=_("Website URL"))
+    # Social Media Links
+    facebook_url = models.URLField(max_length=255, blank=True, null=True, verbose_name=_("Facebook Profile URL"))
+    instagram_url = models.URLField(max_length=255, blank=True, null=True, verbose_name=_("Instagram Profile URL"))
+    twitter_url = models.URLField(max_length=255, blank=True, null=True, verbose_name=_("Twitter (X) Profile URL"))
+    linkedin_url = models.URLField(max_length=255, blank=True, null=True, verbose_name=_("LinkedIn Profile URL"))
+    whatsapp_number = models.CharField(max_length=20, blank=True, null=True,
+                                       verbose_name=_("WhatsApp Number"),
+                                       help_text=_("Include country code, e.g., +12345678900. This will be visible."))
+    # --- END: Public Contact Information ---
 
     # You don't need to redefine username, email, password, first_name, last_name, etc.
     # They are inherited from AbstractUser.
@@ -25,9 +38,3 @@ class CustomUser(AbstractUser):
     # def get_full_name(self):
     #     # Example override or custom method
     #     return f"{self.first_name} {self.last_name}".strip()
-
-
-
-
-    
-  

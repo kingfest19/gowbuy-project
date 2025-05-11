@@ -1,15 +1,16 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
+{% load i18n %} {# <<< Make sure i18n is loaded #}
 
-{% block title %}Checkout - NEXUS{% endblock title %}
+{% block title %}{% trans "Checkout" %} - NEXUS{% endblock title %}
 
 {% block extra_css %}
-    {# Link checkout-specific CSS if you create one #}
+    {# Link the checkout CSS file #}
     <link rel="stylesheet" href="{% static 'assets/css/checkout.css' %}" />
     <style>
         /* Basic styling for address selection */
-        .address-selection .card {
+        .address-selection .card { /* Keep card styling for the selectable addresses */
             cursor: pointer; /* Indicate addresses are selectable */
             transition: box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
         }
@@ -30,93 +31,117 @@
         .address-block strong {
             font-size: 0.95rem;
         }
+        /* Style for sections now that cards are removed */
+        .checkout-section {
+            padding: 1rem; /* Add some padding */
+            border-bottom: 1px solid #dee2e6; /* Add a separator line */
+        }
+        .checkout-section:last-of-type {
+             border-bottom: none; /* Remove border from last section */
+        }
     </style>
 {% endblock extra_css %}
 
 {% block content %}
 <div class="container mt-4 mb-5">
-    <h2>Checkout</h2>
-    <hr>
 
     {# --- Main Form that submits to place_order view --- #}
-    <form method="post" action="{% url 'place_order' %}">
+    <form method="post" action="{% url 'core:place_order' %}">
         {% csrf_token %}
 
         <div class="row g-4"> {# Use gutters for spacing #}
 
             {# --- Left Column: Address Selection & Payment --- #}
             <div class="col-md-7 col-lg-8">
+                <h2 class="mb-4">
+                    <i class="bi bi-cart-check-fill me-2"></i>{% trans "Checkout" %} {# Added icon #}
+                </h2>
 
-                {# --- Shipping Address --- #}
-                <h4 class="mb-3">1. Shipping Address</h4>
-                {% if shipping_addresses %}
-                    <div class="row row-cols-1 row-cols-md-2 g-3 address-selection mb-4">
-                        {% for address in shipping_addresses %}
-                            <div class="col">
-                                <label for="ship-addr-{{ address.id }}" class="w-100">
-                                    <input type="radio" name="shipping_address" value="{{ address.id }}" id="ship-addr-{{ address.id }}" class="form-check-input" {% if address.is_default or forloop.first %}checked{% endif %} required>
-                                    <div class="card h-100">
-                                        <div class="card-body address-block">
-                                            <strong class="card-title">{{ address.full_name }} {% if address.is_default %}<span class="badge bg-secondary">Default</span>{% endif %}</strong>
-                                            <p>{{ address.street_address }}</p>
-                                            {% if address.apartment_address %}<p>{{ address.apartment_address }}</p>{% endif %}
-                                            <p>{{ address.city }}, {{ address.state }} {{ address.zip_code }}</p>
-                                            <p>{{ address.country }}</p>
-                                            {% if address.phone_number %}<p>Phone: {{ address.phone_number }}</p>{% endif %}
-                                        </div>
-                                    </div>
-                                </label>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="alert alert-warning" role="alert">
-                        You have no shipping addresses saved. Please <a href="#">add an address</a>. {# TODO: Link to add address view #}
-                    </div>
-                {% endif %}
-                {# TODO: Add link/button to add a new shipping address #}
-                {# <a href="#" class="btn btn-outline-secondary btn-sm mb-4">Add New Shipping Address</a> #}
-
+                {% include 'partials/_messages.html' %} {# Display messages #}
 
                 {# --- Billing Address --- #}
-                <h4 class="mb-3">2. Billing Address</h4>
-                {# TODO: Add checkbox "Same as Shipping Address" with JS to hide/show selection #}
-                {% if billing_addresses %}
-                     <div class="row row-cols-1 row-cols-md-2 g-3 address-selection mb-4">
-                        {% for address in billing_addresses %}
-                            <div class="col">
-                                <label for="bill-addr-{{ address.id }}" class="w-100">
-                                    <input type="radio" name="billing_address" value="{{ address.id }}" id="bill-addr-{{ address.id }}" class="form-check-input" {% if address.is_default or forloop.first %}checked{% endif %} required>
-                                    <div class="card h-100">
-                                        <div class="card-body address-block">
-                                            <strong class="card-title">{{ address.full_name }} {% if address.is_default %}<span class="badge bg-secondary">Default</span>{% endif %}</strong>
-                                            <p>{{ address.street_address }}</p>
-                                            {% if address.apartment_address %}<p>{{ address.apartment_address }}</p>{% endif %}
-                                            <p>{{ address.city }}, {{ address.state }} {{ address.zip_code }}</p>
-                                            <p>{{ address.country }}</p>
-                                            {% if address.phone_number %}<p>Phone: {{ address.phone_number }}</p>{% endif %}
-                                        </div>
+                <div class="mb-4 checkout-section"> {# Removed card class #}
+                    <h4 class="mb-3">1. {% trans "Billing Address" %}</h4> {# Removed card-header, added mb-3 #}
+                    {# TODO: Add ability to add new billing address #}
+                    <div class="p-3"> {# Replaced card-body with padding #}
+                        {% if billing_addresses %}
+                            <div class="row row-cols-1 row-cols-md-2 g-3 address-selection">
+                                {% for address in billing_addresses %}
+                                    <div class="col">
+                                        <label for="bill-addr-{{ address.id }}" class="w-100">
+                                            <input type="radio" name="billing_address" value="{{ address.id }}" id="bill-addr-{{ address.id }}" class="form-check-input" {% if address.is_default or forloop.first %}checked{% endif %} required>
+                                            <div class="card h-100"> {# Keep card for selectable address block #}
+                                                <div class="p-3 address-block"> {# Replaced card-body #}
+                                                    <strong class="card-title">{{ address.full_name }} {% if address.is_default %}<span class="badge bg-secondary">{% trans "Default" %}</span>{% endif %}</strong>
+                                                    <p>{{ address.street_address }}</p>
+                                                    {% if address.apartment_address %}<p>{{ address.apartment_address }}</p>{% endif %}
+                                                    <p>{{ address.city }}, {{ address.state }} {{ address.zip_code }}</p>
+                                                    <p>{{ address.country }}</p>
+                                                    {% if address.phone_number %}<p>{% trans "Phone:" %} {{ address.phone_number }}</p>{% endif %}
+                                                </div>
+                                            </div>
+                                        </label>
                                     </div>
-                                </label>
+                                {% endfor %}
                             </div>
-                        {% endfor %}
+                        {% else %}
+                            <div class="alert alert-warning" role="alert">
+                                {% trans "You have no billing addresses saved." %} {% trans "Please" %} <a href="#">{% trans "add an address" %}</a>. {# TODO: Link to add address view #}
+                            </div>
+                        {% endif %}
+                        {# TODO: Add link/button to add a new billing address #}
+                        {# <a href="#" class="btn btn-outline-secondary btn-sm mt-3">Add New Billing Address</a> #}
                     </div>
-                {% else %}
-                    <div class="alert alert-warning" role="alert">
-                        You have no billing addresses saved. Please <a href="#">add an address</a>. {# TODO: Link to add address view #}
+                </div>
+
+
+                {# --- Shipping Address (Conditional) --- #}
+                {% if requires_shipping %} {# <<< START Conditional Block #}
+                <div class="mb-4 checkout-section"> {# Removed card class #}
+                    <h4 class="mb-3">2. {% trans "Shipping Address" %}</h4> {# Removed card-header, added mb-3 #}
+                    {# TODO: Add ability to add new shipping address #}
+                    <div class="p-3"> {# Replaced card-body with padding #}
+                        {# TODO: Add option to use billing address for shipping #}
+                        {% if shipping_addresses %}
+                            <div class="row row-cols-1 row-cols-md-2 g-3 address-selection">
+                                {% for address in shipping_addresses %}
+                                    <div class="col">
+                                        <label for="ship-addr-{{ address.id }}" class="w-100">
+                                            <input type="radio" name="shipping_address" value="{{ address.id }}" id="ship-addr-{{ address.id }}" class="form-check-input" {% if address.is_default or forloop.first %}checked{% endif %} required>
+                                            <div class="card h-100"> {# Keep card for selectable address block #}
+                                                <div class="p-3 address-block"> {# Replaced card-body #}
+                                                    <strong class="card-title">{{ address.full_name }} {% if address.is_default %}<span class="badge bg-secondary">{% trans "Default" %}</span>{% endif %}</strong>
+                                                    <p>{{ address.street_address }}</p>
+                                                    {% if address.apartment_address %}<p>{{ address.apartment_address }}</p>{% endif %}
+                                                    <p>{{ address.city }}, {{ address.state }} {{ address.zip_code }}</p>
+                                                    <p>{{ address.country }}</p>
+                                                    {% if address.phone_number %}<p>{% trans "Phone:" %} {{ address.phone_number }}</p>{% endif %}
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning" role="alert">
+                                {% trans "You have no shipping addresses saved." %} {% trans "Please" %} <a href="#">{% trans "add an address" %}</a>. {# TODO: Link to add address view #}
+                            </div>
+                        {% endif %}
+                        {# TODO: Add link/button to add a new shipping address #}
+                        <a href="#" class="btn btn-outline-secondary btn-sm mt-3">{% trans "Add New Shipping Address" %}</a> {# TODO: Update href to actual add address URL #}
                     </div>
-                {% endif %}
-                {# TODO: Add link/button to add a new billing address #}
-                {# <a href="#" class="btn btn-outline-secondary btn-sm mb-4">Add New Billing Address</a> #}
+                </div>
+                {% endif %} {# <<< END Conditional Block #}
 
 
                 {# --- Payment Method (Placeholder) --- #}
-                <h4 class="mb-3">3. Payment Method</h4>
-                <div class="card mb-4">
-                    <div class="card-body">
-                        <p class="text-muted">Payment integration (e.g., Stripe, PayPal) will be added here.</p>
+                <div class="mb-4 checkout-section"> {# Removed card class #}
+                    {# Adjust step number based on whether shipping is shown #}
+                    <h4 class="mb-3">{% if requires_shipping %}3.{% else %}2.{% endif %} {% trans "Payment Method" %}</h4> {# Removed card-header, added mb-3 #}
+                    <div class="p-3"> {# Replaced card-body with padding #}
+                        <p class="text-muted">{% trans "Payment integration (e.g., Stripe, PayPal) will be added here." %}</p>
                         {# Placeholder for payment form elements #}
-                        <div class="alert alert-info">For now, clicking "Place Order" will finalize the order without payment.</div>
+                        <div class="alert alert-info">{% trans 'For now, clicking "Place Order" will finalize the order without payment.' %}</div>
                     </div>
                 </div>
 
@@ -125,49 +150,61 @@
 
             {# --- Right Column: Order Summary & Place Order Button --- #}
             <div class="col-md-5 col-lg-4 order-md-last"> {# Use order-md-last to keep it on right #}
-                <h4 class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="text-primary">Order Summary</span>
-                    <span class="badge bg-primary rounded-pill">{{ cart_items|length }}</span>
-                </h4>
-                <ul class="list-group mb-3">
-                    {% for item in cart_items %}
-                    <li class="list-group-item d-flex justify-content-between lh-sm">
-                        <div>
-                            <h6 class="my-0">{{ item.product.name }}</h6>
-                            <small class="text-muted">Qty: {{ item.quantity }}</small>
-                        </div>
-                        <span class="text-muted">${{ item.total_item_price|floatformat:2 }}</span>
-                    </li>
-                    {% endfor %}
+                <div class="order-summary card"> {# Added card class for visual grouping #}
+                    <div class="card-header"> {# Added card-header #}
+                        <h4 class="d-flex justify-content-between align-items-center mb-0"> {# Removed mb-3 #}
+                            <span class="text-primary">{% trans "Order Summary" %}</span>
+                            <span class="badge bg-primary rounded-pill">{{ cart_items|length }}</span>
+                        </h4>
+                    </div>
+                    <ul class="list-group list-group-flush summary-items-list"> {# Removed mb-3, added list-group-flush #}
+                        {% for item in cart_items %}
+                        <li class="list-group-item d-flex justify-content-between lh-sm summary-order-item"> {# Added summary-order-item #}
+                            <div class="summary-item-details"> {# Added details wrapper #}
+                                <h6 class="my-0 name">{{ item.product.name }}</h6> {# Added name class #}
+                                <small class="text-muted qty">{% trans "Qty:" %} {{ item.quantity }}</small> {# Added qty class #}
+                                {% if item.product.product_type == 'digital' %}
+                                    <small class="text-muted d-block">({% trans "Digital Item" %})</small>
+                                {% endif %}
+                            </div>
+                            <span class="text-muted summary-item-price">${{ item.total_item_price|floatformat:2 }}</span> {# Added price class #}
+                        </li>
+                        {% endfor %}
+                    </ul>
 
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Subtotal</span>
-                        <strong>${{ cart_total|floatformat:2|intcomma }}</strong>
-                    </li>
-                     <li class="list-group-item d-flex justify-content-between bg-light">
-                        <div class="text-success">
-                            <h6 class="my-0">Shipping</h6>
-                            <small>Standard Shipping</small>
+                    <div class="card-body summary-totals"> {# Added card-body wrapper for totals #}
+                        <div class="summary-item">
+                            <span>{% trans "Subtotal" %}</span>
+                            <span>${{ cart_total|floatformat:2|intcomma }}</span>
                         </div>
-                        <span class="text-success">FREE</span> {# Placeholder #}
-                    </li>
-                     <li class="list-group-item d-flex justify-content-between bg-light">
-                        <div class="text-muted">
-                            <h6 class="my-0">Estimated Tax</h6>
-                            {# <small>Based on 94107</small> #}
+                        {% if requires_shipping %}
+                         <div class="summary-item">
+                            <div class="text-success">
+                                <span class="d-block">{% trans "Shipping" %}</span>
+                                <small>{% trans "Standard Shipping" %}</small>
+                            </div>
+                            <span class="text-success">{% trans "FREE" %}</span> {# Placeholder #}
                         </div>
-                        <span class="text-muted">$0.00</span> {# Placeholder #}
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Total (USD)</span>
-                        <strong>${{ cart_total|floatformat:2|intcomma }}</strong> {# TODO: Add tax/shipping later #}
-                    </li>
-                </ul>
+                        {% endif %}
+                         <div class="summary-item">
+                            <div class="text-muted">
+                                <span class="d-block">{% trans "Estimated Tax" %}</span>
+                                {# <small>Based on 94107</small> #}
+                            </div>
+                            <span class="text-muted">$0.00</span> {# Placeholder #}
+                        </div>
+                        <hr>
+                        <div class="summary-total">
+                            <span>{% trans "Total (USD)" %}</span>
+                            <strong>${{ cart_total|floatformat:2|intcomma }}</strong> {# TODO: Add tax/shipping later #}
+                        </div>
+                    </div>
 
-                {# --- Place Order Button --- #}
-                <div class="d-grid">
-                    <button class="btn btn-primary btn-lg" type="submit">Place Your Order</button>
-                </div>
+                    {# --- Place Order Button --- #}
+                    <div class="card-footer d-grid place-order-button-container"> {# Added card-footer #}
+                        <button class="btn btn-primary btn-lg place-order-button" type="submit">{% trans "Place Your Order" %}</button> {# Added class to button #}
+                    </div>
+                </div> {# End order-summary card #}
 
             </div> {# End right column #}
 

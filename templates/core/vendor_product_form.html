@@ -15,6 +15,10 @@
     #productForm .mb-3 { /* Add space below manually rendered fields */
         margin-bottom: 1rem !important;
     }
+    /* Style for hidden fields */
+    .field-hidden {
+        display: none;
+    }
 </style>
 {% endblock extra_head %}
 
@@ -36,7 +40,7 @@
                         {% endfor %}
                     {% endif %}
 
-                    <form method="post" enctype="multipart/form-data" id="productForm"> {# Added enctype for potential images #}
+                    <form method="post" enctype="multipart/form-data" id="productForm"> {# Added enctype for file uploads #}
                         {% csrf_token %}
 
                         {% if form.non_field_errors %}
@@ -48,7 +52,24 @@
                         {% endif %}
 
                         {# Render form fields manually for better control #}
-                        {% include "partials/_render_form_fields.html" with form=form %}
+                        {% include 'partials/_form_field.html' with field=form.product_type %}
+                        {% include 'partials/_form_field.html' with field=form.category %}
+                        {% include 'partials/_form_field.html' with field=form.name %}
+                        {% include 'partials/_form_field.html' with field=form.description %}
+                        {% include 'partials/_form_field.html' with field=form.price %}
+
+                        {# Wrapper for Stock Field #}
+                        <div id="stock-field-wrapper">
+                        {% include 'partials/_form_field.html' with field=form.stock %}
+                        </div>
+
+                        {# Wrapper for Digital File Field #}
+                        <div id="digital-file-wrapper">
+                        {% include 'partials/_form_field.html' with field=form.digital_file %}
+                        </div>
+
+                        {% include 'partials/_form_field.html' with field=form.is_active %}
+                        {% include 'partials/_form_field.html' with field=form.is_featured %}
 
                         {# TODO: Add section for managing Product Images (e.g., using formsets) #}
 
@@ -63,3 +84,44 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const productTypeSelect = document.getElementById('{{ form.product_type.id_for_label }}'); // Get the select element
+        // Use the wrapper IDs we added
+        const stockFieldWrapper = document.getElementById('stock-field-wrapper');
+        const digitalFileWrapper = document.getElementById('digital-file-wrapper');
+
+        function toggleFields() {
+            // Check if elements exist before trying to access properties
+            if (!productTypeSelect || !stockFieldWrapper || !digitalFileWrapper) {
+                console.error("Form elements for toggling not found!");
+                return;
+            }
+
+            const selectedType = productTypeSelect.value;
+
+            if (selectedType === 'physical') {
+                stockFieldWrapper.style.display = 'block'; // Show stock
+                digitalFileWrapper.style.display = 'none'; // Hide digital file
+            } else if (selectedType === 'digital') {
+                stockFieldWrapper.style.display = 'none'; // Hide stock
+                digitalFileWrapper.style.display = 'block'; // Show digital file
+            } else {
+                // Default case or if nothing is selected (optional)
+                stockFieldWrapper.style.display = 'block';
+                digitalFileWrapper.style.display = 'none';
+            }
+        }
+
+        // Initial check on page load
+        toggleFields();
+
+        // Add event listener for changes
+        if (productTypeSelect) {
+            productTypeSelect.addEventListener('change', toggleFields);
+        }
+    });
+</script>
+{% endblock extra_js %}

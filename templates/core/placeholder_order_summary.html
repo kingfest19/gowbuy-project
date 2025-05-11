@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Order Summary (Placeholder)" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>{% trans "Order Summary (Placeholder)" %}</h1>
+    <p>{% trans "This view needs to be implemented to show the service order details and payment options." %}</p>
+    <a href="{% url 'core:home' %}" class="btn btn-secondary">{% trans "Back to Home" %}</a>
+</div>
+{% endblock %}

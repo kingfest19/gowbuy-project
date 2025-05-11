@@ -125,6 +125,43 @@
             fill: currentColor;
         }
 
+        /* Styles for the new Category Section */
+        .category-section {
+            padding: 2rem 0;
+            background-color: #f8f9fa; /* Light background for distinction */
+        }
+        .category-section h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+        .category-card {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .category-card img {
+            max-height: 120px; /* Adjust as needed */
+            object-fit: contain;
+            margin-bottom: 0.75rem;
+            border-radius: 50%; /* Make images circular if desired */
+            border: 1px solid #eee;
+            padding: 3px;
+        }
+        .category-card h5 {
+            font-size: 1rem; /* Slightly smaller for more categories */
+            color: #333;
+            margin-top: 0.5rem;
+        }
+        .category-card a {
+            text-decoration: none;
+        }
+        .category-card a:hover h5 {
+            color: var(--color-primary, #087f8c); /* Use primary color from your theme */
+        }
+        .category-card a:hover img {
+            box-shadow: 0 0 8px rgba(0,0,0,0.1);
+        }
+
     </style>
 {% endblock extra_css %}
 
@@ -177,6 +214,31 @@
         {# Now three columns and two separators #} {# Updated Comment #}
     </div>
     <!-- ================= End Three Box Columns ================= -->
+
+    <!-- ==================== NEW: Shop by Category Section ==================== -->
+    {% if categories %}
+    <section class="category-section container">
+        <h2>Shop by Category</h2>
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3 justify-content-center"> {# Adjust columns for responsiveness, g-3 for gutters #}
+            {% for category in categories %}
+            <div class="col">
+                <div class="category-card">
+                    <a href="{{ category.get_absolute_url }}">
+                        {% if category.image %}
+                            <img src="{{ category.image.url }}" alt="{{ category.name }}" class="img-fluid">
+                        {% else %}
+                            {# Provide a generic placeholder if no image is available #}
+                            <img src="{% static 'assets/img/placeholder_category.png' %}" alt="{{ category.name }}" class="img-fluid">
+                        {% endif %}
+                        <h5>{{ category.name }}</h5>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+    <!-- ================= End Shop by Category Section ================= -->
 
     <!-- ==================== 4. One Product Slider ==================== -->
     <div class="products-slider"> {# Using the "Sports and Outdoors" slider #}

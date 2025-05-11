@@ -1,0 +1,77 @@
+{% extends "core/service_base.html" %} {# <<< Extend the new service base #}
+{% load static i18n %}
+
+{% block title %}{% trans "Browse Services" %} - {{ block.super }}{% endblock %}
+{% load crispy_forms_tags %} {# Add if using crispy forms for search #}
+
+{% block service_content %} {# <<< Use the new content block #}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{% trans "Services Marketplace" %}</h1>
+        {% if user.is_authenticated %}
+            <a href="{% url 'core:service_create' %}" class="btn btn-primary">{% trans "Offer a Service" %}</a>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        {# Optional Sidebar for Categories #}
+        <div class="col-md-3 mb-4">
+            <h4>{% trans "Categories" %}</h4>
+            <div class="list-group">
+                <a href="{% url 'core:service_list' %}" class="list-group-item list-group-item-action {% if not category %}active{% endif %}">
+                    {% trans "All Services" %}
+                </a>
+                {% for cat in categories %}
+                    {# TODO: Add get_absolute_url to ServiceCategory model #}
+                    <a href="{% url 'core:service_category_detail' category_slug=cat.slug %}"
+                       class="list-group-item list-group-item-action {% if category.slug == cat.slug %}active{% endif %}">
+                        {{ cat.name }}
+                    </a>
+                    {# TODO: Add subcategory display if needed #}
+                {% empty %}
+                    <p class="list-group-item">{% trans "No service categories found." %}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Main Service Listing Area #}
+        <div class="col-md-9">
+
+            {# Search form is now in service_base.html nav #}
+            {% if query %}
+                <p class="text-muted">{% blocktrans with query=query %}Showing results for: <strong>"{{ query }}"</strong>{% endblocktrans %} <a href="{% url 'core:service_list' %}">({% trans "Clear Search" %})</a></p>
+            {% endif %}
+
+{% if services %}
+    {# Removed the redundant inner {% if services %} block #}
+    <div class="list-group">
+        {% for service in services %}
+            <a href="{% url 'core:service_detail' service_slug=service.slug %}" class="list-group-item list-group-item-action flex-column align-items-start mb-2 shadow-sm">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">{{ service.title }}</h5>
+                    <small class="text-muted">{{ service.created_at|timesince }} {% trans "ago" %}</small>
+                </div>
+                <p class="mb-1 text-muted"><i class="bi bi-person-fill"></i> {{ service.provider.username }} | <i class="bi bi-tag-fill"></i> {{ service.category.name }} | <i class="bi bi-geo-alt-fill"></i> {{ service.location|default:"N/A" }}</p>
+                <small>
+                    <strong>{% trans "Pricing" %}:</strong>
+                    {% with service.packages.all|dictsort:"price" as sorted_packages %} {# Get packages sorted by price #}
+                        {% if sorted_packages %}
+                            {% trans "Starting from" %} GH₵ {{ sorted_packages.0.price|floatformat:2 }} {# Display price of the cheapest package #}
+                        {% else %}
+                            {{ service.price_description }} {% if service.price %}(GH₵ {{ service.price|floatformat:2 }}){% endif %} {# Fallback to service price #}
+                        {% endif %}
+                    {% endwith %}
+                </small>
+            </a>
+        {% endfor %}
+    </div>
+    {# TODO: Add Pagination if needed #}
+{% else %} {# This else corresponds to the {% if services %} on line 45 #}
+    <div class="alert alert-info" role="alert">
+        {% trans "No services found matching your criteria." %}
+    </div>
+{% endif %} {# This endif closes the {% if services %} #}
+</div> {# End col-md-9 #}
+</div> {# End row #}
+</div> {# End container #}
+{% endblock %}

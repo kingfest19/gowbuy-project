@@ -1,4 +1,4 @@
-# authapp/views.py
+# c:\Users\Hp\Desktop\Nexus\authapp\views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages # <<< Import messages
@@ -14,8 +14,8 @@ def register_view(request):
     if request.method == 'POST':
         form = UserRegisterForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user) # Log the user in immediately after registration
+            user = form.save(request) # Pass the request object here
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend') # Specify backend
             messages.success(request, f"Registration successful! Welcome, {user.username}!")
             return redirect('core:home') # Redirect to home page after successful registration
         else:
@@ -28,5 +28,5 @@ def register_view(request):
         form = UserRegisterForm()
 
     context = {'form': form}
-    # Make sure you have a template at 'authapp/register.html'
-    return render(request, 'authapp/register.html', context)
+    # This is the line that has been changed:
+    return render(request, 'core/signup.html', context)

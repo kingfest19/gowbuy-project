@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% load crispy_forms_tags %} {# Load crispy if needed for search form in nav #}
+
+{# Override the main content block to insert service-specific navigation #}
+{% block content %}
+<nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'core:service_list' %}">{% trans "Services Marketplace" %}</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#serviceNav" aria-controls="serviceNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="serviceNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'service_list' %}active{% endif %}" href="{% url 'core:service_list' %}">{% trans "Browse" %}</a>
+                </li>
+                {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'service_create' %}active{% endif %}" href="{% url 'core:service_create' %}">{% trans "Offer Service" %}</a>
+                </li>
+                {# TODO: Add link to 'My Services' page if needed #}
+                {% endif %}
+            </ul>
+            {# Service Search Form in Nav #}
+            <form method="get" action="{% url 'core:service_list' %}" class="d-flex">
+                {# Render only the input field using crispy, adjust if not using crispy #}
+                {% if search_form %}
+                    {# Render only the input widget, not the label #}
+                    {{ search_form.q }}
+                {% else %}
+                     {# Fallback if search_form isn't passed (e.g., on detail/edit pages) #}
+                     <input class="form-control me-2" type="search" name="q" placeholder="{% trans 'Search Services' %}" aria-label="Search" value="{{ query|default:'' }}"> {# <<< Placeholder updated here #}
+                {% endif %}
+                {# Or: <input class="form-control me-2" type="search" name="q" placeholder="{% trans 'Search Services' %}" aria-label="Search" value="{{ query|default:'' }}"> #}
+                <button class="btn btn-outline-success" type="submit">{% trans "Search" %}</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+{# Define a new block for the actual page content that child templates will fill #}
+{% block service_content %}
+{% endblock service_content %}
+
+{% endblock content %}

@@ -1,0 +1,42 @@
+/* Service Marketplace Specific Styles */
+
+/* Service List Page */
+.service-list-container {
+    /* Add specific container styles if needed */
+}
+
+.service-category-sidebar .list-group-item {
+    border-radius: 0.25rem; /* Slightly rounded corners for category links */
+    margin-bottom: 5px;
+}
+
+.service-category-sidebar .list-group-item.active {
+    font-weight: bold;
+}
+
+.service-listing .list-group-item {
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.service-listing .list-group-item:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important; /* Add subtle shadow on hover */
+    z-index: 10; /* Ensure hovered item comes to the front */
+}
+
+/* Service Detail Page */
+.service-detail-card .card-header {
+    background-color: #e9ecef; /* Light grey header */
+}
+
+.service-detail-card .badge {
+    font-size: 0.9em;
+}
+
+/* Service Form Page */
+.service-form-card .card-header {
+    background-color: #e9ecef;
+}
+
+.service-form-card .form-label {
+    font-weight: 500;
+}

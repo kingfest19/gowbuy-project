@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-lmut35poxhw^lr7p=b+w!o9j88cprqn2o^+h)8st^bawhavfe!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '4eec-102-176-94-167.ngrok-free.app'] # Add your ngrok domain
 
 
 # Application definition
@@ -61,7 +61,7 @@ INSTALLED_APPS = [
     # Specific provider apps:
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.facebook',
-    'allauth.socialaccount.providers.apple',
+    # 'allauth.socialaccount.providers.apple', # Removed Apple
 ]
 
 SITE_ID = 1
@@ -76,12 +76,19 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.locale.LocaleMiddleware', # <<< Add LocaleMiddleware
+    'core.middleware.SanitizeLanguageMiddleware', # <<< Add your custom middleware AFTER LocaleMiddleware
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',  # <<< ADD THIS LINE
 ]
+
+# --- START: Settings for running behind a reverse proxy like ngrok ---
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+SECURE_SSL_REDIRECT = False # Set to True in production if your proxy handles SSL termination
+# --- END: Settings for running behind a reverse proxy like ngrok ---
 
 ROOT_URLCONF = 'Nexus.urls'
 
@@ -101,7 +108,10 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'core.context_processors.site_context', # <<< Updated this line
+                'core.context_processors.provider_info', # <<< Add this line for provider info
+               # 'core.context_processors.cart_context',
+                'django.template.context_processors.i18n',
+                'core.views.menu',
             ],
         },
     },
@@ -117,6 +127,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'TIMEOUT': 20000,  # Timeout in milliseconds (e.g., 20 seconds)
+        # You can also try 'OPTIONS': {'timeout': 20} for seconds,
+        # but 'TIMEOUT' at the top level is more common for Django 3.2+
     }
 }
 
@@ -143,7 +156,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en'
 
 # --- START: Internationalization Settings ---
 LANGUAGES = [
@@ -211,9 +224,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # ... rest of your settings ...
 # settings.py
-AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-]
+# AUTHENTICATION_BACKENDS = [
+#     'django.contrib.auth.backends.ModelBackend',  # This line might be duplicated below
+# ]
 
 # settings.py
 # ... (at the end of the file) ...
@@ -239,26 +252,34 @@ AUTHENTICATION_BACKENDS = [
 # ...
 
 # Allauth Settings
-# ACCOUNT_EMAIL_REQUIRED = True          # <<< REMOVE/COMMENT OUT (Deprecated)
-# ACCOUNT_USERNAME_REQUIRED = True       # <<< REMOVE/COMMENT OUT (Deprecated)
-# ACCOUNT_AUTHENTICATION_METHOD = 'username_email' # <<< REMOVE/COMMENT OUT (Deprecated)
+# These settings configure django-allauth for email-based authentication,
+# while still allowing username collection during signup (as your form does).
 
-# --- NEW SETTINGS ---
-ACCOUNT_LOGIN_METHODS = {'username', 'email'} # Use a set for login methods
-ACCOUNT_SIGNUP_FIELDS = ['username', 'email'] # Fields shown on signup form (passwords are implicit)
-                                              # Add '*' if required, but UserRegisterForm handles this
-# --------------------
+ACCOUNT_AUTHENTICATION_METHODS = ['email']          # Users log in with their email.
+ACCOUNT_LOGIN_METHODS = ['email',]               # Users log in with their email.
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None        # Important: Set to None if 'username' is not the primary login field.
+                                                # This tells allauth not to treat the User model's 'username'
+                                                # as the sole login identifier if you're using email for login.
 
-ACCOUNT_EMAIL_VERIFICATION = 'optional' # Or 'mandatory' or 'none'
-ACCOUNT_SESSION_REMEMBER = True        # Allow "Remember Me" functionality
-ACCOUNT_UNIQUE_EMAIL = True            # Enforce unique emails
+# ACCOUNT_EMAIL_REQUIRED = True                 # Deprecated when ACCOUNT_SIGNUP_FORM_CLASS is used.
+                                                # Requirement is handled by the custom form.
+# ACCOUNT_USERNAME_REQUIRED = False             # Deprecated when ACCOUNT_SIGNUP_FORM_CLASS is used.
+                                                # Requirement is handled by the custom form.
+ACCOUNT_SIGNUP_FORM_CLASS = 'authapp.forms.UserRegisterForm' # Specify your custom signup form.
+ACCOUNT_SIGNUP_FIELDS = ['email']               # For allauth's internal checks/forms, only 'email' is a signup field.
+                                                # ACCOUNT_SIGNUP_FIELDS is not needed when using a custom form class.
+
+
+ACCOUNT_EMAIL_VERIFICATION = 'optional'         # Options: 'optional', 'mandatory', 'none'.
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False     # Align with 'optional' email verification.
+# ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True    # Commenting out due to deprecation warning; UserCreationForm handles this.
+ACCOUNT_SESSION_REMEMBER = True                 # Current setting: True. Allows "Remember Me".
+ACCOUNT_UNIQUE_EMAIL = True                     # Current setting: True. Enforces unique emails.
+ACCOUNT_LOGOUT_ON_GET = True                    # Current setting: True. Allows logout via GET request.
 
 # Redirect URLs
 LOGIN_REDIRECT_URL = 'home'  # Name of the URL to redirect to after login
 ACCOUNT_LOGOUT_REDIRECT_URL = 'signin' # Name of the URL to redirect to after logout
-
-# Optional: Prevent logout confirmation page
-ACCOUNT_LOGOUT_ON_GET = True
 
 # ... (Keep SOCIALACCOUNT_PROVIDERS etc.) ...
 
@@ -277,7 +298,6 @@ SOCIALACCOUNT_PROVIDERS = {
         'AUTH_PARAMS': {
             'access_type': 'online',
         }
-        # You will add Client ID and Secret Key via the Django Admin later
     },
     'facebook': {
         'METHOD': 'oauth2', # Set to 'js_sdk' to use the Facebook connect SDK
@@ -300,15 +320,63 @@ SOCIALACCOUNT_PROVIDERS = {
         # 'LOCALE_FUNC': 'path.to.callable',
         'VERIFIED_EMAIL': False, # Facebook emails aren't always verified
         'VERSION': 'v13.0', # Use a specific API version
-        # You will add Client ID and Secret Key via the Django Admin later
-    },
-    'apple': {
-        'SCOPE': ['name', 'email'],
-        # Requires specific setup with Key ID, Team ID, Private Key file
-        # See django-allauth documentation for Apple Sign In details.
-        # Configuration is more complex and usually done via the Admin.
     }
 }
 
 # Optional: If using custom user model and want social accounts to auto-connect
 # SOCIALACCOUNT_ADAPTER = 'your_app.adapter.YourSocialAccountAdapter'
+
+# --- Paystack Settings ---
+PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY', 'sk_test_29ce0215ad852bb436a964e2b2b5db7d903948b3') # Replace with your actual test or live key
+PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY', 'pk_test_35b292948ae9ad66a13e64eb04bf17338c8a17dc') # Replace with your actual test or live key
+PAYSTACK_CALLBACK_URL = 'https://4eec-102-176-94-167.ngrok-free.app/paystack/callback/' # Use your ngrok URL
+
+# c:\Users\Hp\Desktop\Nexus\Nexus\settings.py
+
+# ... other settings ...
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose', # Use verbose formatter
+        },
+    },
+    'root': { # Catch-all for other loggers
+        'handlers': ['console'],
+        'level': 'INFO', # Default level for other loggers
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO', # You can set this to WARNING to reduce Django's own logs
+            'propagate': False,
+        },
+        'core.middleware': { # Logger for our SanitizeLanguageMiddleware
+            'handlers': ['console'],
+            'level': 'DEBUG', # Show all messages from our middleware
+            'propagate': False, # Don't pass to the root logger
+        },
+    },
+}
+
+# ... other settings ...
+
+NEGOTIABLE_PRODUCT_CATEGORY_SLUGS = [
+    'vehicles', 'cars', 'motorcycles', # Example vehicle categories
+    'real-estate', 'houses', 'apartments', 'land-plots', # Example real estate
+    'heavy-machinery', 'industrial-equipment', # Example machinery
+    # Add any other category slugs that should allow direct payment
+]

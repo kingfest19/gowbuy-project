@@ -140,7 +140,7 @@ h6 {
 
 .checkout-section {
     background-color: var(--color-background-light, #fff);
-    padding: var(--spacing-lg, 1.5rem);
+    /* padding: var(--spacing-lg, 1.5rem); */ /* Padding now applied directly in template */
     border-radius: var(--border-radius-lg, 0.5rem);
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--color-border, #dee2e6);
@@ -151,10 +151,15 @@ h6 {
     font-size: 1.3rem;
     font-weight: 600;
     color: var(--color-text-base, #212529);
-    margin-bottom: var(--spacing-md, 1rem);
+    /* margin-bottom: var(--spacing-md, 1rem); */ /* Removed bottom margin */
     border-bottom: 1px solid var(--color-border, #dee2e6);
-    padding-bottom: var(--spacing-sm, 0.5rem);
+    /* padding-bottom: var(--spacing-sm, 0.5rem); */ /* Removed bottom padding */
+    padding: var(--spacing-md, 1rem); /* Add padding directly to header */
     font-family: var(--font-secondary, "Poppins", sans-serif);
+    /* Ensure header background matches card if needed, or remove card-header class */
+    background-color: inherit; /* Inherit from card */
+    border-top-left-radius: var(--border-radius-lg, 0.5rem); /* Match card radius */
+    border-top-right-radius: var(--border-radius-lg, 0.5rem); /* Match card radius */
 }
 
 /* Form Grid Layout */
@@ -240,6 +245,11 @@ h6 {
     color: var(--color-text-muted, #6c757d);
 }
 
+/* Address Selection Specifics */
+.address-selection .card {
+    margin-bottom: 0; /* Remove extra margin if cards are inside grid */
+}
+
 /* Payment Method Styling */
 .payment-options {
     display: flex;
@@ -292,7 +302,7 @@ h6 {
 .checkout-right {
     flex: 1;
     min-width: 280px;
-    position: sticky;
+    /* position: sticky; */ /* Consider removing sticky if layout causes issues */
     top: calc(100px + var(--spacing-lg, 1.5rem));
     /* Adjust based on nav height */
     align-self: flex-start;
@@ -302,7 +312,7 @@ h6 {
 .order-summary {
     /* Reuse cart-summary styling */
     background-color: var(--color-background-light, #fff);
-    padding: var(--spacing-lg, 1.5rem);
+    /* padding: var(--spacing-lg, 1.5rem); */ /* Padding now applied directly */
     border-radius: var(--border-radius-lg, 0.5rem);
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--color-border, #dee2e6);
@@ -312,9 +322,13 @@ h6 {
     font-size: 1.2rem;
     font-weight: 600;
     color: var(--color-text-base, #212529);
-    margin-bottom: var(--spacing-md, 1rem);
+    /* margin-bottom: var(--spacing-md, 1rem); */
     border-bottom: 1px solid var(--color-border, #dee2e6);
-    padding-bottom: var(--spacing-sm, 0.5rem);
+    /* padding-bottom: var(--spacing-sm, 0.5rem); */
+    padding: var(--spacing-md, 1rem); /* Add padding directly */
+    background-color: inherit;
+    border-top-left-radius: var(--border-radius-lg, 0.5rem);
+    border-top-right-radius: var(--border-radius-lg, 0.5rem);
     font-family: var(--font-secondary, "Poppins", sans-serif);
 }
 
@@ -323,6 +337,7 @@ h6 {
     max-height: 300px;
     /* Limit height and make scrollable */
     overflow-y: auto;
+    padding: var(--spacing-md, 1rem); /* Add padding around items */
     margin-bottom: var(--spacing-md, 1rem);
     padding-right: var(--spacing-xs, 0.25rem);
     /* Space for scrollbar */
@@ -347,7 +362,7 @@ h6 {
 .summary-order-item {
     display: flex;
     gap: var(--spacing-sm, 0.5rem);
-    margin-bottom: var(--spacing-sm, 0.5rem);
+    /* margin-bottom: var(--spacing-sm, 0.5rem); */ /* Use padding instead */
     padding-bottom: var(--spacing-sm, 0.5rem);
     border-bottom: 1px solid var(--color-border, #dee2e6);
     font-size: 0.9rem;
@@ -401,6 +416,7 @@ h6 {
     display: flex;
     justify-content: space-between;
     margin-bottom: var(--spacing-sm, 0.5rem);
+    padding: 0 var(--spacing-md, 1rem); /* Add horizontal padding */
     font-size: 0.95rem;
 }
 
@@ -417,7 +433,7 @@ h6 {
     /* From cart.css */
     border: none;
     border-top: 1px solid var(--color-border, #dee2e6);
-    margin: var(--spacing-md, 1rem) 0;
+    margin: var(--spacing-md, 1rem) var(--spacing-md, 1rem); /* Add horizontal margin */
 }
 
 .summary-total {
@@ -427,6 +443,7 @@ h6 {
     font-size: 1.15rem;
     font-weight: 700;
     color: var(--color-text-base, #212529);
+    padding: 0 var(--spacing-md, 1rem); /* Add horizontal padding */
     margin-top: var(--spacing-sm, 0.5rem);
     /* Add space above total */
     margin-bottom: var(--spacing-lg, 1.5rem);
@@ -435,7 +452,7 @@ h6 {
 /* Place Order Button */
 .place-order-button {
     /* Reuse checkout-button styling */
-    width: 100%;
+    /* width: 100%; */ /* Let grid handle width */
     padding: 0.8rem var(--spacing-md, 1rem);
     background-color: var(--color-primary, #007bff);
     color: var(--color-text-light, #fff);
@@ -463,6 +480,12 @@ h6 {
     cursor: not-allowed;
     transform: none;
 }
+
+/* Add padding to the button container */
+.place-order-button-container {
+    padding: 0 var(--spacing-md, 1rem) var(--spacing-md, 1rem);
+}
+
 
 /* --- Responsive Adjustments --- */
 @media (max-width: 992px) {

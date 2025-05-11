@@ -22,6 +22,14 @@
         {% endfor %}
     {% endif %}
 
+    {# Display filter status #}
+    {% if is_filtered and stock_status_filter == 'low' %}
+        <div class="alert alert-info d-flex justify-content-between align-items-center">
+            <span>Showing only low stock items (<= 5).</span>
+            <a href="{% url 'core:vendor_product_list' %}" class="btn btn-sm btn-outline-secondary">Clear Filter</a>
+        </div>
+    {% endif %}
+
     {% if products %}
     <div class="table-responsive">
         <table class="table table-striped table-hover align-middle">

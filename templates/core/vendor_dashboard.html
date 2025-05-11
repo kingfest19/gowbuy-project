@@ -43,6 +43,39 @@
         .list-group-item h6 {
             margin-bottom: 0.25rem; /* Adjust spacing in lists */
         }
+        /* --- START: Dashboard Overview Card Styling --- */
+        .dashboard-overview-card .card-body .card-title,
+        .dashboard-overview-card .card-body .card-text,
+        .dashboard-overview-card .card-body small {
+            color: #212529 !important; /* Ensure text is black */
+        }
+        .dashboard-overview-card .card-body .text-muted {
+            color: #6c757d !important; /* Ensure muted text is standard grey */
+        }
+        .dashboard-overview-card .card { /* This style was already good */
+             border: 1px solid #dee2e6; /* Add a subtle border */
+             box-shadow: 0 .125rem .25rem rgba(0,0,0,.075); /* Add a slight shadow */
+        }
+
+        /* --- START: Vendor Dashboard Card Colors --- */
+        .vendor-card-sales { background-color:rgb(115, 160, 139); color: #fff; } /* Green */
+        .vendor-card-orders { background-color:rgb(147, 191, 200); color: #fff; } /* Cyan */
+        .vendor-card-products { background-color:rgb(178, 166, 199); color: #fff; } /* Purple */
+        .vendor-card-low-stock { background-color:rgb(210, 197, 157); color: #212529; } /* Yellow (dark text) */
+
+        /* Adjust text colors for contrast on colored backgrounds */
+        .vendor-card-sales .card-title, .vendor-card-sales .card-text, .vendor-card-sales small,
+        .vendor-card-orders .card-title, .vendor-card-orders .card-text, .vendor-card-orders small,
+        .vendor-card-products .card-title, .vendor-card-products .card-text, .vendor-card-products small {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+        .vendor-card-low-stock .card-title, .vendor-card-low-stock .card-text, .vendor-card-low-stock small {
+            color: #212529 !important; /* Dark text for yellow background */
+        }
+        .vendor-card-low-stock .btn-outline-warning { /* Make button more visible on yellow */
+            border-color: #493805; color: #493805;
+        }
+        /* --- END: Dashboard Overview Card Styling --- */
     </style>
 {% endblock extra_css %}
 
@@ -56,9 +89,9 @@
                 <a class="nav-link active" href="{% url 'core:vendor_dashboard' %}">📊 {% trans "Overview" %}</a>
                 <a class="nav-link" href="{% url 'core:vendor_product_list' %}">📦 {% trans "Products" %}</a>
                 <a class="nav-link" href="{% url 'core:vendor_order_list' %}">🧾 {% trans "Orders" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_reports' %}">📈 {% trans "Reports" %}</a> {# <<< Updated link #}
                 <a class="nav-link" href="{% url 'core:edit_vendor_profile' %}">✏️ {% trans "Edit Profile" %}</a>
                 <a class="nav-link" href="{% url 'core:vendor_verification' %}">✅ {% trans "Verification" %}</a>
-                {# <a class="nav-link" href="#">📈 {% trans "Reports" %}</a> #} {# Link to a dedicated reports page later? #}
                 <a class="nav-link" href="{% url 'core:vendor_promotion_list' %}">🏷️ {% trans "Promotions" %}</a>
                 <a class="nav-link" href="{% url 'core:vendor_campaign_list' %}">📢 {% trans "Ad Campaigns" %}</a>
             </nav>
@@ -74,7 +107,7 @@
             <h2 class="h4 mb-3">Store Overview</h2>
             <div class="row g-3 mb-4">
                 <div class="col-md-6 col-lg-3">
-                    <div class="card h-100">
+                    <div class="card h-100 dashboard-overview-card vendor-card-sales">
                         <div class="card-body text-center">
                             <h5 class="card-title"><i class="bi bi-currency-dollar text-success me-2"></i>Total Sales</h5>
                             <p class="card-text fs-4 fw-bold">${{ total_sales|floatformat:2|intcomma }}</p>
@@ -83,7 +116,7 @@
                     </div>
                 </div>
                 <div class="col-md-6 col-lg-3">
-                    <div class="card h-100">
+                    <div class="card h-100 dashboard-overview-card vendor-card-orders">
                         <div class="card-body text-center">
                             <h5 class="card-title"><i class="bi bi-box-seam text-info me-2"></i>Total Orders</h5>
                             <p class="card-text fs-4 fw-bold">{{ total_orders_count|intcomma }}</p>
@@ -92,7 +125,7 @@
                     </div>
                 </div>
                 <div class="col-md-6 col-lg-3">
-                    <div class="card h-100">
+                    <div class="card h-100 dashboard-overview-card vendor-card-products">
                         <div class="card-body text-center">
                             <h5 class="card-title"><i class="bi bi-tags text-primary me-2"></i>Active Products</h5>
                             <p class="card-text fs-4 fw-bold">{{ active_products_count|intcomma }}</p>
@@ -101,12 +134,13 @@
                     </div>
                 </div>
                  <div class="col-md-6 col-lg-3">
-                    <div class="card h-100">
+                    <div class="card h-100 dashboard-overview-card vendor-card-low-stock">
                         <div class="card-body text-center">
                             <h5 class="card-title"><i class="bi bi-graph-down text-warning me-2"></i>Low Stock</h5>
                             <p class="card-text fs-4 fw-bold">{{ low_stock_products.count }}</p>
+                             {# Link the button to the filtered product list page #}
                              {% if low_stock_products %}
-                                <a href="#low-stock-list" class="btn btn-sm btn-outline-warning mt-1">View List</a>
+                                <a href="{% url 'core:vendor_product_list' %}?stock_status=low" class="btn btn-sm btn-outline-warning mt-1">View List</a> {# Kept outline for yellow #}
                             {% else %}
                                 <small class="text-muted">No items low on stock</small>
                             {% endif %}
@@ -150,7 +184,7 @@
                     <span class="badge status-badge {% if payment_info_complete %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if payment_info_complete %}{% trans "COMPLETED" %}{% else %}{% trans "PENDING" %}{% endif %}</span>
                 </div>
                 <div class="checklist-item d-flex justify-content-between align-items-center">
-                    <span><a href="#">{% trans "Additional Information" %}</a></span> {# TODO: Add URL for additional info view #}
+                    <span><a href="{% url 'core:edit_vendor_additional_info' %}">{% trans "Additional Information" %}</a></span> {# <<< Updated link #}
                     <span class="badge status-badge {% if additional_info_complete %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if additional_info_complete %}{% trans "COMPLETED" %}{% else %}{% trans "PENDING" %}{% endif %}</span>
                 </div>
             </div>

@@ -1,8 +1,14 @@
 # core/forms.py
 from django import forms
+from django.forms import inlineformset_factory # <<< Import inlineformset_factory
+from crispy_forms.helper import FormHelper # Import FormHelper
+from crispy_forms.layout import Layout, Submit, Row, Column, Fieldset, HTML, Field # Import layout objects (optional for now)
 from django.utils.translation import gettext_lazy as _ # For labels/help text
 # Import models needed for forms
-from .models import VendorReview, ProductReview, Vendor, Promotion, AdCampaign, Product, Category # <<< Import new models
+from .models import (
+    VendorReview, ProductReview, Vendor, Promotion, AdCampaign, Product, Category,
+    ServiceCategory, Service, ServiceReview,ServicePackage, Address # <<< Import Address and ServiceReview
+)
 from django.contrib.auth import get_user_model
 
 class VendorReviewForm(forms.ModelForm):
@@ -255,10 +261,13 @@ class VendorProfileUpdateForm(forms.ModelForm):
         # Fields vendors can edit on their profile
         fields = [
             'name', 'description', 'contact_email', 'phone_number',
-            'logo', 'location_city', 'location_country',
-            'shipping_policy', 'return_policy'
+            'logo', 'location_city', 'location_country', 'shipping_policy', 'return_policy',
+            # New public contact fields
+            'public_phone_number', 'public_email', 'website_url',
+            'facebook_url', 'instagram_url', 'twitter_url', 'linkedin_url', 'whatsapp_number'
         ]
         widgets = {
+            # Existing widgets
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Your Business Name'}),
             'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'Describe your business and products...'}),
             'contact_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Business Contact Email'}),
@@ -268,6 +277,30 @@ class VendorProfileUpdateForm(forms.ModelForm):
             'location_country': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Country'}),
             'shipping_policy': forms.Textarea(attrs={'rows': 5, 'class': 'form-control', 'placeholder': 'Describe your shipping policy...'}),
             'return_policy': forms.Textarea(attrs={'rows': 5, 'class': 'form-control', 'placeholder': 'Describe your return policy...'}),
+            # Widgets for new public contact fields
+            'public_phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., +1234567890')}),
+            'public_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('public@example.com')}),
+            'website_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': _('https://yourwebsite.com')}),
+            'facebook_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': _('https://facebook.com/yourpage')}),
+            'instagram_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': _('https://instagram.com/yourprofile')}),
+            'twitter_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': _('https://twitter.com/yourhandle')}),
+            'linkedin_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': _('https://linkedin.com/in/yourprofile')}),
+            'whatsapp_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('+12345678900')}),
+        }
+        labels = {
+            'contact_email': _("Primary Contact Email (Private)"),
+            'phone_number': _("Primary Contact Phone (Private)"),
+            'public_phone_number': _("Publicly Displayed Phone Number"),
+            'public_email': _("Publicly Displayed Email Address"),
+            'website_url': _("Your Website URL"),
+            'facebook_url': _("Facebook Page URL"),
+            'instagram_url': _("Instagram Profile URL"),
+            'twitter_url': _("Twitter (X) Profile URL"),
+            'linkedin_url': _("LinkedIn Profile URL"),
+            'whatsapp_number': _("Public WhatsApp Number"),
+        }
+        help_texts = {
+            'whatsapp_number': _("Enter with country code. This will be visible to customers."),
         }
 
 # --- End VendorProfileUpdateForm ---
@@ -328,7 +361,7 @@ class PromotionForm(forms.ModelForm):
         required=False,
         help_text=_("Select products if scope is 'Specific Product(s)'.")
     )
-
+    
     class Meta:
         model = Promotion
         # Exclude fields set automatically or not directly editable by vendor
@@ -404,16 +437,194 @@ class VendorProductForm(forms.ModelForm):
         model = Product
         # Fields the vendor can manage
         fields = [
+            'product_type', # <<< Added product type
             'category', 'name', 'description', 'price',
-            'stock', 'is_active', 'is_featured'
+            'stock', 'digital_file', # <<< Added digital file
+            'is_active', 'is_featured'
             # Exclude 'vendor' (set automatically), 'slug' (auto-generated)
         ]
         widgets = {
+            'product_type': forms.Select(attrs={'class': 'form-select'}), # <<< Widget for type
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'rows': 5, 'class': 'form-control'}),
             'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'stock': forms.NumberInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'digital_file': forms.ClearableFileInput(attrs={'class': 'form-control'}), # <<< Widget for file
         }
 # --- End VendorProductForm ---
+
+# --- Vendor Additional Information Form ---
+class VendorAdditionalInfoForm(forms.ModelForm):
+    class Meta:
+        model = Vendor
+        # Define the fields you want in this section
+        fields = ['return_policy'] # Add more fields like 'certifications', 'about_us_extended' etc. later
+        widgets = {
+            'return_policy': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
+            # Add widgets for other fields if needed
+        }
+
+# --- START: Service Marketplace Forms ---
+
+class ServiceForm(forms.ModelForm):
+    """
+    Form for creating and editing services.
+    """
+    # Explicitly define the category field to control the queryset
+    category = forms.ModelChoiceField(
+        queryset=ServiceCategory.objects.filter(is_active=True).order_by('name'), # Ensure ordering
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label=_("Service Category"),
+        empty_label=_("Select a Category...") # Add placeholder
+    )
+
+    class Meta:
+        model = Service
+        # Fields the provider can manage
+        # <<< Added new professional profile fields >>>
+        fields = [ # Fields the provider can manage
+            'category', 'title', 'description', # Core service details
+             'skills', 'experience', 'education', # Professional profile fields - temporarily commented out
+            'location', 'is_active' # Other service details
+        ]
+        # Exclude 'provider' (set in view), 'slug' (auto-generated)
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Professional Logo Design')}),
+            'description': forms.Textarea(attrs={'rows': 5, 'class': 'form-control', 'placeholder': _('Describe the service you offer in detail...')}),
+            'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Accra, Remote, Nationwide')}),
+            'skills': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': _('e.g., Python, Graphic Design, Copywriting')}),
+            'experience': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': _('e.g., 5 years experience in web development...')}),
+            'education': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': _('e.g., BSc Computer Science, Google Certified...')}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'title': _('Service Title'),
+            'description': _('Detailed Description'),
+            'location': _('Service Location'),
+            'is_active': _("Make this service listing active?"),
+            'skills': _('Skills'),
+            'experience': _('Experience Summary'),
+            'education': _('Education / Certifications'),
+        }
+
+    # Add the FormHelper
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        # Define a simpler layout using crispy forms for better structure
+        self.helper.layout = Layout(
+            Field('category', css_class='mb-3'),
+            Field('title', css_class='mb-3'),
+            Field('description', css_class='mb-3'),
+            Fieldset(_('Your Qualifications (Optional)'), # Group optional fields
+                Field('skills', css_class='mb-3'),
+                Field('experience', css_class='mb-3'),
+                Field('education', css_class='mb-3'),
+                css_class='border p-3 rounded mb-3' # Style the fieldset
+            ),
+            Field('location', css_class='mb-3'),
+            Field('is_active', css_class='mb-3') # Render checkbox with label
+        )
+
+# --- START: Service Package Form (Standalone Class) ---
+class ServicePackageForm(forms.ModelForm):
+    """Form for individual service packages within the formset."""
+    class Meta:
+        model = ServicePackage
+        fields = ('name', 'description', 'price', 'delivery_time', 'revisions', 'display_order', 'is_active')
+        widgets = { # Apply Bootstrap classes
+            'name': forms.TextInput(attrs={'class': 'form-control form-control-sm', 'placeholder': _('Package Name')}),
+            'description': forms.Textarea(attrs={'class': 'form-control form-control-sm', 'rows': 2, 'placeholder': _('Package Description')}),
+            'price': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01'}),
+            'delivery_time': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
+            'revisions': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
+            'display_order': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False # Important: The formset template handles the <form> tag
+        self.helper.disable_csrf = True # CSRF handled by the main form
+        # Simplified layout for package form
+        self.helper.layout = Layout(
+            Field('name', css_class='mb-3'),
+            Field('price', css_class='mb-3'),
+            Field('description', css_class='mb-3'),
+            Field('delivery_time', css_class='mb-3'),
+            Field('revisions', css_class='mb-3'),
+            Field('display_order', css_class='mb-3'),
+            # Ensure 'is_active' checkbox is rendered with its label
+            Fieldset(
+                '', # No legend needed for a single checkbox usually
+                'is_active',
+                css_class='mt-2' # Add some margin
+            )
+        )
+# --- END: Service Package Form ---
+
+# --- START: Service Package Formset ---
+ServicePackageFormSet = inlineformset_factory(
+    Service,                                  # Parent model
+    ServicePackage,                           # Child model
+    form=ServicePackageForm,                  # Use the custom form class defined above
+    extra=1,                                  # Show 1 extra blank form by default
+    can_delete=True,                          # Allow deletion of packages
+)
+# --- END: Service Package Formset ---
+
+# --- START: Service Review Form ---
+class ServiceReviewForm(forms.ModelForm):
+    """
+    Form for submitting a review for a Service.
+    """
+    class Meta:
+        model = ServiceReview
+        fields = ['rating', 'comment']
+        widgets = {
+            'rating': forms.RadioSelect(attrs={'class': 'form-check-input'}),
+            'comment': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': _('Share your experience with this service...')}),
+        }
+        labels = {
+            'rating': _('Your Rating'),
+            'comment': _('Your Review (Optional)'),
+        }
+# --- END: Service Review Form ---
+
+# --- START: Service Search Form ---
+class ServiceSearchForm(forms.Form):
+    """
+    Simple form for searching services.
+    """
+    q = forms.CharField(label=_("Search Services"), required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Search Services')}))
+# --- END: Service Search Form ---
+
+# --- START: Address Form ---
+class AddressForm(forms.ModelForm):
+    """
+    Form for creating and updating user addresses.
+    """
+    class Meta:
+        model = Address
+        # Exclude 'user' (set in view) and 'created_at', 'updated_at' (auto-set)
+        fields = [
+            'address_type', 'full_name', 'street_address', 'apartment_address',
+            'city', 'state', 'zip_code', 'country', 'phone_number', 'is_default'
+        ]
+        widgets = {
+            'address_type': forms.Select(attrs={'class': 'form-select'}),
+            'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Recipient's Full Name")}),
+            'street_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Street Address")}),
+            'apartment_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Apt, suite, unit, etc. (Optional)")}),
+            'city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("City")}),
+            'state': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("State / Province / Region")}),
+            'zip_code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("ZIP / Postal Code")}),
+            'country': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Country")}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Phone Number (Optional)")}),
+            'is_default': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+# --- END: Address Form ---
