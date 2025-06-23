@@ -13,9 +13,11 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from django.utils.translation import gettext_lazy as _ # <<< Import for lazy translation
+from decimal import Decimal # For PLATFORM_COMMISSION_RATE
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 
 # Quick-start development settings - unsuitable for production
@@ -109,9 +111,9 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.provider_info', # <<< Add this line for provider info
-               # 'core.context_processors.cart_context',
-                'django.template.context_processors.i18n',
-                'core.views.menu',
+                'core.context_processors.categories_processor', # <<< Add this for categories
+                'django.template.context_processors.i18n', # Removed 'core.views.menu'
+                # 'core.views.menu', # <<< THIS WAS THE PROBLEM
             ],
         },
     },
@@ -234,7 +236,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # django-crispy-forms settings
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
-
+CRISPY_ALLOWED_TEMPLATE_PACKS = ("bootstrap5",) # Ensure this is a tuple or list
 
 # settings.py
 AUTHENTICATION_BACKENDS = [
@@ -256,7 +258,7 @@ AUTHENTICATION_BACKENDS = [
 # while still allowing username collection during signup (as your form does).
 
 ACCOUNT_AUTHENTICATION_METHODS = ['email']          # Users log in with their email.
-ACCOUNT_LOGIN_METHODS = ['email',]               # Users log in with their email.
+ACCOUNT_LOGIN_METHODS = ['email']               # Users log in with their email.
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None        # Important: Set to None if 'username' is not the primary login field.
                                                 # This tells allauth not to treat the User model's 'username'
                                                 # as the sole login identifier if you're using email for login.
@@ -266,7 +268,7 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = None        # Important: Set to None if 'use
 # ACCOUNT_USERNAME_REQUIRED = False             # Deprecated when ACCOUNT_SIGNUP_FORM_CLASS is used.
                                                 # Requirement is handled by the custom form.
 ACCOUNT_SIGNUP_FORM_CLASS = 'authapp.forms.UserRegisterForm' # Specify your custom signup form.
-ACCOUNT_SIGNUP_FIELDS = ['email']               # For allauth's internal checks/forms, only 'email' is a signup field.
+ACCOUNT_SIGNUP_FIELDS = ('email',)             # For allauth's internal checks/forms, only 'email' is a signup field.
                                                 # ACCOUNT_SIGNUP_FIELDS is not needed when using a custom form class.
 
 
@@ -281,7 +283,26 @@ ACCOUNT_LOGOUT_ON_GET = True                    # Current setting: True. Allows 
 LOGIN_REDIRECT_URL = 'home'  # Name of the URL to redirect to after login
 ACCOUNT_LOGOUT_REDIRECT_URL = 'signin' # Name of the URL to redirect to after logout
 
-# ... (Keep SOCIALACCOUNT_PROVIDERS etc.) ...
+DEFAULT_CURRENCY_CODE = 'GHS' # Example default currency
+
+# --- NEXUS Platform Settings ---
+PLATFORM_COMMISSION_RATE = Decimal('0.10') # 10% commission rate
+# --- End NEXUS Platform Settings ---
+
+
+# NEXUS PLATFORM SETTINGS
+# ==============================================================================
+NEXUS_DELIVERY_COMMISSION_RATE = 0.10  # Example: 10% commission on the delivery fee
+# NEXUS_SERVICE_FEE_FIXED = 1.00 # Example: Fixed service fee per order
+
+# settings.py
+# ...
+PLATFORM_SERVICE_COMMISSION_RATE = 0.10 # Example: 10% commission
+# ...
+
+
+# --- Google Maps API Key ---
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', 'AIzaSyC6sFcP8FYHzlDjL9J-syKheSC0XJjQBaQ') # Replace with your actual key
 
 
 
@@ -334,43 +355,77 @@ PAYSTACK_CALLBACK_URL = 'https://4eec-102-176-94-167.ngrok-free.app/paystack/cal
 # c:\Users\Hp\Desktop\Nexus\Nexus\settings.py
 
 # ... other settings ...
+# c:\Users\Hp\Desktop\Nexus\nexus\settings.py
+
+# ... (other settings) ...
 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
         'simple': {
-            'format': '{levelname} {message}',
+            'format': '{levelname} {asctime} {module} {message}',
             'style': '{',
         },
+        'console_format': { # Specific format for console
+            'format': '%(levelname)-8s %(asctime)s %(name)-25s %(funcName)-25s: %(message)s'
+        }
     },
     'handlers': {
         'console': {
+            'level': 'DEBUG', # Set to DEBUG to capture INFO and DEBUG logs
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose', # Use verbose formatter
+            'formatter': 'console_format',
         },
-    },
-    'root': { # Catch-all for other loggers
-        'handlers': ['console'],
-        'level': 'INFO', # Default level for other loggers
+        # You can add file handlers here if you want to log to a file
+        # 'file': {
+        #     'level': 'DEBUG',
+        #     'class': 'logging.FileHandler',
+        #     'filename': BASE_DIR / 'debug.log', # Make sure BASE_DIR is defined
+        #     'formatter': 'simple',
+        # },
     },
     'loggers': {
         'django': {
             'handlers': ['console'],
-            'level': 'INFO', # You can set this to WARNING to reduce Django's own logs
+            'level': 'INFO',
+            'propagate': False, # Stop django logs from going to root if root is also console
+        },
+        'django.request': { # To see request-related errors/warnings
+            'handlers': ['console'],
+            'level': 'WARNING',
             'propagate': False,
         },
-        'core.middleware': { # Logger for our SanitizeLanguageMiddleware
+        'core': { # Logger for your 'core' app (e.g., core.utils, core.signals)
             'handlers': ['console'],
-            'level': 'DEBUG', # Show all messages from our middleware
-            'propagate': False, # Don't pass to the root logger
+            'level': 'DEBUG',
+            'propagate': False, # Prevent double logging if root also logs to console
         },
+        'core.views': { # Specific logger for core.views
+            'handlers': ['console'],
+            'level': 'DEBUG', # Ensure this is DEBUG
+            'propagate': False, # Prevent propagation to 'core' or 'root'
+        },
+        'authapp': { # Logger for your 'authapp' app
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        # Add other app-specific loggers if needed
     },
+    'root': { # Catch-all for other loggers not explicitly defined
+        'handlers': ['console'],
+        'level': 'DEBUG', # Set root to DEBUG to see everything
+    }
 }
+
+# ... (rest of your settings) ...
+
+GEMINI_API_KEY = "AIzaSyA6rlwf-q9CXeE3p1yXVZ-DRq-42_EVv88" # Replace with your real key
 
 # ... other settings ...
 
@@ -380,3 +435,4 @@ NEGOTIABLE_PRODUCT_CATEGORY_SLUGS = [
     'heavy-machinery', 'industrial-equipment', # Example machinery
     # Add any other category slugs that should allow direct payment
 ]
+

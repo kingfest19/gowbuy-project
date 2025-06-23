@@ -1,0 +1,27 @@
+{% load static i18n %}
+
+{% if ai_recommended_products %}
+<div class="ai-recommendations-section mt-5 pt-4 border-top">
+    <h3 class="mb-4 section-title text-center">{% trans "You Might Also Like (AI Powered)" %}</h3>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
+        {% for rec_product in ai_recommended_products %}
+            <div class="col">
+                <div class="card h-100 product-card shadow-sm">
+                    <a href="{{ rec_product.get_absolute_url }}" class="text-decoration-none">
+                        {% if rec_product.images.first %}
+                            <img src="{{ rec_product.images.first.image.url }}" class="card-img-top product-card-img" alt="{{ rec_product.name }}">
+                        {% else %}
+                            <img src="{% static 'assets/img/placeholder.png' %}" class="card-img-top product-card-img" alt="{% trans 'Placeholder Image' %}">
+                        {% endif %}
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title text-dark fs-6 mb-1">{{ rec_product.name|truncatewords:10 }}</h5>
+                            <p class="card-text small text-muted mb-2">{{ rec_product.category.name }}</p>
+                            <p class="card-text product-price fw-bold text-dark mt-auto">GH₵ {{ rec_product.price|floatformat:2 }}</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}

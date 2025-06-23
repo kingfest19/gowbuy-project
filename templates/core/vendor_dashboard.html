@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load notification_tags %} {# Load your new notification tags #}
 {% load i18n humanize %} {# Added humanize for intcomma #}
 
 {% block title %}{% trans "Vendor Dashboard" %} - {{ vendor.name }}{% endblock title %}
@@ -8,16 +9,46 @@
     {# Add specific dashboard CSS if needed later #}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
+        /*
+         IMPORTANT: For the sidebar to be sticky and the main navigation (from base.html)
+         to stay on top, your main navigation elements in base.html (e.g., <nav> and .nav-bottom)
+         need to have `position: sticky; top: ...; z-index: ...;` applied, typically in your
+         global CSS (like assets/css/home.css or core/css/custom_styles.css).
+
+         Example for base.html's header (add to your global CSS):
+         nav { // The main top nav bar from base.html
+             position: sticky;
+             top: 0;
+             z-index: 1030; // High z-index
+             background-color: white; // Or your nav's background
+         }
+         .nav-bottom { // The secondary nav bar from base.html
+             position: sticky;
+             top: 70px; // Adjust based on the height of your top nav
+             z-index: 1029; // Slightly lower than main nav
+             background-color: #f8f9fa; // Or your nav-bottom's background
+         }
+         main {
+             padding-top: 120px; // Adjust to prevent content from going under sticky headers
+                                // This should be roughly height_of_top_nav + height_of_nav_bottom
+         }
+        */
+
         .dashboard-sidebar {
             background-color: #f8f9fa;
-            padding: 1.5rem;
+            padding: 1.0rem; /* Adjusted padding for the whole sidebar block */
             border-radius: 0.375rem;
-            height: 100%; /* Make sidebar full height within its column */
+            position: sticky; 
+            /* IMPORTANT: Adjust this 'top' value based on the total height of your sticky main site navigation from base.html */
+            top: 120px; /* Example: if main nav is 70px and nav-bottom is 50px, total is 120px */
+            /* Adjust 120px to match the 'top' value above */
+            overflow-y: auto; /* Allows sidebar content to scroll if it's too long */
+
         }
         .dashboard-sidebar .nav-link {
             color: #495057;
-            padding: 0.75rem 1rem;
-            margin-bottom: 0.25rem;
+            padding: 0.5rem 1rem; /* Reduced padding for individual links */
+            margin-bottom: 0.1rem; /* Reduced margin for individual links */
         }
         .dashboard-sidebar .nav-link.active {
             background-color: var(--bs-primary);
@@ -84,16 +115,30 @@
     <div class="row">
         {# Sidebar Navigation #}
         <div class="col-md-3">
-            <nav class="nav flex-column dashboard-sidebar mb-4 mb-md-0"> {# Add bottom margin for small screens #}
-                <h5 class="mb-3">{% trans "Dashboard Menu" %}</h5>
+            <nav class="nav flex-column dashboard-sidebar mb-4 mb-md-0"> {# Ensured flex-column for vertical stacking #}
+                <h5 class="mb-2">{% trans "Dashboard Menu" %}</h5>
                 <a class="nav-link active" href="{% url 'core:vendor_dashboard' %}">📊 {% trans "Overview" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_product_list' %}">📦 {% trans "Products" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_order_list' %}">🧾 {% trans "Orders" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_reports' %}">📈 {% trans "Reports" %}</a> {# <<< Updated link #}
-                <a class="nav-link" href="{% url 'core:edit_vendor_profile' %}">✏️ {% trans "Edit Profile" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_verification' %}">✅ {% trans "Verification" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_promotion_list' %}">🏷️ {% trans "Promotions" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_campaign_list' %}">📢 {% trans "Ad Campaigns" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_products' %}">📦 {% trans "Products" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_orders' %}">🧾 {% trans "Orders" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_reports' %}">📈 {% trans "Reports" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_profile_edit' %}">✏️ {% trans "Edit Profile" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_shipping_settings' %}">🚚 {% trans "Shipping" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_payment_settings' %}">💳 {% trans "Payments" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_payout_requests' %}">💰 {% trans "Payouts" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_verification_multistep' %}">✅ {% trans "Verification" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_promotions' %}">🏷️ {% trans "Promotions" %}</a>
+                {# Removed hr as it might look odd in a horizontal layout #}
+                <a class="nav-link" href="{% url 'core:vendor_ads' %}">📢 {% trans "Ad Campaigns" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_reviews' %}">⭐ {% trans "Reviews" %}</a>
+                <a class="nav-link position-relative" href="{% url 'core:vendor_notification_list' %}">
+                    🔔 {% trans "Notifications" %}
+                    {% if notification_count > 0 %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7em; margin-left: -10px; margin-top: 5px;">
+                            {{ notification_count }}
+                            <span class="visually-hidden">unread notifications</span>
+                        </span>
+                    {% endif %}
+                </a>
             </nav>
         </div>
 
@@ -140,7 +185,7 @@
                             <p class="card-text fs-4 fw-bold">{{ low_stock_products.count }}</p>
                              {# Link the button to the filtered product list page #}
                              {% if low_stock_products %}
-                                <a href="{% url 'core:vendor_product_list' %}?stock_status=low" class="btn btn-sm btn-outline-warning mt-1">View List</a> {# Kept outline for yellow #}
+                                <a href="{% url 'core:vendor_products' %}?stock_status=low" class="btn btn-sm btn-outline-warning mt-1">View List</a> {# Kept outline for yellow #}
                             {% else %}
                                 <small class="text-muted">No items low on stock</small>
                             {% endif %}
@@ -153,13 +198,18 @@
             {# --- START: Onboarding Checklist --- #}
             <div class="mb-4 p-3 border rounded bg-light"> {# Added padding, border, background #}
                 <h5 class="mb-3">{% trans "Shop Setup Checklist" %}</h5>
-                {% if not all_sections_complete and not vendor.is_approved %}
+                {% if not vendor.is_approved and vendor.verification_status != Vendor.VERIFICATION_STATUS_VERIFIED %}
                     <div class="alert alert-warning small p-2 mb-3"> {# Adjusted padding/margin #}
-                        {% trans "Please complete all required sections below to activate your shop." %}
+                        {% blocktrans %}Please complete all required sections, including submitting your verification documents. Your shop will go live after successful verification by our team.{% endblocktrans %}
                     </div>
-                {% elif all_sections_complete and not vendor.is_approved %}
+                {% elif vendor.verification_status == Vendor.VERIFICATION_STATUS_PENDING_REVIEW %}
                     <div class="alert alert-info small p-2 mb-3">
-                        {% trans "All sections complete! Your shop is pending final review by our team." %}
+                        {% trans "Your verification documents have been submitted and are pending review by our team." %}
+                    </div>
+                {% elif vendor.verification_status == Vendor.VERIFICATION_STATUS_NEEDS_RESUBMISSION or vendor.verification_status == Vendor.VERIFICATION_STATUS_REJECTED %}
+                    {% url 'core:vendor_verification_multistep' as verification_url %}
+                    <div class="alert alert-danger small p-2 mb-3">
+                        {% blocktrans %}There was an issue with your verification. Please check your notifications or contact support, then <a href="{{ verification_url }}">resubmit your information</a>.{% endblocktrans %}
                     </div>
                 {% elif vendor.is_approved %}
                      <div class="alert alert-success small p-2 mb-3">
@@ -168,19 +218,25 @@
                 {% endif %}
 
                 <div class="checklist-item d-flex justify-content-between align-items-center">
-                    <span><a href="{% url 'core:edit_vendor_profile' %}">{% trans "Shop Information" %}</a></span>
+                    <span><a href="{% url 'core:vendor_profile_edit' %}">{% trans "Shop Information" %}</a></span>
                     <span class="badge status-badge {% if shop_info_complete %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if shop_info_complete %}{% trans "COMPLETED" %}{% else %}{% trans "PENDING" %}{% endif %}</span>
                 </div>
                 <div class="checklist-item d-flex justify-content-between align-items-center">
-                    <span><a href="{% url 'core:vendor_verification' %}">{% trans "Business/Verification Information" %}</a></span>
-                    <span class="badge status-badge {% if business_info_status == 'COMPLETED' %}bg-success{% elif business_info_status == 'PENDING REVIEW' %}bg-info text-dark{% else %}bg-warning text-dark{% endif %}">{% trans business_info_status %}</span>
+                    <span><a href="{% url 'core:vendor_verification_multistep' %}">{% trans "Business/Verification Information" %}</a></span>
+                    <span class="badge status-badge 
+                        {% if vendor.verification_status == Vendor.VERIFICATION_STATUS_VERIFIED %}bg-success
+                        {% elif vendor.verification_status == Vendor.VERIFICATION_STATUS_PENDING_REVIEW %}bg-info text-dark
+                        {% elif vendor.verification_status == Vendor.VERIFICATION_STATUS_REJECTED or vendor.verification_status == Vendor.VERIFICATION_STATUS_NEEDS_RESUBMISSION %}bg-danger
+                        {% else %}bg-warning text-dark{% endif %}">
+                        {{ vendor.get_verification_status_display }}
+                    </span>
                 </div>
                 <div class="checklist-item d-flex justify-content-between align-items-center">
-                    <span><a href="{% url 'core:edit_vendor_shipping' %}">{% trans "Shipping Information" %}</a></span>
+                    <span><a href="{% url 'core:vendor_shipping_settings' %}">{% trans "Shipping Information" %}</a></span>
                     <span class="badge status-badge {% if shipping_info_complete %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if shipping_info_complete %}{% trans "COMPLETED" %}{% else %}{% trans "PENDING" %}{% endif %}</span>
                 </div>
                 <div class="checklist-item d-flex justify-content-between align-items-center">
-                    <span><a href="{% url 'core:edit_vendor_payment' %}">{% trans "Payment Information" %}</a></span>
+                    <span><a href="{% url 'core:vendor_payment_settings' %}">{% trans "Payment Information" %}</a></span>
                     <span class="badge status-badge {% if payment_info_complete %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if payment_info_complete %}{% trans "COMPLETED" %}{% else %}{% trans "PENDING" %}{% endif %}</span>
                 </div>
                 <div class="checklist-item d-flex justify-content-between align-items-center">
@@ -212,7 +268,7 @@
                     </div>
                     <div class="mt-2">
                          {# Ensure you have a 'vendor_order_list' URL pattern defined #}
-                         <a href="{% url 'core:vendor_order_list' %}" class="btn btn-sm btn-outline-secondary">View All Orders</a>
+                         <a href="{% url 'core:vendor_orders' %}" class="btn btn-sm btn-outline-secondary">View All Orders</a>
                     </div>
                     {% else %}
                     <div class="alert alert-light" role="alert">

@@ -8,7 +8,12 @@ class CustomUser(AbstractUser):
     # You MUST define the model specified in settings.AUTH_USER_MODEL
 
     # Add any extra fields you want your user to have beyond the defaults.
-    # Example (optional fields):
+    # Make email unique if you use it for login and want it to be unique.
+    email = models.EmailField(
+        _("email address"),
+        unique=True, # <<< Add this if you want unique emails
+        help_text=_("Required. Emails must be unique.")
+    )
     bio = models.TextField(blank=True, null=True, help_text="A short biography.")
     date_of_birth = models.DateField(blank=True, null=True, verbose_name=_("Date of Birth"))
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True, verbose_name=_("Profile Picture")) # Added from a previous version
@@ -26,6 +31,13 @@ class CustomUser(AbstractUser):
                                        verbose_name=_("WhatsApp Number"),
                                        help_text=_("Include country code, e.g., +12345678900. This will be visible."))
     # --- END: Public Contact Information ---
+    
+      # --- START: Service Provider Flag ---
+    is_service_provider = models.BooleanField(default=False, verbose_name=_("Is Service Provider"), help_text=_("Designates whether this user is an active service provider."))
+    # --- END: Service Provider Flag ---
+
+    
+    
 
     # You don't need to redefine username, email, password, first_name, last_name, etc.
     # They are inherited from AbstractUser.

@@ -7,33 +7,30 @@
 {% block extra_css %}
     {{ block.super }}
     <style>
-        /* --- General Card Styling --- */
+        .service-detail-content { /* Main wrapper for service details */
+            background-color: #fff; /* White background for the content area */
+            padding: 2rem;          /* Add padding around the content */
+            border-radius: 0.5rem;  /* Optional: rounded corners */
+            box-shadow: 0 0.25rem 1rem rgba(0,0,0,0.075); /* Subtle shadow */
+            margin-top: 1rem; /* Adjust top margin if needed, container already has mt-4 */
+            margin-bottom: 2rem; /* Space at the bottom */
+        }
+
         .service-detail-card {
-            border: none; /* Remove default card border */
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1); /* More pronounced shadow for the main card */
-            border-radius: 0.5rem; /* Slightly more rounded corners */
-            overflow: hidden; /* Ensures rounded corners clip content */
+            /* This class will now just be a general container, no card styles */
+            padding-bottom: 2rem; /* Add some bottom padding if all card wrappers are gone */
         }
 
         /* --- Card Header Styling --- */
-        .service-detail-card .card-header {
-            background-color: rgb(52, 73, 94); /* Primary Dark Blue-Grey */
-            color: white;
-            padding: 1.5rem; /* Increased padding */
-            border-bottom: none; /* Remove header border */
+        .service-title-header { /* New class for the title area */
+            padding: 1rem 0; /* Adjust padding as needed */
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #eee; /* Optional: light separator */
         }
-        .service-detail-card .card-header h1 {
+        .service-title-header h1 {
             font-size: 1.75rem; /* Adjust title size */
             font-weight: 600; /* Make title a bit bolder */
-        }
-        .service-detail-card .card-header .btn {
-            color: white; /* Ensure button text in header is visible */
-        }
-        .service-detail-card .card-header .btn-outline-primary {
-            border-color: rgba(255,255,255,0.5);
-        }
-         .service-detail-card .card-header .btn-outline-danger {
-            border-color: rgba(255,255,255,0.5);
+            color: #333; /* Ensure title color is good on page background */
         }
 
         /* --- Card Body Styling --- */
@@ -67,9 +64,9 @@
             border-color: rgb(26, 188, 156);
         }
         .package-tabs .tab-content .border {
-            border-color: #dee2e6 !important; /* Ensure border matches tab border */
-            border-top: none !important; /* Remove top border to connect visually with active tab */
-            border-radius: 0 0 0.375rem 0.375rem; /* Rounded corners only at the bottom */
+            border: none !important; /* Remove border from tab content pane */
+            border-radius: 0; /* Remove rounded corners */
+            padding: 1rem 0; /* Adjust padding if border is removed */
         }
         .service-detail-card .btn-success { /* Order Package button */
             background-color: rgb(26, 188, 156);
@@ -83,14 +80,14 @@
 
 
         /* --- Description, Gallery, Video Sections --- */
-        .service-detail-card h4 {
+        .section-heading { /* New class for section titles */
             color: rgb(52, 73, 94); /* Dark blue-grey for section headings */
             margin-bottom: 1rem;
             padding-bottom: 0.5rem;
             border-bottom: 1px solid #eee; /* Subtle separator */
         }
-        .service-detail-card .card-body > hr { /* Style for the HR after info section */
-            margin: 2rem 0; /* More vertical space */
+        .content-separator { /* New class for <hr> elements */
+            margin: 2rem 0; 
         }
         .service-detail-card .card-body > div > hr { /* Style for HRs within sections if any */
              margin: 1.5rem 0;
@@ -100,10 +97,10 @@
         /* --- Reviews Section (Moved) --- */
         .service-reviews-section {
             margin-top: 2rem; /* Space above the reviews section */
-            padding: 1.5rem;
-            background-color: #f8f9fa; /* Light grey background */
-            border-radius: 0.5rem;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            padding: 0; /* Remove padding if it's to be on the direct background */
+            background-color: transparent; /* Make background transparent */
+            border-radius: 0;
+            box-shadow: none; /* Remove shadow */
         }
          .service-reviews-section h4 {
             color: rgb(52, 73, 94);
@@ -146,9 +143,9 @@
 
 {% block service_content %} {# <<< Use the new content block #}
 <div class="container mt-4">
-    <div class="card service-detail-card"> {# <<< Added class #}
-        <div class="card-header d-flex justify-content-between align-items-center py-3"> {# Added py-3 for padding #}
-            <h1 class="card-title mb-0">{{ service.title }}</h1>
+    <div class="service-detail-content"> {# Main wrapper, no card class needed #}
+        <div class="service-title-header d-flex justify-content-between align-items-center">
+            <h1 class="mb-0">{{ service.title }}</h1>
             {# Edit/Delete Buttons for Provider #}
             {% if user.is_authenticated and user == service.provider %}
                 <div>
@@ -164,8 +161,7 @@
                 </div>
             {% endif %}
         </div>
-        <div class="card-body">
-            {# --- START: Provider/Category/Location Section --- #}
+        {# Content previously in card-body now flows directly #}
             <div class="row mb-4 service-info-section"> {# Added class and bottom margin #}
                 <div class="col-md-6">
                     <p><strong>{% trans "Provider" %}:</strong> 
@@ -178,14 +174,12 @@
                 </div>
                 <div class="col-md-6">
                     <p><strong>{% trans "Location" %}:</strong> {{ service.location|default:"N/A" }}</p>
-                    {# --- START: Remove old pricing display ---
+                    
                     <p><strong>{% trans "Pricing" %}:</strong> {{ service.price_description }} {% if service.price %}<span class="fw-bold">(GH₵ {{ service.price|floatformat:2 }})</span>{% endif %}</p>
-                    --- END: Remove old pricing display --- #}
+                  
                 </div>
             </div>
-            {# --- END: Provider/Category/Location Section --- #}
-
-            <hr>
+            <hr class="content-separator">
 
             {# --- START: Service Packages Tabs --- #}
             {% if service_packages %}
@@ -202,7 +196,7 @@
                 <div class="tab-content" id="packageTabsContent">
                     {% for package in service_packages %}
                     <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="package-{{ package.id }}" role="tabpanel" aria-labelledby="tab-{{ package.id }}">
-                        <div class="border p-3 rounded d-flex flex-column h-100"> {# Added d-flex flex-column h-100 #}
+                        <div class="p-3 d-flex flex-column h-100"> {# Removed .border and .rounded #}
                             <div> {# Wrapper for content before button #}
                                 <h4 class="text-success mb-3">GH₵ {{ package.price|floatformat:2 }}</h4>
                                 <p>{{ package.description|linebreaksbr }}</p>
@@ -225,34 +219,34 @@
                     {% endfor %}
                 </div>
             </div>
-            <hr class="mt-4">
+            <hr class="content-separator mt-4">
             {% else %} {# Fallback if somehow no packages exist #}
                 <div class="mb-3">
                     <h5>{% trans "Pricing" %}</h5>
-                    <p>{{ service.price_description }} {% if service.price %}- <strong>GH₵ {{ service.price|floatformat:2 }}</strong>{% endif %}</p>
+                    <p>{% if service.price %}<strong>GH₵ {{ service.price|floatformat:2 }}</strong>{% else %}{% trans "Contact provider for pricing." %}{% endif %}</p>
                 </div>
             {% endif %}
             {# --- END: Service Packages Tabs --- #}
 
             {# --- START: Description Section --- #}
-            <h4 class="mt-4">{% trans "Description" %}</h4>
+            <h4 class="mt-4 section-heading">{% trans "Description" %}</h4>
             <p>{{ service.description|linebreaksbr }}</p>
             {# --- END: Description Section --- #}
 
             {# --- START: Service Image Gallery --- #}
             {% if service_images %}
-            <hr class="mt-4"> {# Separator #}
-            <h4 class="mb-3">{% trans "Gallery / Portfolio" %}</h4>
+            <hr class="content-separator mt-4"> {# Separator #}
+            <h4 class="mb-3 section-heading">{% trans "Gallery / Portfolio" %}</h4>
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
                 {% for img in service_images %}
                 <div class="col">
-                    <img src="{{ img.image.url }}" class="img-fluid rounded shadow-sm" alt="{{ img.alt_text|default:service.title }}">
+                    <img src="{{ img.image.url }}" class="img-fluid rounded" alt="{{ img.alt_text|default:service.title }}"> {# Removed shadow-sm #}
                     {# Optional: Add lightbox functionality later #}
                 </div>
                 {% endfor %}
             </div>
-            {# --- END: Service Image Gallery --- #}
             {% endif %}
+            {# --- END: Service Image Gallery --- #}
 
             {# --- START: Service Video Section --- #}
             {% if service_videos %}
@@ -261,15 +255,15 @@
             <div class="row row-cols-1 row-cols-md-2 g-3"> {# Adjust columns as needed #}
                 {% for vid in service_videos %}
                 <div class="col">
-                    <div class="card h-100 shadow-sm"> {# Use card for structure #}
-                        <video controls width="100%" class="card-img-top"> {# Responsive width #}
+                    <div class="video-item-flat mb-3"> {# Removed card structure #}
+                        <video controls width="100%" class="img-fluid rounded"> {# Use img-fluid and rounded #}
                             <source src="{{ vid.video.url }}" type="video/mp4"> {# Assume MP4, add other types if needed #}
                             {% trans "Your browser does not support the video tag." %}
                         </video>
                         {% if vid.title or vid.description %}
-                        <div class="card-body py-2"> {# Reduced padding #}
-                            {% if vid.title %}<h6 class="card-title mb-1">{{ vid.title }}</h6>{% endif %}
-                            {% if vid.description %}<p class="card-text small text-muted">{{ vid.description|linebreaksbr }}</p>{% endif %}
+                        <div class="mt-2"> {# Simple margin for spacing #}
+                            {% if vid.title %}<h6 class="mb-1">{{ vid.title }}</h6>{% endif %}
+                            {% if vid.description %}<p class="small text-muted mb-0">{{ vid.description|linebreaksbr }}</p>{% endif %}
                         </div>
                         {% endif %}
                     </div>
@@ -280,13 +274,9 @@
             {% endif %}
 
             <p class="text-muted mt-4"><small>{% trans "Listed" %}: {{ service.created_at|date:"F j, Y, P" }}</small></p>
-        </div>
-        {# --- END: Card Body --- #}
+        {# End of content previously in card-body #}
 
-        {# --- REMOVED: Reviews Section from Card Footer --- #}
-        {# The reviews section content was here and is now moved below the main card #}
-
-    </div> {# End main service-detail-card #}
+    </div> {# End service-detail-content (previously service-detail-card) #}
 
     {# --- START: Reviews Section (Moved and Styled) --- #}
     <div class="service-reviews-section"> {# New container for reviews #}
@@ -326,7 +316,7 @@
             {% if not user_has_reviewed %}
                 <hr>
                 <h5>{% trans "Leave a Review" %}</h5>
-                <form action="{% url 'core:add_service_review' service_slug=service.slug %}" method="post">
+                <form action="{% url 'core:submit_service_review' service_slug=service.slug %}" method="post">
                     {% csrf_token %}
                     {% crispy review_form %} {# Or {{ review_form.as_p }} #}
                     <button type="submit" class="btn btn-primary mt-2">{% trans "Submit Review" %}</button>

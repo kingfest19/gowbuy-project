@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% load humanize %}
+
+{% block title %}{{ page_title }} | {% trans "Rider Dashboard" %}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        .reports-container {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+        }
+        .reports-container h2.page-main-title {
+            color: #007bff;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .summary-card {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .summary-card h5 {
+            margin-bottom: 5px;
+            color: #495057;
+        }
+        .summary-card .amount, .summary-card .count {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .amount.positive, .count.positive { color: #28a745; }
+        .amount.neutral, .count.neutral { color: #6c757d; }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row">
+        {% include "core/rider/rider_dashboard_sidebar_snippet.html" %} {# Assuming sidebar snippet #}
+        <div class="col-md-9">
+            <div class="reports-container">
+                <h2 class="page-main-title">{{ page_title }}</h2>
+
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="summary-card text-center">
+                            <h5>{% trans "Total Earned (All Time)" %}</h5>
+                            <p class="amount positive">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ total_earned|floatformat:2|intcomma }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="summary-card text-center">
+                            <h5>{% trans "Total Completed Deliveries" %}</h5>
+                            <p class="count positive">{{ total_completed_deliveries|intcomma }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="summary-card text-center">
+                            <h5>{% trans "Avg. Earning per Delivery" %}</h5>
+                            <p class="amount neutral">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ average_earning_per_delivery|floatformat:2|intcomma }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-muted">{% trans "More detailed reports, including monthly breakdowns and performance charts, are coming soon!" %}</p>
+                <!-- Placeholder for future charts or more detailed tables -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -8,12 +8,16 @@ from django.utils.translation import gettext_lazy as _
 class UserRegisterForm(UserCreationForm):
     username = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username'}))
     email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'}))
+    first_name = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('First Name (Optional)')}))
+    last_name = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Last Name (Optional)')}))
     password1 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'}))
     password2 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirm Password'}))
 
     class Meta:
         model = CustomUser
-        fields = ['username', 'email',] # Only username and email are directly handled by UserCreationForm's Meta
+        # UserCreationForm handles username, password1, password2.
+        # We explicitly add email, first_name, and last_name here to ensure they are processed.
+        fields = ['username', 'email', 'first_name', 'last_name']
 
     def save(self, request):
         """
@@ -22,7 +26,11 @@ class UserRegisterForm(UserCreationForm):
         It calls the parent UserCreationForm's save method.
         """
         # UserCreationForm.save() handles user creation, password setting, and saving.
-        user = super().save(commit=True)
+        user = super().save(commit=False) # Save commit=False to set additional fields
+        user.email = self.cleaned_data.get('email')
+        user.first_name = self.cleaned_data.get('first_name')
+        user.last_name = self.cleaned_data.get('last_name')
+        user.save()
         return user
 
     def signup(self, request, user):

@@ -33,7 +33,16 @@
                     {% endif %}
                     <div class="card-body d-flex flex-column">
                         <h5 class="card-title">{{ service.title }}</h5>
-                        <p class="card-text text-muted small">{% trans "By" %} {{ service.provider.username }}</p>
+                        <p class="card-text text-muted small">
+                            {% trans "By" %}
+                            <a href="{% url 'core:provider_profile_detail' username=service.provider.username %}">
+                                {% if service.provider.service_provider_profile.business_name %}
+                                    {{ service.provider.service_provider_profile.business_name }}
+                                {% else %}
+                                    {{ service.provider.username }}
+                                {% endif %}
+                            </a>
+                        </p>
                         {# Display starting price if packages exist #}
                         {% with first_package=service.packages.all.first %}
                             {% if first_package %}

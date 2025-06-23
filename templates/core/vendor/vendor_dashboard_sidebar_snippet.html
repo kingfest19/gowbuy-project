@@ -1,0 +1,39 @@
+{% load i18n %}
+<div class="col-md-3">
+    <div class="list-group mb-4 shadow-sm">
+        <a href="{% url 'core:vendor_dashboard' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_dashboard' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_dashboard' %}page{% else %}false{% endif %}">
+            <i class="fas fa-tachometer-alt fa-fw me-2"></i>{% trans "Dashboard" %}
+        </a>
+         <a class="nav-link" href="{% url 'core:vendor_verification_multistep' %}">✅ {% trans "Verification" %}</a>
+        <a href="{% url 'core:vendor_products' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_products' or request.resolver_match.url_name == 'vendor_product_create' or request.resolver_match.url_name == 'vendor_product_edit' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_products' or request.resolver_match.url_name == 'vendor_product_create' or request.resolver_match.url_name == 'vendor_product_edit' %}page{% else %}false{% endif %}">
+            <i class="fas fa-box-open fa-fw me-2"></i>{% trans "Products" %}
+        </a>
+        <a href="{% url 'core:vendor_orders' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_orders' or request.resolver_match.url_name == 'vendor_order_detail' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_orders' or request.resolver_match.url_name == 'vendor_order_detail' %}page{% else %}false{% endif %}">
+            <i class="fas fa-receipt fa-fw me-2"></i>{% trans "Orders" %}
+        </a>
+        <a href="{% url 'core:vendor_profile_edit' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_profile_edit' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_profile_edit' %}page{% else %}false{% endif %}">
+            <i class="fas fa-store fa-fw me-2"></i>{% trans "Store Profile" %}
+        </a>
+        <a href="{% url 'core:vendor_shipping_settings' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_shipping_settings' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_shipping_settings' %}page{% else %}false{% endif %}">
+            <i class="fas fa-shipping-fast fa-fw me-2"></i>{% trans "Shipping" %}
+        </a>
+        <a href="{% url 'core:vendor_payment_settings' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_payment_settings' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_payment_settings' %}page{% else %}false{% endif %}">
+            <i class="fas fa-credit-card fa-fw me-2"></i>{% trans "Payments" %}
+        </a>
+         <a href="{% url 'core:vendor_payout_requests' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_payout_requests' or request.resolver_match.url_name == 'vendor_payout_request_create' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_payout_requests' or request.resolver_match.url_name == 'vendor_payout_request_create' %}page{% else %}false{% endif %}">
+            <i class="fas fa-hand-holding-usd fa-fw me-2"></i>{% trans "Payouts" %}
+        </a>
+        <a href="{% url 'core:vendor_promotions' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_promotions' or request.resolver_match.url_name == 'vendor_promotion_create' or request.resolver_match.url_name == 'vendor_promotion_edit' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_promotions' or request.resolver_match.url_name == 'vendor_promotion_create' or request.resolver_match.url_name == 'vendor_promotion_edit' %}page{% else %}false{% endif %}">
+            <i class="fas fa-tags fa-fw me-2"></i>{% trans "Promotions" %}
+        </a>
+        <a href="{% url 'core:vendor_ads' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_ads' or request.resolver_match.url_name == 'vendor_campaign_create' or request.resolver_match.url_name == 'vendor_campaign_edit' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_ads' or request.resolver_match.url_name == 'vendor_campaign_create' or request.resolver_match.url_name == 'vendor_campaign_edit' %}page{% else %}false{% endif %}">
+            <i class="fas fa-bullhorn fa-fw me-2"></i>{% trans "Advertisements" %}
+        </a>
+        <a href="{% url 'core:vendor_reviews' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_reviews' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_reviews' %}page{% else %}false{% endif %}">
+            <i class="fas fa-star fa-fw me-2"></i>{% trans "Reviews" %}
+        </a>
+        <a href="{% url 'core:vendor_reports' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_reports' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_reports' %}page{% else %}false{% endif %}">
+            <i class="fas fa-chart-line fa-fw me-2"></i>{% trans "Reports" %}
+        </a>
+    </div>
+</div>

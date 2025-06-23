@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static i18n humanize %}
+{% load static i18n humanize notification_tags %}
 
 {% block title %}{% trans "Reports" %} - {{ vendor.name }} {% trans "Dashboard" %}{% endblock title %}
 
@@ -59,13 +59,27 @@
             <nav class="nav flex-column dashboard-sidebar mb-4 mb-md-0">
                 <h5 class="mb-3">{% trans "Dashboard Menu" %}</h5>
                 <a class="nav-link" href="{% url 'core:vendor_dashboard' %}">📊 {% trans "Overview" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_product_list' %}">📦 {% trans "Products" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_order_list' %}">🧾 {% trans "Orders" %}</a>
+               <a class="nav-link" href="{% url 'core:vendor_products' %}">📦 {% trans "Products" %}</a>
+               <a class="nav-link" href="{% url 'core:vendor_orders' %}">🧾 {% trans "Orders" %}</a>
                 <a class="nav-link active" href="{% url 'core:vendor_reports' %}">📈 {% trans "Reports" %}</a> {# Active link #}
-                <a class="nav-link" href="{% url 'core:edit_vendor_profile' %}">✏️ {% trans "Edit Profile" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_verification' %}">✅ {% trans "Verification" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_promotion_list' %}">🏷️ {% trans "Promotions" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_campaign_list' %}">📢 {% trans "Ad Campaigns" %}</a>
+               <a class="nav-link" href="{% url 'core:vendor_profile_edit' %}">✏️ {% trans "Edit Profile" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_shipping_settings' %}">🚚 {% trans "Shipping" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_payment_settings' %}">💳 {% trans "Payments" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_payout_requests' %}">💰 {% trans "Payouts" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_verification_multistep' %}">✅ {% trans "Verification" %}</a>
+                 <a class="nav-link" href="{% url 'core:vendor_promotions' %}">🏷️ {% trans "Promotions" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_ads' %}">📢 {% trans "Ad Campaigns" %}</a>
+                <a class="nav-link" href="{% url 'core:vendor_reviews' %}">⭐ {% trans "Reviews" %}</a>
+                <a class="nav-link position-relative" href="{% url 'core:vendor_notification_list' %}">
+                    🔔 {% trans "Notifications" %}
+                    
+                    {% if notification_count > 0 %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7em; margin-left: -10px; margin-top: 5px;">
+                            {{ notification_count }}
+                            <span class="visually-hidden">unread notifications</span>
+                        </span>
+                    {% endif %}
+                </a>
             </nav>
         </div>
 

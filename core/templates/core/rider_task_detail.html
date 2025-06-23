@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{{ page_title }} | {% trans "NEXUS" %}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        /* Custom styles for Rider Task Detail Page */
+        .task-detail-section {
+            background-color: #ffffff;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e9ecef;
+        }
+
+        .task-detail-section h6 { /* For section sub-titles like Pickup/Delivery Details */
+            color: #007bff; /* Primary color */
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 1.1rem; /* Slightly larger than default h6 */
+        }
+
+        .task-detail-section p {
+            margin-bottom: 0.75rem; /* Space between paragraphs */
+        }
+        .task-detail-section p strong {
+            color: #495057;
+        }
+
+        .page-main-title { /* Re-using from rider_dashboard or define if not global */
+            color: #343a40;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .status-badge-large .badge { /* For the main status badge */
+            font-size: 1.1em;
+            padding: 0.6em 0.8em;
+        }
+        #taskMap {
+            height: 400px; /* Or any desired height */
+            width: 100%;
+            border-radius: 0 0 8px 8px; /* Match card rounding if p-0 is used on card-body */
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <h2 class="page-main-title">{{ page_title }}</h2>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if show_map %}
+            <div class="card mb-4 task-detail-section"> {# Added task-detail-section for consistent styling #}
+                <div class="card-header">
+                    <h6><i class="fas fa-route me-2"></i>{% trans "Delivery Route Overview" %}</h6>
+                </div>
+                <div class="card-body p-0"> {# p-0 to make map flush with card edges #}
+                    <div id="taskMap"></div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="task-detail-section">
+                <h5 class="mb-3">{% trans "Order ID:" %} {{ task.order.order_id }}</h5>
+                <p class="status-badge-large"><strong>{% trans "Current Status:" %}</strong>
+                    <span class="badge
+                        {% if task.status == 'ACCEPTED_BY_RIDER' %}bg-info text-dark
+                        {% elif task.status == 'PICKED_UP' %}bg-warning text-dark
+                        {% elif task.status == 'OUT_FOR_DELIVERY' %}bg-success
+                        {% elif task.status == 'DELIVERED' %}bg-primary
+                        {% else %}bg-secondary
+                        {% endif %}">
+                        {{ task.get_status_display }}
+                    </span>
+                </p>
+            </div>
+
+            <div class="task-detail-section">
+                <h6><i class="fas fa-store me-2"></i>{% trans "Pickup Details" %}</h6>
+                <p><strong>{% trans "From:" %}</strong> {{ task.pickup_address_text }}</p>
+                {% if task.pickup_latitude and task.pickup_longitude %}
+                    <p><small class="text-muted">({% trans "Lat:" %} {{ task.pickup_latitude }}, {% trans "Lng:" %} {{ task.pickup_longitude }})</small></p>
+                {% endif %}
+                {% if task.pickup_latitude and task.pickup_longitude %}
+                    <a href="https://www.google.com/maps/dir/?api=1&destination={{ task.pickup_latitude }},{{ task.pickup_longitude }}" target="_blank" class="btn btn-sm btn-outline-primary mb-2">
+                        <i class="fas fa-directions me-1"></i> {% trans "Directions to Pickup" %}
+                    </a>
+                {% endif %}
+                {% with vendor=task.order.items.first.product.vendor %} {# Assuming first item's vendor is the pickup point #}
+                    {% if vendor and vendor.public_phone_number %}
+                        <p><strong>{% trans "Vendor Contact:" %}</strong> <a href="tel:{{ vendor.public_phone_number }}" class="text-decoration-none">{{ vendor.public_phone_number }}</a></p>
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <div class="task-detail-section">
+                <h6><i class="fas fa-map-marker-alt me-2"></i>{% trans "Delivery Details" %}</h6>
+                <p><strong>{% trans "To:" %}</strong> {{ task.delivery_address_text }}</p>
+                 {% if task.delivery_latitude and task.delivery_longitude %}
+                    <p><small class="text-muted">({% trans "Lat:" %} {{ task.delivery_latitude }}, {% trans "Lng:" %} {{ task.delivery_longitude }})</small></p>
+                {% endif %}
+                {% if task.delivery_latitude and task.delivery_longitude %}
+                    <a href="https://www.google.com/maps/dir/?api=1&destination={{ task.delivery_latitude }},{{ task.delivery_longitude }}" target="_blank" class="btn btn-sm btn-outline-primary mb-2">
+                        <i class="fas fa-map-marked-alt me-1"></i> {% trans "Directions to Delivery" %}
+                    </a>
+                {% endif %}
+                {% if task.order.shipping_address and task.order.shipping_address.phone_number %}
+                     <p><strong>{% trans "Customer Contact:" %}</strong> <a href="tel:{{ task.order.shipping_address.phone_number }}" class="text-decoration-none">{{ task.order.shipping_address.phone_number }}</a></p>
+                {% endif %}
+            </div>
+
+            {% if task.special_instructions %}
+                <div class="task-detail-section">
+                    <h6><i class="fas fa-info-circle me-2"></i>{% trans "Special Instructions" %}</h6>
+                    <p>{{ task.special_instructions }}</p>
+                </div>
+            {% endif %}
+
+            <div class="task-detail-section text-center"> {# Centering actions #}
+                <h6>{% trans "Task Actions" %}</h6>
+                {% if task.status == 'ACCEPTED_BY_RIDER' %}
+                    <form method="post" action="{% url 'core:update_task_status_picked_up' task_id=task.task_id %}" class="d-inline-block me-2">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-info btn-lg"> {# Larger button #}
+                            <i class="fas fa-box-open me-1"></i> {% trans "Mark as Picked Up" %}
+                        </button>
+                    </form>
+                {% elif task.status == 'PICKED_UP' or task.status == 'OUT_FOR_DELIVERY' %}
+                    <form method="post" action="{% url 'core:update_task_status_delivered' task_id=task.task_id %}" class="d-inline-block me-2">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-lg"> {# Larger button #}
+                            <i class="fas fa-check-circle me-1"></i> {% trans "Mark as Delivered" %}
+                        </button>
+                    </form>
+                {% else %}
+                    <p class="text-muted"><em>{% trans "No further actions available for this task's current status." %}</em></p>
+                {% endif %}
+                {# We can add more buttons here later, e.g., "Report Issue" #}
+            </div>
+
+            <a href="{% url 'core:rider_dashboard' %}" class="btn btn-outline-secondary mt-3">{% trans "Back to Dashboard" %}</a>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if show_map and google_maps_api_key %}
+<script>
+    // This initMap is specific to this page and will be called by the Google Maps API script
+    // if it hasn't been called already by the global one in base.html.
+    // To ensure it's the one that runs for this page, we can redefine it or ensure it's called.
+    // For simplicity, we'll assume the global initMap in base.html is very basic.
+    // This function will be called once the Google Maps API script has loaded.
+    function initTaskDetailMap() {
+        console.log("Initializing Task Detail Map...");
+        const pickupLocation = { lat: {{ pickup_lat|default:0.0 }}, lng: {{ pickup_lng|default:0.0 }} }; // Added default for safety
+        const deliveryLocation = { lat: {{ delivery_lat|default:0.0 }}, lng: {{ delivery_lng|default:0.0 }} }; // Added default for safety
+
+        // Check if coordinates are valid before proceeding
+        if (pickupLocation.lat === 0.0 && pickupLocation.lng === 0.0 && deliveryLocation.lat === 0.0 && deliveryLocation.lng === 0.0) {
+            console.warn("Map coordinates are not valid. Map will not be fully initialized.");
+            // Optionally display a message in the map div
+            document.getElementById("taskMap").innerHTML = "<p class='text-center p-3'>{% trans 'Map data is incomplete for this task.' %}</p>";
+            return;
+        }
+
+
+        const map = new google.maps.Map(document.getElementById("taskMap"), {
+            zoom: 12, // Adjust zoom as needed
+            center: pickupLocation, // Center map initially on pickup
+            // You can add more map options here, like mapTypeId, gestureHandling, etc.
+        });
+
+        const pickupMarker = new google.maps.Marker({
+            position: pickupLocation,
+            map: map,
+            title: "{% trans 'Pickup Location' %}",
+            label: "P", // Short label for pickup
+            icon: { // Using a standard Google Maps icon with color
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                fillColor: "#4CAF50", // Green
+                fillOpacity: 1,
+                strokeWeight: 1,
+                strokeColor: "#ffffff"
+            }
+        });
+
+        const deliveryMarker = new google.maps.Marker({
+            position: deliveryLocation,
+            map: map,
+            title: "{% trans 'Delivery Location' %}",
+            label: "D", // Short label for delivery
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                fillColor: "#F44336", // Red
+                fillOpacity: 1,
+                strokeWeight: 1,
+                strokeColor: "#ffffff"
+            }
+        });
+
+        // Optional: Fit map to bounds of both markers
+        const bounds = new google.maps.LatLngBounds();
+        bounds.extend(pickupLocation);
+        bounds.extend(deliveryLocation);
+        map.fitBounds(bounds);
+
+        // If only one point (e.g., pickup and delivery are same, unlikely for tasks),
+        // fitBounds might zoom in too much. Add a check or set a minimum zoom.
+        // A small delay can help ensure the map has rendered before adjusting zoom after fitBounds.
+        google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
+            if (map.getZoom() > 15) { 
+                map.setZoom(15);
+            }
+        });
+    }
+    // If the global initMap is already defined and called, we need to ensure our specific map init runs.
+    // One way is to call it if google.maps is already loaded, or ensure the callback is set to this.
+    // Since base.html has `callback=initMap`, we can rename this function and call it from the global initMap,
+    // or simply redefine initMap here if this template is loaded after base.html's script.
+    // For now, let's assume this will be called correctly by the API script if the global one is minimal.
+    // A more robust way:
+    window.initMap = initTaskDetailMap; // Override global initMap for this page
+
+</script>
+{% endif %}
+{% endblock extra_js %}

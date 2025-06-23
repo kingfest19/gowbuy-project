@@ -1,517 +1,66 @@
-{% extends 'base.html' %}
-{% load static %}
-{% load humanize %}
+{# In your product_detail.html, where you want to display the 3D model #}
 
-{% block title %}{{ product.name|default:"Product Page" }} - NEXUS{% endblock title %}
+{% if product.three_d_model_url %}
+    <div class="product-3d-viewer my-4 p-3 border rounded shadow-sm">
+        <h4 class="mb-3">{% translate "Interactive 3D View" %}</h4>
 
-{% block extra_css %}
-    <link rel="stylesheet" href="{% static 'assets/css/product_detail.css' %}" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-{% endblock extra_css %}
+        {# Import the <model-viewer> component - place this in your base template's <head> or before the </body> for better performance if used on multiple pages #}
+        <script type.module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 
-{% block content %}
-    <div class="product-page-container container my-4">
-      <!-- Breadcrumbs -->
-      <nav aria-label="breadcrumb">
-          <ol class="breadcrumb mb-3">
-            <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
-            {% if product.category %}
-                <li class="breadcrumb-item"><a href="{{ product.category.get_absolute_url }}">{{ product.category.name }}</a></li>
-            {% endif %}
-            <li class="breadcrumb-item active" aria-current="page">{{ product.name|default:"Product Name" }}</li>
-          </ol>
-      </nav>
-
-      <!-- Main Product Display Area -->
-      <div class="product-detail-main row g-4">
-
-        <!-- Product Gallery (Left) -->
-        <div class="product-gallery col-lg-6">
-          <div class="main-image-display mb-3 text-center">
-            {# --- Container for Magnifier --- #}
-            <div class="img-magnifier-container">
-              {% with first_image=product_images.first %}
-              <img
-                id="mainProductImage"
-                src="{% if first_image %}{{ first_image.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
-                alt="{{ product.name }}"
-                class="img-fluid rounded"
-                style="max-height: 450px; object-fit: contain;"
-              />
-              {% endwith %}
+        <model-viewer
+            src="{{ product.three_d_model_url }}"
+            alt="A 3D model of {{ product.name }}"
+            auto-rotate
+            camera-controls
+            ar {# Enables AR mode on supported devices #}
+            ar-modes="webxr scene-viewer quick-look" {# AR modes #}
+            shadow-intensity="1"
+            environment-image="neutral" {# Or path to an HDR environment image #}
+            exposure="1"
+            style="width: 100%; height: 450px; background-color: #f8f9fa; border-radius: 8px;"
+        >
+            {# Optional: Progress bar for loading the model #}
+            <div class="progress-bar hide" slot="progress-bar">
+                <div class="update-bar"></div>
             </div>
-            {# --- Placeholder for Magnified Result (Positioned via CSS/JS) --- #}
-            <div id="magnifierResult" class="img-magnifier-result"></div>
-          </div>
-          {# --- Thumbnail List --- #}
-          {% if product_images.count > 1 %} {# Only show thumbnails if there's more than one image #}
-          <div class="thumbnail-list d-flex flex-wrap justify-content-center gap-2">
-              {% for p_image in product_images %}
-              <div class="thumbnail-item {% if forloop.first %}active{% endif %}">
-                  <img src="{{ p_image.image.url }}" alt="Thumbnail {{ forloop.counter }} for {{ product.name }}" class="img-thumbnail" style="width: 70px; height: 70px; object-fit: contain; cursor: pointer;" data-large-src="{{ p_image.image.url }}">
-              </div>
-              {% endfor %}
-          </div>
-          {% endif %}
-        </div>
+            {# Optional: Custom AR button #}
+            <button slot="ar-button" id="ar-button" class="btn btn-outline-primary mt-2">
+                {% translate "View in your space" %}
+            </button>
+        </model-viewer>
+        <p class="text-muted small mt-2">{% translate "Click and drag to rotate. Scroll to zoom. Try AR on compatible devices!" %}</p>
+    </div>
 
-        <!-- Product Details (Right) -->
-        <div class="product-details col-lg-6">
-          <h1>{{ product.name|default:"Product Name Placeholder" }}</h1>
-
-          {# --- START: Vendor Info Snippet --- #}
-          {% if product.vendor %}
-          <div class="vendor-info-snippet mb-2">
-            <small class="text-muted">
-                Sold by:
-                <a href="{{ product.vendor.get_absolute_url }}" class="text-decoration-none fw-medium">{{ product.vendor.name }}</a>
-                {% if product.vendor.is_verified %}
-                    <span class="badge bg-success ms-1" title="Verified Vendor"><i class="bi bi-patch-check-fill"></i> Verified</span>
-                {% endif %}
-                {# TODO: Add link to vendor reviews/rating here? #}
-            </small>
-          </div>
-          {% endif %}
-          {# --- END: Vendor Info Snippet --- #}
-
-          <div class="rating mb-2 d-flex align-items-center">
-            <span class="stars text-warning me-2">
-                {% with rating_avg=average_product_rating|default_if_none:0 %}
-                    {% with full_stars=rating_avg|floatformat:0 %}
-                        {% for i in "12345" %}
-                            {% if i|add:"0" <= full_stars|add:"0" %}<i class="bi bi-star-fill"></i>{% else %}<i class="bi bi-star"></i>{% endif %}
-                        {% endfor %}
-                    {% endwith %}
-                {% endwith %}
-            </span>
-            <span class="review-count text-muted">
-                ({{ product_reviews.count|default:"0" }} review{{ product_reviews.count|pluralize }})
-            </span>
-          </div>
-
-          <hr />
-
-          <div class="price-section mb-3">
-            <span class="price fs-4 fw-bold">${{ product.price|floatformat:2|intcomma|default:"0.00" }}</span>
-          </div>
-
-          <div class="stock-status mb-3 {% if not product.is_in_stock %}text-danger{% else %}text-success{% endif %}" id="stock-status">
-             {% if product.is_in_stock %} <i class="bi bi-check-circle-fill"></i> In Stock {% else %} <i class="bi bi-x-circle-fill"></i> Out of Stock {% endif %}
-          </div>
-
-          <hr />
-
-          {# --- Add to Cart Form --- #}
-          {% if product.is_in_stock %}
-              <form method="post" action="{% url 'add_to_cart' %}" class="mt-3 mb-3">
-                  {% csrf_token %}
-                  <input type="hidden" name="product_id" value="{{ product.id }}">
-                  <div class="row g-2 align-items-center mb-3">
-                      <div class="col-auto">
-                          <label for="quantityInput" class="col-form-label">Quantity:</label>
-                      </div>
-                      <div class="col-auto" style="max-width: 80px;">
-                           <input type="number" name="quantity" id="quantityInput" class="form-control form-control-sm text-center item-quantity-input" value="1" min="1" max="{{ product.stock }}" required aria-label="Item Quantity">
-                      </div>
-                  </div>
-                  <div class="action-buttons d-flex gap-2">
-                      <button type="submit" class="btn btn-primary add-to-cart-btn flex-grow-1">
-                           <i class="bi bi-cart-plus-fill"></i> Add to Cart
-                      </button>
-                  </div>
-              </form>
-          {% else %}
-              <div class="alert alert-warning mt-3" role="alert">
-                Currently Out of Stock
-              </div>
-          {% endif %}
-
-           {# --- Wishlist Button --- #}
-           {% if user.is_authenticated %}
-           <form method="post" action="{% if is_in_wishlist %}{% url 'core:remove_from_wishlist' product.id %}{% else %}{% url 'core:add_to_wishlist' product.id %}{% endif %}" class="mt-2 wishlist-form">
-               {% csrf_token %}
-               <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
-                   {% if is_in_wishlist %}<i class="bi bi-heart-fill text-danger"></i> Remove from Wishlist{% else %}<i class="bi bi-heart"></i> Add to Wishlist{% endif %}
-               </button>
-           </form>
-           {% endif %}
-
-           {# --- START: Social Sharing --- #}
-           <div class="social-sharing mt-3 pt-3 border-top">
-               <span class="me-2 small text-muted">Share:</span>
-               {# Basic sharing links - replace # with actual sharing URLs if needed #}
-               <a href="#" class="text-decoration-none me-2" title="Share on Facebook"><i class="bi bi-facebook fs-5"></i></a>
-               <a href="#" class="text-decoration-none me-2" title="Share on Twitter"><i class="bi bi-twitter-x fs-5"></i></a>
-               <a href="#" class="text-decoration-none me-2" title="Share on Pinterest"><i class="bi bi-pinterest fs-5"></i></a>
-               <a href="#" class="text-decoration-none" title="Share via Email"><i class="bi bi-envelope-fill fs-5"></i></a>
-           </div>
-           {# --- END: Social Sharing --- #}
-
-        </div><!-- End product-details -->
-      </div><!-- End product-detail-main -->
-
-      <!-- Lower Sections -->
-      <hr class="my-4">
-
-      <div class="product-info-content">
-        <!-- Product Description -->
-        <section class="product-description-section mb-4">
-          <h2>Product Description</h2>
-          <p>
-            {{ product.description|default:"No description available."|linebreaksbr }}
-          </p>
-        </section>
-
-        {# --- START: Product Videos Section --- #}
-        {% if product_videos %}
-        <section class="product-videos-section mb-4">
-            <h2>Product Videos</h2>
-            <div class="video-gallery row g-3">
-                {% for video in product_videos %}
-                    <div class="col-md-6"> {# Display 2 videos per row on medium screens and up #}
-                        <div class="video-item">
-                            <video controls width="100%" preload="metadata">
-                                <source src="{{ video.video.url }}" type="video/mp4"> {# Adjust type if needed #}
-                                Your browser does not support the video tag.
-                            </video>
-                            {% if video.title %}<h6 class="video-title mt-2">{{ video.title }}</h6>{% endif %}
-                            {% if video.description %}<p class="video-description small text-muted">{{ video.description }}</p>{% endif %}
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        </section>
-        {% endif %}
-        {# --- END: Product Videos Section --- #}
-
-        {# --- START: Specifications Section (REMOVED - Not dynamic) --- #}
-        <!-- <section class="product-specs-section mb-4">
-             {# Or display a message if no specs #}
-             {# <p class="text-muted">No specifications available for this product.</p> #}
-        </section> -->
-        {# --- END: Specifications Section --- #}
-
-        {# --- START: Q&A Section (Placeholder) --- #}
-        <section class="product-qa-section mb-4">
-            <h2>Questions & Answers</h2>
-            {# Placeholder for asking a question #}
-            <div class="ask-question mb-3">
-                <p class="mb-1">Have a question about this product?</p>
-                <button class="btn btn-sm btn-outline-secondary">Ask a Question</button> {# TODO: Link to question form/modal #}
-            </div>
-            {# Placeholder for displaying existing Q&As #}
-            <div class="qa-list">
-                <p class="text-muted">No questions have been asked yet.</p>
-                {# Example Q&A item structure (loop through actual Q&As later)
-                <div class="card qa-item mb-2">
-                    <div class="card-body">
-                        <p class="question fw-bold mb-1">Q: What is the warranty?</p>
-                        <p class="answer mb-0">A: This product comes with a 1-year limited warranty.</p>
-                        <small class="text-muted">Answered by VendorName on Date</small>
-                    </div>
-                </div>
-                #}
-            </div>
-        </section>
-        {# --- END: Q&A Section --- #}
-
-        {# --- START: Customer Reviews Section --- #}
-        <section class="product-reviews-section mb-4" id="product-reviews-section">
-          <h2>Customer Reviews</h2>
-          <div class="reviews-summary mb-3 d-flex align-items-center gap-3">
-            {% if average_product_rating %}
-                <span class="fs-5 fw-medium">Average Rating:</span>
-                <span class="stars text-warning fs-5">
-                    {% with rating_avg=average_product_rating|default_if_none:0 %}
-                        {% with full_stars=rating_avg|floatformat:0 %}
-                            {% for i in "12345" %}
-                                {% if i|add:"0" <= full_stars|add:"0" %}<i class="bi bi-star-fill"></i>{% else %}<i class="bi bi-star"></i>{% endif %}
-                            {% endfor %}
-                        {% endwith %}
-                    {% endwith %}
-                </span>
-                <span class="text-muted">({{ average_product_rating|floatformat:1 }} / 5.0 based on {{ product_reviews.count }} review{{ product_reviews.count|pluralize }})</span>
-            {% else %}
-                <span class="text-muted">No ratings yet.</span>
-            {% endif %}
-          </div>
-
-          {# --- START: Add Product Review Form --- #}
-          <div class="product-review-form-container mb-4">
-              {% if user.is_authenticated %}
-                  {% if user_has_reviewed_product %}
-                      <div class="alert alert-info" role="alert">
-                          You have already reviewed this product.
-                      </div>
-                  {% else %}
-                      {# Optional: Add check if user purchased the item here #}
-                      {% if review_form %} {# Check if form exists before rendering #}
-                      <div class="card">
-                          <div class="card-header">Write a Review</div>
-                          <div class="card-body">
-                              <form method="post" action="{% url 'core:add_product_review' product.id %}" enctype="multipart/form-data"> {# <<< Add enctype #}
-                                  {% csrf_token %}
-                                  {# Render form fields manually for Bootstrap styling #}
-                                  <div class="mb-3">
-                                      <label class="form-label">{{ review_form.rating.label }}</label>
-                                      <div>
-                                      {% for radio in review_form.rating %}
-                                          <div class="form-check form-check-inline">
-                                              <input type="radio" name="{{ radio.name }}" id="id_{{ radio.name }}_{{ forloop.counter }}" value="{{ radio.choice_value }}" class="form-check-input" required>
-                                              <label class="form-check-label" for="id_{{ radio.name }}_{{ forloop.counter }}">{{ radio.choice_label }}</label>
-                                          </div>
-                                      {% endfor %}
-                                      </div>
-                                      {% if review_form.rating.errors %}<div class="invalid-feedback d-block">{{ review_form.rating.errors|striptags }}</div>{% endif %}
-                                  </div>
-                                  <div class="mb-3">
-                                      <label for="{{ review_form.comment.id_for_label }}" class="form-label">{{ review_form.comment.label }}</label>
-                                      {{ review_form.comment }}
-                                      {% if review_form.comment.errors %}<div class="invalid-feedback d-block">{{ review_form.comment.errors|striptags }}</div>{% endif %}
-                                  </div>
-                                  {# Add Video Upload Field #}
-                                  <div class="mb-3">
-                                      <label for="{{ review_form.video.id_for_label }}" class="form-label">{{ review_form.video.label }}</label>
-                                      {{ review_form.video }}
-                                      {% if review_form.video.errors %}<div class="invalid-feedback d-block">{{ review_form.video.errors|striptags }}</div>{% endif %}
-                                  </div>
-                                  <button type="submit" class="btn btn-primary">Submit Review</button>
-                              </form>
-                          </div>
-                      </div>
-                      {% endif %} {# End check for review_form existence #}
-                  {% endif %}
-              {% else %}
-                 <p><a href="{% url 'signin' %}?next={{ request.path }}">Sign in</a> to write a review.</p>
-              {% endif %}
-          </div>
-          {# --- END: Add Product Review Form --- #}
-
-          {# --- START: Display Existing Reviews --- #}
-          <div class="review-list mt-4">
-              {% if product_reviews %}
-                  {% for review in product_reviews %}
-                      <div class="card review mb-3">
-                          <div class="card-body">
-                              <div class="d-flex justify-content-between align-items-center mb-2">
-                                  <span class="review-author fw-bold">{{ review.user.get_full_name|default:review.user.username }}</span>
-                                  <span class="review-rating text-warning">
-                                      {% for i in "12345" %}
-                                          {% if i|add:"0" <= review.rating|add:"0" %}<i class="bi bi-star-fill"></i>{% else %}<i class="bi bi-star"></i>{% endif %}
-                                      {% endfor %}
-                                  </span>
-                              </div>
-                              <p class="review-body card-text">{{ review.comment|linebreaksbr }}</p>
-                              {# Display Review Video if exists #}
-                              {% if review.video %}
-                                  <div class="review-video mt-2">
-                                      <video controls width="100%" style="max-width: 300px; border-radius: var(--border-radius-sm);" preload="metadata">
-                                          <source src="{{ review.video.url }}" type="video/mp4"> {# Adjust type if needed #}
-                                      </video>
-                                  </div>
-                              {% endif %}
-                              <small class="text-muted">Reviewed on {{ review.created_at|date:"M d, Y" }}</small>
-                          </div>
-                      </div>
-                  {% endfor %}
-              {% else %}
-                  <p class="text-muted">Be the first to review this product!</p>
-              {% endif %}
-          </div>
-          {# --- END: Display Existing Reviews --- #}
-
-        </section>
-        {# --- END: Customer Reviews Section --- #}
-
-      </div><!-- End product-info-content -->
-
-      {# --- START: Related Products Section --- #}
-      {% if related_products %}
-      <section class="related-products-section mt-5">
-          <h2>Related Products</h2>
-          <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3">
-              {% for related_product in related_products %}
-                  <div class="col">
-                      <div class="card h-100 product-card">
-                          <a href="{{ related_product.get_absolute_url }}">
-                              {# Use the first image from the related product's images #}
-                              {% with related_first_image=related_product.images.first %}
-                                  <img src="{% if related_first_image %}{{ related_first_image.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}" class="card-img-top" alt="{{ related_product.name }}">
-                              {% endwith %}
-                          </a>
-                          <div class="card-body d-flex flex-column">
-                              <h5 class="card-title fs-6 mb-1">
-                                  <a href="{{ related_product.get_absolute_url }}" class="text-decoration-none text-dark stretched-link">{{ related_product.name }}</a>
-                              </h5>
-                              <p class="card-text product-price fw-bold mb-2">${{ related_product.price|floatformat:2|intcomma }}</p>
-                              {# Optional: Add vendor or rating snippet here #}
-                              {# <small class="text-muted">By {{ related_product.vendor.name }}</small> #}
-                          </div>
-                          {# Optional: Add to cart button if needed in related products
-                          <div class="card-footer bg-transparent border-0 pb-2">
-                              <button class="btn btn-sm btn-outline-primary w-100">Add to Cart</button>
-                          </div>
-                          #}
-                      </div>
-                  </div>
-              {% endfor %}
-          </div>
-      </section>
-      {% endif %}
-      {# --- END: Related Products Section --- #}
-
-    </div><!-- End product-page-container -->
-{% endblock content %}
-
-{% block extra_js %}
-    {{ block.super }} {# <<< ADD THIS LINE (or ensure it's present) #}
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const mainImage = document.getElementById('mainProductImage');
-        const thumbnails = document.querySelectorAll('.thumbnail-item img');
-        const thumbnailItems = document.querySelectorAll('.thumbnail-item'); // Get the container divs
-
-        // --- Magnifier Functionality ---
-        function imageZoom(imgID, resultID) {
-          var img, lens, result, cx, cy;
-          img = document.getElementById(imgID);
-          result = document.getElementById(resultID);
-
-          // Clean up existing lens if any (important for re-initialization)
-          var existingLens = img.parentElement.querySelector(".img-magnifier-lens");
-          if (existingLens) {
-            existingLens.remove();
-          }
-
-          if (!img || !result || !img.src || img.src.includes('placeholder.png')) {
-              if(result) result.style.display = "none"; // Hide result if no image or placeholder
-              return; // Exit if elements not found, no src, or placeholder
-          }
-
-          // Ensure result is initially hidden
-          result.style.display = "none";
-
-          // Create lens:
-          lens = document.createElement("DIV");
-          lens.setAttribute("class", "img-magnifier-lens");
-
-          // Insert lens:
-          img.parentElement.insertBefore(lens, img);
-
-          // Calculate the ratio between result DIV and lens:
-          // Ensure lens has dimensions before calculating ratio
-          if (lens.offsetWidth === 0 || lens.offsetHeight === 0) {
-              // Temporarily display to get dimensions, then hide
-              lens.style.visibility = 'hidden';
-              lens.style.display = 'block';
-              cx = result.offsetWidth / lens.offsetWidth;
-              cy = result.offsetHeight / lens.offsetHeight;
-              lens.style.display = 'none';
-              lens.style.visibility = 'visible';
-          } else {
-              cx = result.offsetWidth / lens.offsetWidth;
-              cy = result.offsetHeight / lens.offsetHeight;
-          }
-
-          // Set background properties for the result DIV:
-          result.style.backgroundImage = "url('" + img.src + "')";
-          // Use naturalWidth/Height for accurate zoom, check if loaded
-          if (img.naturalWidth && img.naturalHeight) {
-              result.style.backgroundSize = (img.naturalWidth * cx) + "px " + (img.naturalHeight * cy) + "px";
-          } else {
-              // Fallback or wait for load if needed, here we just use offsetWidth as approximation
-              result.style.backgroundSize = (img.offsetWidth * cx) + "px " + (img.offsetHeight * cy) + "px";
-          }
-
-
-          // Event listeners for moving cursor/touch
-          lens.addEventListener("mousemove", moveLens);
-          img.addEventListener("mousemove", moveLens);
-          lens.addEventListener("touchmove", moveLens, { passive: false }); // Use passive: false to allow preventDefault
-          img.addEventListener("touchmove", moveLens, { passive: false });
-
-          // Show lens and result on enter
-          img.parentElement.addEventListener("mouseenter", () => {
-              if (img.src && !img.src.includes('placeholder.png')) {
-                  lens.style.display = "block";
-                  result.style.display = "block";
-                  // Recalculate background size in case image source changed or loaded late
-                  result.style.backgroundImage = "url('" + img.src + "')";
-                   if (img.naturalWidth && img.naturalHeight) {
-                       result.style.backgroundSize = (img.naturalWidth * cx) + "px " + (img.naturalHeight * cy) + "px";
-                   } else {
-                       result.style.backgroundSize = (img.offsetWidth * cx) + "px " + (img.offsetHeight * cy) + "px";
-                   }
-              }
-          });
-
-          // Hide lens and result on leave
-          img.parentElement.addEventListener("mouseleave", () => {
-              lens.style.display = "none";
-              result.style.display = "none";
-          });
-
-          function moveLens(e) {
-            var pos, x, y;
-            e.preventDefault(); // Prevent scrolling on touch
-            pos = getCursorPos(e);
-            x = pos.x - (lens.offsetWidth / 2);
-            y = pos.y - (lens.offsetHeight / 2);
-            // Boundary checks using offsetWidth/Height which reflect the displayed size
-            if (x > img.offsetWidth - lens.offsetWidth) {x = img.offsetWidth - lens.offsetWidth;}
-            if (x < 0) {x = 0;}
-            if (y > img.offsetHeight - lens.offsetHeight) {y = img.offsetHeight - lens.offsetHeight;}
-            if (y < 0) {y = 0;}
-            // Set lens position
-            lens.style.left = x + "px";
-            lens.style.top = y + "px";
-            // Set result background position
-            result.style.backgroundPosition = "-" + (x * cx) + "px -" + (y * cy) + "px";
-          }
-
-          function getCursorPos(e) {
-            var a, x = 0, y = 0;
-            e = e.changedTouches ? e.changedTouches[0] : e; // Handle touch events
-            a = img.getBoundingClientRect();
-            x = e.pageX - a.left - window.pageXOffset;
-            y = e.pageY - a.top - window.pageYOffset;
-            return {x : x, y : y};
-          }
+    {# Basic styling for the progress bar (optional) #}
+    <style>
+        .progress-bar {
+            display: block;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            transition: opacity 0.3s;
+            pointer-events: none; /* Allow interaction with underlying controls */
         }
-        // --- End Magnifier Functionality ---
-
-        thumbnails.forEach((thumbnail) => {
-          thumbnail.addEventListener('click', function () {
-            const largeSrc = this.getAttribute('data-large-src');
-            mainImage.src = largeSrc; // Update the main image source
-
-            // Update active state for thumbnails
-            thumbnailItems.forEach(item => item.classList.remove('active'));
-            this.closest('.thumbnail-item').classList.add('active');
-
-            // Re-initialize zoom AFTER the image src has likely updated
-            // Using setTimeout ensures the new src is loaded before zoom calculations
-            // It might take a moment for the browser to render the new image dimensions
-            setTimeout(() => imageZoom("mainProductImage", "magnifierResult"), 100); // Timeout helps ensure dimensions are ready
-          });
-        });
-
-        // Initial call to set up the magnifier after ensuring image is loaded
-        // Check if image is already loaded (e.g., from cache)
-        if (mainImage.complete && mainImage.naturalHeight !== 0) {
-            imageZoom("mainProductImage", "magnifierResult");
-        } else {
-            // Otherwise, wait for the 'load' event
-            mainImage.addEventListener('load', () => imageZoom("mainProductImage", "magnifierResult"));
-            // Add an error handler in case the image fails to load
-            mainImage.addEventListener('error', () => {
-                console.error("Main product image failed to load.");
-                // Optionally hide magnifier result if image fails
-                const result = document.getElementById("magnifierResult");
-                if(result) result.style.display = "none";
-            });
+        .progress-bar.hide {
+            opacity: 0;
         }
-
-      });
-    </script>
-{% endblock extra_js %}
+        .update-bar {
+            background-color: #007bff; /* Bootstrap primary color */
+            width: 0%;
+            height: 5px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s;
+        }
+        #ar-button {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+        }
+    </style>
+{% endif %}

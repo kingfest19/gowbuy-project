@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Become a Nexus Rider - Why Join Us?" %}{% endblock title %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("{% static 'assets/images/rider_hero_background.jpg' %}"); /* Add a suitable background image */
+        background-size: cover;
+        background-position: center;
+        color: white;
+        padding: 4rem 1rem;
+        text-align: center;
+        border-radius: 0.375rem;
+        margin-bottom: 2rem;
+    }
+    .hero-section h1 {
+        font-size: 2.8rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    .hero-section p.lead {
+        font-size: 1.25rem;
+        margin-bottom: 2rem;
+    }
+    .benefits-section .benefit-item {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .benefits-section .benefit-item .icon {
+        font-size: 3rem; /* Bootstrap Icons or Font Awesome */
+        color: var(--bs-primary);
+        margin-bottom: 1rem;
+    }
+    .benefits-section .benefit-item h3 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .cta-section {
+        text-align: center;
+        padding: 2rem 0;
+    }
+    .cta-section .btn-apply {
+        font-size: 1.2rem;
+        padding: 0.75rem 2rem;
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="hero-section">
+        <h1>{% trans "Ride with Nexus: Your Journey to Flexibility & Earnings!" %}</h1>
+        <p class="lead">{% trans "Discover the advantages of joining our dedicated team of delivery riders." %}</p>
+    </div>
+
+    <div class="benefits-section row">
+        <div class="col-md-4 benefit-item">
+            <div class="icon"><i class="bi bi-clock-history"></i></div> {# Example: Bootstrap Icon #}
+            <h3>{% trans "Flexible Hours" %}</h3>
+            <p>{% trans "Work when it suits you. Be your own boss and set your own schedule." %}</p>
+        </div>
+        <div class="col-md-4 benefit-item">
+            <div class="icon"><i class="bi bi-cash-coin"></i></div>
+            <h3>{% trans "Competitive Earnings" %}</h3>
+            <p>{% trans "Earn well for every delivery, with opportunities for tips and bonuses." %}</p>
+        </div>
+        <div class="col-md-4 benefit-item">
+            <div class="icon"><i class="bi bi-geo-alt-fill"></i></div>
+            <h3>{% trans "Explore Your City" %}</h3>
+            <p>{% trans "Get to know your local area while making deliveries and meeting new people." %}</p>
+        </div>
+    </div>
+
+    <div class="cta-section">
+        <h2>{% trans "Ready to Hit the Road?" %}</h2>
+        <p>{% trans "Join the Nexus rider community today and start earning." %}</p>
+        <a href="{% url 'core:become_rider' %}" class="btn btn-primary btn-lg btn-apply">{% trans "Apply to Ride Now" %}</a>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+    {{ block.super }}
+    {# You can add any page-specific JavaScript for the "Become Rider Info" page here if needed #}
+{% endblock extra_js %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %} {# Or your allauth base, e.g., "account/base.html" #}
+{% load i18n %}
+{% load crispy_forms_tags %} {# If you use crispy-forms #}
+
+{% block title %}{% trans "Manage Email Addresses" %} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        .account-form-card { /* Re-using the style from password_change.html */
+            max-width: 600px; /* Slightly wider for email list */
+            margin: 2rem auto;
+            box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.1);
+        }
+        .account-form-card .card-header {
+            background-color: rgb(52, 73, 94); /* Primary Dark Blue-Grey */
+            color: white;
+        }
+        .account-form-card .btn-primary {
+            background-color: rgb(26, 188, 156); /* Accent Teal */
+            border-color: rgb(26, 188, 156);
+        }
+        .account-form-card .btn-primary:hover {
+            background-color: rgb(20, 150, 120);
+            border-color: rgb(20, 150, 120);
+        }
+        .email-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        .email-list-item:last-child {
+            border-bottom: none;
+        }
+        .email-list-item .email-address {
+            font-weight: 500;
+        }
+        .email-list-item .actions button, .email-list-item .actions a {
+            margin-left: 0.5rem;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="card account-form-card">
+        <div class="card-header">
+            <h2 class="mb-0">{% trans "Manage Email Addresses" %}</h2>
+        </div>
+        <div class="card-body p-4">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if user.emailaddress_set.all %}
+                <p>{% trans 'The following email addresses are associated with your account:' %}</p>
+                <form action="{% url 'account_email' %}" class="email_list" method="post">
+                    {% csrf_token %}
+                    <div class="list-group list-group-flush mb-3">
+                        {% for emailaddress in user.emailaddress_set.all %}
+                        <div class="list-group-item email-list-item">
+                            <div class="email-address">
+                                <label for="email_radio_{{forloop.counter}}" class="{% if emailaddress.primary %}fw-bold{% endif %}">
+                                    <input id="email_radio_{{forloop.counter}}" type="radio" name="email" {% if emailaddress.primary %}checked="checked"{%endif %} value="{{emailaddress.email}}">
+                                    {{ emailaddress.email }}
+                                </label>
+                                {% if emailaddress.verified %}
+                                    <span class="badge bg-success">{% trans "Verified" %}</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">{% trans "Unverified" %}</span>
+                                {% endif %}
+                                {% if emailaddress.primary %}<span class="badge bg-info">{% trans "Primary" %}</span>{% endif %}
+                            </div>
+                            <div class="actions">
+                                {% if not emailaddress.primary %}<button class="btn btn-sm btn-outline-secondary" type="submit" name="action_primary" >{% trans 'Make Primary' %}</button>{% endif %}
+                                {% if not emailaddress.verified %}<button class="btn btn-sm btn-outline-secondary" type="submit" name="action_send" >{% trans 'Re-send Verification' %}</button>{% endif %}
+                                <button class="btn btn-sm btn-outline-danger" type="submit" name="action_remove" >{% trans 'Remove' %}</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </form>
+            {% else %}
+                <p><strong>{% trans 'Warning:'%}</strong> {% trans "You currently do not have any email addresses associated with your account." %}</p>
+            {% endif %}
+
+            <h5 class="mt-4">{% trans "Add Email Address" %}</h5>
+            <form method="post" action="{% url 'account_email' %}" class="add_email">
+                {% csrf_token %}
+                {{ form|crispy }} {# Or render manually: {{ form.as_p }} #}
+                <div class="d-grid mt-3">
+                    <button name="action_add" type="submit" class="btn btn-primary">{% trans "Add Email" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

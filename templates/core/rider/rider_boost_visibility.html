@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{{ page_title }} | {% trans "Rider Dashboard" %}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        .boost-visibility-container {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+        }
+        .boost-visibility-container h2.page-main-title {
+            color: #007bff;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .boost-option-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: box-shadow 0.3s ease;
+        }
+        .boost-option-card:hover {
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+        .boost-option-card h5 {
+            color: #28a745; /* Green for positive action */
+        }
+        .boost-option-card .price {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .coming-soon-badge { /* This class might be removed if not used, but keeping for now */
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #fff;
+            background-color: #ffc107; /* Warning yellow */
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+        .feature-list li {
+            margin-bottom: 8px;
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row">
+        {% include "core/rider/rider_dashboard_sidebar_snippet.html" %} {# Assuming sidebar snippet #}
+        <div class="col-md-9">
+            <div class="boost-visibility-container">
+                <h2 class="page-main-title">{{ page_title }}</h2>
+
+                <p class="lead">{% trans "Get noticed by more customers! Boosting your visibility can help you get more delivery requests." %}</p>
+                
+                {% if active_rider_boosts %}
+                <div class="my-4">
+                    <h4>{% trans "Your Active Boosts" %}</h4>
+                    <div class="list-group">
+                        {% for active_boost in active_rider_boosts %}
+                        <div class="list-group-item list-group-item-action flex-column align-items-start">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">
+                                    {% if active_boost.boost_package.icon_class %}<i class="{{ active_boost.boost_package.icon_class }} me-2"></i>{% endif %}
+                                    {{ active_boost.boost_package.name }}
+                                </h5>
+                                <small class="text-success">{% trans "Active" %}</small>
+                            </div>
+                            <p class="mb-1 small text-muted">{{ active_boost.boost_package.description }}</p>
+                            <small>{% blocktrans with expiry_date=active_boost.expires_at|date:"F d, Y H:i" %}Expires: {{ expiry_date }}{% endblocktrans %}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <hr>
+                {% endif %}
+
+                {% if not boost_packages %}
+                    <div class="alert alert-info mt-4" role="alert">
+                        <h4 class="alert-heading">{% trans "Boost Options Coming Soon!" %}</h4>
+                        <p>{% trans "We are currently setting up boost packages. Please check back later to see available options." %}</p>
+                    </div>
+                {% else %}
+                    {# The old alert about boost activation not being implemented has been removed as the feature is now functional. #}
+
+                    <h4 class="mt-5">{% trans "Available Boost Packages:" %}</h4>
+                    <div class="row mt-3">
+                        {% for package in boost_packages %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="boost-option-card h-100 d-flex flex-column">
+                                <h5>
+                                    {% if package.icon_class %}<i class="{{ package.icon_class }} me-2"></i>{% endif %}
+                                    {{ package.name }}
+                                </h5>
+                                <p class="text-muted small">{{ package.description|linebreaksbr }}</p>
+                                <ul class="list-unstyled feature-list mt-auto">
+                                    <li><i class="fas fa-clock text-info me-1"></i> {% blocktrans with duration=package.duration_hours %}Duration: {{ duration }} hours{% endblocktrans %}</li>
+                                    <li><i class="fas fa-bullseye text-info me-1"></i> {% blocktrans with type=package.get_boost_type_display %}Type: {{ type }}{% endblocktrans %}</li>
+                                </ul>
+                                <p class="price mt-2">GH₵{{ package.price|floatformat:2 }}</p> {# Keep price display #}
+                                <form method="POST" action="{% url 'core:activate_rider_boost' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="package_id" value="{{ package.id }}">
+                                    <button type="submit" class="btn btn-success w-100">{% trans "Activate Boost" %}</button> {# Button enabled #}
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

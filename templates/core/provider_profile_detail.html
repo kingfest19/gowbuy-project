@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n static humanize %}
+{% load i18n static humanize core_extras %}
 
 {% block title %}{% blocktrans with provider_name=profile_owner.username %}{{ provider_name }}'s Profile{% endblocktrans %} - {{ block.super }}{% endblock %}
 
@@ -36,6 +36,25 @@
             font-size: 1.1rem;
             color: rgb(52, 73, 94);
         }
+        /* Styles for portfolio items */
+        .portfolio-item-card .card-img-top {
+            height: 200px;
+            object-fit: cover;
+        }
+        .portfolio-item-card .ratio-16x9 iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .portfolio-item-card .no-preview-placeholder {
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa; /* Light grey background */
+        }
     </style>
 {% endblock %}
 
@@ -48,16 +67,17 @@
                 <div class="card-body text-center">
                     {# You might want a profile picture field on your CustomUser model #}
                     {% if profile_owner.profile_picture %}
-                        <img src="{{ profile_owner.profile_picture.url }}" alt="{{ profile_owner.username }}" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                        <img src="{{ profile_owner.profile_picture.url }}" alt="{{ profile_owner.username }} {% trans 'profile picture' %}" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
                     {% else %}
                         <i class="bi bi-person-circle display-1 text-muted mb-3"></i>
                     {% endif %}
-                    <h4 class="card-title">{{ profile_owner.username }}</h4>
-                    {% if profile_owner.bio %}
-                        <p class="text-muted">{{ profile_owner.bio }}</p>
+                    <h4 class="card-title">{{ profile_owner.get_full_name|default:profile_owner.username }}</h4>
+                    <p class="text-muted">@{{ profile_owner.username }}</p>
+
+                    {% if request.user == profile_owner %}
+                        <a href="{% url 'core:user_profile' %}" class="btn btn-outline-primary btn-sm mb-3"><i class="bi bi-pencil-square me-1"></i> {% trans "Edit My Profile" %}</a>
                     {% endif %}
-                    <p class="text-muted">{% trans "Member since" %} {{ profile_owner.date_joined|date:"M Y" }}</p>
-                    
+
                     {% if average_rating %}
                         <div class="mb-2">
                             <span class="badge bg-warning text-dark fs-6">
@@ -66,6 +86,7 @@
                             <small class="text-muted">({% blocktrans count review_count=review_count %}{{ review_count }} review{% plural %}{{ review_count }} reviews{% endblocktrans %})</small>
                         </div>
                     {% endif %}
+
                     {# --- START: Public Contact Information --- #}
                     <hr class="my-3">
                     <div class="text-start"> {# text-start to align content left within the centered card #}
@@ -109,12 +130,94 @@
                         {% endif %}
                     </div>
                     {# --- END: Public Contact Information --- #}
-                    {# Add more provider details here if available, e.g., location, contact button #}
+                    {% if profile_owner.bio %} {# This is the general user bio from CustomUser #}
+                        <hr class="my-3">
+                        <h6 class="text-muted mb-2 text-start">{% trans "About Me" %}</h6>
+                        <p class="text-muted text-start small">{{ profile_owner.bio|linebreaksbr }}</p>
+                    {% endif %}
+                    <p class="text-muted text-start small mt-3">{% trans "Member since" %} {{ profile_owner.date_joined|date:"M Y" }}</p>
                 </div>
             </div>
         </div>
 
         <div class="col-md-9">
+            <!-- Service Provider Specific Bio Section -->
+            {% if profile_owner.service_provider_profile.bio %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>{% trans "About My Services" %}</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ profile_owner.service_provider_profile.bio|linebreaksbr }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Portfolio Section -->
+            {% if profile_owner.service_provider_profile and profile_owner.service_provider_profile.portfolio_items.all %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>{% trans "My Portfolio" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 g-3"> {# Adjust columns as needed #}
+                        {% for item in profile_owner.service_provider_profile.portfolio_items.all %}
+                            <div class="col">
+                                <div class="card shadow-sm portfolio-item-card h-100">
+                                    {% if item.image %}
+                                        <a href="{{ item.image.url }}" data-bs-toggle="modal" data-bs-target="#portfolioModal{{ item.id }}">
+                                            <img src="{{ item.image.url }}" class="card-img-top" alt="{{ item.title|default:'Portfolio image' }}">
+                                        </a>
+                                    {% elif item.video_url %}
+                                        <div class="ratio ratio-16x9">
+                                            {% with embed_url=item.video_url|get_embed_url %}
+                                                {% if embed_url %}
+                                                    <iframe src="{{ embed_url }}" title="{{ item.title|default:'Portfolio video' }}" allowfullscreen></iframe>
+                                                {% else %}
+                                                <div class="no-preview-placeholder">
+                                                    <a href="{{ item.video_url }}" target="_blank" class="btn btn-outline-primary">{% trans "Watch Video" %}</a>
+                                                </div>
+                                            {% endif %}{% endwith %}
+                                        </div>
+                                    {% else %}
+                                        <div class="no-preview-placeholder">
+
+                                            <p class="text-muted m-0">{% trans "No preview available" %}</p>
+                                        </div>
+                                    {% endif %}
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ item.title|default_if_none:"" }}</h6>
+                                        {% if item.description %}
+                                            <p class="card-text small text-muted">{{ item.description|truncatewords:20 }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modal for Image -->
+                            {% if item.image %}
+                            <div class="modal fade" id="portfolioModal{{ item.id }}" tabindex="-1" aria-labelledby="portfolioModalLabel{{ item.id }}" aria-hidden="true">
+                                <div class="modal-dialog modal-lg modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="portfolioModalLabel{{ item.id }}">{{ item.title|default_if_none:"Portfolio Image" }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body text-center">
+                                            <img src="{{ item.image.url }}" class="img-fluid" alt="{{ item.title|default:'Portfolio image' }}">
+                                            {% if item.description %}<p class="mt-2">{{ item.description }}</p>{% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            <!-- End Portfolio Section -->
+
             <!-- Services Offered -->
             <h2 class="mb-3">{% trans "Services Offered" %}</h2>
             {% if services %}
@@ -167,4 +270,28 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{# If you add Bootstrap JS for modals, ensure it's loaded #}
+<script>
+// Simple YouTube/Vimeo URL parser for embed (can be improved)
+// This function is not directly used by the template above as parsing is done with Django template filters,
+// but it's here as an example if you wanted to switch to client-side parsing.
+function getVideoEmbedUrl(url) {
+    if (!url) return null;
+    let videoId;
+    if (url.includes("youtube.com/watch?v=")) {
+        videoId = url.split('v=')[1].split('&')[0];
+        return `https://www.youtube.com/embed/${videoId}`;
+    } else if (url.includes("youtu.be/")) {
+        videoId = url.split('youtu.be/')[1].split('?')[0];
+        return `https://www.youtube.com/embed/${videoId}`;
+    } else if (url.includes("vimeo.com/")) {
+        videoId = url.split('vimeo.com/')[1].split('?')[0];
+        return `https://player.vimeo.com/video/${videoId}`;
+    }
+    return null; // Not a recognized YouTube/Vimeo URL
+}
+</script>
 {% endblock %}

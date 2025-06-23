@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% trans "Edit Service Provider Profile" %} - {{ user.username }}
+{% endblock title %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .profile-form-container {
+        background-color: rgba(0,0,0,0.075); /* White background for the form area */
+        padding: 2rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.25rem 1rem rgba(0,0,0,0.075); /* Subtle shadow */
+        margin-top: 2rem; /* Spacing from top */
+        margin-bottom: 2rem; /* Spacing at bottom */
+    }
+
+    .profile-form-container h1 {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: #2c3e50; /* Dark blue-grey */
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    /* Styling for form elements */
+    #profileForm label,
+    #profileForm .form-label {
+        color: #212529 !important;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    #profileForm .form-control,
+    #profileForm .form-select,
+    #profileForm textarea {
+        display: block;
+        width: 100%;
+        padding: .5rem .75rem;
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: #212529;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        appearance: none;
+        border-radius: .375rem;
+        transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+    }
+
+    #profileForm .form-control:focus,
+    #profileForm .form-select:focus,
+    #profileForm textarea:focus {
+        border-color: #86b7fe;
+        outline: 0;
+        box-shadow: 0 0 0 .25rem rgba(13,110,253,.25);
+    }
+
+    #profileForm textarea {
+        min-height: 120px;
+    }
+
+    #profileForm .form-text { /* Help text */
+        font-size: 0.875em;
+        color: #6c757d;
+    }
+
+    #profileForm .invalid-feedback { /* Error messages */
+        display: block; /* Ensure they are visible */
+    }
+    .btn-submit-profile {
+        padding: 0.6rem 1.5rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="profile-form-container">
+                <h1>{% trans "Edit Service Provider Profile" %}</h1>
+                <form method="post" id="profileForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% crispy form %} {# Using Crispy Forms for rendering #}
+                    <button type="submit" class="btn btn-primary btn-submit-profile mt-3">{% trans "Save Changes" %}</button>
+                    <a href="{% url 'core:provider_dashboard' %}" class="btn btn-outline-secondary mt-3">{% trans "Cancel" %}</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

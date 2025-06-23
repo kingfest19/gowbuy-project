@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{{ page_title }} | {% trans "Rider Dashboard" %}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        .notification-list-container { background-color: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); border: 1px solid #e0e0e0; }
+        .notification-list-container h2 { color: #333; margin-bottom: 25px; text-align: center; }
+        .notification-item { border: none; border-bottom: 1px solid #eee; padding: 15px 20px; transition: background-color 0.2s ease-in-out; }
+        .notification-item:last-child { border-bottom: none; }
+        .notification-item:hover { background-color: #f8f9fa; }
+        .notification-item.fw-bold { background-color: #e9f5ff; }
+        .empty-state-illustration { max-width: 200px; height: auto; margin-bottom: 20px; }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row">
+        {% include "core/rider/rider_dashboard_sidebar_snippet.html" %} {# Assuming sidebar snippet #}
+        <div class="col-md-9">
+            <div class="notification-list-container">
+                <h2 class="mb-4">{{ page_title }}</h2>
+
+                {% if notifications %}
+                    <div class="list-group">
+                        {% for notification in notifications %}
+                            <div class="list-group-item list-group-item-action flex-column align-items-start notification-item {% if not notification.is_read %}fw-bold{% endif %}">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <p class="mb-1">
+                                        {% if not notification.is_read %}✨{% else %}✉️{% endif %}
+                                        {% if notification.link %}<a href="{{ notification.link }}" class="text-decoration-none stretched-link">{{ notification.message|linebreaksbr }}</a>{% else %}{{ notification.message|linebreaksbr }}{% endif %}
+                                    </p>
+                                    <small class="text-muted text-end" style="min-width: 80px;">{{ notification.created_at|timesince }} {% trans "ago" %}</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4">{% include "partials/_pagination.html" %}</div>
+                {% else %}
+                    <div class="text-center text-muted py-5">
+                        <img src="{% static 'core/img/illustrations/undraw_empty_re_opql.svg' %}" alt="No Notifications" class="empty-state-illustration"> {# Example SVG path #}
+                        <p>{% trans "You have no notifications at the moment." %}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

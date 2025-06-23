@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{{ page_title }} | {% trans "NEXUS" %}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        .customer-notification-container {
+            background-color: #ffffff; /* Optional: if your page background isn't white */
+            padding: 25px;
+            border-radius: 8px;
+            /* box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Optional subtle shadow */
+            /* border: 1px solid #e9ecef; /* Optional light border */
+            margin-top: 20px;
+        }
+        .customer-notification-container h2.page-main-title {
+            color: #007bff;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+            text-align: center;
+        }
+        .notification-item {
+            border-bottom: 1px solid #eee; /* Separator for items */
+            padding: 15px 0px; /* Vertical padding, no horizontal padding as list-group-item handles it */
+            transition: background-color 0.2s ease-in-out;
+        }
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+        .notification-item.fw-bold { /* For unread items */
+            background-color: #e9f5ff; /* Light blue for unread */
+        }
+        .notification-item:hover {
+            background-color: #f8f9fa; /* Subtle hover */
+        }
+        .empty-state-illustration { max-width: 200px; height: auto; margin-bottom: 20px; }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="customer-notification-container">
+        <h2 class="page-main-title">{{ page_title }}</h2>
+
+        {% if notifications %}
+            <div class="list-group list-group-flush"> {# list-group-flush removes borders between items if you prefer that look #}
+                {% for notification in notifications %}
+                    <div class="list-group-item list-group-item-action flex-column align-items-start notification-item {% if not notification.is_read %}fw-bold{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <p class="mb-1">
+                                {% if not notification.is_read %}✨{% else %}✉️{% endif %}
+                                {% if notification.link %}<a href="{{ notification.link }}" class="text-decoration-none stretched-link">{{ notification.message|linebreaksbr }}</a>{% else %}{{ notification.message|linebreaksbr }}{% endif %}
+                            </p>
+                            <small class="text-muted text-nowrap ms-3">{{ notification.created_at|timesince }} {% trans "ago" %}</small>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            {% include "partials/_pagination.html" %} {# Assuming you have a pagination partial #}
+        {% else %}
+            <div class="text-center text-muted py-5">
+                <img src="{% static 'core/img/illustrations/undraw_empty_re_opql.svg' %}" alt="{% trans 'No Notifications' %}" class="empty-state-illustration">
+                <p class="mt-3">{% trans "You have no notifications at the moment." %}</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock content %}

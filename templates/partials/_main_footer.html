@@ -1,0 +1,7 @@
+{% load i18n %}
+<footer class="py-4 bg-dark text-white-50 mt-auto">
+    <div class="container text-center">
+        {% now "Y" as current_year %}
+        <small>{% blocktrans with year=current_year %}Copyright &copy; NEXUS {{ year }}{% endblocktrans %}</small>
+    </div>
+</footer>

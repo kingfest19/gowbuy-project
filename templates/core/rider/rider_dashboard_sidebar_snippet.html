@@ -1,0 +1,14 @@
+{% load i18n %}
+<div class="col-md-3">
+    <nav class="nav flex-column rider-dashboard-sidebar mb-4 mb-md-0">
+        <h5>{% trans "Rider Menu" %}</h5>
+        <a class="nav-link {% if request.resolver_match.url_name == 'rider_dashboard' %}active{% endif %}" href="{% url 'core:rider_dashboard' %}">📊 {% trans "Overview" %}</a>
+        <a class="nav-link {% if request.resolver_match.url_name == 'rider_earnings_reports' %}active{% endif %}" href="{% url 'core:rider_earnings_reports' %}">📈 {% trans "Earnings & Reports" %}</a>
+       <a class="nav-link {% if request.resolver_match.url_name == 'rider_earnings' %}active{% endif %}" href="{% url 'core:rider_earnings' %}"><i class="bi bi-wallet2 me-2"></i> {% trans "My Detailed Earnings" %}</a>
+        <a class="nav-link {% if request.resolver_match.url_name == 'rider_profile_view' or request.resolver_match.url_name == 'rider_profile_edit' %}active{% endif %}" href="{% url 'core:rider_profile_view' %}">👤 {% trans "My Profile" %}</a>
+        <a class="nav-link {% if request.resolver_match.url_name == 'rider_verification' %}active{% endif %}" href="{% url 'core:rider_verification' %}">✅ {% trans "Verification" %}</a>
+        <a class="nav-link {% if request.resolver_match.url_name == 'rider_boost_visibility' %}active{% endif %}" href="{% url 'core:rider_boost_visibility' %}">🚀 {% trans "Boost Visibility" %}</a>
+        <a class="nav-link {% if request.resolver_match.url_name == 'rider_notification_list' %}active{% endif %}" href="{% url 'core:rider_notification_list' %}">🔔 {% trans "Notifications" %}</a>
+        <hr class="my-2"><a class="nav-link" href="{% url 'account_logout' %}">🚪 {% trans "Logout" %}</a>
+    </nav>
+</div>

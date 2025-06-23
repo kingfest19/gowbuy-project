@@ -1,177 +1,278 @@
 {% extends "base.html" %}
 {% load i18n static humanize %}
+{% load notification_tags %} {# Load your notification tags here #}
 
 {% block title %}{% trans "Provider Dashboard" %} - {{ block.super }}{% endblock %}
 
 {% block extra_css %}
     {{ block.super }}
     <style>
+        /* Styles for stat cards from the original provider_dashboard.html */
         .dashboard-stat-card .card-body {
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 150px; /* Ensure cards have a decent height */
+            min-height: 150px;
         }
         .dashboard-stat-card .card-title {
             font-size: 1rem;
             font-weight: 500;
-            color: #6c757d; /* Muted color for title */
+            color: #6c757d; /* Default title color for cards */
         }
-        .dashboard-stat-card { /* Targeting the card itself for shadow and hover */
+        .dashboard-stat-card {
             transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
         }
         .dashboard-stat-card:hover {
-            transform: translateY(-5px); /* Lift the card slightly */
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important; /* More pronounced shadow on hover */
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
         }
         .dashboard-stat-card .card-text.stat-number {
-            font-size: 2.5rem; /* Larger number for stats */
+            font-size: 2.5rem;
             font-weight: bold;
-            color: #fff; /* White text for better contrast on colored backgrounds */
+            color: #fff; /* Default stat number color, assuming colored backgrounds */
         }
-        .dashboard-stat-card .card-title,
-        .dashboard-stat-card .text-muted {
-            color: rgba(255, 255, 255, 0.85) !important; /* Lighter text for titles and muted text on colored backgrounds */
+        /* Ensure text on colored cards is readable */
+        .dashboard-stat-card.card-active-services .card-title,
+        .dashboard-stat-card.card-active-services .text-muted,
+        .dashboard-stat-card.card-in-progress-orders .card-title,
+        .dashboard-stat-card.card-in-progress-orders .text-muted,
+        .dashboard-stat-card.card-completed-orders .card-title,
+        .dashboard-stat-card.card-completed-orders .text-muted {
+            color: rgba(255, 255, 255, 0.90) !important;
         }
+         .dashboard-stat-card.card-offer-new .card-title,
+        .dashboard-stat-card.card-offer-new .text-muted {
+             color: #6c757d !important; /* Darker text for lighter card */
+        }
+        .dashboard-stat-card.card-offer-new .stat-number {
+            color: #212529 !important; /* Darker text for lighter card */
+        }
+
 
         /* Specific card colors */
-        .card-active-services { background-color:rgb(115, 160, 139); } /* Bootstrap success green */
-        .card-in-progress-orders { background-color:rgb(147, 191, 200); } /* Bootstrap info cyan */
-        .card-completed-orders { background-color:rgb(178, 166, 199); } /* Bootstrap warning yellow */
-        .card-offer-new { background-color:rgb(210, 197, 157); } /* A nice purple */
+        .card-active-services { background-color:rgb(115, 160, 139); } /* Greenish */
+        .card-in-progress-orders { background-color:rgb(147, 191, 200); } /* Bluish */
+        .card-completed-orders { background-color:rgb(178, 166, 199); } /* Purplish */
+        .card-offer-new { background-color:rgb(248, 249, 250); border: 1px solid #dee2e6; } /* Light grey, similar to default Bootstrap card */
 
-        .card-offer-new .btn-light { /* Style for the button on the purple card */
+        .card-offer-new .btn-light { /* Style for the button on the light card */
             font-weight: bold;
+            border-color: #6c757d; /* Add border to button */
+            color: #0d6efd; /* Primary color for text */
+        }
+        .card-offer-new .btn-light:hover {
+            background-color: #0d6efd;
+            color: white;
+        }
+
+
+        /* Styles for the sticky sidebar */
+        .dashboard-sidebar {
+            background-color: #f8f9fa; /* Light grey background */
+            padding: 1rem;
+            border-radius: 0.375rem; /* Bootstrap's default card radius */
+            position: sticky;
+            /* IMPORTANT: Adjust 'top' based on the height of your fixed/sticky main navigation in base.html */
+            top: 120px; /* Example: if main nav is 70px and nav-bottom is 50px, total is 120px */
+            max-height: calc(100vh - 140px); /* (120px top + 20px bottom margin) - prevents overlap with footer */
+            overflow-y: auto; /* Allows sidebar content to scroll if it's too long */
+            z-index: 1020; /* Ensure it's above content but below main nav if main nav has higher z-index */
+        }
+        .dashboard-sidebar .nav-link {
+            color: #495057; /* Dark grey text */
+            padding: 0.65rem 1rem; /* Slightly more padding */
+            margin-bottom: 0.2rem; /* Slightly more margin */
+            border-radius: 0.25rem; /* Rounded corners for links */
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        }
+        .dashboard-sidebar .nav-link.active {
+            background-color: var(--bs-primary); /* Use Bootstrap primary color */
+            color: white;
+            font-weight: 500;
+        }
+        .dashboard-sidebar .nav-link:hover:not(.active) { /* Don't change active link hover bg */
+            background-color: #e9ecef; /* Lighter grey on hover */
+            color: #0056b3; /* Darker blue on hover */
+        }
+        .dashboard-sidebar h5 {
+            padding: 0.5rem 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #343a40;
         }
     </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4 mb-5">
+<div class="container-fluid my-4"> {# Use container-fluid for wider layout #}
     <div class="row">
-        <div class="col-12">
-            <h1 class="mb-4">{% trans "Provider Dashboard" %}</h1>
-            <p class.lead>{% blocktrans %}Welcome back, {{ user.username }}! Manage your services and track your orders here.{% endblocktrans %}</p>
-            <hr>
+        {# Sidebar Navigation #}
+        <div class="col-md-3">
+            <nav class="nav flex-column dashboard-sidebar mb-4 mb-md-0">
+                <h5 class="mb-2">{% trans "Dashboard Menu" %}</h5>
+                
+                <a class="nav-link {% if request.resolver_match.url_name == 'service_provider_dashboard' %}active{% endif %}" href="{% url 'core:service_provider_dashboard' %}"><i class="fas fa-tachometer-alt fa-fw me-2"></i>{% trans "Dashboard" %}</a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'service_provider_services_list' or request.resolver_match.url_name == 'service_provider_service_create' or request.resolver_match.url_name == 'service_provider_service_edit' %}active{% endif %}" href="{% url 'core:service_provider_services_list' %}"><i class="fas fa-concierge-bell fa-fw me-2"></i>{% trans "My Services" %}</a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'service_provider_bookings_list' %}active{% endif %}" href="{% url 'core:service_provider_bookings_list' %}"><i class="fas fa-calendar-check fa-fw me-2"></i>{% trans "My Bookings" %}</a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'edit_service_provider_profile' %}active{% endif %}" href="{% url 'core:edit_service_provider_profile' %}"><i class="fas fa-user-edit fa-fw me-2"></i>{% trans "Edit Profile" %}</a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'service_provider_verification_multistep' %}active{% endif %}" href="{% url 'core:service_provider_verification_multistep' %}"><i class="fas fa-user-check fa-fw me-2"></i>{% trans "Verification" %}</a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'service_provider_payout_requests' or request.resolver_match.url_name == 'service_provider_payout_request_create' %}active{% endif %}" href="{% url 'core:service_provider_payout_requests' %}"><i class="fas fa-hand-holding-usd fa-fw me-2"></i>{% trans "Payouts" %}</a>
+                <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true"><i class="fas fa-bullhorn fa-fw me-2"></i>{% trans "Advertisements (Coming Soon)" %}</a>
+                <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true"><i class="fas fa-star fa-fw me-2"></i>{% trans "Client Reviews (Coming Soon)" %}</a>
+                <a class="nav-link position-relative disabled" href="#" tabindex="-1" aria-disabled="true">
+                    <i class="fas fa-bell fa-fw me-2"></i>{% trans "Notifications (Coming Soon)" %}
+                </a>
+            </nav>
         </div>
-    </div>
 
-    <!-- Quick Stats -->
-    <div class="row mb-4 g-3">
-        <div class="col-md-6 col-lg-3 mb-3 ">
-            <div class="card text-center h-100 shadow-sm dashboard-stat-card card-active-services">
-                <div class="card-body">
-                    <h5 class="card-title">{% trans "Active Services" %}</h5>
-                    <p class="card-text stat-number">{{ active_services_count }}</p>
-                    <small class="text-muted">{% blocktrans with total=total_services_count %}out of {{ total }} total services{% endblocktrans %}</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-lg-3 mb-3 ">
-            <div class="card text-center h-100 shadow-sm dashboard-stat-card card-in-progress-orders">
-                <div class="card-body">
-                    <h5 class="card-title">{% trans "In Progress Orders" %}</h5>
-                    <p class="card-text stat-number">{{ in_progress_service_orders_count }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-lg-3 mb-3 ">
-            <div class="card text-center h-100 shadow-sm dashboard-stat-card card-completed-orders">
-                <div class="card-body">
-                    <h5 class="card-title">{% trans "Completed Orders" %}</h5>
-                    <p class="card-text stat-number">{{ completed_service_orders_count }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-lg-3 mb-3 ">
-            <div class="card text-center h-100 shadow-sm dashboard-stat-card card-offer-new">
-                <div class="card-body d-flex flex-column justify-content-center">
-                    <a href="{% url 'core:service_create' %}" class="btn btn-light btn-lg"> {# Changed to btn-light for better contrast #}
-                        <i class="bi bi-plus-circle-fill me-2"></i>{% trans "Offer New Service" %}
+        {# Main Content Area - Cardless #}
+        <main class="col-md-9 ms-sm-auto col-lg-9 px-md-4 pt-3 pb-2">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-3 border-bottom">
+                <h1 class="h2">{{ page_title|default:_("Provider Dashboard") }}</h1>
+                 <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{% url 'core:service_provider_service_create' %}" class="btn btn-sm btn-success">
+                        <i class="fas fa-plus-circle me-1"></i> {% trans "Offer New Service" %}
                     </a>
                 </div>
             </div>
-        </div>
-    </div>
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-3" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
 
-    <!-- Manage Services Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <h3>{% trans "Your Services" %}</h3>
-                </div>
-                <div class="card-body">
-                    {% if services %}
-                        <ul class="list-group list-group-flush">
-                            {% for service in services %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <a href="{{ service.get_absolute_url }}">{{ service.title }}</a>
-                                        <small class="d-block text-muted">{% if service.is_active %}<span class="badge bg-success">{% trans "Active" %}</span>{% else %}<span class="badge bg-secondary">{% trans "Inactive" %}</span>{% endif %} - {% trans "Created" %}: {{ service.created_at|date:"d M Y" }}</small>
-                                    </div>
-                                    <div>
-                                        <a href="{% url 'core:service_edit' service_slug=service.slug %}" class="btn btn-sm btn-outline-primary me-2"><i class="bi bi-pencil-square"></i> {% trans "Edit" %}</a>
-                                        {# Consider a confirmation modal for delete #}
-                                        <form action="{% url 'core:service_delete' service_slug=service.slug %}" method="post" class="d-inline" onsubmit="return confirm('{% trans "Are you sure you want to delete this service?" %}')">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> {% trans "Delete" %}</button>
-                                        </form>
-                                    </div>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p>{% trans "You have not listed any services yet." %}</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
+            <p class="lead mb-4">{% blocktrans %}Welcome back, {{ user.username }}! Manage your services and track your orders here.{% endblocktrans %}</p>
 
-    <!-- Recent Service Orders Section -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <h3>{% trans "Recent Service Orders" %}</h3>
-                </div>
-                <div class="card-body">
-                    {% if recent_service_orders %}
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>{% trans "Order ID" %}</th>
-                                        <th>{% trans "Customer" %}</th>
-                                        <th>{% trans "Date" %}</th>
-                                        <th>{% trans "Status" %}</th>
-                                        <th>{% trans "Total" %}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for order in recent_service_orders %}
-                                        <tr>
-                                            <td><a href="{{ order.get_absolute_url }}">{{ order.order_id }}</a></td>
-                                            <td>{{ order.user.username }}</td>
-                                            <td>{{ order.created_at|date:"d M Y" }}</td>
-                                            <td><span class="badge bg-info">{{ order.get_status_display }}</span></td>
-                                            <td>GH₵{{ order.total_amount|floatformat:2 }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+            <!-- Quick Stats (using the card style from original provider_dashboard.html) -->
+            <div class="row mb-4 g-3">
+                <div class="col-md-6 col-lg-3 mb-3">
+                    <div class="card text-center h-100 shadow-sm dashboard-stat-card card-active-services">
+                        <div class="card-body">
+                            <h5 class="card-title">{% trans "Active Services" %}</h5>
+                            <p class="card-text stat-number">{{ active_services_count|default:0 }}</p>
+                            <small class="text-muted">{% blocktrans with total=total_services_count|default:0 %}out of {{ total }} total services{% endblocktrans %}</small>
                         </div>
-                        {% if service_orders.count > 5 %}
-                            <a href="#" class="btn btn-link">{% trans "View All Service Orders" %}</a> {# Placeholder for full order list view #}
-                        {% endif %}
-                    {% else %}
-                        <p>{% trans "No orders found for your services yet." %}</p>
-                    {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-3">
+                    <div class="card text-center h-100 shadow-sm dashboard-stat-card card-in-progress-orders">
+                        <div class="card-body">
+                            <h5 class="card-title">{% trans "Recent Bookings" %}</h5>
+                            <p class="card-text stat-number">{{ recent_bookings.count|default:0 }}</p>
+                             <small class="text-muted">{% trans "Last 5 bookings" %}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-3">
+                    <div class="card text-center h-100 shadow-sm dashboard-stat-card card-completed-orders">
+                        <div class="card-body">
+                            <h5 class="card-title">{% trans "Total Bookings" %}</h5>
+                            {# Assuming you'll pass total_bookings_count from view #}
+                            <p class="card-text stat-number">{{ total_bookings_count|default:0 }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-3">
+                    <div class="card text-center h-100 shadow-sm dashboard-stat-card card-offer-new">
+                        <div class="card-body d-flex flex-column justify-content-center">
+                            <a href="{% url 'core:service_provider_service_create' %}" class="btn btn-light btn-lg">
+                                <i class="fas fa-plus-circle me-2"></i>{% trans "Offer New Service" %}
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <!-- Manage Services Section - Cardless -->
+            <div class="mb-5">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="h4">{% trans "Your Services" %}</h3>
+                    <a href="{% url 'core:service_provider_services_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-tasks me-1"></i> {% trans "Manage All Services" %}
+                    </a>
+                </div>
+                {% if services %} {# Assuming 'services' is a limited list of top/recent services for the dashboard #}
+                    <ul class="list-group list-group-flush">
+                        {% for service in services|slice:":3" %} {# Displaying top 3 for dashboard overview #}
+                            <li class="list-group-item d-flex justify-content-between align-items-center ps-0 pe-0 py-3 border-bottom">
+                                <div>
+                                    <h6 class="mb-1"><a href="{{ service.get_absolute_url }}" class="text-decoration-none">{{ service.title }}</a></h6>
+                                    <small class="d-block text-muted">
+                                        {% if service.is_active %}<span class="badge bg-success">{% trans "Active" %}</span>
+                                        {% else %}<span class="badge bg-secondary">{% trans "Inactive" %}</span>{% endif %}
+                                        - {% trans "Packages" %}: {{ service.packages.count }}
+                                    </small>
+                                </div>
+                                <div>
+                                    <a href="{% url 'core:service_provider_service_edit' service_slug=service.slug %}" class="btn btn-sm btn-outline-primary me-2"><i class="fas fa-edit"></i> {% trans "Edit" %}</a>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="alert alert-light" role="alert">
+                        {% trans "You have not listed any services yet." %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Recent Service Bookings Section - Cardless -->
+            <div class="mb-4">
+                <h3 class="h4 mb-3">{% trans "Recent Bookings" %}</h3>
+                {% if recent_bookings %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Service" %}</th>
+                                    <th>{% trans "Client" %}</th>
+                                    <th>{% trans "Date Booked" %}</th>
+                                    <th>{% trans "Status" %}</th>
+                                    <th>{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for booking in recent_bookings %}
+                                    <tr>
+                                        <td>{{ booking.service_package.service.title }} - {{ booking.service_package.name }}</td>
+                                        <td>{{ booking.user.username }}</td>
+                                        <td>{{ booking.booking_date|date:"d M Y, H:i" }}</td>
+                                        <td><span class="badge bg-info rounded-pill">{{ booking.get_status_display }}</span></td>
+                                        <td>
+                                            {# Ensure 'service_provider_booking_detail' URL name exists and takes 'booking_id' #}
+                                            {# <a href="{% url 'core:service_provider_booking_detail' booking_id=booking.id %}" class="btn btn-sm btn-outline-info">{% trans "View" %}</a> #}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if total_bookings_count > recent_bookings|length %} {# Assuming total_bookings_count is passed from view #}
+                         {# Placeholder for View All Bookings link - ensure 'service_provider_bookings_list' URL is defined #}
+                         <a href="#" class="btn btn-link mt-2 disabled" tabindex="-1" aria-disabled="true">{% trans "View All Bookings (Coming Soon)" %}</a>
+                         {# <a href="{% url 'core:service_provider_bookings_list' %}" class="btn btn-link mt-2">{% trans "View All Bookings" %}</a> #}
+                    {% endif %}
+                {% else %}
+                     {% if total_services_count > 0 %}
+                        <div class="alert alert-light" role="alert">
+                            {% trans "No recent bookings for your services yet." %}
+                        </div>
+                    {% else %}
+                         <div class="alert alert-light" role="alert">
+                            {% trans "Offer services to start receiving bookings." %}
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </main>
     </div>
 </div>
-{% endblock %}
+{% endblock content %}
+
+{% block extra_js %}{% endblock %}

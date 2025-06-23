@@ -4,6 +4,7 @@ from django.urls import path
 # Import all necessary views from core.views that are handled by this file
 from . import views # <<< Import the views module itself
 
+
 app_name = 'core' # Namespace for reversing URLs (e.g., {% url 'core:product_detail' ... %})
 
 urlpatterns = [
@@ -11,117 +12,209 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('menu/', views.menu, name='menu'),
 
+    # Product pages
     # Catalog pages (These match the get_absolute_url methods in models)
-    path('category/<slug:category_slug>/', views.category_detail, name='category_detail'),
-    path('product/<slug:product_slug>/', views.product_detail, name='product_detail'),
+    path('category/<slug:category_slug>/', views.CategoryDetailView.as_view(), name='category_detail'),
+    path('product/<slug:product_slug>/', views.ProductDetailView.as_view(), name='product_detail'),
 
     # Search page
-    path('search/', views.search_results, name='search_results'), # <<< Added search URL
+    path('search/', views.search_results, name='search_results'),
 
+    path('products/', views.ProductListView.as_view(), name='product_list'), # For ProductListView
     # Offers page
-    path('offers/', views.daily_offers, name='daily_offers'), # <<< Added offers URL
+    path('offers/', views.daily_offers, name='daily_offers'),
 
     # Sell on Nexus page
-    path('sell/', views.sell_on_nexus, name='sell_on_nexus'), # <<< Added sell page URL
+    path('sell/', views.sell_on_nexus, name='sell_on_nexus'),
 
     # Vendor Registration page
-    path('register-vendor/', views.register_vendor, name='register_vendor'), # <<< Added vendor registration URL
+    path('register-vendor/', views.vendor_registration_view, name='register_vendor'),
 
     # Vendor Dashboard page
-    path('dashboard/', views.vendor_dashboard, name='vendor_dashboard'), # <<< Added vendor dashboard URL
+    path('dashboard/', views.VendorDashboardView.as_view(), name='vendor_dashboard'),
 
     # Vendor Verification page
-    path('dashboard/verify/', views.vendor_verification, name='vendor_verification'), # <<< Added vendor verification URL
+     path('dashboard/verify/', views.MultiStepVendorVerificationView.as_view(), name='vendor_verification_multistep'), # Changed view and name
 
     # Vendor Profile Edit page
-    path('dashboard/profile/edit/', views.edit_vendor_profile, name='edit_vendor_profile'), # <<< Added vendor profile edit URL
+    path('dashboard/profile/edit/', views.EditVendorProfileView.as_view(), name='vendor_profile_edit'), # Corrected name
 
-    # Vendor Shipping Edit page
-    path('dashboard/shipping/edit/', views.edit_vendor_shipping, name='edit_vendor_shipping'), # <<< Added vendor shipping edit URL
+    # Vendor Shipping Settings page (assuming this is what edit_vendor_shipping was for)
+    path('dashboard/shipping/', views.EditVendorShippingView.as_view(), name='vendor_shipping_settings'),
 
     # Vendor Payment Edit page
-    path('dashboard/payment/edit/', views.edit_vendor_payment, name='edit_vendor_payment'), # <<< Added vendor payment edit URL
+      path('dashboard/payment/edit/', views.EditVendorPaymentView.as_view(), name='vendor_payment_settings'), # Corrected name
 
     # --- Vendor Additional Info ---
-    path('dashboard/additional-info/', views.edit_vendor_additional_info, name='edit_vendor_additional_info'), # <<< Added this line
+    path('dashboard/additional-info/', views.EditVendorAdditionalInfoView.as_view(), name='edit_vendor_additional_info'),
 
     # --- Vendor Orders ---
-    path('dashboard/orders/', views.vendor_order_list, name='vendor_order_list'), # <<< Added this line
+    path('dashboard/orders/', views.VendorOrderListView.as_view(), name='vendor_orders'),
+    path('dashboard/orders/<int:pk>/', views.VendorOrderDetailView.as_view(), name='vendor_order_detail'),
 
     # --- Vendor Reports ---
-    path('dashboard/reports/', views.vendor_reports, name='vendor_reports'), # <<< Added this line
+    path('dashboard/reports/', views.VendorReportsView.as_view(), name='vendor_reports'),
 
     # --- Vendor Promotions ---
-    path('dashboard/promotions/', views.vendor_promotion_list, name='vendor_promotion_list'),
-    path('dashboard/promotions/create/', views.vendor_promotion_create, name='vendor_promotion_create'),
-    path('dashboard/promotions/<int:promotion_id>/edit/', views.vendor_promotion_edit, name='vendor_promotion_edit'),
-    # TODO: Add URL for promotion delete
+    path('dashboard/promotions/', views.VendorPromotionListView.as_view(), name='vendor_promotions'),
+    path('dashboard/promotions/create/', views.VendorPromotionCreateView.as_view(), name='vendor_promotion_create'),
+    path('dashboard/promotions/<int:pk>/edit/', views.VendorPromotionUpdateView.as_view(), name='vendor_promotion_edit'),
+    path('dashboard/promotions/<int:pk>/delete/', views.VendorPromotionDeleteView.as_view(), name='vendor_promotion_delete'),
 
     # --- Vendor Ad Campaigns ---
-    path('dashboard/campaigns/', views.vendor_campaign_list, name='vendor_campaign_list'),
-    path('dashboard/campaigns/create/', views.vendor_campaign_create, name='vendor_campaign_create'),
-    # TODO: Add URL for campaign edit/delete
+    path('dashboard/campaigns/', views.VendorCampaignListView.as_view(), name='vendor_ads'),  # Name used in sidebar, more relevant now
+       path('dashboard/campaigns/create/', views.VendorCampaignCreateView.as_view(), name='vendor_campaign_create'), # Corrected name
+    path('dashboard/campaigns/<int:pk>/edit/', views.VendorCampaignUpdateView.as_view(), name='vendor_campaign_edit'), # Assuming pk
+    path('dashboard/campaigns/<int:pk>/delete/', views.VendorCampaignDeleteView.as_view(), name='vendor_campaign_delete'), # Assuming pk
+
+    # --- Vendor Notifications ---
+    path('dashboard/notifications/', views.VendorNotificationListView.as_view(), name='vendor_notification_list'),
 
     # --- Vendor Products ---
-    path('dashboard/products/', views.vendor_product_list, name='vendor_product_list'),
-    path('dashboard/products/create/', views.vendor_product_create, name='vendor_product_create'),
-    path('dashboard/products/<int:product_id>/edit/', views.vendor_product_edit, name='vendor_product_edit'),
-    path('dashboard/products/<int:product_id>/delete/', views.vendor_product_delete, name='vendor_product_delete'),
+    path('dashboard/products/', views.VendorProductListView.as_view(), name='vendor_products'), # Corrected name to vendor_products
+    path('dashboard/products/create/', views.VendorProductCreateView.as_view(), name='vendor_product_create'),
+    path('dashboard/products/<int:pk>/edit/', views.VendorProductUpdateView.as_view(), name='vendor_product_edit'),
+    path('dashboard/products/<int:pk>/delete/', views.VendorProductDeleteView.as_view(), name='vendor_product_delete'),
 
 
     # Vendor pages
-    path('vendors/', views.vendor_list, name='vendor_list'),
-    path('vendor/<slug:vendor_slug>/', views.vendor_detail, name='vendor_detail'), # Corrected angle brackets
+    path('vendors/', views.VendorListView.as_view(), name='vendor_list'),
+    path('vendor/<slug:vendor_slug>/', views.VendorDetailView.as_view(), name='vendor_detail'),
+
+    # --- Cart URLs ---
+    path('cart/', views.cart_detail, name='cart_detail'), # <<< Reverted to use function-based view
+    # path('cart/', views.CartDetailView.as_view(), name='cart_detail'), # <<< Updated to use CartDetailView
+    path('add-to-cart/<int:product_id>/', views.add_to_cart, name='add_to_cart'), # Ensure this line captures product_id
+    path('remove-from-cart/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
+    path('update-cart-item/<int:item_id>/', views.update_cart_item, name='update_cart_item'),
+    path('cart/clear/', views.clear_cart, name='clear_cart'),
 
     # Order pages (These require login via decorators in views)
-    path('orders/', views.order_history, name='order_history'), # List of user's orders
-    path('order/<str:order_id>/', views.order_detail, name='order_detail'), # Detail of a specific order
-    path('order/<str:order_id>/download/<int:product_id>/', views.download_digital_product, name='download_digital_product'), # <<< Added download URL
+    path('orders/', views.OrderHistoryView.as_view(), name='order_history'),
+    path('order/<str:order_id>/', views.OrderDetailView.as_view(), name='order_detail'),
+    # path('order/<str:order_id>/download/<int:product_id>/', views.download_digital_product, name='download_digital_product'), # Keep if function-based
 
     # Checkout & Order Placement
-    path('checkout/', views.checkout, name='checkout'), # Uncommented for product checkout
-    path('place-order/', views.place_order, name='place_order'), # Uncommented for product order placement
-    path('order-summary/', views.order_summary_view, name='order_summary'), # Assuming this view exists for services
-    path('checkout/process-choice/', views.process_checkout_choice, name='process_checkout_choice'),
-    path('paystack/callback/', views.paystack_callback, name='paystack_callback'), # <<< ADD THIS LINE FOR PAYSTACK CALLBACK
-    path('order/<str:order_id>/confirm-completion/', views.customer_confirm_service_completion, name='customer_confirm_service_completion'), # <<< For customer confirmation
-    
-    # Wishlist pages
-    path('wishlist/', views.wishlist_detail, name='wishlist_detail'),
-    path('wishlist/add/<int:product_id>/', views.add_to_wishlist, name='add_to_wishlist'),
+    path('checkout/', views.checkout, name='checkout'),
+    path('checkout/add-address/', views.add_checkout_address, name='add_checkout_address'),   # Ensure POST to this URL
+    path('place-order/', views.place_order, name='place_order'),                       # Ensure POST to this URL
+    path('ajax/calculate-delivery-fee/', views.calculate_delivery_fee_ajax, name='calculate_delivery_fee_ajax'), # New AJAX endpoint
+    path('order/<str:order_id>/process-choice/', views.process_checkout_choice, name='process_checkout_choice'), # Handle checkout choice
+    path('order/<int:order_id>/initiate-payment/', views.initiate_paystack_payment, name='initiate_paystack_payment'),
+    path('paystack/callback/', views.paystack_callback, name='paystack_callback'), # Keep if function-based
+    path('order/<str:order_id>/confirm-delivery/', views.customer_confirm_product_delivery, name='customer_confirm_product_delivery'), # Order ID
+    path('order/<str:order_id>/confirm-completion/', views.customer_confirm_service_completion, name='customer_confirm_service_completion'),  # Order ID
+
+    # Wishlist
+    path('wishlist/', views.view_wishlist, name='wishlist_detail'), # Changed from wishlist_detail to view_wishlist
+    path('wishlist/add/', views.add_to_wishlist, name='add_to_wishlist'), # Changed URL to be more generic for POST
     path('wishlist/remove/<int:product_id>/', views.remove_from_wishlist, name='remove_from_wishlist'),
 
     # Review pages
-    path('product/<int:product_id>/add-review/', views.add_product_review, name='add_product_review'),
-    path('vendor/<int:vendor_id>/add-review/', views.add_vendor_review, name='add_vendor_review'), # Corrected angle brackets
+    path('product/<int:product_id>/add-review/', views.submit_product_review, name='submit_product_review'),
+    path('vendor/<int:vendor_id>/add-review/', views.submit_vendor_review, name='submit_vendor_review'),
+    path('vendor/<slug:vendor_slug>/review/add/', views.submit_vendor_review, name='add_vendor_review'),
+# Or if it takes vendor_id:
+# path('vendor/<int:vendor_id>/review/add/', views.submit_vendor_review, name='add_vendor_review'),
+
+
 
     # Location Update URL
-    path('update-location/', views.update_location, name='update_location'), # <<< Add this line
+    path('update-location/', views.update_location, name='update_location'),
 
     # Language Update URL
-    path('update-language/', views.update_language, name='update_language'), # <<< Add this line
+    path('update-language/', views.update_language, name='update_language'),
 
     # User Profile URL
-    path('profile/', views.user_profile_view, name='user_profile'), # <<< Add this line
+    path('profile/edit/', views.edit_user_profile, name='edit_user_profile'), # More specific URL first
+    path('profile/', views.user_profile_view, name='user_profile'), # General profile view for the logged-in user
+    path('profile/change-password/', views.change_password, name='change_password'),
 
-    # Provider Dashboard
-    path('dashboard/provider/', views.provider_dashboard, name='provider_dashboard'),
+
+    # Service Provider
+    path('dashboard/provider/', views.ProviderDashboardView.as_view(), name='provider_dashboard'),
+
+    path('become-service-provider/', views.become_service_provider, name='become_service_provider'),
+
 
     # Public Provider Profile
-    path('provider/<str:username>/', views.provider_profile_detail, name='provider_profile_detail'),
+    path('service_providers/<str:username>/', views.ProviderProfileDetailView.as_view(), name='provider_profile_detail'),
+
+    # Edit Service Provider Profile & Portfolio
+    path('dashboard/provider/edit-profile/', views.edit_service_provider_profile, name='edit_service_provider_profile'),
+    path('dashboard/provider/portfolio/delete/<int:item_id>/', views.delete_portfolio_item, name='delete_portfolio_item'),
+    
+    # Vendor Payouts (ensure these are defined if used in sidebar)
+    path('dashboard/payouts/', views.VendorPayoutListView.as_view(), name='vendor_payout_requests'), # requests
+    path('dashboard/payouts/request/', views.VendorPayoutRequestCreateView.as_view(), name='vendor_payout_request_create'), # Create
+
+    # --- Vendor Reviews --- # <-- Added comment for clarity
+    path('dashboard/reviews/', views.VendorReviewListView.as_view(), name='vendor_reviews'), # <-- This is the line for vendor reviews
+
+    # --- AJAX URLs ---
+    path('ajax/enhance-description/', views.ajax_enhance_product_description, name='ajax_enhance_product_description'),
+    path('ajax/chatbot-message/', views.ajax_chatbot_message, name='ajax_chatbot_message'),
+    path('ajax/visual-search/', views.ajax_visual_search, name='ajax_visual_search'),
+    path('ajax/generate-3d-model/', views.ajax_generate_3d_model, name='ajax_generate_3d_model'), # <<< Add this URL
 
 ]
 
 # --- START: Service Marketplace URLs ---
 urlpatterns += [
-    path('services/', views.service_list, name='service_list'),
-    path('services/category/<slug:category_slug>/', views.service_category_detail, name='service_category_detail'),
-    path('services/create/', views.service_create, name='service_create'),
-    path('services/<slug:service_slug>/', views.service_detail, name='service_detail'),
-    path('services/<slug:service_slug>/edit/', views.service_edit, name='service_edit'),
-    path('services/<slug:service_slug>/delete/', views.service_delete, name='service_delete'),
-    path('services/<slug:service_slug>/add-review/', views.add_service_review, name='add_service_review'), # <<< Added review URL
-    path('services/add-package-to-order/<int:package_id>/', views.add_service_to_order, name='add_service_to_order'), # <<< Add this line
-    path('order/<int:order_id>/initiate-payment/', views.initiate_paystack_payment, name='initiate_paystack_payment'), # <-- New URL for Paystack
+    path('services/', views.ServiceListView.as_view(), name='service_list'),
+    path('services/search/', views.ServiceSearchResultsView.as_view(), name='service_search_results'), # New URL for search results
+    path('services/category/<slug:category_slug>/', views.ServiceCategoryDetailView.as_view(), name='service_category_detail'),
+    path('services/create/', views.ServiceCreateView.as_view(), name='service_create'),
+    path('service/<slug:service_slug>/', views.ServiceDetailView.as_view(), name='service_detail'), # Changed path prefix for clarity
+    path('service/<slug:service_slug>/edit/', views.ServiceUpdateView.as_view(), name='service_edit'),
+    path('service/<slug:service_slug>/delete/', views.ServiceDeleteView.as_view(), name='service_delete'),
+    path('service/<slug:service_slug>/add-review/', views.submit_service_review, name='submit_service_review'),
+    path('services/add-package-to-order/<int:package_id>/', views.add_service_to_order, name='add_service_to_order'),
+    path('services/category/<slug:category_slug>/', views.CategoryServiceListView.as_view(), name='services_by_category'),
 ]
 # --- END: Service Marketplace URLs ---
+
+# --- START: Rider URLs ---
+urlpatterns += [
+    path('riders/apply/', views.BecomeRiderView.as_view(), name='become_rider'),
+    path('riders/dashboard/', views.RiderDashboardView.as_view(), name='rider_dashboard'), 
+    path('riders/dashboard/toggle-availability/', views.toggle_rider_availability, name='toggle_rider_availability'),
+    path('riders/task/<uuid:task_id>/accept/', views.accept_delivery_task, name='accept_delivery_task'),
+    path('riders/task/<uuid:task_id>/', views.RiderTaskDetailView.as_view(), name='rider_task_detail'),
+    path('riders/task/<uuid:task_id>/picked-up/', views.update_task_status_picked_up, name='update_task_status_picked_up'),
+    path('riders/task/<uuid:task_id>/delivered/', views.update_task_status_delivered, name='update_task_status_delivered'),
+    
+        # Rider Dashboard Sections
+        path('riders/dashboard/earnings-reports/', views.RiderEarningsReportsView.as_view(), name='rider_earnings_reports'),
+    path('riders/dashboard/profile/', views.RiderProfileView.as_view(), name='rider_profile_view'), # Points to the new view page
+    path('riders/dashboard/profile/edit/', views.RiderProfileEditView.as_view(), name='rider_profile_edit'), # Edit page has its own URL
+    path('riders/dashboard/verification/', views.RiderVerificationView.as_view(), name='rider_verification'),
+    path('riders/dashboard/boost/', views.RiderBoostVisibilityView.as_view(), name='rider_boost_visibility'),
+    path('riders/dashboard/boost/activate/', views.ActivateRiderBoostView.as_view(), name='activate_rider_boost'),
+    path('riders/paystack-boost-callback/', views.paystack_boost_callback, name='paystack_boost_callback'),
+    path('riders/dashboard/earnings/request-payout/', views.RequestPayoutView.as_view(), name='rider_request_payout'), # This should be nested or distinct
+    path('riders/dashboard/earnings/', views.RiderEarningsView.as_view(), name='rider_earnings'), # Changed path to match desired URL
+    path('riders/dashboard/notifications/', views.RiderNotificationListView.as_view(), name='rider_notification_list'),
+    path('riders/why-join/', views.BecomeRiderInfoView.as_view(), name='become_rider_info_page'),
+]
+# --- END: Rider URLs ---
+
+
+# --- START: Service Provider Dashboard URLs ---
+urlpatterns += [
+    path('provider/dashboard/', views.ServiceProviderDashboardView.as_view(), name='service_provider_dashboard'),
+    path('provider/services/', views.ServiceProviderServicesListView.as_view(), name='service_provider_services_list'),
+    path('provider/services/create/', views.ServiceCreateView.as_view(), name='service_provider_service_create'), # Reusing ServiceCreateView
+    path('provider/services/<slug:service_slug>/edit/', views.ServiceUpdateView.as_view(), name='service_provider_service_edit'), # Reusing ServiceUpdateView
+    path('provider/services/<slug:service_slug>/delete/', views.ServiceDeleteView.as_view(), name='service_provider_service_delete'), # Reusing ServiceDeleteView
+    path('provider/bookings/', views.ServiceProviderBookingsListView.as_view(), name='service_provider_bookings_list'), # Placeholder
+    path('provider/verify/', views.MultiStepVendorVerificationView.as_view(), name='service_provider_verification_multistep'), # Placeholder, ensure you have a view for this
+    path('provider/payouts/', views.ServiceProviderPayoutRequestListView.as_view(), name='service_provider_payout_requests'),
+    path('provider/payouts/request/', views.ServiceProviderPayoutRequestCreateView.as_view(), name='service_provider_payout_request_create'),
+    # path('provider/profile/edit/', views.EditServiceProviderProfileView.as_view(), name='service_provider_profile_edit'), # Placeholder
+]
+# --- END: Service Provider Dashboard URLs ---
+
+# --- START: Customer Notification URL ---
+urlpatterns += [path('notifications/', views.CustomerNotificationListView.as_view(), name='customer_notification_list'),]
+# END: Customer Notification URL

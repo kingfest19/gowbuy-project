@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% load static i18n humanize %}
+
+{% block title %}{{ page_title }}{% endblock title %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'assets/css/service_marketplace.css' %}">
+    <style>
+        /* Styles for service items, now without the .service-item-flat wrapper */
+        .service-image { /* New class for the image, or target .col img */
+            height: 180px;
+            width: 100%;
+            object-fit: cover;
+            border-radius: 0.25rem;
+            margin-bottom: 0.75rem;
+        }
+        .service-title a { /* New class for the title's link, or target .col h5 a */
+            color: #333; 
+            font-weight: 600; 
+        }
+        .service-title a:hover { 
+            color: var(--bs-primary); 
+        }
+        .provider-info { font-size: 0.85rem; color: #6c757d; } /* Was .service-item-flat .provider-info */
+        .service-description-flat { font-size: 0.9rem; color: #495057; flex-grow: 1; } /* Was .service-item-flat .service-description-flat */
+        .service-price-flat { font-weight: bold; color: var(--bs-success); } /* Was .service-item-flat .service-price-flat */
+        .btn-details-flat { margin-top: auto; } /* Was .service-item-flat .btn-details-flat */
+
+        /* Category page specific header */
+        .category-header {
+            background-color: #f8f9fa; /* Light background */
+            padding: 2.5rem 0; /* Increased padding */
+            margin-bottom: 2.5rem; /* Increased margin */
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .category-header h1 {
+            font-weight: 600;
+            font-size: 2.5rem; /* Larger title */
+        }
+        .category-header .lead {
+            font-size: 1.15rem; /* Slightly larger lead text */
+            color: #5a6268; /* Darker lead text */
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .category-header .search-form-category {
+            max-width: 600px;
+            margin: 1.5rem auto 0;
+        }
+
+        .service-listing-area {
+            /* background-color: #ffffff; */ /* Removed to make it transparent */
+            /* padding: 1.5rem; */ /* Removed padding from the container */
+            /* border: 1px solid #dee2e6; */ /* Removed border */
+            /* border-radius: 0.375rem; */ /* Removed border-radius */
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="category-header">
+    <div class="container">
+        <h1>{{ current_category.name }}</h1>
+        {% if current_category.description %}
+        <p class="lead">{{ current_category.description|truncatewords:30 }}</p>
+        {% endif %}
+        {# Search within this category #}
+        <form method="get" action="{% url 'core:services_by_category' category_slug=current_category.slug %}" class="search-form-category">
+            <div class="input-group input-group-lg">
+                <input type="text" name="q" class="form-control" placeholder="{% trans 'Search within this category...' %}" value="{{ search_query|default:'' }}">
+                <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> {% trans "Search" %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="container my-4">
+    <div class="row">
+        <!-- Sidebar for Categories -->
+        <div class="col-lg-3 mb-4 mb-lg-0">
+            <h4>{% trans "Browse Categories" %}</h4>
+            <hr>
+            <ul class="list-group list-group-flush">
+                <a href="{% url 'core:service_list' %}" 
+                   class="list-group-item list-group-item-action">
+                   <i class="fas fa-th-list me-2"></i>{% trans "All Categories" %}
+                </a>
+                {% for category_item in all_service_categories %}
+                    <a href="{% url 'core:services_by_category' category_slug=category_item.slug %}" 
+                       class="list-group-item list-group-item-action {% if current_category_slug == category_item.slug %}active{% endif %}">
+                        {{ category_item.name }} <span class="badge bg-secondary float-end">{{ category_item.num_services }}</span>
+                    </a>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Main Content Area for Service Listing -->
+        <div class="col-lg-9 service-listing-area">
+            {% if services %}
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="h5 mb-0 text-muted">
+                        {% if search_query %}
+                            {% blocktrans count counter=page_obj.paginator.count %}
+                                Found {{ counter }} service matching "{{ search_query }}".
+                            {% plural %}
+                                Found {{ counter }} services matching "{{ search_query }}".
+                            {% endblocktrans %}
+                        {% else %}
+                             {% blocktrans count counter=page_obj.paginator.count %}
+                                {{ counter }} service available.
+                            {% plural %}
+                                {{ counter }} services available.
+                            {% endblocktrans %}
+                        {% endif %}
+                    </h3>
+                    {# TODO: Add sorting options if needed #}
+                </div>
+
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    {% for service in services %}
+                    <div class="col d-flex flex-column position-relative"> {# Added d-flex, flex-column, position-relative #}
+                        <a href="{{ service.get_absolute_url }}">
+                            {% if service.images.first.image.url %}
+                                <img src="{{ service.images.first.image.url }}" alt="{{ service.title }}" class="service-image">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}" class="service-image">
+                            {% endif %}
+                        </a>
+                        <h5 class="mb-1 service-title">
+                            <a href="{{ service.get_absolute_url }}" class="text-decoration-none stretched-link">{{ service.title|truncatechars:50 }}</a>
+                        </h5>
+                        <p class="provider-info mb-2">
+                            <i class="bi bi-person-fill"></i> {{ service.provider.username }}
+                            {% if service.provider.service_provider_profile and service.provider.service_provider_profile.is_approved %}
+                                <i class="bi bi-patch-check-fill text-success ms-1" title="{% trans 'Verified Provider' %}"></i>
+                            {% endif %}
+                        </p>
+                        <p class="service-description-flat mb-2">{{ service.description|truncatewords_html:12 }}</p>
+                        {% if service.packages.exists %}
+                            <p class="service-price-flat mb-2">
+                                {% trans "From" %}: GH₵ {{ service.packages.all.first.price|floatformat:2|intcomma }}
+                            </p>
+                        {% endif %}
+                        <a href="{{ service.get_absolute_url }}" class="btn btn-sm btn-outline-primary w-100 btn-details-flat">{% trans "View Details" %}</a>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if is_paginated %}
+                    {% include "core/includes/pagination.html" %}
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-search fa-4x text-muted mb-4"></i>
+                    {% if search_query %}
+                        <h4 class="mb-3">{% trans "No Matches Found" %}</h4>
+                        <p class="lead">{% blocktrans with query=search_query category_name=current_category.name %}No services found matching "{{ query }}" in the category "{{ category_name }}".{% endblocktrans %}</p>
+                    {% else %}
+                        <h4 class="mb-3">{% trans "No Services Yet" %}</h4>
+                        <p class="lead">{% blocktrans with category_name=current_category.name %}There are currently no services listed in the category "{{ category_name }}".{% endblocktrans %}</p>
+                    {% endif %}
+                    <p class="mt-4"><a href="{% url 'core:service_list' %}" class="btn btn-outline-primary"><i class="fas fa-arrow-left me-2"></i>{% trans "Explore All Services" %}</a></p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# You can include "How It Works" and "Become a Provider" sections here if desired #}
+    {# For brevity, they are omitted but can be copied from service_list.html #}
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+    {{ block.super }}
+{% endblock extra_js %}

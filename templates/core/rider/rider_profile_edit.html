@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{{ page_title }} | {% trans "Rider Dashboard" %}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }} {# Keep any CSS from the parent template #}
+    <style>
+        .profile-picture-current {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 20px; /* Increased margin */
+            border: 3px solid #eee;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Subtle shadow */
+        }
+        .rider-profile-form-container {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+        }
+        .rider-profile-form-container h2 {
+            color: #007bff; /* Primary color for title */
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .rider-profile-form-container .form-control,
+        .rider-profile-form-container .form-select {
+            margin-bottom: 15px; /* Space below each form control */
+        }
+        .rider-profile-form-container label {
+            font-weight: 500; /* Slightly bolder labels */
+            margin-bottom: 0.3rem;
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row">
+        {% include "core/rider/rider_dashboard_sidebar_snippet.html" %} {# Assuming sidebar snippet #}
+        <div class="col-md-9">
+            <div class="rider-profile-form-container"> {# New container for styling #}
+                <h2 class="mb-4">{{ page_title }}</h2> {# Title inside the container #}
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% if rider_profile.user.profile_picture %}
+                    <div class="text-center"> {# Centered profile picture #}
+                        <img src="{{ rider_profile.user.profile_picture.url }}" alt="{% trans 'Current Profile Picture' %}" class="profile-picture-current">
+                    </div>
+                {% endif %}
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {{ form.as_p }} {# Or use crispy_forms if you have it set up: {% crispy form %} #}
+                    <div class="d-grid gap-2"> {# Full-width button using d-grid #}
+                        <button type="submit" class="btn btn-primary btn-lg mt-3">{% trans "Save Changes" %}</button>
+                    </div>
+                </form>
+            </div> {# End rider-profile-form-container #}
+        </div>
+    </div>
+</div>
+{% endblock content %}

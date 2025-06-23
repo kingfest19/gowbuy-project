@@ -1,121 +1,125 @@
-{% extends "core/service_base.html" %} {# <<< Extend the new service base #}
+{% extends "core/service_base.html" %}
 {% load static i18n %}
-{# Removed crispy_forms_tags for now #}
+{% load crispy_forms_tags %}
 
-{% block title %}{{ form_title }} - {% trans "Service" %} - {{ block.super }}{% endblock %}
+{% block title %}
+    {% if form.instance.pk %}
+        {% trans "Edit Service" %}: {{ service.title }}
+    {% else %}
+        {% trans "Offer a New Service" %}
+    {% endif %}
+     - {% trans "Services" %}
+{% endblock title %}
 
 {% block extra_css %}
 {{ block.super }}
 <style>
-/* --- START: Force visibility for form check inputs --- */
-/* Ensure checkboxes and radios have a visible border */
-.form-check-input {
-    background-color: #fff; /* Keep background white */
-    border: 1px solid #b0b0b0 !important; /* Add a visible border */
-    float: none !important; /* Prevent floating issues */
-    margin-left: 0 !important; /* Reset margin if needed */
-}
+    .service-form-container {
+        background-color: #fff; /* White background for the form area */
+        padding: 2rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.25rem 1rem rgba(0,0,0,0.075); /* Subtle shadow */
+        margin-top: 1rem; /* Adjust if service_base container has enough margin */
+        margin-bottom: 2rem;
+    }
 
-/* Style when checked (using Bootstrap's primary color variable) */
-.form-check-input:checked {
-    background-color: var(--bs-primary); /* Use Bootstrap primary color */
-    border-color: var(--bs-primary) !important;
-}
+    .service-form-container h1 {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: #2c3e50; /* Dark blue-grey */
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e9ecef;
+    }
 
-/* Ensure radio buttons are also visible and stay round */
-.form-check-input[type="radio"] {
-    border-radius: 50%;
-}
+    /* Styling for form elements, similar to vendor_campaign_form.html */
+    #serviceForm label,
+    #serviceForm .form-label { /* For Crispy Forms or manual labels */
+        color: #212529 !important;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
 
-/* --- START: Ensure form labels are visible --- */
-form label {
-    color: #212529 !important; /* Bootstrap's default dark text color */
-}
-/* --- END: Ensure form labels are visible --- */
-/* --- END: Force visibility for form check inputs --- */
+    #serviceForm .form-control,
+    #serviceForm .form-select,
+    #serviceForm textarea {
+        display: block;
+        width: 100%;
+        padding: .5rem .75rem; /* Slightly more padding */
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: #212529;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        appearance: none;
+        border-radius: .375rem; /* Bootstrap 5 default */
+        transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+    }
+
+    #serviceForm .form-control:focus,
+    #serviceForm .form-select:focus,
+    #serviceForm textarea:focus {
+        border-color: #86b7fe;
+        outline: 0;
+        box-shadow: 0 0 0 .25rem rgba(13,110,253,.25);
+    }
+
+    #serviceForm textarea {
+        min-height: 120px;
+    }
+
+    #serviceForm .form-text { /* Help text */
+        font-size: 0.875em;
+        color: #6c757d;
+    }
+
+    #serviceForm .invalid-feedback { /* Error messages */
+        display: block; /* Ensure they are visible */
+    }
+    .btn-submit-service {
+        padding: 0.6rem 1.5rem;
+        font-weight: 500;
+    }
 </style>
 {% endblock extra_css %}
 
-{% block service_content %} {# <<< Use the new content block #}
-<div class="container mt-4 mb-5"> {# Added mb-5 for bottom margin #}
-    <div class="row justify-content-center">
-        <div class="col-lg-10 col-xl-9"> {# Adjusted column width #}
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h1 class="card-title h4 mb-0">{{ form_title }}</h1>
+{% block service_content %}
+<div class="container mt-4">
+    <div class="service-form-container">
+        <h1>
+            {% if form.instance.pk %}
+                {% trans "Edit Service" %}
+            {% else %}
+                {% trans "Offer a New Service" %}
+            {% endif %}
+        </h1>
+        <form method="post" id="serviceForm" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            {# --- START: Manual Error Display for Debugging --- #}
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    <h4>{% trans "Please correct the errors below:" %}</h4>
+                    {{ form.non_field_errors }}
                 </div>
-                <div class="card-body p-4">
-                    {# Use enctype for file uploads (images/videos) #}
-                    {# Removed novalidate to allow browser validation popups #}
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
+            {% endif %}
 
-                        {# --- START: Main Service Form Fields --- #}
-                        <fieldset class="border p-3 rounded mb-4">
-                            <legend class="w-auto px-2 h5">{% trans "Service Details" %}</legend>
-                            {# Render fields manually or using form.as_p for simplicity #}
-                            {{ form.as_p }}
-                        </fieldset>
-                        {# --- END: Main Service Form Fields --- #}
-
-                        {# --- START: Service Packages Formset --- #}
-                        <fieldset class="mt-4 border p-3 rounded mb-4">
-                            <legend class="w-auto px-2 h5">{% trans "Service Packages" %}</legend>
-                            <p class="text-muted small">{% trans "Define the different packages or tiers for your service. You must define at least one package." %}</p>
-
-                            {# Important: Renders hidden fields for formset management #}
-                            {{ package_formset.management_form }} {# <<< RENDER THIS #}
-
-                            <div id="package-forms-container">
-                                {% for package_form in package_formset %}
-                                    <div class="package-form mb-3 p-3 border rounded bg-light">
-                                        <h6 class="mb-3 border-bottom pb-2">{% blocktrans with count=forloop.counter %}Package {{ count }}{% endblocktrans %}</h6>
-
-                                        {# Render package form fields manually or using as_p #}
-                                        {{ package_form.as_p }}
-
-                                        {# --- Explicitly render DELETE checkbox --- #}
-                                        {% if package_formset.can_delete and package_form.instance.pk %}
-                                            <div class="form-check mt-2">
-                                                {{ package_form.DELETE }} {# Render the checkbox input #}
-                                                <label class="form-check-label small text-danger" for="{{ package_form.DELETE.id_for_label }}">
-                                                    {% trans "Delete" %}
-                                                </label>
-                                            </div>
-                                        {% endif %}
-                                        {# --- End DELETE checkbox --- #}
-
-                                    </div>
-                                {% endfor %}
-                            </div>
-                            {# Optional: Add JS here to handle adding new forms dynamically if needed #}
-                            {# Example button for adding forms (requires JS) #}
-                            {# <button type="button" id="add-package-form" class="btn btn-sm btn-outline-secondary mt-2">{% trans "Add Another Package" %}</button> #}
-                        </fieldset>
-                        {# --- END: Service Packages Formset --- #}
-
-                        {# --- START: Service Images Formset --- #}
-                        {# TODO: Add Image Formset rendering here later if needed #}
-                        {# --- END: Service Images Formset --- #}
-
-                        {# --- START: Service Videos Formset --- #}
-                        {# TODO: Add Video Formset rendering here later if needed #}
-                        {# --- END: Service Videos Formset --- #}
-
-                        {# --- START: Submit Buttons --- #}
-                        <div class="mt-4 d-flex justify-content-end gap-2"> {# Use flexbox for button alignment #}
-                            <a href="{% if service %}{% url 'core:service_detail' service_slug=service.slug %}{% else %}{% url 'core:service_list' %}{% endif %}" class="btn btn-secondary">
-                                <i class="bi bi-x-circle me-1"></i> {% trans "Cancel" %}
-                            </a>
-                            <button type="submit" class="btn btn-success"> {# Standard submit button #}
-                                <i class="bi bi-check-circle-fill me-1"></i> {% trans "Save Service" %}
-                            </button>
-                        </div>
-                        {# --- END: Submit Buttons --- #}
-                    </form>
+            {% for field in form %}
+                <div class="mb-3">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
+                    {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors }}</div>{% endif %}
                 </div>
-            </div>
-        </div>
+            {% endfor %}
+            {# --- END: Manual Error Display --- #}
+            {# {% crispy form %} #} {# Temporarily commented out Crispy Forms #}
+
+            <button type="submit" class="btn btn-primary btn-submit-service mt-3">{% trans "Save Service" %}</button>
+            <a href="{% url 'core:service_list' %}" class="btn btn-outline-secondary mt-3">{% trans "Cancel" %}</a>
+        </form>
     </div>
-</div> {# End container #}
+</div>
 {% endblock service_content %}

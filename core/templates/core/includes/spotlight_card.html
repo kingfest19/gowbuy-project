@@ -1,0 +1,42 @@
+{% load i18n static %}
+{% comment %}
+Context variables expected:
+- item: The Vendor instance or ServiceProviderProfile instance.
+- item_type: A string, either 'vendor' or 'provider'.
+{% endcomment %}
+
+<div class="col">
+    <div class="card h-100 spotlight-card">
+        {% if item_type == 'vendor' %}
+            <a href="{% url 'core:vendor_detail' vendor_slug=item.slug %}" class="text-decoration-none">
+                {% if item.logo %}
+                    <img src="{{ item.logo.url }}" class="card-img-top spotlight-card-img" alt="{{ item.name }}">
+                {% else %}
+                    <div class="spotlight-card-img-placeholder d-flex align-items-center justify-content-center">
+                        <i class="fas fa-store fa-3x text-muted"></i>
+                    </div>
+                {% endif %}
+            </a>
+            <div class="card-body text-center d-flex flex-column">
+                <h5 class="card-title fs-6 mt-auto"><a href="{% url 'core:vendor_detail' vendor_slug=item.slug %}" class="text-dark text-decoration-none">{% trans "Meet" %} {{ item.name }}</a></h5>
+                <p class="card-text small text-muted mb-2">{{ item.description|truncatewords:12|default_if_none:"" }}</p>
+                <a href="{% url 'core:vendor_detail' vendor_slug=item.slug %}" class="btn btn-sm btn-outline-primary mt-auto">{% trans "Visit Store" %}</a>
+            </div>
+        {% elif item_type == 'provider' and item.user %} {# Ensure item.user exists for providers #}
+            <a href="{% url 'core:service_provider_detail' username=item.user.username %}" class="text-decoration-none">
+                {% if item.user.userprofile.profile_picture %}
+                    <img src="{{ item.user.userprofile.profile_picture.url }}" class="card-img-top spotlight-card-img" alt="{{ item.user.get_full_name|default:item.user.username }}">
+                {% else %}
+                    <div class="spotlight-card-img-placeholder d-flex align-items-center justify-content-center">
+                        <i class="fas fa-user-tie fa-3x text-muted"></i>
+                    </div>
+                {% endif %}
+            </a>
+            <div class="card-body text-center d-flex flex-column">
+                <h5 class="card-title fs-6 mt-auto"><a href="{% url 'core:service_provider_detail' username=item.user.username %}" class="text-dark text-decoration-none">{% trans "Meet" %} {{ item.user.get_full_name|default:item.user.username }}</a></h5>
+                <p class="card-text small text-muted mb-2">{{ item.bio|truncatewords:12|default_if_none:"" }}</p>
+                <a href="{% url 'core:service_list' %}?provider={{ item.user.id }}" class="btn btn-sm btn-outline-primary mt-auto">{% trans "View Services" %}</a> {# Link to services filtered by this provider #}
+            </div>
+        {% endif %}
+    </div>
+</div>

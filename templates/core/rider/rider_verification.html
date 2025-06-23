@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{{ page_title }} | {% trans "Rider Dashboard" %}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        .verification-container {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+        }
+        .verification-container h2 {
+            color: #007bff;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .status-section {
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .status-section.approved {
+            background-color: #d4edda; /* Light green */
+            color: #155724; /* Dark green */
+            border-color: #c3e6cb;
+        }
+        .status-section.pending {
+            background-color: #fff3cd; /* Light yellow */
+            color: #856404; /* Dark yellow */
+            border-color: #ffeeba;
+        }
+        .status-section.rejected {
+            background-color: #f8d7da; /* Light red */
+            color: #721c24; /* Dark red */
+            border-color: #f5c6cb;
+        }
+        .status-section i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .document-list h5 {
+            color: #343a40;
+            margin-bottom: 15px;
+        }
+        .document-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #eee;
+        }
+        .document-item:last-child {
+            border-bottom: none;
+        }
+        .document-item a.btn { /* More specific selector for buttons */
+            margin-left: 10px;
+        }
+        .document-item img {
+            max-width: 100px;
+            height: auto;
+            margin-top: 10px;
+            display: block; /* Ensure image is on its own line */
+            border: 1px solid #ddd;
+            padding: 3px;
+            border-radius: 4px;
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row">
+        {% include "core/rider/rider_dashboard_sidebar_snippet.html" %} {# Assuming sidebar snippet #}
+        <div class="col-md-9">
+            <div class="verification-container">
+                <h2 class="mb-4">{{ page_title }}</h2>
+
+                {# Display overall status #}
+                <div class="status-section
+                    {% if verification_status == 'approved' %}approved{% elif verification_status == 'pending_review' %}pending{% elif verification_status == 'reviewed_not_approved' %}rejected{% endif %}">
+                    {% if verification_status == 'approved' %}
+                        <i class="fas fa-check-circle"></i>
+                    {% elif verification_status == 'pending_review' %}
+                        <i class="fas fa-clock"></i>
+                    {% elif verification_status == 'reviewed_not_approved' %}
+                         <i class="fas fa-times-circle"></i>
+                    {% endif %}
+                    <p class="lead mb-0">{{ verification_status_message }}</p>
+                </div>
+                
+                {% if verification_status == 'approved' and rider_profile %}
+                    <a href="{% url 'core:rider_profile_edit' %}" class="btn btn-primary mt-3 mb-4"><i class="fas fa-edit me-2"></i>{% trans "Update My Verification Documents / Profile" %}</a>
+                {% endif %}
+
+                {# Display application details if application exists AND status is NOT approved #}
+                {# OR if application exists and profile doesn't (edge case, e.g., during approval process before profile fully syncs) #}
+                {% if rider_application and verification_status != 'approved' %}
+                    <div class="document-list mt-4">
+                        <h5>{% trans "Submitted Application Documents" %}</h5>
+                        <p class="text-muted"><small>{% trans "These are the documents you submitted with your application." %}</small></p>
+
+                        <div class="document-item">
+                            <strong>{% trans "Vehicle Type:" %}</strong> {{ rider_application.get_vehicle_type_display }}
+                        </div>
+                        <div class="document-item">
+                            <strong>{% trans "Vehicle Registration Number:" %}</strong> {{ rider_application.vehicle_registration_number|default:"N/A" }}
+                            {% if rider_application.vehicle_registration_document %}
+                                <a href="{{ rider_application.vehicle_registration_document.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Document" %}</a>
+                                {% if rider_application.vehicle_registration_document.url|lower|slice:"-4:" == ".jpg" or rider_application.vehicle_registration_document.url|lower|slice:"-4:" == ".png" or rider_application.vehicle_registration_document.url|lower|slice:"-5:" == ".jpeg" or rider_application.vehicle_registration_document.url|lower|slice:"-4:" == ".gif" %}
+                                    <img src="{{ rider_application.vehicle_registration_document.url }}" alt="Vehicle Registration Document Preview">
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">{% trans "No document uploaded." %}</span>
+                            {% endif %}
+                        </div>
+                        <div class="document-item">
+                            <strong>{% trans "Driver's License Number:" %}</strong> {{ rider_application.license_number|default:"N/A" }}
+                            {% if rider_application.drivers_license_front %}
+                                <a href="{{ rider_application.drivers_license_front.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Front" %}</a>
+                                {% if rider_application.drivers_license_front.url|lower|slice:"-4:" == ".jpg" or rider_application.drivers_license_front.url|lower|slice:"-4:" == ".png" or rider_application.drivers_license_front.url|lower|slice:"-5:" == ".jpeg" or rider_application.drivers_license_front.url|lower|slice:"-4:" == ".gif" %}
+                                    <img src="{{ rider_application.drivers_license_front.url }}" alt="Driver's License Front Preview">
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">{% trans "No front document uploaded." %}</span>
+                            {% endif %}
+                            {% if rider_application.drivers_license_back %}
+                                <a href="{{ rider_application.drivers_license_back.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Back" %}</a>
+                                {% if rider_application.drivers_license_back.url|lower|slice:"-4:" == ".jpg" or rider_application.drivers_license_back.url|lower|slice:"-4:" == ".png" or rider_application.drivers_license_back.url|lower|slice:"-5:" == ".jpeg" or rider_application.drivers_license_back.url|lower|slice:"-4:" == ".gif" %}
+                                    <img src="{{ rider_application.drivers_license_back.url }}" alt="Driver's License Back Preview">
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">{% trans "No back document uploaded." %}</span>
+                            {% endif %}
+                        </div>
+                         <div class="document-item">
+                            <strong>{% trans "National ID:" %}</strong>
+                            {% if rider_application.id_card_front %}
+                                <a href="{{ rider_application.id_card_front.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Front" %}</a>
+                                {% if rider_application.id_card_front.url|lower|slice:"-4:" == ".jpg" or rider_application.id_card_front.url|lower|slice:"-4:" == ".png" or rider_application.id_card_front.url|lower|slice:"-5:" == ".jpeg" or rider_application.id_card_front.url|lower|slice:"-4:" == ".gif" %}
+                                    <img src="{{ rider_application.id_card_front.url }}" alt="National ID Front Preview">
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">{% trans "No front document uploaded." %}</span>
+                            {% endif %}
+                            {% if rider_application.id_card_back %}
+                                <a href="{{ rider_application.id_card_back.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Back" %}</a>
+                                {% if rider_application.id_card_back.url|lower|slice:"-4:" == ".jpg" or rider_application.id_card_back.url|lower|slice:"-4:" == ".png" or rider_application.id_card_back.url|lower|slice:"-5:" == ".jpeg" or rider_application.id_card_back.url|lower|slice:"-4:" == ".gif" %}
+                                    <img src="{{ rider_application.id_card_back.url }}" alt="National ID Back Preview">
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">{% trans "No back document uploaded." %}</span>
+                            {% endif %}
+                        </div>
+                         <div class="document-item">
+                            <strong>{% trans "Profile Picture:" %}</strong>
+                            {% if rider_application.profile_picture %}
+                                <a href="{{ rider_application.profile_picture.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Picture" %}</a>
+                                <img src="{{ rider_application.profile_picture.url }}" alt="Profile Picture Preview">
+                            {% else %}
+                                <span class="text-muted">{% trans "No picture uploaded." %}</span>
+                            {% endif %}
+                        </div>
+                         <div class="document-item">
+                            <strong>{% trans "Vehicle Picture:" %}</strong>
+                            {% if rider_application.vehicle_picture %}
+                                <a href="{{ rider_application.vehicle_picture.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Picture" %}</a>
+                                <img src="{{ rider_application.vehicle_picture.url }}" alt="Vehicle Picture Preview">
+                            {% else %}
+                                <span class="text-muted">{% trans "No picture uploaded." %}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% elif rider_profile and verification_status == 'approved' %}
+                    {# Display current documents from RiderProfile for approved riders #}
+                    <div class="document-list mt-4">
+                        <h5>{% trans "Your Current Verification Documents" %}</h5>
+                        <p class="text-muted"><small>{% trans "These are your currently active verification documents. You can update them by editing your profile." %}</small></p>
+
+                        <div class="document-item">
+                            <strong>{% trans "Vehicle Type:" %}</strong> {{ rider_profile.get_vehicle_type_display|default:"N/A" }}
+                        </div>
+                        <div class="document-item">
+                            <strong>{% trans "Vehicle Registration Number:" %}</strong> {{ rider_profile.vehicle_registration_number|default:"N/A" }}
+                            {% if rider_profile.current_vehicle_registration_document %}
+                                <a href="{{ rider_profile.current_vehicle_registration_document.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Document" %}</a>
+                                {% if rider_profile.current_vehicle_registration_document.url|lower|slice:"-4:" == ".jpg" or rider_profile.current_vehicle_registration_document.url|lower|slice:"-4:" == ".png" or rider_profile.current_vehicle_registration_document.url|lower|slice:"-5:" == ".jpeg" or rider_profile.current_vehicle_registration_document.url|lower|slice:"-4:" == ".gif" %}
+                                    <img src="{{ rider_profile.current_vehicle_registration_document.url }}" alt="Current Vehicle Registration Document Preview">
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">{% trans "No current document." %}</span>
+                            {% endif %}
+                        </div>
+                        <div class="document-item">
+                            <strong>{% trans "Driver's License Number:" %}</strong> {{ rider_profile.license_number|default:"N/A" }}
+                            {% if rider_profile.current_drivers_license_front %}
+                                <a href="{{ rider_profile.current_drivers_license_front.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Front" %}</a>
+                                {% if rider_profile.current_drivers_license_front.url|lower|slice:"-4:" == ".jpg" or rider_profile.current_drivers_license_front.url|lower|slice:"-4:" == ".png" or rider_profile.current_drivers_license_front.url|lower|slice:"-5:" == ".jpeg" or rider_profile.current_drivers_license_front.url|lower|slice:"-4:" == ".gif" %}
+                                    <img src="{{ rider_profile.current_drivers_license_front.url }}" alt="Current Driver's License Front Preview">
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">{% trans "No current front document." %}</span>
+                            {% endif %}
+                            {% if rider_profile.current_drivers_license_back %}
+                                <a href="{{ rider_profile.current_drivers_license_back.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Back" %}</a>
+                                {% if rider_profile.current_drivers_license_back.url|lower|slice:"-4:" == ".jpg" or rider_profile.current_drivers_license_back.url|lower|slice:"-4:" == ".png" or rider_profile.current_drivers_license_back.url|lower|slice:"-5:" == ".jpeg" or rider_profile.current_drivers_license_back.url|lower|slice:"-4:" == ".gif" %}
+                                    <img src="{{ rider_profile.current_drivers_license_back.url }}" alt="Current Driver's License Back Preview">
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">{% trans "No current back document." %}</span>
+                            {% endif %}
+                        </div>
+                         <div class="document-item">
+                            <strong>{% trans "National ID:" %}</strong>
+                            {% if rider_profile.current_id_card_front %}
+                                <a href="{{ rider_profile.current_id_card_front.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Front" %}</a>
+                                {% if rider_profile.current_id_card_front.url|lower|slice:"-4:" == ".jpg" or rider_profile.current_id_card_front.url|lower|slice:"-4:" == ".png" or rider_profile.current_id_card_front.url|lower|slice:"-5:" == ".jpeg" or rider_profile.current_id_card_front.url|lower|slice:"-4:" == ".gif" %}
+                                    <img src="{{ rider_profile.current_id_card_front.url }}" alt="Current National ID Front Preview">
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">{% trans "No current front document." %}</span>
+                            {% endif %}
+                            {% if rider_profile.current_id_card_back %}
+                                <a href="{{ rider_profile.current_id_card_back.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Back" %}</a>
+                                {% if rider_profile.current_id_card_back.url|lower|slice:"-4:" == ".jpg" or rider_profile.current_id_card_back.url|lower|slice:"-4:" == ".png" or rider_profile.current_id_card_back.url|lower|slice:"-5:" == ".jpeg" or rider_profile.current_id_card_back.url|lower|slice:"-4:" == ".gif" %}
+                                    <img src="{{ rider_profile.current_id_card_back.url }}" alt="Current National ID Back Preview">
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">{% trans "No current back document." %}</span>
+                            {% endif %}
+                        </div>
+                         <div class="document-item">
+                            <strong>{% trans "Vehicle Picture:" %}</strong>
+                            {% if rider_profile.current_vehicle_picture %}
+                                <a href="{{ rider_profile.current_vehicle_picture.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Picture" %}</a>
+                                <img src="{{ rider_profile.current_vehicle_picture.url }}" alt="Current Vehicle Picture Preview">
+                            {% else %}
+                                <span class="text-muted">{% trans "No current picture." %}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% elif not rider_application and not rider_profile %}
+                    {# Fallback if neither application nor profile exists - should be rare due to view logic #}
+                    <p class="mt-4">{% trans "Verification information is not available. Please ensure you have applied to be a rider." %}</p>
+                {% endif %}
+
+            </div> {# Close verification-container #}
+        </div>
+    </div>
+</div>
+{% endblock content %}

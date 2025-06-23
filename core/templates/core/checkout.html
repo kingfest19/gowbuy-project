@@ -1,215 +1,494 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% load i18n %}
 {% load static %}
-{% load humanize %}
-{% load i18n %} {# <<< Make sure i18n is loaded #}
+{% load crispy_forms_tags %}
 
-{% block title %}{% trans "Checkout" %} - NEXUS{% endblock title %}
+{% block title %}{% trans "Checkout" %} - {{ block.super }}{% endblock %}
 
 {% block extra_css %}
-    {# Link the checkout CSS file #}
-    <link rel="stylesheet" href="{% static 'assets/css/checkout.css' %}" />
-    <style>
-        /* Basic styling for address selection */
-        .address-selection .card { /* Keep card styling for the selectable addresses */
-            cursor: pointer; /* Indicate addresses are selectable */
-            transition: box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
-        }
-        .address-selection input[type="radio"] {
-            display: none; /* Hide the actual radio button */
-        }
-        .address-selection input[type="radio"]:checked + .card {
-            border-color: var(--bs-primary); /* Bootstrap primary color */
-            box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.5); /* Bootstrap focus shadow */
-        }
-        .address-selection .card:hover {
-             border-color: #adb5bd; /* Lighter gray on hover */
-        }
-        .address-block p {
-            margin-bottom: 0.25rem; /* Reduce space between address lines */
-            font-size: 0.9rem;
-        }
-        .address-block strong {
-            font-size: 0.95rem;
-        }
-        /* Style for sections now that cards are removed */
-        .checkout-section {
-            padding: 1rem; /* Add some padding */
-            border-bottom: 1px solid #dee2e6; /* Add a separator line */
-        }
-        .checkout-section:last-of-type {
-             border-bottom: none; /* Remove border from last section */
-        }
-    </style>
-{% endblock extra_css %}
+{{ block.super }}
+<style>
+    /* Styling for the main checkout sections (which no longer have .card) */
+    .checkout-section {
+        margin-bottom: 1.5rem; /* Replicates .mb-4 from .card */
+    }
+    .checkout-section .card-header { /* This still applies to the header divs */
+        background-color: #f8f9fa; 
+        border-bottom: 1px solid #dee2e6;
+        padding: 0.75rem 1.25rem; /* Default Bootstrap card-header padding */
+        border-top-left-radius: 0.375rem; /* Add back some rounding if desired */
+        border-top-right-radius: 0.375rem;
+    }
+    .checkout-section .card-header h4 {
+        margin-bottom: 0;
+        font-size: 1.25rem;
+    }
+    /* Content area within checkout sections, if needed for consistent padding */
+    .checkout-section-content {
+        padding: 1.25rem; /* Mimic card-body padding */
+        border: 1px solid #dee2e6;
+        border-top: none; /* Header has bottom border */
+        border-bottom-left-radius: 0.375rem;
+        border-bottom-right-radius: 0.375rem;
+    }
+
+    .address-list-item-wrapper { /* Wrapper for consistent styling */
+        padding: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem; /* Bootstrap's default border-radius */
+        margin-bottom: 0.75rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    .address-list-item-wrapper:hover {
+        border-color: #0d6efd; /* Bootstrap primary blue */
+    }
+    .address-list-item-wrapper input[type="radio"] {
+        margin-top: 0.35rem; /* Align radio button better with text */
+        margin-right: 0.5rem;
+    }
+    .address-list-item-wrapper label {
+        width: 100%;
+        cursor: pointer;
+        margin-bottom: 0; /* Remove default label margin */
+    }
+    .address-list-item-wrapper.selected { /* Style for selected address */
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    .add-address-form-container { /* Styles for the collapse div itself */
+        background-color: #f8f9fa; /* Slightly different background for add form */
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem; /* Replicates card-body padding */
+        margin-top: 1rem; /* Add some space above the add form */
+    }
+    .order-summary-card .card-header {
+        background-color: rgb(52, 73, 94); /* Primary Dark Blue-Grey */
+        color: white;
+    }
+    .order-summary-card .list-group-item {
+        border-left: none;
+        border-right: none;
+        padding-left: 0;
+        padding-right: 0;
+    }
+    .order-summary-card .list-group-item:first-child {
+        border-top: none;
+    }
+    .order-summary-card .list-group-item:last-child {
+        border-bottom: none;
+    }
+    .btn-add-new-address {
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4 mb-5">
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <h2 class="mb-4">{% trans "Checkout" %}</h2>
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{% if message.tags %}{{ message.tags }}{% else %}info{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
 
-    {# --- Main Form that submits to place_order view --- #}
-    <form method="post" action="{% url 'core:place_order' %}">
-        {% csrf_token %}
+            <form method="post" action="{% url 'core:place_order' %}" id="placeOrderForm">
+                {% csrf_token %} <!-- CSRF for the main place_order form -->
 
-        <div class="row g-4"> {# Use gutters for spacing #}
-
-            {# --- Left Column: Address Selection & Payment --- #}
-            <div class="col-md-7 col-lg-8">
-                <h2 class="mb-4">
-                    <i class="bi bi-cart-check-fill me-2"></i>{% trans "Checkout" %} {# Added icon #}
-                </h2>
-
-                {% include 'partials/_messages.html' %} {# Display messages #}
-
-                {# --- Billing Address --- #}
-                <div class="mb-4 checkout-section"> {# Removed card class #}
-                    <h4 class="mb-3">1. {% trans "Billing Address" %}</h4> {# Removed card-header, added mb-3 #}
-                    {# TODO: Add ability to add new billing address #}
-                    <div class="p-3"> {# Replaced card-body with padding #}
+                <!-- Billing Address Section -->
+                <div class="checkout-section" id="billingAddressSection">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4>1. {% trans "Billing Address" %}</h4>
+                        <button type="button" class="btn btn-sm btn-outline-primary btn-add-new-address" data-bs-toggle="collapse" data-bs-target="#addNewBillingAddressForm" aria-expanded="false" aria-controls="addNewBillingAddressForm">
+                            <i class="bi bi-plus-circle"></i> {% trans "Add New" %}
+                        </button>
+                    </div>
+                    <div class="checkout-section-content">
                         {% if billing_addresses %}
-                            <div class="row row-cols-1 row-cols-md-2 g-3 address-selection">
-                                {% for address in billing_addresses %}
-                                    <div class="col">
-                                        <label for="bill-addr-{{ address.id }}" class="w-100">
-                                            <input type="radio" name="billing_address" value="{{ address.id }}" id="bill-addr-{{ address.id }}" class="form-check-input" {% if address.is_default or forloop.first %}checked{% endif %} required>
-                                            <div class="card h-100"> {# Keep card for selectable address block #}
-                                                <div class="p-3 address-block"> {# Replaced card-body #}
-                                                    <strong class="card-title">{{ address.full_name }} {% if address.is_default %}<span class="badge bg-secondary">{% trans "Default" %}</span>{% endif %}</strong>
-                                                    <p>{{ address.street_address }}</p>
-                                                    {% if address.apartment_address %}<p>{{ address.apartment_address }}</p>{% endif %}
-                                                    <p>{{ address.city }}, {{ address.state }} {{ address.zip_code }}</p>
-                                                    <p>{{ address.country }}</p>
-                                                    {% if address.phone_number %}<p>{% trans "Phone:" %} {{ address.phone_number }}</p>{% endif %}
-                                                </div>
+                            {% for address in billing_addresses %}
+                                <div class="form-check address-list-item-wrapper">
+                                    <input class="form-check-input" type="radio" name="billing_address_id" id="billing_address_{{ address.id }}" value="{{ address.id }}" {% if address.is_default or billing_addresses|length == 1 %}checked{% endif %} {% if billing_addresses %}required{% endif %}>
+                                    <label class="form-check-label" for="billing_address_{{ address.id }}">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <strong>{{ address.full_name }}</strong> {% if address.is_default %}<span class="badge bg-info">{% trans "Default" %}</span>{% endif %}<br>
+                                                {{ address.street_address }}{% if address.apartment_address %}, {{ address.apartment_address }}{% endif %}<br>
+                                                {{ address.city }}, {{ address.state }} {{ address.zip_code }}<br>
+                                                {{ address.country }}
+                                                {% if address.phone_number %}<br><i class="bi bi-telephone"></i> {{ address.phone_number }}{% endif %}
                                             </div>
-                                        </label>
-                                    </div>
-                                {% endfor %}
-                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            {% endfor %}
                         {% else %}
-                            <div class="alert alert-warning" role="alert">
-                                {% trans "You have no billing addresses saved." %} {% trans "Please" %} <a href="#">{% trans "add an address" %}</a>. {# TODO: Link to add address view #}
-                            </div>
+                            <p class="mb-3">{% trans "You have no billing addresses saved. Please add an address." %}</p>
                         {% endif %}
-                        {# TODO: Add link/button to add a new billing address #}
-                        {# <a href="#" class="btn btn-outline-secondary btn-sm mt-3">Add New Billing Address</a> #}
+                        <!-- Add New Billing Address form will be moved outside the main form -->
                     </div>
                 </div>
+                
+                <!-- Shipping Address -->
+                {% if requires_shipping %}
+                <div class="checkout-section" id="shippingAddressSection">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4>2. {% trans "Shipping Address" %}</h4>
+                        <button type="button" class="btn btn-sm btn-outline-primary btn-add-new-address" data-bs-toggle="collapse" data-bs-target="#addNewShippingAddressForm" aria-expanded="false" aria-controls="addNewShippingAddressForm">
+                             <i class="bi bi-plus-circle"></i> {% trans "Add New" %}
+                        </button>
+                    </div>
+                    <div class="checkout-section-content">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="use_billing_for_shipping" id="use_billing_for_shipping">
+                            <label class="form-check-label" for="use_billing_for_shipping">
+                                {% trans "Use billing address for shipping" %}
+                            </label>
+                        </div>
 
-
-                {# --- Shipping Address (Conditional) --- #}
-                {% if requires_shipping %} {# <<< START Conditional Block #}
-                <div class="mb-4 checkout-section"> {# Removed card class #}
-                    <h4 class="mb-3">2. {% trans "Shipping Address" %}</h4> {# Removed card-header, added mb-3 #}
-                    {# TODO: Add ability to add new shipping address #}
-                    <div class="p-3"> {# Replaced card-body with padding #}
-                        {# TODO: Add option to use billing address for shipping #}
-                        {% if shipping_addresses %}
-                            <div class="row row-cols-1 row-cols-md-2 g-3 address-selection">
+                        <div id="shippingAddressOptions">
+                            {% if shipping_addresses %}
                                 {% for address in shipping_addresses %}
-                                    <div class="col">
-                                        <label for="ship-addr-{{ address.id }}" class="w-100">
-                                            <input type="radio" name="shipping_address" value="{{ address.id }}" id="ship-addr-{{ address.id }}" class="form-check-input" {% if address.is_default or forloop.first %}checked{% endif %} required>
-                                            <div class="card h-100"> {# Keep card for selectable address block #}
-                                                <div class="p-3 address-block"> {# Replaced card-body #}
-                                                    <strong class="card-title">{{ address.full_name }} {% if address.is_default %}<span class="badge bg-secondary">{% trans "Default" %}</span>{% endif %}</strong>
-                                                    <p>{{ address.street_address }}</p>
-                                                    {% if address.apartment_address %}<p>{{ address.apartment_address }}</p>{% endif %}
-                                                    <p>{{ address.city }}, {{ address.state }} {{ address.zip_code }}</p>
-                                                    <p>{{ address.country }}</p>
-                                                    {% if address.phone_number %}<p>{% trans "Phone:" %} {{ address.phone_number }}</p>{% endif %}
+                                    <div class="form-check address-list-item-wrapper">
+                                        <input class="form-check-input" type="radio" name="shipping_address_id" id="shipping_address_{{ address.id }}" value="{{ address.id }}" {% if address.is_default and not billing_addresses|length == 1 and not shipping_addresses|length == 1 %}checked{% endif %}> {# JS handles required for this based on checkbox #}
+                                        <label class="form-check-label" for="shipping_address_{{ address.id }}">
+                                            <div class="d-flex justify-content-between">
+                                                <div>
+                                                    <strong>{{ address.full_name }}</strong> {% if address.is_default %}<span class="badge bg-info">{% trans "Default" %}</span>{% endif %}<br>
+                                                    {{ address.street_address }}{% if address.apartment_address %}, {{ address.apartment_address }}{% endif %}<br>
+                                                    {{ address.city }}, {{ address.state }} {{ address.zip_code }}<br>
+                                                    {{ address.country }}
+                                                    {% if address.phone_number %}<br><i class="bi bi-telephone"></i> {{ address.phone_number }}{% endif %}
                                                 </div>
                                             </div>
                                         </label>
                                     </div>
                                 {% endfor %}
+                            {% else %}
+                                <p class="mb-3">{% trans "You have no shipping addresses saved. Please add an address or use your billing address." %}</p>
+                            {% endif %}
+                        </div>
+                        <!-- Add New Shipping Address form will be moved outside the main form -->
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Payment Method Section -->
+                <div class="checkout-section" id="paymentMethodSection"> {# ID ADDED HERE #}
+                    <div class="card-header">
+                        <h4>{% if requires_shipping %}3.{% else %}2.{% endif %} {% trans "Payment Method" %}</h4>
+                    </div>
+                    <div class="checkout-section-content">
+                        {% if payment_method_choices %}
+                            <p class="mb-3">{% trans "Please select your preferred payment method:" %}</p>
+                            {% for value, display_name in payment_method_choices %}
+                            <div class="form-check address-list-item-wrapper">
+                                <input class="form-check-input" type="radio" name="payment_method" id="payment_method_{{ value }}" value="{{ value }}" {% if forloop.first %}checked{% endif %} required>
+                                <label class="form-check-label" for="payment_method_{{ value }}">
+                                    {{ display_name }}
+                                </label>
                             </div>
+                            {% endfor %}
                         {% else %}
-                            <div class="alert alert-warning" role="alert">
-                                {% trans "You have no shipping addresses saved." %} {% trans "Please" %} <a href="#">{% trans "add an address" %}</a>. {# TODO: Link to add address view #}
-                            </div>
+                            <p class="text-danger">{% trans "No payment methods are currently available. Please contact support." %}</p>
                         {% endif %}
-                        {# TODO: Add link/button to add a new shipping address #}
-                        <a href="#" class="btn btn-outline-secondary btn-sm mt-3">{% trans "Add New Shipping Address" %}</a> {# TODO: Update href to actual add address URL #}
-                    </div>
-                </div>
-                {% endif %} {# <<< END Conditional Block #}
-
-
-                {# --- Payment Method (Placeholder) --- #}
-                <div class="mb-4 checkout-section"> {# Removed card class #}
-                    {# Adjust step number based on whether shipping is shown #}
-                    <h4 class="mb-3">{% if requires_shipping %}3.{% else %}2.{% endif %} {% trans "Payment Method" %}</h4> {# Removed card-header, added mb-3 #}
-                    <div class="p-3"> {# Replaced card-body with padding #}
-                        <p class="text-muted">{% trans "Payment integration (e.g., Stripe, PayPal) will be added here." %}</p>
-                        {# Placeholder for payment form elements #}
-                        <div class="alert alert-info">{% trans 'For now, clicking "Place Order" will finalize the order without payment.' %}</div>
+                        <p class="mt-3 small text-muted">{% trans "Clicking 'Place Order' below will finalize your cart, address, and payment method selection." %}</p>
                     </div>
                 </div>
 
-            </div> {# End left column #}
+                <div class="d-grid mt-4">
+                    <button type="button" class="btn btn-primary btn-lg" id="placeOrderButton">{% trans "Place Order & Proceed to Payment Choice" %}</button>
+                </div>
+            </form> <!-- End of main placeOrderForm -->
 
+            <!-- MOVED "Add New Billing Address" Form -->
+            <div class="collapse add-address-form-container mt-3" id="addNewBillingAddressForm">
+                <h5>{% trans "Add New Billing Address" %}</h5>
+                <form method="post" action="{% url 'core:add_checkout_address' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="address_type" value="billing">
+                    <input type="hidden" name="next" value="{% url 'core:checkout' %}"> {# Ensure redirect back to checkout #}
+                    {{ address_form|crispy }}
+                    <button type="submit" class="btn btn-primary mt-2">{% trans "Save Billing Address" %}</button>
+                </form>
+            </div>
 
-            {# --- Right Column: Order Summary & Place Order Button --- #}
-            <div class="col-md-5 col-lg-4 order-md-last"> {# Use order-md-last to keep it on right #}
-                <div class="order-summary card"> {# Added card class for visual grouping #}
-                    <div class="card-header"> {# Added card-header #}
-                        <h4 class="d-flex justify-content-between align-items-center mb-0"> {# Removed mb-3 #}
-                            <span class="text-primary">{% trans "Order Summary" %}</span>
-                            <span class="badge bg-primary rounded-pill">{{ cart_items|length }}</span>
-                        </h4>
-                    </div>
-                    <ul class="list-group list-group-flush summary-items-list"> {# Removed mb-3, added list-group-flush #}
+            <!-- MOVED "Add New Shipping Address" Form -->
+            {% if requires_shipping %}
+            <div class="collapse add-address-form-container mt-3" id="addNewShippingAddressForm">
+                <h5>{% trans "Add New Shipping Address" %}</h5>
+                <form method="post" action="{% url 'core:add_checkout_address' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="address_type" value="shipping">
+                    <input type="hidden" name="next" value="{% url 'core:checkout' %}"> {# Ensure redirect back to checkout #}
+                    {{ address_form|crispy }}
+                    <button type="submit" class="btn btn-primary mt-2">{% trans "Save Shipping Address" %}</button>
+                </form>
+            </div>
+            {% endif %}
+
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm order-summary-card">
+                <div class="card-header">
+                    <h4 class="mb-0">{% trans "Order Summary" %}</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
                         {% for item in cart_items %}
-                        <li class="list-group-item d-flex justify-content-between lh-sm summary-order-item"> {# Added summary-order-item #}
-                            <div class="summary-item-details"> {# Added details wrapper #}
-                                <h6 class="my-0 name">{{ item.product.name }}</h6> {# Added name class #}
-                                <small class="text-muted qty">{% trans "Qty:" %} {{ item.quantity }}</small> {# Added qty class #}
-                                {% if item.product.product_type == 'digital' %}
-                                    <small class="text-muted d-block">({% trans "Digital Item" %})</small>
-                                {% endif %}
-                            </div>
-                            <span class="text-muted summary-item-price">${{ item.total_item_price|floatformat:2 }}</span> {# Added price class #}
-                        </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="my-0">{{ item.product.name }}</h6>
+                                    <small class="text-muted">{% trans "Qty:" %} {{ item.quantity }}</small>
+                                </div>
+                                <span class="text-muted">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ item.total_item_price|floatformat:2 }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item">{% trans "Your cart is empty." %}</li>
                         {% endfor %}
-                    </ul>
-
-                    <div class="card-body summary-totals"> {# Added card-body wrapper for totals #}
-                        <div class="summary-item">
+                        {# --- Order Summary Totals (Dynamic) --- #}
+                        <li class="list-group-item d-flex justify-content-between">
                             <span>{% trans "Subtotal" %}</span>
-                            <span>${{ cart_total|floatformat:2|intcomma }}</span>
-                        </div>
+                            <span>{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ cart_total|floatformat:2 }}</span>
+                        </li>
                         {% if requires_shipping %}
-                         <div class="summary-item">
-                            <div class="text-success">
-                                <span class="d-block">{% trans "Shipping" %}</span>
-                                <small>{% trans "Standard Shipping" %}</small>
-                            </div>
-                            <span class="text-success">{% trans "FREE" %}</span> {# Placeholder #}
-                        </div>
+                            {# These list items will be updated by JavaScript #}
+                            <li class="list-group-item d-flex justify-content-between" id="nexusDeliveryFeeRow" style="{% if estimated_platform_delivery_fee <= 0 %}display: none;{% endif %}">
+                                <span>{% trans "Nexus Delivery Fee" %}</span>
+                                <span id="estimatedPlatformDeliveryFee">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ estimated_platform_delivery_fee|floatformat:2 }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between" id="vendorDeliveryFeesRow" style="{% if estimated_total_vendor_delivery_fees <= 0 %}display: none;{% endif %}">
+                                <span>{% trans "Vendor Delivery Fees" %}</span>
+                                <span id="estimatedTotalVendorDeliveryFees">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ estimated_total_vendor_delivery_fees|floatformat:2 }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between" id="totalDeliveryFeeRow">
+                                <strong>{% trans "Total Delivery Fee" %}</strong>
+                                <strong id="estimatedTotalDeliveryFee">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ estimated_total_delivery_fee|floatformat:2 }}</strong>
+                            </li>
                         {% endif %}
-                         <div class="summary-item">
-                            <div class="text-muted">
-                                <span class="d-block">{% trans "Estimated Tax" %}</span>
-                                {# <small>Based on 94107</small> #}
-                            </div>
-                            <span class="text-muted">$0.00</span> {# Placeholder #}
-                        </div>
-                        <hr>
-                        <div class="summary-total">
-                            <span>{% trans "Total (USD)" %}</span>
-                            <strong>${{ cart_total|floatformat:2|intcomma }}</strong> {# TODO: Add tax/shipping later #}
-                        </div>
-                    </div>
+                        <li class="list-group-item d-flex justify-content-between border-top pt-2">
+                            <strong>{% trans "Order Total" %}</strong>
+                            <strong id="finalOrderTotal">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ cart_total|add:estimated_total_delivery_fee|floatformat:2 }}</strong>
+                        </li>
+                    </ul>
+                    {% if not cart_items %}
+                        <a href="{% url 'core:home' %}" class="btn btn-secondary w-100 mt-3">{% trans "Continue Shopping" %}</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-                    {# --- Place Order Button --- #}
-                    <div class="card-footer d-grid place-order-button-container"> {# Added card-footer #}
-                        <button class="btn btn-primary btn-lg place-order-button" type="submit">{% trans "Place Your Order" %}</button> {# Added class to button #}
-                    </div>
-                </div> {# End order-summary card #}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const currencySymbol = "{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'GH₵' }}";
+    const cartSubtotal = parseFloat("{{ cart_total|floatformat:2 }}"); // Get cart subtotal as a number
+    console.log("DOM fully loaded and parsed. Starting checkout page script."); // Log 1
+    const useBillingCheckbox = document.getElementById('use_billing_for_shipping');
+    const shippingAddressOptionsDiv = document.getElementById('shippingAddressOptions');
+    const shippingRadioButtons = document.querySelectorAll('input[name="shipping_address_id"]');
+    const addNewShippingAddressButton = document.querySelector('#shippingAddressSection [data-bs-target="#addNewShippingAddressForm"]');
 
-            </div> {# End right column #}
+    function handleShippingAddressRequirement() {
+        console.log("handleShippingAddressRequirement called.");
+        if (useBillingCheckbox && shippingAddressOptionsDiv) {
+            if (useBillingCheckbox.checked) {
+                shippingAddressOptionsDiv.style.display = 'none';
+                if (addNewShippingAddressButton) addNewShippingAddressButton.style.display = 'none';
+                shippingRadioButtons.forEach(radio => {
+                    radio.checked = false;
+                    radio.required = false;
+                    const wrapper = radio.closest('.address-list-item-wrapper');
+                    if (wrapper) wrapper.classList.remove('selected');
+                });
+                updateDeliveryFeeDisplay(0, 0, 0, true); // Set fees to 0 when using billing address
+            } else {
+                shippingAddressOptionsDiv.style.display = 'block';
+                if (addNewShippingAddressButton) addNewShippingAddressButton.style.display = 'block';
+                shippingRadioButtons.forEach(radio => {
+                    // radio.checked = false; // Might want to uncheck if it was checked before checking "use billing"
+                    radio.required = true; 
+                });
+            }
+        }
+    }
 
-        </div> {# End row #}
-    </form> {# End main form #}
+    if (useBillingCheckbox) {
+        useBillingCheckbox.addEventListener('change', handleShippingAddressRequirement);
+        handleShippingAddressRequirement(); // Initial call
+    }
 
-</div> {# End container #}
-{% endblock content %}
+    // --- AJAX for Delivery Fee Calculation ---
+    const shippingAddressRadios = document.querySelectorAll('input[name="shipping_address_id"]');
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const requiresShipping = "{{ requires_shipping|lower }}" === "true"; // Get requires_shipping from context
+
+    const nexusFeeSpan = document.getElementById('estimatedPlatformDeliveryFee');
+    const vendorFeesSpan = document.getElementById('estimatedTotalVendorDeliveryFees');
+    const totalFeeSpan = document.getElementById('estimatedTotalDeliveryFee');
+    const orderTotalSpan = document.getElementById('finalOrderTotal');
+
+    const nexusFeeRow = document.getElementById('nexusDeliveryFeeRow');
+    const vendorFeesRow = document.getElementById('vendorDeliveryFeesRow');
+    const totalFeeRow = document.getElementById('totalDeliveryFeeRow'); // Assuming you add this ID
+
+    function updateDeliveryFeeDisplay(platformFee, vendorFees, totalFee, isUsingBilling = false) {
+        console.log(`Updating display: Platform=${platformFee}, Vendor=${vendorFees}, Total=${totalFee}, UsingBilling=${isUsingBilling}`);
+        if (!requiresShipping) {
+             // If shipping is not required at all, hide fee rows
+             if(nexusFeeRow) nexusFeeRow.style.display = 'none';
+             if(vendorFeesRow) vendorFeesRow.style.display = 'none';
+             if(totalFeeRow) totalFeeRow.style.display = 'none';
+             if(orderTotalSpan) orderTotalSpan.textContent = currencySymbol + cartSubtotal.toFixed(2);
+             return;
+        }
+
+        if (nexusFeeSpan) nexusFeeSpan.textContent = currencySymbol + parseFloat(platformFee).toFixed(2);
+        if (vendorFeesSpan) vendorFeesSpan.textContent = currencySymbol + parseFloat(vendorFees).toFixed(2);
+        if (totalFeeSpan) totalFeeSpan.textContent = currencySymbol + parseFloat(totalFee).toFixed(2);
+        if (orderTotalSpan) orderTotalSpan.textContent = currencySymbol + (cartSubtotal + parseFloat(totalFee)).toFixed(2);
+
+        // Show/hide rows based on values
+        if(nexusFeeRow) nexusFeeRow.style.display = parseFloat(platformFee) > 0 ? 'flex' : 'none';
+        if(vendorFeesRow) vendorFeesRow.style.display = parseFloat(vendorFees) > 0 ? 'flex' : 'none';
+        // Always show total fee row if shipping is required, even if total is 0
+        if(totalFeeRow) totalFeeRow.style.display = 'flex';
+    }
+
+    function fetchDeliveryFee(addressId, useBilling) {
+        console.log(`Fetching delivery fee for address ID: ${addressId}, Use Billing: ${useBilling}`);
+        if (!requiresShipping) return; // No need to fetch if shipping isn't required
+
+        // If using billing, fees are 0, no need for AJAX
+        if (useBilling) {
+             updateDeliveryFeeDisplay(0, 0, 0, true);
+             return;
+        }
+
+        // If not using billing, but no address selected, fees are 0
+        if (!addressId) {
+             updateDeliveryFeeDisplay(0, 0, 0, false);
+             return;
+        }
+
+        fetch("{% url 'core:calculate_delivery_fee_ajax' %}", {
+            method: 'POST',
+            headers: {'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `shipping_address_id=${addressId}&use_billing_for_shipping=${useBilling}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log("AJAX response received:", data);
+            if (data.success) {
+                updateDeliveryFeeDisplay(data.estimated_platform_delivery_fee, data.estimated_total_vendor_delivery_fees, data.estimated_total_delivery_fee);
+            } else {
+                console.error("Error calculating delivery fee:", data.error);
+                // Optionally display an error message to the user
+            }
+        })
+        .catch(error => {
+            console.error("AJAX error fetching delivery fee:", error);
+            // Optionally display a generic error message
+        });
+    }
+
+    // Listen for changes on shipping address radio buttons
+    shippingAddressRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.checked) {
+                fetchDeliveryFee(this.value, false); // Fetch fee for selected address
+            }
+        });
+    });
+
+    // Listen for change on "Use billing address" checkbox
+    if (useBillingCheckbox) {
+        useBillingCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                fetchDeliveryFee(null, true); // Pass null address ID, indicate using billing
+            } else {
+                // If unchecking, trigger calculation for the currently selected shipping radio (if any)
+                const selectedShippingRadio = document.querySelector('input[name="shipping_address_id"]:checked');
+                if (selectedShippingRadio) {
+                    fetchDeliveryFee(selectedShippingRadio.value, false);
+                } else {
+                    // If no shipping radio was checked, fees might become 0 or require user selection
+                    updateDeliveryFeeDisplay(0, 0, 0, false); // Or prompt user to select address
+                }
+            }
+        });
+    }
+
+    // Initial calculation/display update on page load
+    // This is already handled by the template context, but we can ensure consistency
+    // by calling updateDeliveryFeeDisplay with initial values if needed.
+    // For now, the template renders initial values, and JS updates on change.
+
+    // --- End AJAX for Delivery Fee Calculation ---
+
+    const placeOrderForm = document.getElementById('placeOrderForm');
+    console.log("Attempting to find placeOrderForm element:", placeOrderForm); // Log 2
+
+    const placeOrderButton = document.getElementById('placeOrderButton');
+    console.log("Attempting to find placeOrderButton element:", placeOrderButton); // Log 3
+
+    if (placeOrderButton) {
+        console.log("placeOrderButton element FOUND. Attaching JS click event listener."); // Log 4
+        placeOrderButton.addEventListener('click', function(event) {
+            console.log("Place Order Button JS CLICK LISTENER fired."); // Log 5
+            console.log("Attempting to programmatically submit the form via requestSubmit().");
+            if (placeOrderForm) {
+                if (typeof placeOrderForm.requestSubmit === 'function') {
+                    placeOrderForm.requestSubmit(); // Modern way, triggers HTML5 validation
+                } else {
+                    placeOrderForm.submit(); // Older fallback, might bypass some validation
+                }
+            } else {
+                console.error("placeOrderForm is not defined, cannot submit.");
+            }
+        });
+    } else {
+        console.error("CRITICAL: placeOrderButton element with ID 'placeOrderButton' was NOT FOUND. JS Click listener cannot be attached.");
+    }
+
+    if (placeOrderForm) {
+        console.log("placeOrderForm element FOUND. Attaching JS submit event listener."); // Log 6
+        placeOrderForm.addEventListener('submit', function(event) {
+            console.log("Place order form JS SUBMIT LISTENER fired."); // Log 7
+            // AT THIS POINT, WE ARE DOING NO CUSTOM VALIDATION AND NOT PREVENTING DEFAULT.
+            // The browser should attempt to submit the form if all HTML5 'required' fields are met.
+            console.log("Letting the browser attempt to submit the form or handle native validation.");
+        });
+    } else {
+        console.error("CRITICAL: placeOrderForm element with ID 'placeOrderForm' was NOT FOUND in the DOM. JS Submit listener cannot be attached.");
+    }
+
+    document.querySelectorAll('input[type="radio"][name="billing_address_id"], input[type="radio"][name="shipping_address_id"], input[type="radio"][name="payment_method"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll(`input[name="${this.name}"]`).forEach(r => {
+                const wrapper = r.closest('.address-list-item-wrapper');
+                if (wrapper) wrapper.classList.remove('selected');
+            });
+            if (this.checked) {
+                const wrapper = this.closest('.address-list-item-wrapper');
+                if (wrapper) wrapper.classList.add('selected');
+            }
+        });
+        if (radio.checked) {
+            const wrapper = radio.closest('.address-list-item-wrapper');
+            if (wrapper) wrapper.classList.add('selected');
+        }
+    });
+
+});
+</script>
+{% endblock %}

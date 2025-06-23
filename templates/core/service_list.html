@@ -1,77 +1,280 @@
-{% extends "core/service_base.html" %} {# <<< Extend the new service base #}
+{% extends "base.html" %}
 {% load static i18n %}
+{% load humanize %}
 
-{% block title %}{% trans "Browse Services" %} - {{ block.super }}{% endblock %}
-{% load crispy_forms_tags %} {# Add if using crispy forms for search #}
+{% block title %}{{ page_title }}{% endblock title %}
 
-{% block service_content %} {# <<< Use the new content block #}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>{% trans "Services Marketplace" %}</h1>
-        {% if user.is_authenticated %}
-            <a href="{% url 'core:service_create' %}" class="btn btn-primary">{% trans "Offer a Service" %}</a>
-        {% endif %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'assets/css/service_marketplace.css' %}">
+    <style>
+        .service-hero-section {
+            /* Ensure this section is a positioned element for z-index to work against other positioned siblings */
+            position: relative; 
+            z-index: 10; /* Higher z-index to keep it on top */
+        }
+
+        .service-item-flat {
+            padding: 1.25rem; /* Padding for the item content */
+            border: 1px solid #e0e0e0; /* A light border for separation */
+            border-radius: 0.375rem; /* Optional: rounded corners */
+            background-color: #ffffff; /* White background to stand out if page bg is different */
+            display: flex;
+            flex-direction: column;
+            height: 100%; /* Ensure items in a row take same height if using g-4 */
+            position: relative; /* <<< ADD THIS LINE to contain the stretched-link */
+            z-index: 1; /* Lower z-index than the hero section */
+            transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        .service-item-flat:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0.3rem 0.8rem rgba(0,0,0,0.1);
+        }
+        .service-item-flat img {
+            height: 180px; /* Fixed height for images */
+            width: 100%;
+            object-fit: cover; /* Ensure image covers the area, might crop */
+            border-radius: 0.25rem; /* Rounded corners for image */
+            margin-bottom: 0.75rem;
+        }
+        .service-item-flat h5 a {
+            color: #333;
+            font-weight: 600;
+        }
+        .service-item-flat h5 a:hover {
+            color: var(--bs-primary);
+        }
+        .service-item-flat .provider-info {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        .service-item-flat .service-description-flat {
+            font-size: 0.9rem;
+            color: #495057;
+            flex-grow: 1; /* Allows description to take available space */
+        }
+        .service-item-flat .service-price-flat {
+            font-weight: bold;
+            color: var(--bs-success); /* Or your preferred price color */
+        }
+        .service-item-flat .btn-details-flat {
+            margin-top: auto; /* Pushes button to the bottom */
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="service-hero-section">
+    <div class="container">
+        <h1 class="display-4 fw-bold">{% trans "Find & Book Professional Services" %}</h1>
+        <p class="lead col-lg-8 mx-auto">{% trans "Connect with skilled professionals for any task, big or small. NEXUS makes it easy." %}</p>
+        {# Search Bar - can reuse your existing search form logic #}
+        <form method="get" action="{% url 'core:service_search_results' %}" class="mt-4">
+            <div class="input-group input-group-lg">
+                <input type="text" name="q" class="form-control" placeholder="{% trans 'Search for services (e.g., logo design, plumbing)' %}" value="{{ request.GET.q|default:'' }}">
+                <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> {% trans "Search" %}</button>
+            </div>
+        </form>
     </div>
+</div>
 
-    <div class="row">
-        {# Optional Sidebar for Categories #}
-        <div class="col-md-3 mb-4">
-            <h4>{% trans "Categories" %}</h4>
-            <div class="list-group">
-                <a href="{% url 'core:service_list' %}" class="list-group-item list-group-item-action {% if not category %}active{% endif %}">
-                    {% trans "All Services" %}
-                </a>
-                {% for cat in categories %}
-                    {# TODO: Add get_absolute_url to ServiceCategory model #}
-                    <a href="{% url 'core:service_category_detail' category_slug=cat.slug %}"
-                       class="list-group-item list-group-item-action {% if category.slug == cat.slug %}active{% endif %}">
-                        {{ cat.name }}
+<div class="container my-4">
+    <!-- Featured Services Section -->
+    {% if featured_services %}
+    <section class="mb-5">
+        <h2 class="section-title">{% trans "Featured Services" %}</h2>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+            {% for service in featured_services %}
+            <div class="col">
+                <div class="service-item-flat">
+                    <a href="{{ service.get_absolute_url }}">
+                        {% if service.images.first.image.url %}
+                            <img src="{{ service.images.first.image.url }}" alt="{{ service.title }}">
+                        {% else %}
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                        {% endif %}
                     </a>
-                    {# TODO: Add subcategory display if needed #}
-                {% empty %}
-                    <p class="list-group-item">{% trans "No service categories found." %}</p>
-                {% endfor %}
+                    <h5 class="mb-1">
+                        <a href="{{ service.get_absolute_url }}" class="text-decoration-none stretched-link">{{ service.title|truncatechars:50 }}</a>
+                    </h5>
+                    <p class="provider-info mb-2">
+                        <i class="bi bi-person-fill"></i> {{ service.provider.username }}
+                        {% if service.provider.service_provider_profile and service.provider.service_provider_profile.is_approved %}
+                            <i class="bi bi-patch-check-fill text-success ms-1" title="{% trans 'Verified Provider' %}"></i>
+                        {% endif %}
+                    </p>
+                    <p class="service-description-flat mb-2">{{ service.description|truncatewords_html:12 }}</p>
+                    {% if service.packages.exists %}
+                        <p class="service-price-flat mb-2">
+                             {% trans "From" %}: GH₵ {{ service.packages.all.first.price|floatformat:2|intcomma }}
+                        </p>
+                    {% endif %}
+                    <a href="{{ service.get_absolute_url }}" class="btn btn-sm btn-outline-primary w-100 btn-details-flat">{% trans "View Details" %}</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+    
+ <!-- Popular Service Categories Section -->
+    {% if top_service_categories %}
+    <section class="mb-5">
+        <h2 class="section-title">{% trans "Popular Service Categories" %}</h2>
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3">
+            {% for category in top_service_categories %}
+            <div class="col">
+                <div class="category-card-service">
+                    <a href="{% url 'core:services_by_category' category_slug=category.slug %}">
+                        {% if category.image %}
+                            <img src="{{ category.image.url }}" alt="{{ category.name }}">
+                        {% else %}
+                            <div class="icon-placeholder"><i class="fas fa-tools"></i></div> {# Fallback icon #}
+                        {% endif %}
+                        <div class="category-name">{{ category.name }}</div>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+
+         <!-- "How It Works" Section (Static Example) -->
+    <section class="mb-5 py-4 bg-light rounded">
+        <h2 class="section-title">{% trans "How NEXUS Services Work" %}</h2>
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="p-3">
+                    <i class="fas fa-search fa-3x text-primary mb-3"></i>
+                    <h4>{% trans "1. Discover" %}</h4>
+                    <p>{% trans "Browse or search for the service you need from our talented providers." %}</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3">
+                    <i class="fas fa-calendar-check fa-3x text-primary mb-3"></i>
+                    <h4>{% trans "2. Book & Pay" %}</h4>
+                    <p>{% trans "Select a package, book a time, and pay securely through our platform." %}</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3">
+                    <i class="fas fa-star fa-3x text-primary mb-3"></i>
+                    <h4>{% trans "3. Get It Done" %}</h4>
+                    <p>{% trans "Receive quality service and leave a review to help others." %}</p>
+                </div>
             </div>
         </div>
+    </section>    
 
-        {# Main Service Listing Area #}
-        <div class="col-md-9">
+ <!-- Main Service Listing (with filters if desired) -->
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="mb-0">
+                {% if current_category %} {# Use the category object from context #}
+                    {% trans "Services in" %} {{ current_category.name }}
+                {% elif search_query %} {# Use search_query from context #}
+                    {% trans "Search Results for" %} "{{ search_query }}"
+                {% else %}
+                    {% trans "All Services" %}
+                {% endif %}
+            </h3>
+            {# TODO: Add sorting options if needed #}
+        </div>
 
-            {# Search form is now in service_base.html nav #}
-            {% if query %}
-                <p class="text-muted">{% blocktrans with query=query %}Showing results for: <strong>"{{ query }}"</strong>{% endblocktrans %} <a href="{% url 'core:service_list' %}">({% trans "Clear Search" %})</a></p>
-            {% endif %}
+        <div class="row">
+            <!-- Optional Sidebar for Filters -->
+            <div class="col-lg-3 mb-4 mb-lg-0">
+                <h4>{% trans "Filter Services" %}</h4>
+                <hr>
+                <h5 class="mt-3">{% trans "Categories" %}</h5>
+                <ul class="list-group list-group-flush">
+                    <a href="{% url 'core:service_list' %}{% if search_query %}?q={{ search_query }}{% endif %}" 
+                       class="list-group-item list-group-item-action {% if not current_category %}active{% endif %}">
+                       <i class="fas fa-th-list me-2"></i>{% trans "All Categories" %}
+                    </a>
+                    {% for category_item in all_service_categories %} {# Changed loop var to avoid conflict #}
+                        <a href="{% url 'core:services_by_category' category_slug=category_item.slug %}{% if search_query %}&q={{ search_query }}{% endif %}" 
+                           class="list-group-item list-group-item-action {% if current_category and current_category.slug == category_item.slug %}active{% endif %}">
+                            {{ category_item.name }} <span class="badge bg-secondary float-end">{{ category_item.num_services }}</span>
+                        </a>
+                    {% endfor %}
+                </ul>
+                {# Add more filters here: Price Range, Location, Provider Rating etc. #}
+            </div>
 
-{% if services %}
-    {# Removed the redundant inner {% if services %} block #}
-    <div class="list-group">
-        {% for service in services %}
-            <a href="{% url 'core:service_detail' service_slug=service.slug %}" class="list-group-item list-group-item-action flex-column align-items-start mb-2 shadow-sm">
-                <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">{{ service.title }}</h5>
-                    <small class="text-muted">{{ service.created_at|timesince }} {% trans "ago" %}</small>
-                </div>
-                <p class="mb-1 text-muted"><i class="bi bi-person-fill"></i> {{ service.provider.username }} | <i class="bi bi-tag-fill"></i> {{ service.category.name }} | <i class="bi bi-geo-alt-fill"></i> {{ service.location|default:"N/A" }}</p>
-                <small>
-                    <strong>{% trans "Pricing" %}:</strong>
-                    {% with service.packages.all|dictsort:"price" as sorted_packages %} {# Get packages sorted by price #}
-                        {% if sorted_packages %}
-                            {% trans "Starting from" %} GH₵ {{ sorted_packages.0.price|floatformat:2 }} {# Display price of the cheapest package #}
+            <!-- Main Content Area for Service Listing -->
+            <div class="col-lg-9">
+                {% if services %}
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                        {% for service in services %}
+                        <div class="col">
+                            <div class="service-item-flat">
+                                <a href="{{ service.get_absolute_url }}">
+                                    {% if service.images.first.image.url %}
+                                        <img src="{{ service.images.first.image.url }}" alt="{{ service.title }}">
+                                    {% else %}
+                                        <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                                    {% endif %}
+                                </a>
+                                <h5 class="mb-1">
+                                    <a href="{{ service.get_absolute_url }}" class="text-decoration-none stretched-link">{{ service.title|truncatechars:50 }}</a>
+                                </h5>
+                                <p class="provider-info mb-2">
+                                    <i class="bi bi-person-fill"></i> {{ service.provider.username }}
+                                    {% if service.provider.service_provider_profile and service.provider.service_provider_profile.is_approved %}
+                                        <i class="bi bi-patch-check-fill text-success ms-1" title="{% trans 'Verified Provider' %}"></i>
+                                    {% endif %}
+                                </p>
+                                <p class="service-description-flat mb-2">{{ service.description|truncatewords_html:12 }}</p>
+                                {% if service.packages.exists %}
+                                    <p class="service-price-flat mb-2">
+                             {% trans "From" %}: GH₵ {{ service.packages.all.first.price|floatformat:2|intcomma }}
+                                    </p>
+                                {% endif %}
+                                <a href="{{ service.get_absolute_url }}" class="btn btn-sm btn-outline-primary w-100 btn-details-flat">{% trans "View Details" %}</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if is_paginated %}
+                        {# Include the pagination snippet #}
+                        {% include "core/includes/pagination.html" %}
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        {% if current_category %}
+                            <p class="lead">{% blocktrans with category_name=current_category.name %}No services found in the category "{{ category_name }}".{% endblocktrans %}</p>
+                        {% elif search_query %}
+                             <p class="lead">{% blocktrans with query=search_query %}No services found matching your search for "{{ query }}".{% endblocktrans %}</p>
                         {% else %}
-                            {{ service.price_description }} {% if service.price %}(GH₵ {{ service.price|floatformat:2 }}){% endif %} {# Fallback to service price #}
+                            <p class="lead">{% trans "No services are currently available. Please check back later." %}</p>
                         {% endif %}
-                    {% endwith %}
-                </small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Become a Provider CTA Section -->
+    <section class="my-5">
+        <div class="cta-provider-section">
+            <h2 class="display-5 fw-bold">{% trans "Offer Your Skills on NEXUS?" %}</h2>
+            <p class="col-lg-8 mx-auto fs-5">{% trans "Join our community of talented service providers and reach new clients. It's easy to get started!" %}</p>
+            <a href="{% url 'core:become_service_provider' %}" class="btn btn-success btn-lg mt-3">
+                <i class="fas fa-user-plus me-2"></i>{% trans "Become a Provider" %}
             </a>
-        {% endfor %}
-    </div>
-    {# TODO: Add Pagination if needed #}
-{% else %} {# This else corresponds to the {% if services %} on line 45 #}
-    <div class="alert alert-info" role="alert">
-        {% trans "No services found matching your criteria." %}
-    </div>
-{% endif %} {# This endif closes the {% if services %} #}
-</div> {# End col-md-9 #}
-</div> {# End row #}
-</div> {# End container #}
-{% endblock %}
+        </div>
+    </section>
+
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+    {{ block.super }}
+    {# You can add any page-specific JavaScript for the "Become Rider Info" page here if needed #}
+{% endblock extra_js %}
