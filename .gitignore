@@ -36,3 +36,5 @@ db.sqlite3
 
 # Virtual environment
 /venv_py311/
+/venv/
+/.tmp.driveupload/
