@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from django.utils.translation import gettext_lazy as _ # <<< Import for lazy translation
+import dj_database_url
 from decimal import Decimal # For PLATFORM_COMMISSION_RATE
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -24,12 +25,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-lmut35poxhw^lr7p=b+w!o9j88cprqn2o^+h)8st^bawhavfe!'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-lmut35poxhw^lr7p=b+w!o9j88cprqn2o^+h)8st^bawhavfe!')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Set DEBUG to False in production. The '0' == '1' pattern is a common way to handle boolean env vars.
+DEBUG = os.environ.get('DEBUG', '1') == '1'
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '4eec-102-176-94-167.ngrok-free.app'] # Add your ngrok domain
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
 # Application definition
@@ -144,15 +150,13 @@ WSGI_APPLICATION = 'Nexus.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
+if 'DATABASE_URL' in os.environ:
+    DATABASES = {'default': dj_database_url.config(conn_max_age=600, ssl_require=True)}
+else:
+    DATABASES = {'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-        'TIMEOUT': 20000,  # Timeout in milliseconds (e.g., 20 seconds)
-        # You can also try 'OPTIONS': {'timeout': 20} for seconds,
-        # but 'TIMEOUT' at the top level is more common for Django 3.2+
-    }
-}
+    }}
 
 # --- START: Caching Settings (for django-ratelimit and performance) ---
 # Using Redis as the cache backend, since it's already configured for Channels.
@@ -341,7 +345,7 @@ PLATFORM_SERVICE_COMMISSION_RATE = 0.10 # Example: 10% commission
 
 
 # --- Google Maps API Key ---
-GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', 'AIzaSyC6sFcP8FYHzlDjL9J-syKheSC0XJjQBaQ') # Replace with your actual key
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
 
 
 
@@ -387,8 +391,8 @@ SOCIALACCOUNT_PROVIDERS = {
 # SOCIALACCOUNT_ADAPTER = 'your_app.adapter.YourSocialAccountAdapter'
 
 # --- Paystack Settings ---
-PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY', 'sk_test_29ce0215ad852bb436a964e2b2b5db7d903948b3') # Replace with your actual test or live key
-PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY', 'pk_test_35b292948ae9ad66a13e64eb04bf17338c8a17dc') # Replace with your actual test or live key
+PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY')
+PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY')
 PAYSTACK_CALLBACK_URL = 'https://4eec-102-176-94-167.ngrok-free.app/paystack/callback/' # Use your ngrok URL
 
 # c:\Users\Hp\Desktop\Nexus\Nexus\settings.py
@@ -464,7 +468,7 @@ LOGGING = {
 
 # ... (rest of your settings) ...
 
-GEMINI_API_KEY = "AIzaSyA6rlwf-q9CXeE3p1yXVZ-DRq-42_EVv88" # Replace with your real key
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 # ... other settings ...
 
