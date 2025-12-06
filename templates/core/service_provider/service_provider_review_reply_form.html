@@ -1,0 +1,36 @@
+ {% extends "base.html" %}
+ {% load i18n crispy_forms_tags %}
+ 
+ {% block title %}{% trans "Reply to Review" %}{% endblock %}
+ 
+ {% block content %}
+ <div class="container mt-5 mb-5" style="max-width: 800px;">
+     <div class="card shadow-sm">
+         <div class="card-header">
+             <h4>{% trans "Reply to Review" %}</h4>
+         </div>
+         <div class="card-body">
+             <div class="mb-4 p-3 border rounded bg-light">
+                 <p><strong>{% trans "Review from" %}:</strong> {{ review.user.get_full_name|default:review.user.username }}</p>
+                 <p><strong>{% trans "Service" %}:</strong> {{ review.service.title }}</p>
+                 <p><strong>{% trans "Rating" %}:</strong> {{ review.rating }}/5</p>
+                 <blockquote class="blockquote mb-0">
+                     <p>{{ review.review }}</p>
+                 </blockquote>
+             </div>
+ 
+             <form method="post">
+                 {% csrf_token %}
+                 <fieldset>
+                     <legend class="h5">{% trans "Your Reply" %}</legend>
+                     {{ form|crispy }}
+                 </fieldset>
+                 <div class="d-flex justify-content-end gap-2 mt-4">
+                     <a href="{% url 'core:service_provider_review_list' %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+                     <button type="submit" class="btn btn-primary">{% trans "Submit Reply" %}</button>
+                 </div>
+             </form>
+         </div>
+     </div>
+ </div>
+ {% endblock %}

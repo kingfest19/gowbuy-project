@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{% block page_title %}{% endblock page_title %} - {% trans "Provider Dashboard" %}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
+    .provider-dashboard-wrapper {
+        display: flex;
+        min-height: calc(100vh - 56px); /* Adjust 56px based on your navbar height */
+    }
+    .provider-sidebar {
+        width: 260px;
+        flex-shrink: 0;
+        background-color: #343a40;
+        color: #adb5bd;
+        padding-top: 1.5rem;
+        position: sticky;
+        top: 56px; /* Adjust based on navbar height */
+        height: calc(100vh - 56px);
+        overflow-y: auto;
+    }
+    .provider-sidebar .nav-link {
+        color: #adb5bd;
+        padding: 0.75rem 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.95rem;
+        border-left: 3px solid transparent;
+        transition: all 0.2s ease-in-out;
+    }
+    .provider-sidebar .nav-link:hover {
+        background-color: #495057;
+        color: #fff;
+    }
+    .provider-sidebar .nav-link.active {
+        background-color: #212529;
+        color: #fff;
+        font-weight: 600;
+        border-left-color: #0d6efd;
+    }
+    .provider-sidebar .nav-link .bi {
+        font-size: 1.1rem;
+        width: 20px;
+        text-align: center;
+    }
+    .provider-sidebar .sidebar-heading {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: #6c757d;
+        padding: 0.5rem 1.5rem;
+        margin-top: 1rem;
+    }
+    .provider-content {
+        flex-grow: 1;
+        padding: 2rem;
+    }
+    .unread-count-badge {
+        font-size: 0.75rem;
+        padding: 0.2em 0.5em;
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="provider-dashboard-wrapper">
+    <!-- Sidebar -->
+    <nav class="provider-sidebar">
+        <div class="nav flex-column">
+            <a class="nav-link {% if request.resolver_match.url_name == 'service_provider_dashboard' %}active{% endif %}" href="{% url 'core:service_provider_dashboard' %}">
+                <i class="bi bi-grid-1x2-fill"></i> {% trans "Dashboard" %}
+            </a>
+
+            <div class="sidebar-heading">{% trans "Management" %}</div>
+            <a class="nav-link {% if 'service_provider_services' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:service_provider_services_list' %}">
+                <i class="bi bi-tools"></i> {% trans "My Services" %}
+            </a>
+            <a class="nav-link {% if 'service_provider_bookings' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:service_provider_bookings_list' %}">
+                <i class="bi bi-calendar-check"></i> {% trans "Bookings" %}
+            </a>
+            <a class="nav-link {% if 'service_provider_availability' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:service_provider_availability_list' %}">
+                <i class="bi bi-clock-history"></i> {% trans "Availability" %}
+            </a>
+
+            <div class="sidebar-heading">{% trans "Engagement" %}</div>
+            <a class="nav-link {% if 'service_provider_message' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:service_provider_message_list' %}">
+                <i class="bi bi-chat-dots-fill"></i> {% trans "Messages" %}
+                {% if unread_message_count > 0 %}
+                    <span class="badge rounded-pill bg-danger ms-auto unread-count-badge">{{ unread_message_count }}</span>
+                {% endif %}
+            </a>
+            <a class="nav-link {% if 'service_provider_review' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:service_provider_review_list' %}">
+                <i class="bi bi-star-fill"></i> {% trans "Reviews" %}
+            </a>
+
+            <div class="sidebar-heading">{% trans "Finance & Growth" %}</div>
+            <a class="nav-link {% if 'service_provider_payout' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:service_provider_payout_requests' %}">
+                <i class="bi bi-cash-coin"></i> {% trans "Payouts" %}
+            </a>
+            <a class="nav-link {% if 'service_provider_advertisements' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:service_provider_advertisements' %}">
+                <i class="bi bi-megaphone-fill"></i> {% trans "Advertisements" %}
+            </a>
+
+            <div class="sidebar-heading">{% trans "Account" %}</div>
+            <a class="nav-link {% if request.resolver_match.url_name == 'edit_service_provider_profile' %}active{% endif %}" href="{% url 'core:edit_service_provider_profile' %}">
+                <i class="bi bi-person-badge-fill"></i> {% trans "Edit Profile" %}
+            </a>
+            <a class="nav-link {% if 'service_provider_notification' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:service_provider_notification_list' %}">
+                <i class="bi bi-bell-fill"></i> {% trans "Notifications" %}
+            </a>
+            <a class="nav-link" href="{% url 'core:user_profile' %}">
+                <i class="bi bi-arrow-left-circle-fill"></i> {% trans "Back to Customer View" %}
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="provider-content">
+        {% block page_content %}
+            {# The content from child templates will be injected here. They should define a 'page_content' block. #}
+        {% endblock page_content %}
+    </main>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+{{ block.super }}
+{# Add any provider-specific JS here if needed #}
+{% endblock extra_js %}

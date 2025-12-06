@@ -1,0 +1,52 @@
+{% extends 'core/user_dashboard_base.html' %}
+{% load i18n crispy_forms_tags %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-4">
+    <h1 class="h2 mb-0">{% trans "My Addresses" %}</h1>
+    <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#addAddressForm" aria-expanded="false" aria-controls="addAddressForm">
+        <i class="fas fa-plus me-2"></i>{% trans "Add New Address" %}
+    </button>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="collapse {% if form.errors %}show{% endif %}" id="addAddressForm">
+    <div class="card card-body mb-4">
+        <h5 class="card-title">{% trans "Add a New Address" %}</h5>
+        <form method="post" action="{% url 'core:address_list' %}">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <button type="submit" class="btn btn-success">{% trans "Save Address" %}</button>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <h4>{% trans "Billing Addresses" %}</h4>
+        {% if billing_addresses %}
+            {% for address in billing_addresses %}{% include 'core/partials/address_card.html' with address=address %}{% endfor %}
+        {% else %}
+            <p class="text-muted">{% trans "You have no saved billing addresses." %}</p>
+        {% endif %}
+    </div>
+    <div class="col-md-6">
+        <h4>{% trans "Shipping Addresses" %}</h4>
+        {% if shipping_addresses %}
+            {% for address in shipping_addresses %}{% include 'core/partials/address_card.html' with address=address %}{% endfor %}
+        {% else %}
+            <p class="text-muted">{% trans "You have no saved shipping addresses." %}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock dashboard_content %}

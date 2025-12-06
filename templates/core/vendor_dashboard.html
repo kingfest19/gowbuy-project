@@ -9,266 +9,405 @@
     {# Add specific dashboard CSS if needed later #}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
-        /*
-         IMPORTANT: For the sidebar to be sticky and the main navigation (from base.html)
-         to stay on top, your main navigation elements in base.html (e.g., <nav> and .nav-bottom)
-         need to have `position: sticky; top: ...; z-index: ...;` applied, typically in your
-         global CSS (like assets/css/home.css or core/css/custom_styles.css).
+        body {
+            background-color: #ebe8e8; /* Match product list background */
+        }
 
-         Example for base.html's header (add to your global CSS):
-         nav { // The main top nav bar from base.html
-             position: sticky;
-             top: 0;
-             z-index: 1030; // High z-index
-             background-color: white; // Or your nav's background
-         }
-         .nav-bottom { // The secondary nav bar from base.html
-             position: sticky;
-             top: 70px; // Adjust based on the height of your top nav
-             z-index: 1029; // Slightly lower than main nav
-             background-color: #f8f9fa; // Or your nav-bottom's background
-         }
-         main {
-             padding-top: 120px; // Adjust to prevent content from going under sticky headers
-                                // This should be roughly height_of_top_nav + height_of_nav_bottom
-         }
-        */
+        .dashboard-container {
+            display: flex;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
 
+        /* Sidebar styling */
         .dashboard-sidebar {
-            background-color: #f8f9fa;
-            padding: 1.0rem; /* Adjusted padding for the whole sidebar block */
-            border-radius: 0.375rem;
-            position: sticky; 
-            /* IMPORTANT: Adjust this 'top' value based on the total height of your sticky main site navigation from base.html */
-            top: 120px; /* Example: if main nav is 70px and nav-bottom is 50px, total is 120px */
-            /* Adjust 120px to match the 'top' value above */
-            overflow-y: auto; /* Allows sidebar content to scroll if it's too long */
-
+            flex: 0 0 280px; /* Fixed width for sidebar */
+            background-color: #ffffff;
+            padding: 1.5rem 1rem;
+            border-radius: 12px;
+            position: sticky;
+            top: 2rem;
+            align-self: flex-start; /* Important for sticky positioning */
+            height: calc(100vh - 4rem);
+            overflow-y: auto;
+            border: 1px solid #c7c9cb;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
         }
         .dashboard-sidebar .nav-link {
             color: #495057;
-            padding: 0.5rem 1rem; /* Reduced padding for individual links */
-            margin-bottom: 0.1rem; /* Reduced margin for individual links */
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.2rem;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s;
+            white-space: nowrap; /* Prevent link text from wrapping */
         }
         .dashboard-sidebar .nav-link.active {
-            background-color: var(--bs-primary);
+            background-color: #474747; /* Match btn-dark from product list */
             color: white;
-            font-weight: 500;
         }
-        .dashboard-sidebar .nav-link:hover {
+        .dashboard-sidebar .nav-link:hover:not(.active) {
             background-color: #e9ecef;
+            color: #323232ff;
         }
-        .status-badge {
-            font-size: 0.9em;
+
+        /* Ensure nav items are stacked vertically */
+        .dashboard-sidebar .nav {
+            flex-direction: column;
         }
-        .checklist-item {
-            border-bottom: 1px solid #eee;
-            padding: 1rem 0;
+
+        /* New Sidebar Heading Style */
+        .sidebar-heading {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6c757d; /* Bootstrap's text-muted color */
+            text-transform: uppercase;
+            padding: 0 1rem; /* Match nav-link horizontal padding */
+            margin-top: 1.5rem; /* Space above the heading */
+            margin-bottom: 0.5rem; /* Space below the heading */
+            letter-spacing: .05em;
         }
-        .checklist-item:last-child {
-            border-bottom: none; /* Remove border from last item */
+        .nav > .sidebar-heading:first-of-type {
+            margin-top: 0; /* No top margin for the very first heading */
         }
-        .card-text.fs-4 { /* Ensure card numbers are prominent */
-            margin-bottom: 0.5rem;
+
+        .dashboard-main {
+            flex-grow: 1;
         }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2.5rem;
+            border-radius: 8px;
+            background-color: #ffffff;
+            border-left: 5px solid #323232ff;
+            border: 1px solid #828282ff;
+        }
+
+        .page-header h1 {
+            font-weight: 600;
+            color: #323232ff;
+            margin-bottom: 0;
+        }
+
+        /* New Stat Cards Styling */
+        .stat-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+        .stat-card {
+            background-color: #fff;
+            border: 1px solid #828282ff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+            aspect-ratio: 1 / 1; /* Make the card square */
+            text-align: center;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .stat-card .stat-icon {
+            font-size: 2rem;
+            padding: 0.75rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        .stat-card .stat-info .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #323232ff;
+            line-height: 1.2;
+        }
+        .stat-card .stat-info .stat-title {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+
+        /* Icon colors for stat cards */
+        .icon-sales { background-color: #28a745; }
+        .icon-orders { background-color: #17a2b8; }
+        .icon-products { background-color: #6f42c1; }
+        .icon-low-stock { background-color: #fd7e14; }
+
+        /* Dashboard Section Styling */
+        .dashboard-section {
+            background-color: #fff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid #828282ff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .dashboard-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .dashboard-section-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #323232ff;
+            margin-bottom: 0;
+        }
+
+        /* List group styling inside sections */
         .list-group-item h6 {
             margin-bottom: 0.25rem; /* Adjust spacing in lists */
+            font-weight: 500;
+            color: #343a40;
         }
-        /* --- START: Dashboard Overview Card Styling --- */
-        .dashboard-overview-card .card-body .card-title,
-        .dashboard-overview-card .card-body .card-text,
-        .dashboard-overview-card .card-body small {
-            color: #212529 !important; /* Ensure text is black */
+        .list-group-item a {
+            text-decoration: none;
         }
-        .dashboard-overview-card .card-body .text-muted {
-            color: #6c757d !important; /* Ensure muted text is standard grey */
+        .list-group-item a:hover h6 {
+            color: #323232ff;
         }
-        .dashboard-overview-card .card { /* This style was already good */
-             border: 1px solid #dee2e6; /* Add a subtle border */
-             box-shadow: 0 .125rem .25rem rgba(0,0,0,.075); /* Add a slight shadow */
+        .list-group-item-action:hover {
+            background-color: #f8f9fa;
         }
 
-        /* --- START: Vendor Dashboard Card Colors --- */
-        .vendor-card-sales { background-color:rgb(115, 160, 139); color: #fff; } /* Green */
-        .vendor-card-orders { background-color:rgb(147, 191, 200); color: #fff; } /* Cyan */
-        .vendor-card-products { background-color:rgb(178, 166, 199); color: #fff; } /* Purple */
-        .vendor-card-low-stock { background-color:rgb(210, 197, 157); color: #212529; } /* Yellow (dark text) */
-
-        /* Adjust text colors for contrast on colored backgrounds */
-        .vendor-card-sales .card-title, .vendor-card-sales .card-text, .vendor-card-sales small,
-        .vendor-card-orders .card-title, .vendor-card-orders .card-text, .vendor-card-orders small,
-        .vendor-card-products .card-title, .vendor-card-products .card-text, .vendor-card-products small {
-            color: rgba(255, 255, 255, 0.9) !important;
-        }
-        .vendor-card-low-stock .card-title, .vendor-card-low-stock .card-text, .vendor-card-low-stock small {
-            color: #212529 !important; /* Dark text for yellow background */
-        }
-        .vendor-card-low-stock .btn-outline-warning { /* Make button more visible on yellow */
-            border-color: #493805; color: #493805;
-        }
-        /* --- END: Dashboard Overview Card Styling --- */
     </style>
 {% endblock extra_css %}
 
 {% block content %}
-<div class="container-fluid my-4"> {# Use container-fluid for wider layout #}
-    <div class="row">
-        {# Sidebar Navigation #}
-        <div class="col-md-3">
-            <nav class="nav flex-column dashboard-sidebar mb-4 mb-md-0"> {# Ensured flex-column for vertical stacking #}
-                <h5 class="mb-2">{% trans "Dashboard Menu" %}</h5>
-                <a class="nav-link active" href="{% url 'core:vendor_dashboard' %}">📊 {% trans "Overview" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_products' %}">📦 {% trans "Products" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_orders' %}">🧾 {% trans "Orders" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_reports' %}">📈 {% trans "Reports" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_profile_edit' %}">✏️ {% trans "Edit Profile" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_shipping_settings' %}">🚚 {% trans "Shipping" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_payment_settings' %}">💳 {% trans "Payments" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_payout_requests' %}">💰 {% trans "Payouts" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_verification_multistep' %}">✅ {% trans "Verification" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_promotions' %}">🏷️ {% trans "Promotions" %}</a>
-                {# Removed hr as it might look odd in a horizontal layout #}
-                <a class="nav-link" href="{% url 'core:vendor_ads' %}">📢 {% trans "Ad Campaigns" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_reviews' %}">⭐ {% trans "Reviews" %}</a>
-                <a class="nav-link position-relative" href="{% url 'core:vendor_notification_list' %}">
-                    🔔 {% trans "Notifications" %}
-                    {% if notification_count > 0 %}
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7em; margin-left: -10px; margin-top: 5px;">
-                            {{ notification_count }}
-                            <span class="visually-hidden">unread notifications</span>
-                        </span>
-                    {% endif %}
-                </a>
-            </nav>
-        </div>
+<div class="container dashboard-container my-5">
+    {# Sidebar Navigation #}
+    <aside class="dashboard-sidebar">
+        {% include "core/vendor/vendor_dashboard_sidebar_snippet.html" with active_page='overview' %}
+    </aside>
 
-        {# Main Content Area #}
-        <div class="col-md-9">
-            <h1 class="mb-4">{% trans "Welcome," %} {{ vendor.name }}!</h1>
+    {# Main Content Area #}
+    <main class="dashboard-main">
+        <div class="page-header">
+            <div>
+                <h1>{% trans "Vendor Dashboard" %}</h1>
+                <p class="text-muted mb-0">{% trans "Welcome back," %} {{ vendor.name }}!</p>
+            </div>
+        </div>
 
             {% include 'partials/_messages.html' %} {# Display messages at the top #}
 
-            <!-- Start: Report Summary Section -->
-            <h2 class="h4 mb-3">Store Overview</h2>
-            <div class="row g-3 mb-4">
-                <div class="col-md-6 col-lg-3">
-                    <div class="card h-100 dashboard-overview-card vendor-card-sales">
-                        <div class="card-body text-center">
-                            <h5 class="card-title"><i class="bi bi-currency-dollar text-success me-2"></i>Total Sales</h5>
-                            <p class="card-text fs-4 fw-bold">${{ total_sales|floatformat:2|intcomma }}</p>
-                            {# Note: Consider filtering sales by completed orders in the view for accuracy #}
-                        </div>
+            <!-- Stat Cards -->
+            <div class="stat-cards-grid">
+                <!-- Total Sales -->
+                <div class="stat-card">
+                    <div class="stat-icon icon-sales"><i class="bi bi-cash-stack"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value">GH₵{{ total_sales|floatformat:2|intcomma }}</div>
+                        <div class="stat-title">{% trans "Total Sales" %}</div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-3">
-                    <div class="card h-100 dashboard-overview-card vendor-card-orders">
-                        <div class="card-body text-center">
-                            <h5 class="card-title"><i class="bi bi-box-seam text-info me-2"></i>Total Orders</h5>
-                            <p class="card-text fs-4 fw-bold">{{ total_orders_count|intcomma }}</p>
-                            <small class="text-muted">Orders containing your products</small>
-                        </div>
+                <!-- Total Orders -->
+                <div class="stat-card">
+                    <div class="stat-icon icon-orders"><i class="bi bi-box-seam"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ total_orders_count|intcomma }}</div>
+                        <div class="stat-title">{% trans "Total Orders" %}</div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-3">
-                    <div class="card h-100 dashboard-overview-card vendor-card-products">
-                        <div class="card-body text-center">
-                            <h5 class="card-title"><i class="bi bi-tags text-primary me-2"></i>Active Products</h5>
-                            <p class="card-text fs-4 fw-bold">{{ active_products_count|intcomma }}</p>
-                            <small class="text-muted">/ {{ total_products_count|intcomma }} total</small>
-                        </div>
+                <!-- Active Products -->
+                <div class="stat-card">
+                    <div class="stat-icon icon-products"><i class="bi bi-tags"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ active_products_count|intcomma }}</div>
+                        <div class="stat-title">{% trans "Active Products" %}</div>
                     </div>
                 </div>
-                 <div class="col-md-6 col-lg-3">
-                    <div class="card h-100 dashboard-overview-card vendor-card-low-stock">
-                        <div class="card-body text-center">
-                            <h5 class="card-title"><i class="bi bi-graph-down text-warning me-2"></i>Low Stock</h5>
-                            <p class="card-text fs-4 fw-bold">{{ low_stock_products.count }}</p>
-                             {# Link the button to the filtered product list page #}
-                             {% if low_stock_products %}
-                                <a href="{% url 'core:vendor_products' %}?stock_status=low" class="btn btn-sm btn-outline-warning mt-1">View List</a> {# Kept outline for yellow #}
-                            {% else %}
-                                <small class="text-muted">No items low on stock</small>
-                            {% endif %}
-                        </div>
+                <!-- Low Stock -->
+                <div class="stat-card">
+                    <div class="stat-icon icon-low-stock"><i class="bi bi-graph-down-arrow"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ low_stock_products.count }}</div>
+                        <div class="stat-title">{% trans "Low Stock" %}</div>
                     </div>
                 </div>
             </div>
-            <!-- End: Report Summary Section -->
 
-            {# --- START: Onboarding Checklist --- #}
-            <div class="mb-4 p-3 border rounded bg-light"> {# Added padding, border, background #}
-                <h5 class="mb-3">{% trans "Shop Setup Checklist" %}</h5>
+            <!-- Onboarding Checklist -->
+            <div class="dashboard-section">
+                <div class="dashboard-section-header">
+                    <h2>{% trans "Shop Setup Checklist" %}</h2>
+                </div>
                 {% if not vendor.is_approved and vendor.verification_status != Vendor.VERIFICATION_STATUS_VERIFIED %}
-                    <div class="alert alert-warning small p-2 mb-3"> {# Adjusted padding/margin #}
+                    <div class="alert alert-warning small p-2">
                         {% blocktrans %}Please complete all required sections, including submitting your verification documents. Your shop will go live after successful verification by our team.{% endblocktrans %}
                     </div>
                 {% elif vendor.verification_status == Vendor.VERIFICATION_STATUS_PENDING_REVIEW %}
-                    <div class="alert alert-info small p-2 mb-3">
+                    <div class="alert alert-info small p-2">
                         {% trans "Your verification documents have been submitted and are pending review by our team." %}
                     </div>
                 {% elif vendor.verification_status == Vendor.VERIFICATION_STATUS_NEEDS_RESUBMISSION or vendor.verification_status == Vendor.VERIFICATION_STATUS_REJECTED %}
-                    {% url 'core:vendor_verification_multistep' as verification_url %}
-                    <div class="alert alert-danger small p-2 mb-3">
+                    {% url 'core:vendor_verification' as verification_url %}
+                    <div class="alert alert-danger small p-2">
                         {% blocktrans %}There was an issue with your verification. Please check your notifications or contact support, then <a href="{{ verification_url }}">resubmit your information</a>.{% endblocktrans %}
                     </div>
                 {% elif vendor.is_approved %}
-                     <div class="alert alert-success small p-2 mb-3">
+                     <div class="alert alert-success small p-2">
                         {% trans "Your shop is live!" %}
                     </div>
                 {% endif %}
 
-                <div class="checklist-item d-flex justify-content-between align-items-center">
-                    <span><a href="{% url 'core:vendor_profile_edit' %}">{% trans "Shop Information" %}</a></span>
-                    <span class="badge status-badge {% if shop_info_complete %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if shop_info_complete %}{% trans "COMPLETED" %}{% else %}{% trans "PENDING" %}{% endif %}</span>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <a href="{% url 'core:edit_vendor_profile' %}">{% trans "Shop Information" %}</a>
+                        <span class="badge rounded-pill {% if shop_info_complete %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if shop_info_complete %}{% trans "COMPLETED" %}{% else %}{% trans "PENDING" %}{% endif %}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <a href="{% url 'core:vendor_verification' %}">{% trans "Business/Verification Information" %}</a>
+                        <span class="badge rounded-pill 
+                            {% if vendor.verification_status == Vendor.VERIFICATION_STATUS_VERIFIED %}bg-success
+                            {% elif vendor.verification_status == Vendor.VERIFICATION_STATUS_PENDING_REVIEW %}bg-info text-dark
+                            {% elif vendor.verification_status == Vendor.VERIFICATION_STATUS_REJECTED or vendor.verification_status == Vendor.VERIFICATION_STATUS_NEEDS_RESUBMISSION %}bg-danger
+                            {% else %}bg-warning text-dark{% endif %}">
+                            {{ vendor.get_verification_status_display }}
+                        </span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <a href="{% url 'core:vendor_shipping_settings' %}">{% trans "Shipping Information" %}</a>
+                        <span class="badge rounded-pill {% if shipping_info_complete %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if shipping_info_complete %}{% trans "COMPLETED" %}{% else %}{% trans "PENDING" %}{% endif %}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <a href="{% url 'core:vendor_payment_settings' %}">{% trans "Payment Information" %}</a>
+                        <span class="badge rounded-pill {% if payment_info_complete %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if payment_info_complete %}{% trans "COMPLETED" %}{% else %}{% trans "PENDING" %}{% endif %}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <a href="{% url 'core:edit_vendor_additional_info' %}">{% trans "Additional Information" %}</a>
+                        <span class="badge rounded-pill {% if additional_info_complete %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if additional_info_complete %}{% trans "COMPLETED" %}{% else %}{% trans "PENDING" %}{% endif %}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Recent Activity Section -->
+            <div class="dashboard-section">
+                <div class="dashboard-section-header">
+                    <h2>{% trans "Recent Activity" %}</h2>
+                    <a href="{% url 'core:vendor_order_list' %}" class="btn btn-sm btn-outline-secondary">{% trans "View All Orders" %}</a>
                 </div>
-                <div class="checklist-item d-flex justify-content-between align-items-center">
-                    <span><a href="{% url 'core:vendor_verification_multistep' %}">{% trans "Business/Verification Information" %}</a></span>
-                    <span class="badge status-badge 
-                        {% if vendor.verification_status == Vendor.VERIFICATION_STATUS_VERIFIED %}bg-success
-                        {% elif vendor.verification_status == Vendor.VERIFICATION_STATUS_PENDING_REVIEW %}bg-info text-dark
-                        {% elif vendor.verification_status == Vendor.VERIFICATION_STATUS_REJECTED or vendor.verification_status == Vendor.VERIFICATION_STATUS_NEEDS_RESUBMISSION %}bg-danger
-                        {% else %}bg-warning text-dark{% endif %}">
-                        {{ vendor.get_verification_status_display }}
-                    </span>
-                </div>
-                <div class="checklist-item d-flex justify-content-between align-items-center">
-                    <span><a href="{% url 'core:vendor_shipping_settings' %}">{% trans "Shipping Information" %}</a></span>
-                    <span class="badge status-badge {% if shipping_info_complete %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if shipping_info_complete %}{% trans "COMPLETED" %}{% else %}{% trans "PENDING" %}{% endif %}</span>
-                </div>
-                <div class="checklist-item d-flex justify-content-between align-items-center">
-                    <span><a href="{% url 'core:vendor_payment_settings' %}">{% trans "Payment Information" %}</a></span>
-                    <span class="badge status-badge {% if payment_info_complete %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if payment_info_complete %}{% trans "COMPLETED" %}{% else %}{% trans "PENDING" %}{% endif %}</span>
-                </div>
-                <div class="checklist-item d-flex justify-content-between align-items-center">
-                    <span><a href="{% url 'core:edit_vendor_additional_info' %}">{% trans "Additional Information" %}</a></span> {# <<< Updated link #}
-                    <span class="badge status-badge {% if additional_info_complete %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if additional_info_complete %}{% trans "COMPLETED" %}{% else %}{% trans "PENDING" %}{% endif %}</span>
+                <div class="row g-4">
+                    <!-- Recent Orders -->
+                    <div class="col-lg-7">
+                        <h3 class="h5 mb-3"><i class="bi bi-receipt me-2"></i>{% trans "Recent Orders" %}</h3>
+                        {% if recent_orders %}
+                        <div class="list-group list-group-flush">
+                            {% for order in recent_orders %}
+                            <a href="{% url 'core:vendor_order_detail' pk=order.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">{% trans "Order" %} #{{ order.order_id }}</h6>
+                                    <small class="text-muted">{% trans "Placed on:" %} {{ order.created_at|date:"M d, Y H:i" }}</small>
+                                    {% if order.user %}<small class="d-block">{% trans "Customer:" %} {{ order.user.username }}</small>{% endif %}
+                                </div>
+                                <span class="badge bg-{% if order.status == 'pending' %}warning text-dark{% elif order.status == 'processing' %}info text-dark{% elif order.status == 'shipped' %}primary{% elif order.status == 'delivered' or order.status == 'completed' %}success{% elif order.status == 'cancelled' or order.status == 'refunded' %}danger{% else %}secondary{% endif %} rounded-pill">{{ order.get_status_display }}</span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-light" role="alert">
+                            {% trans "No recent orders found." %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Low Stock Products -->
+                    <div class="col-lg-5">
+                        <h3 class="h5 mb-3"><i class="bi bi-box-fill text-danger me-2"></i>{% trans "Low Stock Items" %} (<= 5)</h3>
+                        {% if low_stock_products %}
+                        <div class="list-group list-group-flush">
+                            {% for product in low_stock_products %}
+                            <a href="{% url 'core:vendor_product_update' pk=product.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">{{ product.name }}</h6>
+                                    <small class="text-muted">SKU: {{ product.sku|default:"N/A" }}</small>
+                                </div>
+                                <span class="badge bg-danger rounded-pill">{{ product.stock }} {% trans "left" %}</span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-light" role="alert">
+                            {% trans "No products are currently low on stock." %}
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-            {# --- END: Onboarding Checklist --- #}
 
-            <!-- Start: Recent Orders and Low Stock Lists -->
+            <!-- Premium Features Section -->
+            <div class="dashboard-section">
+                <div class="dashboard-section-header">
+                    <h2>{% trans "Premium Features" %}</h2>
+                </div>
+                {% if vendor.has_premium_3d_generation_access %}
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <i class="bi bi-boxes fs-1 text-primary"></i>
+                    </div>
+                    <div class="col">
+                        <h3 class="h5 mb-1">{% trans "AI 3D Model Generation" %}</h3>
+                        <p class="mb-2 text-muted">
+                            {% trans "You have access to our cutting-edge AI tool to generate 3D models for your products. Go to any product's edit page to start generating." %}
+                        </p>
+                        <a href="{% url 'core:vendor_product_list' %}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-box-seam me-2"></i>{% trans "Manage Products" %}
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <i class="bi bi-rocket-takeoff-fill fs-1 text-info"></i>
+                    </div>
+                    <div class="col">
+                        <h3 class="h5 mb-1">{% trans "Unlock AI 3D Model Generation" %}</h3>
+                        <p class="mb-2 text-muted">{% trans "Attract more buyers by showcasing your products in 3D. Upgrade to a premium plan to automatically generate 3D models from your product images." %}</p>
+                        <a href="{% url 'core:vendor_upgrade' %}" class="btn btn-sm btn-info"> <i class="bi bi-arrow-up-circle me-2"></i>{% trans "Learn More & Upgrade" %}</a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Recent Orders and Low Stock Lists (Old structure, now combined above) -->
+            <!--
             <div class="row g-4 mt-4">
-                <!-- Recent Orders -->
                 <div class="col-lg-7">
                     <h2 class="h4 mb-3"><i class="bi bi-receipt me-2"></i>Recent Orders</h2>
                     {% if recent_orders %}
                     <div class="list-group">
                         {% for order in recent_orders %}
-                        {# Link to the standard order detail for now, consider a vendor-specific one later #}
-                        <a href="{% url 'core:order_detail' order.order_id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <a href="{% url 'core:vendor_order_detail' pk=order.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                             <div>
                                 <h6 class="mb-1">Order #{{ order.order_id }}</h6>
                                 <small class="text-muted">Placed on: {{ order.created_at|date:"M d, Y H:i" }}</small>
                                 {% if order.user %}<small class="d-block">Customer: {{ order.user.username }}</small>{% endif %}
                             </div>
-                            {# Dynamically set badge color based on status text #}
-                            <span class="badge bg-{% if order.status == 'pending' %}warning text-dark{% elif order.status == 'processing' %}info text-dark{% elif order.status == 'shipped' %}primary{% elif order.status == 'delivered' %}success{% elif order.status == 'cancelled' or order.status == 'refunded' %}danger{% else %}secondary{% endif %} rounded-pill">{{ order.get_status_display }}</span>
+                            <span class="badge bg-{% if order.status == 'pending' %}warning text-dark{% elif order.status == 'processing' %}info text-dark{% elif order.status == 'shipped' %}primary{% elif order.status == 'delivered' or order.status == 'completed' %}success{% elif order.status == 'cancelled' or order.status == 'refunded' %}danger{% else %}secondary{% endif %} rounded-pill">{{ order.get_status_display }}</span>
                         </a>
                         {% endfor %}
                     </div>
                     <div class="mt-2">
-                         {# Ensure you have a 'vendor_order_list' URL pattern defined #}
-                         <a href="{% url 'core:vendor_orders' %}" class="btn btn-sm btn-outline-secondary">View All Orders</a>
+                         <a href="{% url 'core:vendor_order_list' %}" class="btn btn-sm btn-outline-secondary">View All Orders</a>
                     </div>
                     {% else %}
                     <div class="alert alert-light" role="alert">
@@ -276,33 +415,28 @@
                     </div>
                     {% endif %}
                 </div>
-
-                <!-- Low Stock Products -->
-                <div class="col-lg-5" id="low-stock-list">
+                <div class="col-lg-5">
                     <h2 class="h4 mb-3"><i class="bi bi-box-fill text-danger me-2"></i>Low Stock Items (<= 5)</h2>
                     {% if low_stock_products %}
                     <div class="list-group">
                         {% for product in low_stock_products %}
-                        <a href="{% url 'core:vendor_product_edit' product.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <a href="{% url 'core:vendor_product_update' pk=product.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                             <div>
                                 <h6 class="mb-1">{{ product.name }}</h6>
-                                <small class="text-muted">SKU: {{ product.sku|default:"N/A" }}</small> {# Assuming you might add an SKU field later #}
+                                <small class="text-muted">SKU: {{ product.sku|default:"N/A" }}</small>
                             </div>
                             <span class="badge bg-danger rounded-pill">{{ product.stock }} left</span>
                         </a>
                         {% endfor %}
                     </div>
                     {% else %}
-                    <div class="alert alert-light" role="alert">
-                        No products are currently low on stock.
-                    </div>
+                    <div class="alert alert-light" role="alert">No products are currently low on stock.</div>
                     {% endif %}
                 </div>
             </div>
-            <!-- End: Recent Orders and Low Stock Lists -->
+            -->
 
-        </div>
-    </div>
+    </main>
 </div>
 {% endblock content %}
 

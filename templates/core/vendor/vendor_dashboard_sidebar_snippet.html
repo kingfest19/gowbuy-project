@@ -1,39 +1,36 @@
 {% load i18n %}
-<div class="col-md-3">
-    <div class="list-group mb-4 shadow-sm">
-        <a href="{% url 'core:vendor_dashboard' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_dashboard' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_dashboard' %}page{% else %}false{% endif %}">
-            <i class="fas fa-tachometer-alt fa-fw me-2"></i>{% trans "Dashboard" %}
-        </a>
-         <a class="nav-link" href="{% url 'core:vendor_verification_multistep' %}">✅ {% trans "Verification" %}</a>
-        <a href="{% url 'core:vendor_products' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_products' or request.resolver_match.url_name == 'vendor_product_create' or request.resolver_match.url_name == 'vendor_product_edit' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_products' or request.resolver_match.url_name == 'vendor_product_create' or request.resolver_match.url_name == 'vendor_product_edit' %}page{% else %}false{% endif %}">
-            <i class="fas fa-box-open fa-fw me-2"></i>{% trans "Products" %}
-        </a>
-        <a href="{% url 'core:vendor_orders' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_orders' or request.resolver_match.url_name == 'vendor_order_detail' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_orders' or request.resolver_match.url_name == 'vendor_order_detail' %}page{% else %}false{% endif %}">
-            <i class="fas fa-receipt fa-fw me-2"></i>{% trans "Orders" %}
-        </a>
-        <a href="{% url 'core:vendor_profile_edit' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_profile_edit' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_profile_edit' %}page{% else %}false{% endif %}">
-            <i class="fas fa-store fa-fw me-2"></i>{% trans "Store Profile" %}
-        </a>
-        <a href="{% url 'core:vendor_shipping_settings' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_shipping_settings' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_shipping_settings' %}page{% else %}false{% endif %}">
-            <i class="fas fa-shipping-fast fa-fw me-2"></i>{% trans "Shipping" %}
-        </a>
-        <a href="{% url 'core:vendor_payment_settings' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_payment_settings' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_payment_settings' %}page{% else %}false{% endif %}">
-            <i class="fas fa-credit-card fa-fw me-2"></i>{% trans "Payments" %}
-        </a>
-         <a href="{% url 'core:vendor_payout_requests' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_payout_requests' or request.resolver_match.url_name == 'vendor_payout_request_create' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_payout_requests' or request.resolver_match.url_name == 'vendor_payout_request_create' %}page{% else %}false{% endif %}">
-            <i class="fas fa-hand-holding-usd fa-fw me-2"></i>{% trans "Payouts" %}
-        </a>
-        <a href="{% url 'core:vendor_promotions' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_promotions' or request.resolver_match.url_name == 'vendor_promotion_create' or request.resolver_match.url_name == 'vendor_promotion_edit' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_promotions' or request.resolver_match.url_name == 'vendor_promotion_create' or request.resolver_match.url_name == 'vendor_promotion_edit' %}page{% else %}false{% endif %}">
-            <i class="fas fa-tags fa-fw me-2"></i>{% trans "Promotions" %}
-        </a>
-        <a href="{% url 'core:vendor_ads' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_ads' or request.resolver_match.url_name == 'vendor_campaign_create' or request.resolver_match.url_name == 'vendor_campaign_edit' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_ads' or request.resolver_match.url_name == 'vendor_campaign_create' or request.resolver_match.url_name == 'vendor_campaign_edit' %}page{% else %}false{% endif %}">
-            <i class="fas fa-bullhorn fa-fw me-2"></i>{% trans "Advertisements" %}
-        </a>
-        <a href="{% url 'core:vendor_reviews' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_reviews' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_reviews' %}page{% else %}false{% endif %}">
-            <i class="fas fa-star fa-fw me-2"></i>{% trans "Reviews" %}
-        </a>
-        <a href="{% url 'core:vendor_reports' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'vendor_reports' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'vendor_reports' %}page{% else %}false{% endif %}">
-            <i class="fas fa-chart-line fa-fw me-2"></i>{% trans "Reports" %}
-        </a>
-    </div>
-</div>
+<nav class="nav flex-column dashboard-sidebar mb-4 mb-md-0">
+    <h6 class="sidebar-heading">{% trans "Store Management" %}</h6>
+    <a class="nav-link {% if active_page == 'overview' %}active{% endif %}" href="{% url 'core:vendor_dashboard' %}"><span aria-hidden="true">📊</span> {% trans "Overview" %}</a>
+    <a class="nav-link {% if active_page == 'products' %}active{% endif %}" href="{% url 'core:vendor_product_list' %}"><span aria-hidden="true">📦</span> {% trans "Products" %}</a>
+    <a class="nav-link {% if active_page == 'orders' %}active{% endif %}" href="{% url 'core:vendor_order_list' %}"><span aria-hidden="true">🧾</span> {% trans "Orders" %}</a>
+    <a class="nav-link {% if active_page == 'reports' %}active{% endif %}" href="{% url 'core:vendor_reports' %}"><span aria-hidden="true">📈</span> {% trans "Reports" %}</a>
+    <a class="nav-link {% if active_page == 'profile' %}active{% endif %}" href="{% url 'core:edit_vendor_profile' %}"><span aria-hidden="true">✏️</span> {% trans "Edit Profile" %}</a>
+    <a class="nav-link {% if active_page == 'shipping' %}active{% endif %}" href="{% url 'core:vendor_shipping_settings' %}"><span aria-hidden="true">🚚</span> {% trans "Shipping" %}</a>
+    <a class="nav-link {% if active_page == 'payments' %}active{% endif %}" href="{% url 'core:vendor_payment_settings' %}"><span aria-hidden="true">💳</span> {% trans "Payments" %}</a>
+
+    <h6 class="sidebar-heading">{% trans "Engagement & Tools" %}</h6>
+    <a class="nav-link {% if active_page == 'verification' %}active{% endif %}" href="{% url 'core:vendor_verification' %}"><span aria-hidden="true">✅</span> {% trans "Verification" %}</a>
+    <a class="nav-link {% if active_page == 'promotions' %}active{% endif %}" href="{% url 'core:vendor_promotion_list' %}"><span aria-hidden="true">🏷️</span> {% trans "Promotions" %}</a>
+    <a class="nav-link {% if active_page == 'campaigns' %}active{% endif %}" href="{% url 'core:vendor_campaign_list' %}"><span aria-hidden="true">📣</span> {% trans "Ad Campaigns" %}</a>
+    <a class="nav-link {% if active_page == 'reviews' %}active{% endif %}" href="{% url 'core:vendor_review_list' %}"><span aria-hidden="true">⭐</span> {% trans "Reviews" %}</a>
+    <a class="nav-link position-relative {% if active_page == 'messages' %}active{% endif %}" href="{% url 'core:vendor_message_list' %}">
+        <span aria-hidden="true">💬</span> {% trans "Messages" %}
+        {% if unread_message_count > 0 %}
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7em; margin-left: -10px; margin-top: 5px;">
+                {{ unread_message_count }}
+                <span class="visually-hidden">unread messages</span>
+            </span>
+        {% endif %}
+    </a>
+    <a class="nav-link position-relative {% if active_page == 'notifications' %}active{% endif %}" href="{% url 'core:vendor_notification_list' %}">
+        🔔 {% trans "Notifications" %}
+        {% if notification_count > 0 %}
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7em; margin-left: -10px; margin-top: 5px;">
+                {{ notification_count }}
+                <span class="visually-hidden">unread notifications</span>
+            </span>
+        {% endif %}
+    </a>
+    <a class="nav-link {% if active_page == 'payouts' %}active{% endif %}" href="{% url 'core:vendor_payout_request_list' %}"><span aria-hidden="true">💰</span> {% trans "Payouts" %}</a>
+</nav>

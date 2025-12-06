@@ -1,66 +1,240 @@
 {% extends "base.html" %}
-{% load static %}
-{% load i18n %}
+{% load static i18n query_params promotion_tags %}
 
 {% block title %}{% trans "Manage Promotions" %} - {{ vendor.name }}{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        .list-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #ebe8e8;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+            border: 1px solid #959aa0; /* Softer border */
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2.5rem;
+            border-radius: 8px;
+            background-color: #ffffff; /* White background */
+            border-left: 5px solid #323232ff; /* Prominent black left border */
+            border: 1px solid #c7c9cb; /* Subtle border for separation */
+        }
+
+        .page-header h1 {
+            font-weight: 600;
+            color: #323232ff; /* Black text for contrast */
+            margin-bottom: 0;
+        }
+
+        .table {
+            border-collapse: separate;
+            border-spacing: 0 0.75rem; /* Increased spacing for a "card list" feel */
+        }
+
+        .table thead th {
+            border: none;
+            font-weight: 600;
+            color: #6c757d;
+            background-color: transparent; /* Make header transparent to show page bg */
+            padding: 0.5rem 1rem;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+
+        .table tbody tr {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+            border: 1px solid #f0f2f5;
+        }
+        
+        .table tbody tr:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .table td, .table th {
+            border: none;
+            vertical-align: middle;
+            padding: 1rem;
+        }
+
+        .btn-dark {
+            background-color: #474747;
+            border-color: #474747;
+        }
+        .btn-dark:hover {
+            background-color: #383838; /* A darker shade for hover */
+            border-color: #383838;
+        }
+
+        .filter-bar {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid #c7c9cb; /* Softer border */
+        }
+
+        .action-buttons .btn {
+            border-radius: 50%; /* Circular buttons */
+            width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .action-buttons form {
+            vertical-align: middle;
+        }
+    </style>
+{% endblock extra_css %}
+
 {% block content %}
 <div class="container mt-5 mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>{% trans "Manage Promotions" %}</h1>
-        <a href="{% url 'core:vendor_promotion_create' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-1"></i> {% trans "Create New Promotion" %}
-        </a>
-    </div>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div class="list-container">
+        <div class="page-header">
+            <div>
+                <h1>{% trans "Manage Promotions" %}</h1>
+                <p class="text-muted mb-0">{% trans "Create and manage discounts for your products." %}</p>
             </div>
-        {% endfor %}
-    {% endif %}
+            <a href="{% url 'core:vendor_promotion_create' %}" class="btn btn-lg btn-dark">
+                <i class="bi bi-plus-circle me-2"></i> {% trans "Create New Promotion" %}
+            </a>
+        </div>
 
-    {% if promotions %}
-    <div class="table-responsive">
-        <table class="table table-striped table-hover">
-            <thead>
-                <tr>
-                    <th>{% trans "Name" %}</th>
-                    <th>{% trans "Code" %}</th>
-                    <th>{% trans "Type" %}</th>
-                    <th>{% trans "Value" %}</th>
-                    <th>{% trans "Scope" %}</th>
-                    <th>{% trans "Start Date" %}</th>
-                    <th>{% trans "End Date" %}</th>
-                    <th>{% trans "Active" %}</th>
-                    <th>{% trans "Actions" %}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for promo in promotions %}
-                <tr>
-                    <td>{{ promo.name }}</td>
-                    <td>{{ promo.code|default:"-" }}</td>
-                    <td>{{ promo.get_promo_type_display }}</td>
-                    <td>{{ promo.discount_value }}{% if promo.promo_type == 'percentage' %}%{% endif %}</td>
-                    <td>{{ promo.get_scope_display }}</td>
-                    <td>{{ promo.start_date|date:"Y-m-d H:i" }}</td>
-                    <td>{{ promo.end_date|date:"Y-m-d H:i" }}</td>
-                    <td>{% if promo.is_active %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}</td>
-                    <td>
-                        <a href="{% url 'core:vendor_promotion_edit' promo.id %}" class="btn btn-sm btn-outline-secondary">{% trans "Edit" %}</a>
-                        {# TODO: Add Delete button/form if needed #}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        {% include 'partials/_messages.html' %}
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <form method="get" action="">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md">
+                        <div class="input-group">
+                            <input type="text" name="q" class="form-control" placeholder="{% trans 'Search by promotion name or code...' %}" value="{{ search_query|default:'' }}">
+                            <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                    <div class="col-md-auto">
+                        <div class="btn-group" role="group" aria-label="Status filter">
+                            <a href="?{% query_transform status='' page=1 %}" class="btn {% if not current_status %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "All" %}</a>
+                            <a href="?{% query_transform status='active' page=1 %}" class="btn {% if current_status == 'active' %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "Active" %}</a>
+                            <a href="?{% query_transform status='inactive' page=1 %}" class="btn {% if current_status == 'inactive' %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "Inactive" %}</a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover table-vcenter mb-0">
+                <thead>
+                    <tr>
+                        <th>{% trans "Name" %}</th>
+                        <th>{% trans "Code" %}</th>
+                        <th>{% trans "Type" %}</th>
+                        <th>{% trans "Value" %}</th>
+                        <th>{% trans "Scope" %}</th>
+                        <th>{% trans "Duration" %}</th>
+                        <th>{% trans "Usage" %}</th>
+                        <th class="text-center">{% trans "Status" %}</th>
+                        <th class="text-end pe-3">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for promo in promotions %}
+                    <tr>
+                        <td>{{ promo.name }}</td>
+                        <td><code>{{ promo.code|default:"-" }}</code></td>
+                        <td>{{ promo.get_promo_type_display }}</td>
+                        <td>
+                            {% if promo.promo_type == 'percentage' %}
+                                {{ promo.discount_value }}%
+                            {% else %}
+                                {{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ promo.discount_value|floatformat:2 }}
+                            {% endif %}
+                        </td>
+                        <td>{{ promo.get_scope_display }}</td>
+                        <td>
+                            <small class="d-block">{{ promo.start_date|date:"M d, Y" }}</small>
+                            <small class="d-block text-muted">{% trans "to" %} {{ promo.end_date|date:"M d, Y"|default:"Never" }}</small>
+                        </td>
+                        <td>
+                            {{ promo.usage_count|default:0 }}{% if promo.usage_limit %} / {{ promo.usage_limit }}{% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% with status_info=promo|promotion_status_badge %}
+                                <span class="badge {{ status_info.class }}">{{ status_info.text }}</span>
+                            {% endwith %}
+                        </td>
+                        <td class="text-end action-buttons">
+                            <a href="{% url 'core:vendor_promotion_edit' promo.id %}" class="btn btn-outline-dark" title="{% trans 'Edit' %}">
+                                <i class="bi bi-pencil-fill"></i>
+                            </a>
+                            <!-- Delete Button trigger modal -->
+                            <button type="button" class="btn btn-outline-danger ms-1" data-bs-toggle="modal" data-bs-target="#deletePromoModal-{{ promo.id }}" title="{% trans 'Delete' %}">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+
+                            <!-- Delete Confirmation Modal -->
+                            <div class="modal fade" id="deletePromoModal-{{ promo.id }}" tabindex="-1" aria-labelledby="deletePromoModalLabel-{{ promo.id }}" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title text-start" id="deletePromoModalLabel-{{ promo.id }}">{% trans "Confirm Deletion" %}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body text-start">
+                                            {% blocktrans with promo_name=promo.name %}Are you sure you want to delete the promotion "{{ promo_name }}"? This action cannot be undone.{% endblocktrans %}
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                                            <form action="{% url 'core:vendor_promotion_delete' promo.id %}" method="post" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger">{% trans "Yes, Delete" %}</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center py-5">
+                            <i class="bi bi-tag" style="font-size: 3rem; color: #6c757d;"></i>
+                            <h4 class="mt-3">{% trans "No Promotions Found" %}</h4>
+                            {% if search_query or current_status %}
+                                <p class="text-muted">{% trans "Try adjusting your search or filter to find what you're looking for." %}</p>
+                                <a href="{% url 'core:vendor_promotion_list' %}" class="btn btn-secondary btn-sm">{% trans "Clear Filters" %}</a>
+                            {% else %}
+                                <p class="text-muted">{% trans "You haven't created any promotions yet." %}</p>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        <div class="mt-4">
+            {% include "core/snippets/pagination_snippet.html" with page_obj=page_obj %}
+        </div>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="alert alert-info">{% trans "You haven't created any promotions yet." %}</div>
-    {% endif %}
-    <a href="{% url 'core:vendor_dashboard' %}" class="btn btn-link mt-3">{% trans "Back to Dashboard" %}</a>
 </div>
 {% endblock %}

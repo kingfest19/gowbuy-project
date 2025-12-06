@@ -2,136 +2,181 @@
 {% load i18n %}
 {% load static %}
 {% load crispy_forms_tags %}
-{% load custom_filters %}
+{% load core_extras %}
 
-{% block title %}{% trans "Edit Provider Profile & Portfolio" %} - {{ block.super }}{% endblock %}
+{% block title %}{{ page_title }}{% endblock %}
 
 {% block extra_css %}
-{{ block.super }}
-<style>
-    .edit-profile-page-container {
-        background-color: #fff; /* White background for the main content area */
-        padding: 2rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 0.25rem 1rem rgba(0,0,0,0.075); /* Subtle shadow */
-        margin-top: 1rem; /* Adjust if base container has enough margin */
-        margin-bottom: 2rem;
-    }
-
-    .edit-profile-page-container .page-main-title {
-        font-size: 2rem; /* Main page title */
-        font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 2rem;
-    }
-
-    .profile-section {
-        margin-bottom: 2.5rem;
-    }
-
-    .profile-section h4 { /* Section titles */
-        font-size: 1.5rem;
-        font-weight: 500;
-        color: #34495e;
-        margin-bottom: 1.25rem;
-        padding-bottom: 0.6rem;
-        border-bottom: 2px solid #e9ecef;
-    }
-</style>
-{% endblock extra_css %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #ebe8e8;
+        }
+        .form-container {
+            background-color: #ebe8e8;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+            border: 1px solid #c7c9cb;
+            max-width: 900px; /* To center the form like vendor product form */
+            margin: 0 auto;
+            font-family: "Outfit", sans-serif;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #f0f2f5;
+        }
+        .page-header h1 {
+            font-family: "Poppins", sans-serif;
+            font-weight: 700;
+            color: #1a2533;
+            margin-bottom: 0;
+        }
+        fieldset {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+        legend {
+            font-family: "Poppins", sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a2533;
+            padding: 0;
+            width: 100%;
+            float: left;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .form-container .form-control,
+        .form-container .form-select {
+            border: 1px solid #ced4da;
+            transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+        }
+        .form-container .form-control:focus,
+        .form-container .form-select:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        .form-label {
+            font-weight: 500;
+            color: #495057;
+            font-size: 0.9rem;
+        }
+        .form-container .btn-primary,
+        .form-container .btn-success {
+            background-color: #474747;
+            border-color: #474747;
+            font-weight: 500;
+        }
+        .form-container .btn-primary:hover,
+        .form-container .btn-success:hover {
+            background-color: #383838;
+            border-color: #383838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .portfolio-item-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .portfolio-item-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
 <div class="container mt-5 mb-5">
-    <div class="edit-profile-page-container"> {# New main wrapper with white background #}
-        <div class="row">
-            <div class="col-12">
-                <h1 class="page-main-title">{% trans "Edit Provider Profile & Portfolio" %}</h1>
-            </div>
-        </div>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
-        <div class="row">
-            <!-- Edit Profile Section -->
-            <div class="col-md-6 mb-4 profile-section">
-                <h4>{% trans "Edit Your Provider Profile" %}</h4>
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    {{ profile_form|crispy }}
-                    <div class="d-grid mt-3">
-                        <button type="submit" name="submit_profile" class="btn btn-primary">{% trans "Save Profile Changes" %}</button>
+    <div class="form-container">
+        <div class="page-header">
+                    <div>
+                        <h1>{{ page_title }}</h1>
+                        <p class="text-muted mb-0">{% trans "Update your professional profile and manage your portfolio." %}</p>
                     </div>
-                </form>
-            </div>
+                </div>
 
-            <!-- Add Portfolio Item Section -->
-            <div class="col-md-6 mb-4 profile-section">
-                <h4>{% trans "Add New Portfolio Item" %}</h4>
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    {{ portfolio_item_form|crispy }}
-                    <div class="d-grid mt-3">
-                        <button type="submit" name="submit_portfolio_item" class="btn btn-success">{% trans "Add Item to Portfolio" %}</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                <!-- Profile Update Form -->
+                <fieldset>
+                    <legend>{% trans "Update Your Profile" %}</legend>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ profile_form|crispy }}
+                        <button type="submit" name="submit_profile" class="btn btn-primary mt-3">{% trans "Update Profile" %}</button>
+                    </form>
+                </fieldset>
 
-        <!-- Manage Existing Portfolio Items Section -->
-        <div class="row mt-4">
-            <div class="col-12 profile-section">
-                <h4>{% trans "Manage Your Portfolio" %}</h4>
-                {% if portfolio_items %}
-                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-                        {% for item in portfolio_items %}
-                            <div class="col">
-                                <div class="card h-100 shadow-sm"> {# Kept card styling for individual portfolio items for now #}
-                                    {% if item.image %}
-                                        <img src="{{ item.image.url }}" class="card-img-top" alt="{{ item.title|default:'Portfolio image' }}" style="height: 200px; object-fit: cover;">
-                                    {% elif item.video_url %}
-                                        <div class="ratio ratio-16x9">
-                                            {# Basic iframe for YouTube/Vimeo - needs more robust parsing for production #}
-                                            {% if "youtube.com/watch?v=" in item.video_url %}
-                                                <iframe src="{{ item.video_url|replace:"watch?v=,embed/" }}" title="{{ item.title|default:'Portfolio video' }}" allowfullscreen></iframe>
-                                            {% elif "vimeo.com/" in item.video_url %}
-                                                 <iframe src="https://player.vimeo.com/video/{{ item.video_url|slice:"-9:" }}" title="{{ item.title|default:'Portfolio video' }}" allowfullscreen></iframe>
-                                            {% else %}
-                                                <p class="p-3">{% trans "Video preview not available for this URL." %}</p>
+                <!-- Portfolio Management -->
+                <fieldset>
+                    <legend>{% trans "Manage Your Portfolio" %}</legend>
+                    <!-- Add New Portfolio Item Form -->
+                    <h6>{% trans "Add New Item" %}</h6>
+                    <form method="post" enctype="multipart/form-data" class="mb-4 border p-3 rounded">
+                        {% csrf_token %}
+                        {{ portfolio_item_form|crispy }}
+                        <button type="submit" name="submit_portfolio_item" class="btn btn-success mt-3">{% trans "Add to Portfolio" %}</button>
+                    </form>
+
+                    <hr>
+
+                    <!-- Existing Portfolio Items -->
+                    <h6>{% trans "Your Current Portfolio" %}</h6>
+                    {% if portfolio_items %}
+                        <div class="row">
+                            {% for item in portfolio_items %}
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card h-100 portfolio-item-card">
+                                        {% if item.image %}
+                                            <img src="{{ item.image.url }}" class="card-img-top" alt="{{ item.title }}">
+                                        {% elif item.video_url %}
+                                            <div class="ratio ratio-16x9">
+                                                {% with embed_url=item.video_url|get_embed_url %}
+                                                    {% if embed_url %}
+                                                        <iframe src="{{ embed_url }}" title="{{ item.title|default:'Portfolio video' }}" allowfullscreen></iframe>
+                                                    {% else %}
+                                                        <a href="{{ item.video_url }}" target="_blank" class="btn btn-outline-primary m-auto">{% trans "Watch Video" %}</a>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            </div>
+                                    {% elif item.link %}
+                                            <a href="{{ item.link }}" target="_blank" class="btn btn-outline-primary m-auto">{% trans "View Link" %}</a>
+                                        {% else %}
+                                            <div class="bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                                                <span class="text-muted">{% trans "No Media" %}</span>
+                                            </div>
+                                        {% endif %}
+                                        <div class="card-body">
+                                            <h6 class="card-title">{{ item.title }}</h6>
+                                            {% if item.description %}
+                                                <p class="card-text small">{{ item.description|truncatewords:15 }}</p>
                                             {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    <div class="card-body">
-                                        <h5 class="card-title">{{ item.title|default:"Untitled Item" }}</h5>
-                                        <p class="card-text small">{{ item.description|truncatewords:15 }}</p>
-                                    </div>
-                                    <div class="card-footer text-center">
-                                        <form method="post" action="{% url 'core:delete_portfolio_item' item.id %}" onsubmit="return confirm('{% trans "Are you sure you want to delete this item?" %}');">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-danger">{% trans "Delete" %}</button>
-                                        </form>
+                                        </div>
+                                        <div class="card-footer bg-transparent border-top-0">
+                                            <a href="{% url 'core:edit_portfolio_item' item.id %}" class="btn btn-sm btn-outline-secondary">{% trans "Edit" %}</a>
+                                            <form action="{% url 'core:delete_portfolio_item' item.id %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this item?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">{% trans "Delete" %}</button>
+                                            </form>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="text-muted">{% trans "You haven't added any items to your portfolio yet." %}</p>
-                {% endif %}
-            </div>
-        </div>
-    </div> {# End edit-profile-page-container #}
-</div> {# End container #}
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    // Optional: Add JS for better UX, e.g., image previews before upload
-</script>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">{% trans "You have not added any portfolio items yet." %}</p>
+                    {% endif %}
+                </div>
+    </div>
+</div>
 {% endblock %}

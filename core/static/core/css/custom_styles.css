@@ -5,9 +5,13 @@
    This file is intended to override or supplement theme styles.
 */
 
-/* --- Form Label Styling --- */
+/* --- General Body and Text Styling --- */
+body {
+    color: #333; /* Dark gray for general text to ensure readability */
+    background-color: #f8f9fa; /* Light background for contrast */
+}
 
-/* Target all labels - try this first */
+/* --- Form Label Styling --- */
 label {
     color: #000000 !important; /* Black. Use !important if theme styles are too strong */
 }
@@ -20,4 +24,57 @@ label {
 /* Specifically for labels next to checkboxes and radio buttons */
 .form-check-label {
     color: #000000 !important;
+}
+
+/* --- Form Input Styling --- */
+.form-control,
+.form-select,
+.form-control[type="file"] {
+    background-color: #ffffff; /* White background for input fields */
+    border: 1px solid #ced4da; /* Light gray border */
+    color: #495057; /* Dark text color for input values */
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+}
+
+/* Style for crispy forms fieldsets and legends */
+fieldset.form-group {
+    border: 1px solid #e9ecef; /* Light border for fieldsets */
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.25rem;
+    background-color: #ffffff; /* White background for fieldsets */
+}
+
+legend.border-bottom {
+    font-size: 1.25rem;
+    padding-bottom: .5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    width: auto; /* Adjust width to content */
+    padding-right: 1rem; /* Add some padding to the right of the legend */
+}
+
+/* Ensure crispy forms help text is visible */
+.form-text {
+    color: #6c757d; /* Muted gray for help text */
+    font-size: 0.875em;
+}
+
+/* Adjust spacing for form groups */
+.mb-4 {
+    margin-bottom: 1.5rem !important;
+}
+
+/* General padding for the dashboard content */
+.dashboard-content {
+    padding: 20px;
 }

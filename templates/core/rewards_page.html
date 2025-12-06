@@ -1,0 +1,88 @@
+{% extends 'core/user_dashboard_base.html' %}
+{% load i18n static humanize %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .reward-item {
+        position: relative;
+        background-size: cover;
+        background-position: center;
+        border-radius: .75rem;
+        overflow: hidden;
+        color: white;
+        min-height: 220px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end; /* Align content to the bottom */
+        padding: 1.5rem;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .reward-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 20px rgba(0,0,0,0.15);
+    }
+    /* This pseudo-element creates the dark gradient overlay for text readability */
+    .reward-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 100%);
+        z-index: 1;
+    }
+    .reward-item-content {
+        position: relative;
+        z-index: 2;
+    }
+</style>
+{% endblock extra_css %}
+
+{% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">{{ page_title }}</h2>
+    <div class="text-end">
+        <div class="text-muted">{% trans "Your Balance" %}</div>
+        <div class="fs-4 fw-bold text-primary">{{ user_points.points_balance|default:0|intcomma }} {% trans "Points" %}</div>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="row">
+    {% for reward in available_rewards %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="reward-item" style="background-image: url('{% if reward.image %}{{ reward.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}');">
+            <div class="reward-item-content">
+                <h4 class="mb-1">{{ reward.name }}</h4>
+                <p class="small mb-2 opacity-75">{{ reward.description|truncatewords:15 }}</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold fs-5">{{ reward.points_cost|intcomma }} {% trans "Points" %}</span>
+                    <form method="post" action="{% url 'core:rewards_page' %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="reward_id" value="{{ reward.id }}">
+                        <button type="submit" class="btn btn-sm btn-warning fw-bold" {% if user_points.points_balance < reward.points_cost %}disabled title="{% trans 'Not enough points' %}"{% endif %}>
+                            {% trans "Redeem" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">{% trans "There are currently no rewards available to redeem. Check back soon!" %}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock dashboard_content %}

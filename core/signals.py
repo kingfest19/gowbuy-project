@@ -1,15 +1,20 @@
 # c:\Users\Hp\Desktop\Nexus\core\signals.py
 from django.dispatch import Signal
 from django.db.models.signals import post_save, pre_save
+from django.contrib.auth.signals import user_logged_in
+from django.db import transaction as db_transaction
 from django.urls import reverse # For generating notification links 
 from django.dispatch import receiver # Ensure receiver is imported
 from django.conf import settings # To get commission rate
 from decimal import Decimal # For precise calculations
-from .models import Order, DeliveryTask, Vendor, Notification, RiderApplication, Transaction, PayoutRequest # Import PayoutRequest
+from .models import Order, DeliveryTask, Vendor, Notification, RiderApplication, Transaction, PayoutRequest, SecurityLog, ProductQuestion, ProductReview
+from paypal.standard.models import ST_PP_COMPLETED
+from paypal.standard.ipn.signals import valid_ipn_received
 from django.contrib.auth import get_user_model # For notifying staff
-import logging
+from django.core.cache import cache # Import cache for invalidation
+import logging, uuid
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__) # This is already present, just for context
 
 order_placed = Signal()
 
@@ -27,6 +32,20 @@ def save_old_delivery_task_status(sender, instance, **kwargs):
     else: # For new instances, there's no original status from DB
         instance._original_status = None
 
+@receiver(user_logged_in)
+def log_user_login(sender, request, user, **kwargs):
+    """
+    Logs successful user login events.
+    """
+    ip_address = request.META.get('REMOTE_ADDR')
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+    SecurityLog.objects.create(
+        user=user,
+        action='login_success',
+        ip_address=ip_address,
+        user_agent=user_agent,
+        details=f"User '{user.username}' logged in successfully."
+    )
 
 @receiver(post_save, sender=Order)
 def create_delivery_task_for_order(sender, instance, created, **kwargs):
@@ -328,9 +347,8 @@ def calculate_earnings_on_delivery(sender, instance, **kwargs):
                             amount=task.platform_commission,
                             currency=task.order.currency if task.order else "GHS", # Get currency from order or default
                             status='completed',
-                            related_order=task.order,
-                            related_task=task,
-                            description=f"Platform commission for task {task.task_id} (Order: {task.order.order_id if task.order else 'N/A'})."
+                        order=task.order,
+                        description=f"Platform commission for delivery task {task.task_id} (Order: {task.order.order_id if task.order else 'N/A'})."
                         )
                         # Rider Earning Transaction (represents amount owed to rider)
                         # This isn't a direct payout yet, but an accrual.
@@ -456,3 +474,119 @@ def notify_on_payout_request_update(sender, instance, created, **kwargs):
             Notification.objects.create(recipient=target_user, message=user_message, link=dashboard_link)
             logger.info(f"User notification sent to {target_user.username} for payout request {payout_request.id} status change to {payout_request.status}.")
 # --- END: PayoutRequest Signals for Notifications ---
+
+# --- PayPal IPN Signal Handler ---
+
+@receiver(valid_ipn_received)
+def paypal_payment_notification(sender, **kwargs):
+    """
+    Receiver function to handle successful payment notifications from PayPal.
+    This is triggered when a payment is successfully processed and PayPal sends
+    an Instant Payment Notification (IPN) to our server.
+    """
+    ipn_obj = sender
+    logger.info(f"Received PayPal IPN signal for invoice: {ipn_obj.invoice}")
+
+    # Check that the payment status is 'Completed'
+    if ipn_obj.payment_status == ST_PP_COMPLETED:
+        # Check that the receiver email is the one we expect.
+        if ipn_obj.receiver_email != settings.PAYPAL_RECEIVER_EMAIL:
+            logger.error(f"PayPal IPN Error: Receiver email mismatch. Expected {settings.PAYPAL_RECEIVER_EMAIL}, got {ipn_obj.receiver_email}.")
+            return
+
+        # Try to retrieve the order from your database using the invoice number (which is the order's pk)
+        try:
+            order = Order.objects.get(id=ipn_obj.invoice)
+        except Order.DoesNotExist:
+            logger.error(f"PayPal IPN Error: Order with ID {ipn_obj.invoice} not found.")
+            return
+
+        # Verify that the order is in a state where payment is expected.
+        if order.status != 'AWAITING_ESCROW_PAYMENT':
+            logger.warning(f"PayPal IPN Warning: Received payment for order {order.order_id} which is not awaiting payment. Current status: {order.status}. IPN txn_id: {ipn_obj.txn_id}")
+            # This could be a duplicate IPN, so we don't process it again.
+            return
+
+        # Verify the payment amount and currency.
+        if Decimal(ipn_obj.mc_gross) != order.total_amount.quantize(Decimal('0.01')):
+            logger.error(f"PayPal IPN Error: Amount mismatch for order {order.order_id}. Expected {order.total_amount}, got {ipn_obj.mc_gross}.")
+            return
+        
+        if ipn_obj.mc_currency != order.currency:
+            logger.error(f"PayPal IPN Error: Currency mismatch for order {order.order_id}. Expected {order.currency}, got {ipn_obj.mc_currency}.")
+            return
+
+        # If all checks pass, update the order and create a transaction record.
+        with db_transaction.atomic():
+            # The Order model does not have a 'payment_status' field.
+            # We just update the main status.
+            order.status = 'PROCESSING' # This will trigger other signals like delivery task creation
+            # The payment method should have already been set to 'paypal' when the order was placed.
+            # We can re-affirm it here if we want.
+            order.payment_method = 'paypal'
+            order.save(update_fields=['status', 'payment_method'])
+
+            # Create a transaction record for this payment
+            Transaction.objects.create(
+                user=order.user, transaction_type='payment', amount=Decimal(ipn_obj.mc_gross),
+                currency=ipn_obj.mc_currency, status='completed', order=order,
+                gateway_transaction_id=ipn_obj.txn_id, description=f"PayPal payment for Order #{order.order_id}."
+            )
+
+            # Notify the customer that their payment was successful
+            Notification.objects.create(recipient=order.user, message=f"Your payment for order {order.order_id} was successful. Your order is now being processed.", link=reverse('core:order_detail', kwargs={'order_id': order.order_id}))
+            logger.info(f"Successfully processed PayPal payment for Order {order.order_id}. Transaction ID: {ipn_obj.txn_id}")
+
+    else:
+        logger.warning(f"Received PayPal IPN with non-completed status: {ipn_obj.payment_status} for invoice {ipn_obj.invoice}")
+
+# --- Product Q&A Notification Signal ---
+@receiver(post_save, sender=ProductQuestion)
+def notify_vendor_on_new_question(sender, instance, created, **kwargs):
+    """
+    Sends a notification to the vendor when a new question is posted on their product.
+    """
+    if created:
+        question = instance
+        product = question.product
+        vendor = product.vendor
+        
+        if vendor and vendor.user:
+            logger.info(f"New question for product '{product.name}'. Notifying vendor '{vendor.name}'.")
+            Notification.objects.create(
+                recipient=vendor.user,
+                message=f"You have a new question on your product '{product.name}' from user {question.user.username}.",
+                # Link to the product detail page where the Q&A is displayed
+                link=product.get_absolute_url() + "#product-qa-section" # Add an anchor
+            )
+
+# --- START: AI Cache Invalidation Signal ---
+@receiver(post_save, sender=ProductReview)
+def clear_ai_summary_cache_on_review_change(sender, instance, **kwargs):
+    """
+    Clears the cached AI review summary for a product when one of its reviews
+    is saved (created, updated, or approved/unapproved).
+    """
+    product = instance.product
+    cache_key = f"ai_summary_prod_{product.id}"
+    cache.delete(cache_key)
+    logger.info(f"Cleared AI review summary cache for product {product.id} due to review update.")
+# --- END: AI Cache Invalidation Signal ---
+
+# --- START: Background Removal Signal ---
+from .task import process_background_removal
+from .models import ProductImage
+
+@receiver(post_save, sender=ProductImage)
+def schedule_background_removal(sender, instance, created, **kwargs):
+    """
+    When a new ProductImage is created, schedule a Celery task
+    to remove its background.
+    """
+    # We only want to trigger this for newly created images,
+    # and we check that it's not an image that was already processed by this task.
+    if created and not instance.image.name.startswith('no_bg_'):
+        logger.info(f"New ProductImage (ID: {instance.id}) created. Scheduling background removal.")
+        # Use .delay() to call the task asynchronously
+        process_background_removal.delay(instance.id)
+# --- END: Background Removal Signal ---

@@ -1,0 +1,63 @@
+{% extends "core/provider_dashboard_base.html" %}
+{% load i18n %}
+
+{% block dashboard_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ page_title }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'core:service_provider_availability_create' %}" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-plus-circle me-1"></i> {% trans "Add New Slot" %}
+        </a>
+    </div>
+</div>
+
+{% if availability_slots %}
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th scope="col">{% trans "Service" %}</th>
+                <th scope="col">{% trans "Start Time" %}</th>
+                <th scope="col">{% trans "End Time" %}</th>
+                <th scope="col">{% trans "Status" %}</th>
+                <th scope="col">{% trans "Actions" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for slot in availability_slots %}
+            <tr class="{% if slot.is_booked %}table-light text-muted{% endif %}">
+                <td>{{ slot.service.title }}</td>
+                <td>{{ slot.start_time|date:"D, d M Y, P" }}</td>
+                <td>{{ slot.end_time|date:"P" }}</td>
+                <td>
+                    {% if slot.is_booked %}
+                        <span class="badge bg-danger">{% trans "Booked" %}</span>
+                    {% else %}
+                        <span class="badge bg-success">{% trans "Available" %}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if not slot.is_booked %}
+                    <a href="{% url 'core:service_provider_availability_edit' slot.pk %}" class="btn btn-sm btn-outline-secondary me-1" title="{% trans 'Edit' %}"><i class="fas fa-edit"></i></a>
+                    <a href="{% url 'core:service_provider_availability_delete' slot.pk %}" class="btn btn-sm btn-outline-danger" title="{% trans 'Delete' %}"><i class="fas fa-trash-alt"></i></a>
+                    {% else %}
+                    <span class="text-muted">{% trans "N/A" %}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include "partials/_pagination.html" %}
+
+{% else %}
+<div class="alert alert-info mt-3" role="alert">
+    <h4 class="alert-heading">{% trans "No Availability Slots Found" %}</h4>
+    <p>{% trans "You have not added any availability time slots for your services yet." %}</p>
+    <hr>
+    <p class="mb-0">{% trans "Click the 'Add New Slot' button to get started." %}</p>
+</div>
+{% endif %}
+{% endblock dashboard_content %}

@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% load humanize %}
+
+{% block title %}{% trans "Order Details for Vendor" %} - #{{ order.order_id }}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        .vendor-order-detail-container {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+        }
+        .vendor-order-detail-container h2.page-main-title {
+            color: #007bff;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .order-item-image img {
+            max-width: 60px; /* Smaller image for vendor view */
+            height: auto;
+            border-radius: 0.25rem;
+        }
+        #deliveryMapForVendor {
+            height: 350px;
+            width: 100%;
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row">
+        {% include "core/vendor/vendor_dashboard_sidebar_snippet.html" %} {# Assuming you have a vendor sidebar #}
+        <div class="col-md-9">
+            <div class="vendor-order-detail-container">
+                <h2 class="page-main-title mb-4">{% trans "Order Details" %} #{{ order.order_id }}</h2>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5>{% trans "Order Information" %}</h5>
+                        <p><strong>{% trans "Order Date:" %}</strong> {{ order.created_at|date:"F d, Y H:i" }}</p>
+                        <p><strong>{% trans "Status:" %}</strong> <span class="badge {% if order.status == 'COMPLETED' %}bg-success{% elif order.status == 'CANCELLED' %}bg-danger{% else %}bg-info{% endif %}">{{ order.get_status_display }}</span></p>
+                        <p><strong>{% trans "Payment Method:" %}</strong> {{ order.get_payment_method_display }}</p>
+                        {% if order.paystack_ref %}
+                            <p><strong>{% trans "Paystack Ref:" %}</strong> {{ order.paystack_ref }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h5>{% trans "Customer & Shipping" %}</h5>
+                        {% if order.user %}
+                            <p><strong>{% trans "Customer:" %}</strong> {{ order.user.get_full_name|default:order.user.username }}</p>
+                        {% endif %}
+                        {% if order.shipping_address_text %}
+                            <p><strong>{% trans "Shipping Address:" %}</strong></p>
+                            <address style="white-space: pre-wrap;">{{ order.shipping_address_text }}</address>
+                            {% if order.shipping_address.phone_number %}
+                                <p><strong>{% trans "Customer Phone:" %}</strong> {{ order.shipping_address.phone_number }}</p>
+                            {% endif %}
+                        {% else %}
+                            <p>{% trans "No shipping address provided (e.g., digital goods or local pickup)." %}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if show_map and vendor_location_lat and vendor_location_lng and delivery_lat and delivery_lng %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">{% trans "Delivery Overview" %}</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="deliveryMapForVendor"></div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <h5 class="mt-4">{% trans "Items in this Order (from Your Store)" %}</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>{% trans "Product" %}</th>
+                                <th>{% trans "SKU" %}</th>
+                                <th class="text-center">{% trans "Quantity" %}</th>
+                                <th class="text-end">{% trans "Unit Price" %}</th>
+                                <th class="text-end">{% trans "Total" %}</th>
+                                <th>{% trans "Fulfillment" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in vendor_order_items %} {# Assuming view passes vendor_order_items #}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if item.product.images.first %}
+                                            <img src="{{ item.product.images.first.image.url }}" alt="{{ item.product_name }}" class="order-item-image me-2">
+                                        {% else %}
+                                            <div class="order-item-image me-2 bg-light d-flex align-items-center justify-content-center text-muted" style="width:60px; height:60px;">?</div>
+                                        {% endif %}
+                                        {{ item.product_name }}
+                                    </div>
+                                </td>
+                                <td>{{ item.product.sku|default:"N/A" }}</td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ item.price|floatformat:2 }}</td>
+                                <td class="text-end">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ item.get_total_item_price|floatformat:2 }}</td>
+                                <td>
+                                    <span class="badge {% if item.fulfillment_method == 'nexus' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                        {{ item.get_fulfillment_method_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">{% trans "No items from your store in this order." %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4">
+                    <h5>{% trans "Order Actions" %}</h5>
+                    {% if order.status == 'PROCESSING' %}
+                        {# Add buttons for vendor actions, e.g., Mark as Shipped (if FBM) #}
+                        {% for item in vendor_order_items %}
+                            {% if item.fulfillment_method == 'vendor' and item.product.product_type == 'physical' %}
+                                {# Example: <a href="#" class="btn btn-info">Mark as Shipped</a> #}
+                                <p class="text-muted"><em>{% trans "Action for vendor-fulfilled items (e.g., Mark Shipped) would go here." %}</em></p>
+                               
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    <a href="#" class="btn btn-outline-secondary">{% trans "Print Packing Slip" %} (Coming Soon)</a>
+                    {# <a href="#" class="btn btn-outline-primary">{% trans "Contact Customer" %}</a> #}
+                </div>
+
+                <div class="mt-4">
+                    <a href="{% url 'core:vendor_orders' %}" class="btn btn-secondary">{% trans "Back to Orders" %}</a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    console.log("Vendor Order Detail - Debugging Map Conditions:");
+    console.log("show_map:", {{ show_map|yesno:"true,false,null" }});
+    console.log("google_maps_api_key present:", "{{ google_maps_api_key|yesno:'true,false' }}");
+    // console.log("google_maps_api_key value:", "{{ google_maps_api_key }}"); // Be careful logging the actual key to console
+    console.log("vendor_location_lat:", {{ vendor_location_lat|default:"null" }});
+    console.log("vendor_location_lng:", {{ vendor_location_lng|default:"null" }});
+    console.log("delivery_lat:", {{ delivery_lat|default:"null" }});
+    console.log("delivery_lng:", {{ delivery_lng|default:"null" }});
+</script>
+{% if show_map and google_maps_api_key and vendor_location_lat and vendor_location_lng and delivery_lat and delivery_lng %}
+<script>
+    function initVendorOrderDetailMap() {
+        console.log("Initializing Vendor Order Detail Map...");
+        const pickupLocation = { lat: {{ vendor_location_lat|default:0.0 }}, lng: {{ vendor_location_lng|default:0.0 }} }; // Vendor's location
+        const deliveryLocation = { lat: {{ delivery_lat|default:0.0 }}, lng: {{ delivery_lng|default:0.0 }} }; // Customer's location
+        if (pickupLocation.lat === 0.0 && pickupLocation.lng === 0.0 && deliveryLocation.lat === 0.0 && deliveryLocation.lng === 0.0) {
+            console.warn("Map coordinates are not valid for this order. Map will not be fully initialized.");
+            document.getElementById("deliveryMapForVendor").innerHTML = "<p class='text-center p-3'>{% trans 'Map data is currently unavailable for this order.' %}</p>";
+            return;
+        }
+
+        const map = new google.maps.Map(document.getElementById("deliveryMapForVendor"), {
+            // Check if google.maps object is available
+            // This check should ideally be before trying to use it.
+            // If 'google' is not defined, the script from base.html didn't load.
+            // For now, we assume it loads if this block is reached.
+            zoom: 12,
+            center: pickupLocation, // Center on vendor's location
+        });
+
+        new google.maps.Marker({
+            position: pickupLocation,
+            map: map,
+            title: "{% trans 'Your Location (Pickup)' %}",
+            label: "P",
+             icon: {
+                path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: "#4CAF50", fillOpacity: 1, strokeWeight: 1, strokeColor: "#ffffff"
+            }
+        });
+
+        new google.maps.Marker({
+            position: deliveryLocation,
+            map: map,
+            title: "{% trans 'Customer Delivery Location' %}",
+            label: "D",
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: "#F44336", fillOpacity: 1, strokeWeight: 1, strokeColor: "#ffffff"
+            }
+        });
+
+        const bounds = new google.maps.LatLngBounds();
+        bounds.extend(pickupLocation);
+        bounds.extend(deliveryLocation);
+        map.fitBounds(bounds);
+
+        google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
+            if (map.getZoom() > 15) { map.setZoom(15); }
+        });
+    }
+    window.initMap = initVendorOrderDetailMap; // Override global initMap for this page
+</script>
+{% endif %}
+{% endblock extra_js %}

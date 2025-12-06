@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+{% load i18n humanize crispy_forms_tags static %}
+
+{% block title %}{% trans "Conversation Details" %}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+    .content-panel {
+        background-color: #fff;
+        padding: 2rem 2.5rem;
+        border-radius: 12px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+        border: 1px solid #c7c9cb;
+    }
+
+    .chat-app-container {
+        background-color: #fff;
+        border-radius: 1rem;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        display: flex;
+        flex-direction: column;
+        height: 70vh;
+        overflow: hidden;
+        border: 1px solid #dee2e6;
+    }
+
+    .chat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        flex-shrink: 0;
+    }
+
+    .participant-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .participant-info img {
+        width: 45px;
+        height: 45px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 2px solid #dee2e6;
+    }
+
+    .participant-details h5 {
+        margin-bottom: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    #online-status {
+        font-size: 0.8rem;
+    }
+
+    .chat-log-container {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column-reverse;
+        background-color: #f0f2f5;
+    }
+
+    .messages-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .message-bubble {
+        max-width: 75%;
+        padding: 0.75rem 1.25rem;
+        border-radius: 1.25rem;
+        word-wrap: break-word;
+        position: relative;
+        line-height: 1.4;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .message-sent {
+        background-color: #0d6efd; /* Blue for customer sent messages */
+        color: white;
+        align-self: flex-end;
+        border-bottom-right-radius: 0.25rem;
+    }
+
+    .message-received {
+        background-color: #fff;
+        color: #212529;
+        align-self: flex-start;
+        border: 1px solid #dee2e6;
+        border-bottom-left-radius: 0.25rem;
+    }
+
+    .message-meta {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin-top: 0.25rem;
+    }
+
+    .read-receipt-icon {
+        font-size: 0.8rem;
+    }
+    .message-sent .read-receipt-icon {
+        color: #a7caff; /* Light blue for sent check */
+    }
+    .message-sent .read-receipt-icon .text-primary {
+        color: #fff !important; /* White for read check on blue background */
+    }
+
+    .message-timestamp {
+        font-size: 0.7rem;
+        opacity: 0.8;
+    }
+
+    .message-sent .message-timestamp {
+        text-align: right;
+        color: #e0e0e0;
+    }
+
+    .message-received .message-timestamp {
+        text-align: left;
+        color: #6c757d;
+    }
+
+    .chat-input-form {
+        padding: 1rem 1.5rem;
+        background-color: #fff;
+        border-top: 1px solid #dee2e6;
+        flex-shrink: 0;
+    }
+
+    .chat-input-form .form-control {
+        border-radius: 1.5rem;
+        border: 1px solid #ced4da;
+        padding: 0.75rem 1.25rem;
+        resize: none;
+        background-color: #f8f9fa;
+        transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    .chat-input-form .form-control:focus {
+        background-color: #fff;
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
+    .chat-input-form .btn {
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .emoji-picker-container {
+        position: relative;
+    }
+
+    .typing-indicator {
+        font-style: italic;
+        color: #6c757d;
+        font-size: 0.85rem;
+        padding-left: 0.5rem;
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container my-4 my-md-5">
+    <div class="row">
+        <div class="col-lg-3 mb-4 mb-lg-0">
+            {% include "core/customer/customer_dashboard_sidebar_snippet.html" with active_page='messages' %}
+        </div>
+        <div class="col-lg-9">
+            <div class="content-panel">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2 class="h4 mb-1">{% trans "Conversation with" %} {{ conversation.other_participant.get_full_name|default:conversation.other_participant.username }}</h2>
+                        <p class="text-muted mb-0 small">{{ conversation.subject }}</p>
+                    </div>
+                    <a href="{{ back_url }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>{{ back_text }}
+                    </a>
+                </div>
+
+                <div class="chat-app-container">
+                    <div class="chat-header">
+                        <div class="participant-info">
+                            <img src="{{ conversation.other_participant.userprofile.get_profile_picture_url }}" alt="{{ conversation.other_participant.get_full_name|default:conversation.other_participant.username }}">
+                            <div class="participant-details">
+                                <h5 class="mb-0">{{ conversation.other_participant.get_full_name|default:conversation.other_participant.username }}</h5>
+                            </div>
+                        </div>
+                        <span id="online-status" class="badge bg-secondary">{% trans "Offline" %}</span>
+                    </div>
+
+                    <div class="chat-log-container" id="chat-log" data-conversation-id="{{ conversation.id }}">
+                        <div class="messages-wrapper">
+                        {% for message in conversation.messages.all %}
+                            <div class="message-bubble {% if message.sender == request.user %}message-sent{% else %}message-received{% endif %}" data-message-id="{{ message.id }}">
+                                <div>{{ message.content|linebreaksbr }}</div>
+                                <div class="message-meta">
+                                    <span class="message-timestamp">{{ message.timestamp|date:"M d, H:i" }}</span>
+                                    {% if message.sender == request.user %}
+                                        <span class="read-receipt-icon" data-receipt-for="{{ message.id }}">
+                                            {% if message.is_read %}
+                                                <i class="fas fa-check-double text-primary"></i>
+                                            {% else %}
+                                                <i class="fas fa-check"></i>
+                                            {% endif %}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p class="text-center text-muted">{% trans "This is the beginning of your conversation." %}</p>
+                        {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="chat-input-form emoji-picker-container" id="chat-form-container">
+                        <div id="typing-indicator-container" class="mb-1" style="height: 20px;"></div>
+                        <form id="chat-form" class="d-flex align-items-start w-100">
+                            {% csrf_token %}
+                            <div class="input-group">
+                                {{ form.content|as_crispy_field }}
+                                <button class="btn btn-outline-secondary" type="button" id="emoji-button" title="{% trans 'Add emoji' %}">
+                                    <i class="far fa-smile"></i>
+                                </button>
+                                <button type="submit" class="btn btn-primary" title="{% trans 'Send Message' %}">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </form>
+                        <emoji-picker class="light" style="display: none; position: absolute; bottom: 75px; right: 20px; z-index: 100;"></emoji-picker>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+{{ block.super }}
+{# Auto-scroll to bottom on initial load #}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatContainer = document.querySelector('.chat-log-container');
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    });
+</script>
+
+{# Emoji Picker Scripts #}
+<script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const emojiPicker = document.querySelector('emoji-picker');
+    const emojiButton = document.getElementById('emoji-button');
+    const contentTextarea = document.getElementById('id_content');
+
+    if (emojiPicker && emojiButton && contentTextarea) {
+        emojiButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
+        });
+
+        emojiPicker.addEventListener('emoji-click', event => {
+            const emoji = event.detail.unicode;
+            const start = contentTextarea.selectionStart;
+            const end = contentTextarea.selectionEnd;
+            contentTextarea.value = contentTextarea.value.substring(0, start) + emoji + contentTextarea.value.substring(end);
+            contentTextarea.focus();
+            contentTextarea.selectionStart = contentTextarea.selectionEnd = start + emoji.length;
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!emojiPicker.contains(event.target) && event.target !== emojiButton && !emojiButton.contains(event.target)) {
+                emojiPicker.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
+
+{# WebSocket Chat Script #}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatLogContainer = document.getElementById('chat-log');
+    const conversationId = chatLogContainer.dataset.conversationId;
+    const currentUsername = "{{ request.user.username }}";
+    const messageInput = document.getElementById('id_content');
+    const chatForm = document.getElementById('chat-form');
+    const messagesWrapper = document.querySelector('.messages-wrapper');
+    const typingIndicatorContainer = document.getElementById('typing-indicator-container');
+    const onlineStatusBadge = document.getElementById('online-status');
+
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const chatSocket = new WebSocket(
+        wsScheme + '://' + window.location.host + '/ws/chat/' + conversationId + '/'
+    );
+
+    chatSocket.onopen = function(e) { console.log("Chat socket successfully connected."); };
+
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+        onlineStatusBadge.textContent = '{% trans "Offline" %}';
+        onlineStatusBadge.classList.remove('bg-success');
+        onlineStatusBadge.classList.add('bg-secondary');
+    };
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        
+        if (data.type === 'new_message') {
+            const messageBubble = document.createElement('div');
+            messageBubble.classList.add('message-bubble');
+            messageBubble.dataset.messageId = data.message_id;
+            
+            let messageMetaHTML;
+
+            if (data.sender === currentUsername) {
+                messageBubble.classList.add('message-sent');
+                messageMetaHTML = `<span class="message-timestamp">${new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span><span class="read-receipt-icon" data-receipt-for="${data.message_id}"><i class="fas fa-check"></i></span>`;
+            } else {
+                messageBubble.classList.add('message-received');
+                messageMetaHTML = `<span class="message-timestamp">${new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
+                chatSocket.send(JSON.stringify({
+                    'type': 'mark_messages_as_read',
+                    'message_ids': [data.message_id]
+                }));
+            }
+
+            const messageContent = document.createElement('div');
+            messageContent.innerHTML = data.message.replace(/\n/g, '<br>');
+
+            const messageMeta = document.createElement('div');
+            messageMeta.classList.add('message-meta');
+            messageMeta.innerHTML = messageMetaHTML;
+            
+            messageBubble.appendChild(messageContent);
+            messageBubble.appendChild(messageMeta);
+            messagesWrapper.appendChild(messageBubble);
+
+            chatLogContainer.scrollTop = chatLogContainer.scrollHeight;
+
+            if (data.sender !== currentUsername) {
+                typingIndicatorContainer.innerHTML = '';
+            }
+
+        } else if (data.type === 'typing') {
+            if (data.is_typing && data.username !== currentUsername) {
+                typingIndicatorContainer.innerHTML = `<p class="typing-indicator">${data.username} {% trans "is typing..." %}</p>`;
+            } else {
+                typingIndicatorContainer.innerHTML = '';
+            }
+        } else if (data.type === 'user_status') {
+            if (data.username !== currentUsername) {
+                if (data.is_online) {
+                    onlineStatusBadge.textContent = '{% trans "Online" %}';
+                    onlineStatusBadge.classList.remove('bg-secondary');
+                    onlineStatusBadge.classList.add('bg-success');
+                } else {
+                    onlineStatusBadge.textContent = '{% trans "Offline" %}';
+                    onlineStatusBadge.classList.remove('bg-success');
+                    onlineStatusBadge.classList.add('bg-secondary');
+                }
+            }
+        } else if (data.type === 'messages_read') {
+            data.message_ids.forEach(function(messageId) {
+                const receiptIconSpan = document.querySelector(`.read-receipt-icon[data-receipt-for="${messageId}"]`);
+                if (receiptIconSpan) {
+                    receiptIconSpan.innerHTML = '<i class="fas fa-check-double text-primary"></i>';
+                }
+            });
+        }
+    };
+
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const message = messageInput.value.trim();
+        if (message) {
+            chatSocket.send(JSON.stringify({ 'type': 'chat_message', 'message': message }));
+            messageInput.value = '';
+            clearTimeout(typingTimer);
+            chatSocket.send(JSON.stringify({'type': 'typing', 'is_typing': false}));
+        }
+    });
+
+    let typingTimer;
+    let isTyping = false;
+    messageInput.addEventListener('keyup', function(e) {
+        clearTimeout(typingTimer);
+        if (!isTyping) {
+            isTyping = true;
+            chatSocket.send(JSON.stringify({'type': 'typing', 'is_typing': true}));
+        }
+        typingTimer = setTimeout(() => {
+            isTyping = false;
+            chatSocket.send(JSON.stringify({'type': 'typing', 'is_typing': false}));
+        }, 3000);
+    });
+});
+</script>
+{% endblock extra_js %}

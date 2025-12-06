@@ -1,0 +1,35 @@
+{% load i18n humanize review_tags %}
+
+<div class="list-group list-group-flush mt-3">
+    {% for review in reviews %}
+        <div class="list-group-item py-3 px-0">
+            <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">
+                    {% with reviewed_item=review.reviewed_item %}
+                        {% if reviewed_item %}
+                            <a href="{{ reviewed_item.get_absolute_url }}">{% blocktrans with name=review.reviewed_item_name %}Review for: {{ name }}{% endblocktrans %}</a>
+                        {% else %}
+                            {% trans "Review for an item" %}
+                        {% endif %}
+                    {% endwith %}
+                </h5>
+                <small class="text-muted">{{ review.created_at|naturaltime }}</small>
+            </div>
+            <div class="d-flex align-items-center mb-2">
+                <div class="text-warning me-2">
+                    {% render_stars review.rating %}
+                </div>
+                <span class="text-muted">({{ review.rating }}/5)</span>
+            </div>
+            <p class="mb-1">{{ review.review|linebreaksbr }}</p>
+            <div class="mt-2">
+                <a href="{% url 'core:edit_review' review_type=review.review_type review_id=review.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit me-1"></i> {% trans "Edit" %}</a>
+                <a href="{% url 'core:delete_review' review_type=review.review_type review_id=review.id %}" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash me-1"></i> {% trans "Delete" %}</a>
+            </div>
+        </div>
+    {% empty %}
+        <div class="list-group-item text-center py-4">
+            <p class="text-muted mb-0">{% trans "You have not submitted any reviews of this type yet." %}</p>
+        </div>
+    {% endfor %}
+</div>

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{% block page_title %}{% endblock page_title %} - {% trans "Vendor Dashboard" %}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
+    .vendor-dashboard-wrapper {
+        display: flex;
+        min-height: calc(100vh - 56px); /* Adjust 56px based on your navbar height */
+    }
+    .vendor-sidebar {
+        width: 260px;
+        flex-shrink: 0;
+        background-color: #343a40;
+        color: #adb5bd;
+        padding-top: 1.5rem;
+        position: sticky;
+        top: 56px; /* Adjust based on navbar height */
+        height: calc(100vh - 56px);
+        overflow-y: auto;
+    }
+    .vendor-sidebar .nav-link {
+        color: #adb5bd;
+        padding: 0.75rem 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.95rem;
+        border-left: 3px solid transparent;
+        transition: all 0.2s ease-in-out;
+    }
+    .vendor-sidebar .nav-link:hover {
+        background-color: #495057;
+        color: #fff;
+    }
+    .vendor-sidebar .nav-link.active {
+        background-color: #212529;
+        color: #fff;
+        font-weight: 600;
+        border-left-color: #ff9800; /* Vendor theme color (orange) */
+    }
+    .vendor-sidebar .nav-link .bi {
+        font-size: 1.1rem;
+        width: 20px;
+        text-align: center;
+    }
+    .vendor-sidebar .sidebar-heading {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: #6c757d;
+        padding: 0.5rem 1.5rem;
+        margin-top: 1rem;
+    }
+    .vendor-content {
+        flex-grow: 1;
+        padding: 2rem;
+    }
+    .unread-count-badge {
+        font-size: 0.75rem;
+        padding: 0.2em 0.5em;
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="vendor-dashboard-wrapper">
+    <!-- Sidebar -->
+    <nav class="vendor-sidebar">
+        <div class="nav flex-column">
+            <a class="nav-link {% if request.resolver_match.url_name == 'vendor_dashboard' %}active{% endif %}" href="{% url 'core:vendor_dashboard' %}">
+                <i class="bi bi-grid-1x2-fill"></i> {% trans "Dashboard" %}
+            </a>
+
+            <div class="sidebar-heading">{% trans "Store Management" %}</div>
+            <a class="nav-link {% if 'vendor_product' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:vendor_product_list' %}">
+                <i class="bi bi-box-seam-fill"></i> {% trans "Products" %}
+            </a>
+            <a class="nav-link {% if 'vendor_order' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:vendor_order_list' %}">
+                <i class="bi bi-receipt"></i> {% trans "Orders" %}
+            </a>
+            <a class="nav-link {% if 'vendor_review' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:vendor_review_list' %}">
+                <i class="bi bi-star-fill"></i> {% trans "Reviews" %}
+            </a>
+
+            <div class="sidebar-heading">{% trans "Engagement" %}</div>
+            <a class="nav-link {% if 'vendor_message' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:vendor_message_list' %}">
+                <i class="bi bi-chat-dots-fill"></i> {% trans "Messages" %}
+                {% if unread_message_count > 0 %}
+                    <span class="badge rounded-pill bg-danger ms-auto unread-count-badge">{{ unread_message_count }}</span>
+                {% endif %}
+            </a>
+            <a class="nav-link {% if 'vendor_promotion' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:vendor_promotion_list' %}">
+                <i class="bi bi-tag-fill"></i> {% trans "Promotions" %}
+            </a>
+            <a class="nav-link {% if 'vendor_campaign' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:vendor_campaign_list' %}">
+                <i class="bi bi-megaphone-fill"></i> {% trans "Campaigns" %}
+            </a>
+
+            <div class="sidebar-heading">{% trans "Finance & Account" %}</div>
+            <a class="nav-link {% if 'vendor_payout' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:vendor_payout_request_list' %}">
+                <i class="bi bi-cash-coin"></i> {% trans "Payouts" %}
+            </a>
+            <a class="nav-link {% if 'vendor_reports' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:vendor_reports' %}">
+                <i class="bi bi-bar-chart-line-fill"></i> {% trans "Reports" %}
+            </a>
+            <a class="nav-link {% if 'edit_vendor_profile' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'core:edit_vendor_profile' %}">
+                <i class="bi bi-person-badge-fill"></i> {% trans "Shop Profile" %}
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="vendor-content">
+        {% block page_content %}{% endblock page_content %}
+    </main>
+</div>
+{% endblock content %}

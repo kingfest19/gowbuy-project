@@ -1,6 +1,7 @@
 # c:\Users\Hp\Desktop\Nexus\core\models.py
 import logging # <<< Added import for logging
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.conf import settings # To link to your custom user model
 from django.utils.text import slugify # To generate slugs automatically
 from django.utils import timezone # To record confirmation time
@@ -89,6 +90,7 @@ class Vendor(models.Model):
     name = models.CharField(max_length=200, unique=True, help_text="Public name of the vendor/store.")
     slug = models.SlugField(max_length=200, unique=True, blank=True, help_text="URL-friendly version of the vendor name. Leave blank to auto-generate.")
     description = models.TextField(blank=True, null=True, help_text="Public description of the vendor.")
+    story = models.TextField(blank=True, null=True, verbose_name=_("Our Story"), help_text=_("Share the story behind your brand. This will be visible on your public profile."))
     contact_email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     logo = models.ImageField(upload_to=vendor_directory_path, blank=True, null=True, help_text="Optional logo for the vendor.")
@@ -131,7 +133,18 @@ class Vendor(models.Model):
     # Example Mobile Money Fields (Adjust as needed)
     mobile_money_provider = models.CharField(max_length=50, blank=True, null=True, verbose_name=_("Mobile Money Provider")) # e.g., MTN, Vodafone, AirtelTigo
     mobile_money_number = models.CharField(max_length=20, blank=True, null=True, verbose_name=_("Mobile Money Number"))
-    # --- End Shipping & Payment Info ---
+    paypal_email = models.EmailField(blank=True, null=True, verbose_name=_("PayPal Email Address"))
+    bank_account_name = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Bank Account Holder's Name"))
+    bank_account_number = models.CharField(max_length=50, blank=True, null=True, verbose_name=_("Bank Account Number"))
+    bank_name = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Bank Name"))
+    bank_branch = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Bank Branch Name/Address"))
+    # --- START: Advanced Payout Options ---
+    stripe_account_id = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Stripe Connect Account ID"), help_text=_("Your Stripe Connect account ID (e.g., acct_xxxxxxxx)."))
+    payoneer_email = models.EmailField(blank=True, null=True, verbose_name=_("Payoneer Email Address"))
+    wise_email = models.EmailField(blank=True, null=True, verbose_name=_("Wise (formerly TransferWise) Email Address"))
+    crypto_wallet_address = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Cryptocurrency Wallet Address"))
+    crypto_wallet_network = models.CharField(max_length=50, blank=True, null=True, verbose_name=_("Crypto Network"), help_text=_("e.g., Bitcoin, Ethereum (ERC20), Tron (TRC20), etc."))
+    # --- END: Advanced Payout Options ---
     # --- START: Payout Information (similar to ServiceProviderProfile) ---
     paystack_recipient_code = models.CharField(
         max_length=100, blank=True, null=True, editable=False, # System-managed
@@ -152,6 +165,11 @@ class Vendor(models.Model):
     # --- Status Fields ---
     is_approved = models.BooleanField(default=False, help_text="Is this vendor approved to sell products?")
     is_verified = models.BooleanField(default=False, help_text="Has this vendor been verified by NEXUS staff (e.g., identity checked)?")
+    has_premium_3d_generation_access = models.BooleanField(
+        default=False,
+        verbose_name=_("Premium 3D Generation Access"),
+        help_text=_("Grants access to the AI-powered 3D model generation feature.")
+    )
     # --- Timestamps ---
     default_fulfillment_method = models.CharField(max_length=10, choices=FULFILLMENT_CHOICES, default='vendor', verbose_name=_("Default Fulfillment Method"))
     created_at = models.DateTimeField(auto_now_add=True)
@@ -210,59 +228,25 @@ class Vendor(models.Model):
 
     def is_shipping_info_complete(self):
         """Checks if shipping information is provided and complete."""
-        try:
-            # Assuming a OneToOneField from VendorShipping to Vendor,
-            # with default related name 'shipping_info' (as per your VendorShipping model)
-            shipping_info = self.shipping_info # Use the related_name
-            # Adjust these checks based on your VendorShipping model's requirements
-            # Example: check if a shipping policy is set on the Vendor model itself
-            return bool(self.shipping_policy) # Assuming shipping_policy is on Vendor model
-        except VendorShipping.DoesNotExist: # Check if VendorShipping is defined
-            return False
-        except AttributeError:
-            # Fallback if shipping_info attribute doesn't exist (e.g., related_name mismatch or no VendorShipping model)
-            # Or if shipping_policy is directly on Vendor model and you want to check that
-            return bool(self.shipping_policy)
+        # This check is now based on the 'shipping_policy' field directly on the Vendor model.
+        return bool(self.shipping_policy)
 
 
     def is_payment_info_complete(self):
         """Checks if payment information is provided and complete."""
-        try:
-            # Assuming a OneToOneField from VendorPayment to Vendor,
-            # with default related name 'payment_info' (as per your VendorPayment model)
-            payment_info = self.payment_info # Use the related_name
-            # Adjust these checks based on your VendorPayment model's requirements
-            # Example: check if mobile money details are provided on the Vendor model itself
-            return all([
-                self.mobile_money_provider,
-                self.mobile_money_number,
-            ])
-        except VendorPayment.DoesNotExist: # Check if VendorPayment is defined
-            return False
-        except AttributeError:
-            # Fallback if payment_info attribute doesn't exist
-            # Or if payment details are directly on Vendor model
-            return all([
-                self.mobile_money_provider,
-                self.mobile_money_number,
-            ])
+        # This check is now based on fields directly on the Vendor model.
+        return all([
+            self.mobile_money_provider,
+            self.mobile_money_number,
+        ])
 
     def is_additional_info_complete(self):
         """Checks if additional information is provided and complete."""
-        try:
-            # Assuming a OneToOneField from VendorAdditionalInfo to Vendor,
-            # with default related name 'additional_info' (as per your VendorAdditionalInfo model)
-            additional_info = self.additional_info # Use the related_name
-            # Adjust these checks based on your VendorAdditionalInfo model's requirements
-            # For now, let's assume if the related object exists, it's "complete enough"
-            # or check a specific field on VendorAdditionalInfo if you have one.
-            # Example: return bool(additional_info.some_required_field_here)
-            return True # Placeholder: if additional_info object exists, consider it complete.
-        except VendorAdditionalInfo.DoesNotExist: # Check if VendorAdditionalInfo is defined
-            return False # Or True if this section is optional and considered complete if not present
-        except AttributeError:
-             # Fallback if additional_info attribute doesn't exist
-            return False
+        # The 'VendorAdditionalInfoForm' now only handles 'return_policy'.
+        # We can consider this section "complete" if a return policy is set.
+        # If this section is optional, we could just return True.
+        # Let's assume having a return policy means this is complete.
+        return bool(self.return_policy)
 
 
     def is_onboarding_complete(self):
@@ -286,12 +270,11 @@ class Product(models.Model):
         ('physical', _('Physical Product')),
         ('digital', _('Digital Product')),
     )
-    # --- VENDOR FIELD (Still temporarily nullable) ---
     vendor = models.ForeignKey(
         Vendor,
         related_name='products',
         on_delete=models.CASCADE,
-        null=True,  # <!-- <<< KEEP THIS TEMPORARILY until all products assigned -->
+        default=1,
         help_text="The vendor selling this product."
     )
     # --------------------------
@@ -326,6 +309,13 @@ class Product(models.Model):
         verbose_name=_("3D Model File"),
         help_text=_("Upload a 3D model file (e.g., .glb, .gltf) for 3D viewing.")
     )
+    ar_model = models.FileField(
+        _("AR 3D Model"),
+        upload_to='ar_models/', 
+        blank=True, 
+        null=True,
+        help_text=_("Upload a .glb or .usdz file for the AR experience.")
+    )
 
     class Meta:
         ordering = ('-created_at', 'name',)
@@ -355,6 +345,25 @@ class Product(models.Model):
         # Handle case where vendor might be None during the transition
         vendor_name = self.vendor.name if self.vendor else "[No Vendor Assigned]"
         return f"{self.name} (by {vendor_name})"
+
+    @property
+    def image(self):
+        return self.images.first()
+
+    def get_specifications(self):
+        return {
+            "Product Type": self.get_product_type_display(),
+            "Stock": self.stock if self.product_type == 'physical' else 'N/A',
+            "Vendor": self.vendor.name if self.vendor else 'N/A',
+            "Keywords": self.keywords_for_ai if self.keywords_for_ai else 'None'
+        }
+
+    def get_additional_specifications(self):
+        return {
+            "Weight": "1kg",
+            "Dimensions": "10x20x30 cm",
+            "Material": "Cotton",
+        }
 
     def get_absolute_url(self):
         return reverse('core:product_detail', kwargs={'product_slug': self.slug})
@@ -402,32 +411,44 @@ class Address(models.Model):
 
 # --- Order Model ---
 class Order(models.Model):
-    # --- Updated Status Choices ---
+    # --- Refined Status Choices ---
     STATUS_CHOICES = (
-        ('PENDING', _('Pending Payment Choice')),      # Customer needs to choose a payment method
-        ('AWAITING_ESCROW_PAYMENT', _('Awaiting Escrow Payment')), # For Escrow, waiting for customer to pay Paystack
-        ('AWAITING_DIRECT_PAYMENT', _('Awaiting Direct Payment Confirmation')),
-        ('PROCESSING', _('Processing')),               # Payment confirmed (escrow) or confirmed (direct), vendor preparing product / provider preparing service
-        ('SHIPPED', _('Shipped')),                     # For physical products, vendor has shipped
-        ('PENDING_PAYOUT', _('Pending Payout to Provider')), # <!-- <<< New Status -->
-        ('IN_PROGRESS', _('Service In Progress')),
-        ('COMPLETED', _('Completed')),                 # Service delivered & confirmed by customer, or product delivered & confirmed
+        ('PENDING', _('Pending Payment Choice')),
+        ('AWAITING_ESCROW_PAYMENT', _('Awaiting Escrow Payment')),
+        ('AWAITING_DIRECT_PAYMENT', _('Awaiting Direct Payment')),
+        ('ON_HOLD_FRAUD_REVIEW', _('On Hold (Fraud Review)')),
+        ('PROCESSING', _('Processing')), # Payment received, work can begin
+        ('IN_PROGRESS', _('Service In Progress')), # Can be used alongside PROCESSING for services
+        ('SHIPPED', _('Shipped')), # For physical products
+        ('DELIVERED', _('Delivered')), # Rider/Vendor marks as delivered
+        ('PENDING_PAYOUT', _('Pending Payout')), # Customer confirms, ready for admin to pay out
+        ('COMPLETED', _('Completed & Paid Out')), # Final state after payout
         ('CANCELLED', _('Cancelled')),
-        ('DISPUTED', _('Disputed')),
         ('REFUNDED', _('Refunded')),
-        # Keep old product statuses if needed, or migrate existing orders
-        ('pending', _('Pending (Product Order)')),
-        ('processing', _('Processing (Product Order)')),
-        ('shipped', _('Shipped (Product Order)')),
-        ('delivered', _('Delivered (Product Order)')),
-        ('cancelled', _('Cancelled (Product Order)')),
-        ('refunded', _('Refunded (Product Order)')),
+        ('DISPUTED', _('Disputed')),
     )
     PAYMENT_METHOD_CHOICES = (
         ('escrow', _('Escrow (Paystack)')),
         ('direct', _('Direct Arrangement')),
+        ('paypal', _('PayPal')),
         # Add other methods like 'cod' (Cash on Delivery) if needed
     )
+    promotion = models.ForeignKey(
+        'Promotion',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='orders',
+        help_text=_("The promotion applied to this order, if any.")
+    )
+    discount_amount = models.DecimalField(
+        _("Discount Amount"),
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text=_("The total discount amount applied to the order.")
+    )
+
     # PAYMENT_STATUS_CHOICES = ( ('pending', 'Pending'), ('paid', 'Paid'), ('failed', 'Failed'), ) # Can be simplified or derived from STATUS
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='orders', on_delete=models.SET_NULL, null=True, blank=True)
@@ -439,6 +460,7 @@ class Order(models.Model):
     platform_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name=_("Platform (Nexus) Delivery Fee Component"))
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name=_("Order Delivery Fee"))
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    currency = models.CharField(max_length=3, default='GHS', help_text=_("Currency of the order (e.g., GHS, USD)"))
     ordered = models.BooleanField(default=False) # Indicates if checkout process started (useful for finding pending orders)
     shipping_address = models.ForeignKey(Address, related_name='shipping_orders', on_delete=models.SET_NULL, null=True, blank=True)
     billing_address = models.ForeignKey(Address, related_name='billing_orders', on_delete=models.SET_NULL, null=True, blank=True)
@@ -455,6 +477,11 @@ class Order(models.Model):
     )
     paystack_ref = models.CharField(max_length=100, blank=True, null=True, help_text="Paystack transaction reference for verification.")
     # customer_confirmed_completion_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Customer Confirmed Completion At")) # Commented out
+    tip_amount = models.DecimalField(
+        _("Rider Tip Amount"), max_digits=10, decimal_places=2,
+        default=Decimal('0.00'),
+        help_text=_("Amount tipped to the rider by the customer.")
+    )
     customer_confirmed_delivery_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Customer Confirmed Delivery/Completion"))
 
     class Meta:
@@ -471,8 +498,6 @@ class Order(models.Model):
         now = datetime.datetime.now()
         random_part = uuid.uuid4().hex[:6].upper()
         return f"NEXUS-{now.strftime('%Y%m%d')}-{random_part}"
-    def __str__(self):
-        return f"Order {self.order_id} ({self.get_status_display()})"
     def calculate_total(self):
         total = sum(item.get_total_item_price() for item in self.items.all())
         # self.total_amount = total # Avoid saving here, calculate on demand or when finalizing
@@ -745,7 +770,9 @@ class VendorReview(models.Model):
     vendor = models.ForeignKey(Vendor, related_name='reviews', on_delete=models.CASCADE) # Now 'Vendor' is defined
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='vendor_reviews', on_delete=models.CASCADE)
     rating = models.PositiveSmallIntegerField(choices=RATING_CHOICES, validators=[MinValueValidator(1), MaxValueValidator(5)])
-    comment = models.TextField(blank=True, null=True)
+    review = models.TextField(_("Review"), blank=True, null=True)
+    reply = models.TextField(_("Vendor Reply"), blank=True, null=True)
+    replied_at = models.DateTimeField(_("Replied At"), null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_approved = models.BooleanField(default=True, help_text="Is this review visible to the public?")
 
@@ -776,6 +803,7 @@ class ProductImage(models.Model):
     def __str__(self):
         return f"Image for {self.product.name} ({self.id})"
 
+
 # --- ProductVideo Model ---
 class ProductVideo(models.Model):
     """
@@ -786,11 +814,12 @@ class ProductVideo(models.Model):
     title = models.CharField(max_length=255, blank=True, null=True, help_text="Optional title for the video.")
     description = models.TextField(blank=True, null=True, help_text="Optional description.")
     uploaded_at = models.DateTimeField(auto_now_add=True)
-
+    # No additional fields needed here.
     class Meta:
         ordering = ['uploaded_at']
         verbose_name = _("Product Video")
-        verbose_name_plural = _("Product Videos")
+    
+    verbose_name_plural = _("Product Videos")
 
     def __str__(self):
         return self.title or f"Video for {self.product.name} ({self.id})"
@@ -818,18 +847,82 @@ class Cart(models.Model):
 # --- CartItem Model ---
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, related_name='items', on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True, blank=True)
+    service_package = models.ForeignKey('ServicePackage', on_delete=models.CASCADE, null=True, blank=True)
     quantity = models.PositiveIntegerField(default=1)
     added_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('cart', 'product') # Ensure a product appears only once per cart (quantity handles multiples)
+        # A cart can have a specific product once and a specific service package once.
+        unique_together = (('cart', 'product'), ('cart', 'service_package'))
+
+    def clean(self):
+        # Enforce that a cart item is for one thing only.
+        if self.product and self.service_package:
+            raise ValidationError(_("A cart item cannot be for both a product and a service package simultaneously."))
+        if not self.product and not self.service_package:
+            raise ValidationError(_("A cart item must be for either a product or a service package."))
 
     def __str__(self):
-        return f"{self.quantity} x {self.product.name} in cart {self.cart.id}"
+        return f"{self.quantity} x {self.name} in cart {self.cart.id}"
+
+    @property
+    def name(self):
+        if self.product:
+            return self.product.name
+        if self.service_package:
+            return f"{self.service_package.service.title} - {self.service_package.name}"
+        return _("Invalid Item")
+
+    @property
+    def price(self):
+        if self.product:
+            return self.product.price
+        if self.service_package:
+            return self.service_package.price
+        return Decimal('0.00')
 
     def get_total_item_price(self):
-        return self.product.price * self.quantity
+        return self.price * self.quantity
+
+# --- SavedForLaterItem Model ---
+class SavedForLaterItem(models.Model):
+    """
+    Represents an item a user has saved for later from their cart.
+    """
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='saved_for_later_items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True, blank=True)
+    service_package = models.ForeignKey('ServicePackage', on_delete=models.CASCADE, null=True, blank=True)
+    quantity = models.PositiveIntegerField(default=1) # Keep the quantity from the cart
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = (('user', 'product'), ('user', 'service_package'))
+        ordering = ['-added_at']
+        verbose_name = _("Saved For Later Item")
+        verbose_name_plural = _("Saved For Later Items")
+
+    def clean(self):
+        if self.product and self.service_package:
+            raise ValidationError(_("A saved item cannot be for both a product and a service package simultaneously."))
+        if not self.product and not self.service_package:
+            raise ValidationError(_("A saved item must be for either a product or a service package."))
+
+    def __str__(self):
+        return f"{self.quantity} x {self.name} in {self.user.username}'s saved list"
+
+    @property
+    def name(self):
+        if self.product: return self.product.name
+        if self.service_package: return f"{self.service_package.service.title} - {self.service_package.name}"
+        return _("Invalid Item")
+
+    @property
+    def price(self):
+        if self.product: return self.product.price
+        if self.service_package: return self.service_package.price
+        return Decimal('0.00')
+
 
 # --- Promotion Model ---
 class Promotion(models.Model):
@@ -861,10 +954,27 @@ class Promotion(models.Model):
     # --- Conditions & Limits ---
     start_date = models.DateTimeField(help_text="When the promotion becomes active.")
     end_date = models.DateTimeField(help_text="When the promotion expires.")
-    min_purchase_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Minimum cart total required to apply (optional).")
-    max_uses = models.PositiveIntegerField(blank=True, null=True, help_text="Maximum number of times this promotion can be used in total (optional).")
+    minimum_purchase_amount = models.DecimalField(
+        _("Minimum Purchase Amount"),
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_("The promotion will only apply if the cart total is above this amount. Leave blank for no minimum.")
+    )
+    usage_limit = models.PositiveIntegerField(
+        _("Usage Limit"),
+        null=True,
+        blank=True,
+        help_text=_("The total number of times this promotion can be used. Leave blank for unlimited uses.")
+    )
+    usage_count = models.PositiveIntegerField(
+        _("Usage Count"),
+        default=0,
+        editable=False,
+        help_text=_("The number of times this promotion has been used.")
+    )
     uses_per_customer = models.PositiveIntegerField(blank=True, null=True, help_text="Maximum number of times a single customer can use this promotion (optional).")
-    current_uses = models.PositiveIntegerField(default=0, editable=False)
     is_active = models.BooleanField(default=True, help_text="Is this promotion currently active (within dates and usage limits)?")
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -952,7 +1062,11 @@ class UserProfile(models.Model):
     profile_picture = models.ImageField(upload_to='users/profile_pics/', blank=True, null=True, help_text=_("User's profile picture."))
     date_of_birth = models.DateField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
-    # Add any other fields you want to store for a user's profile
+    location = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Location"))
+    website_url = models.URLField(max_length=200, blank=True, null=True, verbose_name=_("Website URL"))
+    linkedin_url = models.URLField(max_length=200, blank=True, null=True, verbose_name=_("LinkedIn Profile URL"))
+    twitter_url = models.URLField(max_length=200, blank=True, null=True, verbose_name=_("Twitter (X) Profile URL"))
+    github_url = models.URLField(max_length=200, blank=True, null=True, verbose_name=_("GitHub Profile URL"))
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -986,7 +1100,7 @@ class ServiceReview(models.Model):
     service = models.ForeignKey(Service, related_name='reviews', on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='service_reviews', on_delete=models.CASCADE)
     rating = models.PositiveSmallIntegerField(choices=RATING_CHOICES, validators=[MinValueValidator(1), MaxValueValidator(5)])
-    comment = models.TextField(blank=True, null=True)
+    review = models.TextField(_("Review"), blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_approved = models.BooleanField(default=True, help_text="Is this review visible to the public? (For moderation)")
 
@@ -1057,13 +1171,7 @@ class ServiceProviderProfile(models.Model):
     bio = models.TextField(
         verbose_name=_("Service Provider Bio/Description"),
         help_text=_("Describe your services, experience, and what you offer.")
-        
     )
-    
-    
-    
-    
-    
     # --- START: Payout Information ---
     PAYOUT_MM_PROVIDER_CHOICES = (
         ('', _('Select Provider')),
@@ -1071,57 +1179,102 @@ class ServiceProviderProfile(models.Model):
         ('VODAFONE', _('Vodafone Cash')),
         ('AIRTELTIGO', _('AirtelTigo Money')),
     )
-    payout_mobile_money_provider = models.CharField(
+    mobile_money_provider = models.CharField(
         max_length=50, choices=PAYOUT_MM_PROVIDER_CHOICES, blank=True, null=True,
         verbose_name=_("Payout Mobile Money Provider")
     )
-    payout_mobile_money_number = models.CharField(
+    mobile_money_number = models.CharField(
         max_length=15, blank=True, null=True, verbose_name=_("Payout Mobile Money Number")
     )
+    # --- START: Added missing payout fields ---
+    paypal_email = models.EmailField(blank=True, null=True, verbose_name=_("PayPal Email Address"))
+    bank_account_name = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Bank Account Holder's Name"))
+    bank_account_number = models.CharField(max_length=50, blank=True, null=True, verbose_name=_("Bank Account Number"))
+    bank_name = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Bank Name"))
+    bank_branch = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Bank Branch Name/Address"))
+    # --- END: Added missing payout fields ---
     paystack_recipient_code = models.CharField(
         max_length=100, blank=True, null=True, editable=False, # System-managed
         verbose_name=_("Paystack Recipient Code")
     )
+    # --- START: Advanced Payout Options ---
+    stripe_account_id = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Stripe Connect Account ID"), help_text=_("Your Stripe Connect account ID (e.g., acct_xxxxxxxx)."))
+    payoneer_email = models.EmailField(blank=True, null=True, verbose_name=_("Payoneer Email Address"))
+    wise_email = models.EmailField(blank=True, null=True, verbose_name=_("Wise (formerly TransferWise) Email Address"))
+    crypto_wallet_address = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Cryptocurrency Wallet Address"))
+    crypto_wallet_network = models.CharField(max_length=50, blank=True, null=True, verbose_name=_("Crypto Network"), help_text=_("e.g., Bitcoin, Ethereum (ERC20), Tron (TRC20), etc."))
+    # --- END: Advanced Payout Options ---
     # --- END: Payout Information ---
-    # Add more fields as needed, e.g., years_of_experience, specific skills, location, etc.
     is_approved = models.BooleanField(default=False, help_text=_("Is this service provider profile approved by admin?"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Profile Created At"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Profile Updated At"))
 
+    class Meta:
+        verbose_name = _("Service Provider Profile")
+        verbose_name_plural = _("Service Provider Profiles")
+
     def __str__(self):
-        return f"Service Provider Profile for {self.user.username}" # Changed to username for consistency
+        return f"Service Provider Profile for {self.user.username}"
 
     def get_available_payout_balance(self):
         """
         Calculates the available payout balance for this service provider.
         """
-        # 1. Calculate Gross Earnings from completed service bookings
-        # Assumes ServiceBooking.provider directly links to the User model
         completed_bookings = ServiceBooking.objects.filter(
             provider=self.user,
-            status='COMPLETED' # Use the actual key from STATUS_CHOICES
+            status='COMPLETED'
         ).select_related('service_package')
 
         gross_earnings = sum((booking.service_package.price for booking in completed_bookings if booking.service_package), Decimal('0.00'))
 
-        # 2. Calculate Platform Commission
-        # Ensure commission_rate is Decimal, especially if it was loaded as a float from settings
-        raw_commission_rate = getattr(settings, 'PLATFORM_SERVICE_COMMISSION_RATE', Decimal('0.10')) # Default 10%
+        raw_commission_rate = getattr(settings, 'PLATFORM_SERVICE_COMMISSION_RATE', Decimal('0.10'))
         if not isinstance(raw_commission_rate, Decimal):
-            commission_rate = Decimal(str(raw_commission_rate)) # Convert via string to avoid float precision issues
+            commission_rate = Decimal(str(raw_commission_rate))
         else:
             commission_rate = raw_commission_rate
-        total_commission = gross_earnings * commission_rate # This is line 1095
+        total_commission = gross_earnings * commission_rate
         net_earnings = gross_earnings - total_commission
 
-        # 3. Calculate Total Paid Out
         completed_payouts = PayoutRequest.objects.filter(
             service_provider_profile=self,
-            status='completed' # Use the actual key from STATUS_CHOICES
+            status='completed'
         ).aggregate(total_paid=Sum('amount_requested'))['total_paid'] or Decimal('0.00')
 
         return (net_earnings - completed_payouts).quantize(Decimal('0.01'))
-# --- END: Service Provider Profile Model ---
+
+# --- START: PortfolioItem Model ---
+class PortfolioItem(models.Model):
+    """
+    Represents a single portfolio item for a Service Provider to showcase their work.
+    """
+    provider_profile = models.ForeignKey(ServiceProviderProfile, on_delete=models.CASCADE, related_name='portfolio_items')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to='portfolio_images/', blank=True, null=True, help_text=_("Upload an image for your portfolio item."))
+    link = models.URLField(max_length=255, blank=True, null=True, help_text=_("Or, provide a link to a video (e.g., YouTube, Vimeo) or external project."))
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = _("Portfolio Item")
+        verbose_name_plural = _("Portfolio Items")
+        # This constraint ensures that an item has an image OR a link, but not both.
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(image__isnull=False, link__isnull=True) |
+                    models.Q(image__isnull=True, link__isnull=False)
+                ),
+                name='image_or_link_present',
+                violation_error_message=_("A portfolio item must have either an image or a link, but not both.")
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.title} for {self.provider_profile.user.username}"
+
+# --- END: PortfolioItem Model ---
+
 
 # --- START: Rider Model ---
 class RiderProfile(models.Model):
@@ -1198,6 +1351,61 @@ class RiderApplication(models.Model):
         return f"Rider Application for {self.user.username}"
 # --- END: Rider Application Model ---
 
+# --- START: DeliveryTask Model ---
+class DeliveryTask(models.Model):
+    """
+    Represents a single delivery task for an order, to be assigned to a rider.
+    """
+    STATUS_CHOICES = [
+        ('PENDING_ASSIGNMENT', _('Pending Assignment')),
+        ('ACCEPTED_BY_RIDER', _('Accepted by Rider')),
+        ('PICKED_UP', _('Picked Up')),
+        ('OUT_FOR_DELIVERY', _('Out for Delivery')),
+        ('DELIVERED', _('Delivered')),
+        ('CANCELLED', _('Cancelled')),
+        ('FAILED', _('Failed')),
+    ]
+
+    task_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True, verbose_name=_("Task ID"))
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='delivery_tasks', verbose_name=_("Order"))
+    rider = models.ForeignKey('RiderProfile', on_delete=models.SET_NULL, null=True, blank=True, related_name='delivery_tasks', verbose_name=_("Assigned Rider"))
+    status = models.CharField(_("Task Status"), max_length=30, choices=STATUS_CHOICES, default='PENDING_ASSIGNMENT', db_index=True)
+
+    # Address Information (denormalized for performance and history)
+    pickup_address_text = models.TextField(_("Pickup Address"), blank=True)
+    pickup_latitude = models.DecimalField(_("Pickup Latitude"), max_digits=9, decimal_places=6, null=True, blank=True)
+    pickup_longitude = models.DecimalField(_("Pickup Longitude"), max_digits=9, decimal_places=6, null=True, blank=True)
+    delivery_address_text = models.TextField(_("Delivery Address"))
+    delivery_latitude = models.DecimalField(_("Delivery Latitude"), max_digits=9, decimal_places=6, null=True, blank=True)
+    delivery_longitude = models.DecimalField(_("Delivery Longitude"), max_digits=9, decimal_places=6, null=True, blank=True)
+
+    # Financials
+    delivery_fee = models.DecimalField(_("Total Delivery Fee"), max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    rider_earning = models.DecimalField(_("Rider Earning"), max_digits=10, decimal_places=2, null=True, blank=True, help_text=_("Amount the rider earns from this delivery."))
+    platform_commission = models.DecimalField(_("Platform Commission"), max_digits=10, decimal_places=2, null=True, blank=True, help_text=_("Commission earned by the platform for this delivery."))
+
+    # Timestamps
+    estimated_pickup_time = models.DateTimeField(_("Estimated Pickup Time"), null=True, blank=True)
+    actual_pickup_time = models.DateTimeField(_("Actual Pickup Time"), null=True, blank=True)
+    estimated_delivery_time = models.DateTimeField(_("Estimated Delivery Time"), null=True, blank=True)
+    actual_delivery_time = models.DateTimeField(_("Actual Delivery Time"), null=True, blank=True)
+
+    special_instructions = models.TextField(_("Special Instructions"), blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Delivery Task")
+        verbose_name_plural = _("Delivery Tasks")
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Task {self.task_id} for Order {self.order.order_id}"
+
+    def get_absolute_url(self):
+        return reverse('core:rider_task_detail', kwargs={'task_id': self.task_id})
+# --- END: DeliveryTask Model ---
 
 # --- START: Rider Boost Visibility Models ---
 class BoostPackage(models.Model):
@@ -1233,166 +1441,28 @@ class BoostPackage(models.Model):
 
 # Moved ActiveRiderBoost outside of BoostPackage
 class ActiveRiderBoost(models.Model):
-     rider_profile = models.ForeignKey(RiderProfile, on_delete=models.CASCADE, related_name='active_boosts', verbose_name=_("Rider Profile"))
-     boost_package = models.ForeignKey(BoostPackage, on_delete=models.PROTECT, related_name='activations', verbose_name=_("Boost Package")) # PROTECT to prevent deleting a package if it has active boosts
-     activated_at = models.DateTimeField(_("Activated At"), auto_now_add=True)
-     expires_at = models.DateTimeField(_("Expires At"))
-     is_active = models.BooleanField(_("Is Currently Active?"), default=True, help_text=_("Automatically set based on expiry. Can be manually overridden."))
-    # Optional: Store payment transaction ID if boosts are paid
-    # transaction_id = models.CharField(max_length=100, blank=True, null=True, verbose_name=_("Payment Transaction ID"))
+    rider_profile = models.ForeignKey(RiderProfile, on_delete=models.CASCADE, related_name='active_boosts', verbose_name=_("Rider Profile"))
+    boost_package = models.ForeignKey(BoostPackage, on_delete=models.PROTECT, related_name='activations', verbose_name=_("Boost Package"))
+    activated_at = models.DateTimeField(_("Activated At"), auto_now_add=True)
+    expires_at = models.DateTimeField(_("Expires At"))
+    is_active = models.BooleanField(_("Is Currently Active?"), default=True, help_text=_("Automatically set based on expiry. Can be manually overridden."))
 
-class Meta:
+    class Meta:
         verbose_name = _("Active Rider Boost")
         verbose_name_plural = _("Active Rider Boosts")
         ordering = ['-expires_at', 'rider_profile']
 
-def __str__(self):
+    def __str__(self):
         return f"{self.rider_profile.user.username}'s {self.boost_package.name} (Expires: {self.expires_at.strftime('%Y-%m-%d %H:%M')})"
 
-def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs):
         if not self.expires_at and self.boost_package:
             self.expires_at = timezone.now() + self.boost_package.duration_timedelta
-        # Automatically update is_active based on expiry, unless manually set
         if self.expires_at and self.is_active and self.expires_at < timezone.now():
             self.is_active = False
         super().save(*args, **kwargs)
 
-# --- END: Rider Boost Visibility Models ---
-
-
-
-# --- START: Delivery Task Model ---
-class DeliveryTask(models.Model):
-    STATUS_CHOICES = (
-        ('PENDING_ASSIGNMENT', _('Pending Assignment')),
-        ('ASSIGNED', _('Assigned to Rider')),
-        ('ACCEPTED_BY_RIDER', _('Accepted by Rider')),
-        ('REJECTED_BY_RIDER', _('Rejected by Rider')), # If a rider rejects an assignment
-        ('PICKED_UP', _('Picked Up from Vendor')),
-        ('OUT_FOR_DELIVERY', _('Out for Delivery')),
-        ('DELIVERED', _('Delivered')),
-        ('CANCELLED_BY_CUSTOMER', _('Cancelled by Customer')),
-        ('CANCELLED_BY_VENDOR', _('Cancelled by Vendor')),
-        ('CANCELLED_BY_ADMIN', _('Cancelled by Admin')),
-        ('FAILED_DELIVERY', _('Failed Delivery Attempt')),
-    )
-
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='delivery_tasks', verbose_name=_("Order"))
-    rider = models.ForeignKey(RiderProfile, on_delete=models.SET_NULL, null=True, blank=True, related_name='delivery_tasks', verbose_name=_("Assigned Rider"))
-    
-    # Store addresses as text for the task snapshot, even if they come from order/vendor
-    # This helps if original addresses are modified later.
-    pickup_address_text = models.TextField(verbose_name=_("Pickup Address Snapshot"))
-    pickup_latitude = models.DecimalField(_("Pickup Latitude"), max_digits=9, decimal_places=6, null=True, blank=True)
-    pickup_longitude = models.DecimalField(_("Pickup Longitude"), max_digits=9, decimal_places=6, null=True, blank=True)
-    delivery_address_text = models.TextField(verbose_name=_("Delivery Address Snapshot"))
-    delivery_latitude = models.DecimalField(_("Delivery Latitude"), max_digits=9, decimal_places=6, null=True, blank=True)
-    delivery_longitude = models.DecimalField(_("Delivery Longitude"), max_digits=9, decimal_places=6, null=True, blank=True)
-
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='PENDING_ASSIGNMENT', verbose_name=_("Status"))
-    
-    # Timestamps for various stages
-    estimated_pickup_time = models.DateTimeField(null=True, blank=True, verbose_name=_("Estimated Pickup Time"))
-    actual_pickup_time = models.DateTimeField(null=True, blank=True, verbose_name=_("Actual Pickup Time"))
-    estimated_delivery_time = models.DateTimeField(null=True, blank=True, verbose_name=_("Estimated Delivery Time"))
-    actual_delivery_time = models.DateTimeField(null=True, blank=True, verbose_name=_("Actual Delivery Time"))
-    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name=_("Delivery Fee")) # Consider if fee is per task or order
- # Earnings and Commission
-    rider_earning = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name=_("Rider Earning for this Task"))
-    platform_commission = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name=_("Platform Commission for this Task"))
-
-    special_instructions = models.TextField(blank=True, null=True, verbose_name=_("Special Instructions"))
-    # delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name=_("Delivery Fee")) # Consider if fee is per task or order
-
-    task_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, verbose_name=_("Task ID"))
-
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
-    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
-
-    def __str__(self):
-        return f"Delivery Task for Order {self.order.order_id} - Status: {self.get_status_display()}"
-
-    class Meta:
-        verbose_name = _("Delivery Task")
-        verbose_name_plural = _("Delivery Tasks")
-        ordering = ['-created_at']
-# --- END: Delivery Task Model ---
-
-
-
-# --- START: Portfolio Item Model (for Service Providers) ---
-def service_provider_portfolio_path(instance, filename):
-    # file will be uploaded to MEDIA_ROOT/service_providers/<user_id>/portfolio/<filename>
-    return f'service_providers/{instance.provider_profile.user.id}/portfolio/{filename}'
-
-class PortfolioItem(models.Model):
-    provider_profile = models.ForeignKey(
-        ServiceProviderProfile,
-        on_delete=models.CASCADE,
-        related_name='portfolio_items',
-        verbose_name=_("Provider Profile")
-    )
-    title = models.CharField(max_length=200, blank=True, verbose_name=_("Title (Optional)"))
-    description = models.TextField(blank=True, verbose_name=_("Description (Optional)"))
-    image = models.ImageField(
-        upload_to=service_provider_portfolio_path,
-        blank=True,
-        null=True,
-        verbose_name=_("Image"),
-        help_text=_("Upload an image of your work.")
-    )
-    video_url = models.URLField(
-        blank=True,
-        null=True,
-        verbose_name=_("Video URL (e.g., YouTube, Vimeo)"),
-        help_text=_("Link to a video showcasing your work. This will be embedded.")
-    )
-    uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Uploaded At"))
-    class Meta:
-        ordering = ['-uploaded_at']
-        verbose_name = _("Portfolio Item")
-        verbose_name_plural = _("Portfolio Items")
-    def __str__(self):
-        return self.title or f"Portfolio Item for {self.provider_profile.user.username}" # Changed to username
-# --- END: Service Marketplace Models ---
-
-# --- START: Vendor Onboarding Related Models ---
-class VendorShipping(models.Model):
-    vendor = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name='shipping_info')
-    # Add fields specific to shipping setup, e.g.,
-    # default_shipping_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    # ships_internationally = models.BooleanField(default=False)
-    # ...
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Shipping Info for {self.vendor.name}"
-
-class VendorPayment(models.Model):
-    vendor = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name='payment_info')
-    # Add fields specific to payment setup, e.g.,
-    bank_account_name = models.CharField(max_length=255, blank=True)
-    bank_account_number = models.CharField(max_length=50, blank=True)
-    # bank_name = models.CharField(max_length=100, blank=True)
-    # ...
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Payment Info for {self.vendor.name}"
-
-class VendorAdditionalInfo(models.Model):
-    vendor = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name='additional_info')
-    # Add fields for any other information needed during onboarding
-    # e.g., business_hours = models.TextField(blank=True)
-    # certifications = models.TextField(blank=True)
-    terms_agreed = models.BooleanField(default=False) # Example field
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Additional Info for {self.vendor.name}"
-# --- END: Vendor Onboarding Related Models ---
-
-# --- START: OrderNote Model ---
+# --- OrderNote Model ---
 class OrderNote(models.Model):
     order = models.ForeignKey(Order, related_name='notes_history', on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, help_text="User who added the note (can be admin, vendor, or customer).")
@@ -1465,6 +1535,7 @@ class ServiceAvailability(models.Model):
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='availability_slots')
     # Or link to ServiceProviderProfile if availability is per provider, not per service
     # provider_profile = models.ForeignKey(ServiceProviderProfile, on_delete=models.CASCADE, related_name='availability_slots')
+
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     is_booked = models.BooleanField(default=False)
@@ -1591,7 +1662,7 @@ class SecurityLog(models.Model):
 
     def __str__(self):
         user_display = self.user.username if self.user else "Anonymous/System"
-        return f"{self.get_action_display()} by {user_display} at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
+        return f"{self.action} by {user_display} at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
 # --- END: SecurityLog Model ---
 
 # --- START: TermsAndConditions / PrivacyPolicy Models ---
@@ -1640,9 +1711,11 @@ class Transaction(models.Model):
         ('refund', _('Refund')),
         ('payout', _('Payout to Vendor/Provider')),
         ('platform_commission', _('Platform Commission')), # <!-- <<< Add this -->
+        ('vendor_plan_purchase', _('Vendor Plan Purchase')),
         ('boost_purchase', _('Rider Boost Purchase')),
         ('escrow_hold', _('Escrow Hold')),
         ('escrow_release', _('Escrow Release')),
+        ('reward_redemption', _('Reward Redemption')),
         # Add more types as needed
     )
     STATUS_CHOICES = (
@@ -1807,6 +1880,17 @@ class Conversation(models.Model):
         participant_names = ", ".join([p.username for p in self.participants.all()])
         return f"Conversation between {participant_names}" + (f" re: {self.subject}" if self.subject else "")
 
+    def get_other_participant(self, user):
+        """
+        Given a user, returns the other participant in a 2-person conversation.
+        Returns the first other participant if more than 2 are involved.
+        Returns None if the user is not a participant.
+        """
+        if user in self.participants.all():
+            # Prefetching participants in the view is recommended for performance
+            return self.participants.exclude(id=user.id).first()
+        return None
+
 class Message(models.Model):
     """
     Represents a single message within a conversation.
@@ -1815,6 +1899,7 @@ class Message(models.Model):
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_messages')
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(_("Read At"), null=True, blank=True)
     is_read = models.BooleanField(default=False) # Could be more complex with read receipts per participant
 
     class Meta:
@@ -1978,13 +2063,9 @@ class TicketResponse(models.Model):
     ticket = models.ForeignKey(SupportTicket, on_delete=models.CASCADE, related_name='responses')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE) # User who wrote the response
     message = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    # attachment = models.FileField(upload_to='ticket_attachments/', blank=True, null=True)
 
-    class Meta:
-        ordering = ['created_at']
-    def __str__(self): return f"Response to Ticket #{self.ticket.id} by {self.user.username}"
-# --- END: SupportTicket Models ---
+
+
 
 # --- START: UserActivity Model ---
 class UserActivity(models.Model):
@@ -2134,7 +2215,8 @@ class AffiliateClick(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self): return f"Click for {self.affiliate.referral_code} at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
+    def __str__(self):
+        return f"Click for {self.affiliate.referral_code} at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
 
 class AffiliatePayout(models.Model):
     STATUS_CHOICES = ( ('pending', 'Pending'), ('paid', 'Paid'), ('failed', 'Failed'), )
@@ -2182,7 +2264,7 @@ class Reward(models.Model):
     program = models.ForeignKey(LoyaltyProgram, on_delete=models.CASCADE, related_name='rewards')
     name = models.CharField(max_length=100) # e.g., "GH₵10 Discount Coupon", "Free Shipping"
     description = models.TextField(blank=True)
-    # points_cost = models.PositiveIntegerField()
+    points_cost = models.PositiveIntegerField(_("Points Cost"), default=0)
     # reward_type = models.CharField(max_length=20, choices=(('coupon', 'Coupon'), ('discount', 'Discount'), ('free_item', 'Free Item')))
     # reward_value = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True) # If applicable
     is_active = models.BooleanField(default=True)
@@ -2203,7 +2285,7 @@ class UserReward(models.Model):
 class Coupon(models.Model):
     code = models.CharField(max_length=50, unique=True)
     description = models.TextField(blank=True)
-    # discount_type = models.CharField(max_length=10, choices=(('percent', 'Percentage'), ('fixed', 'Fixed Amount')))
+    # discount_type = models.CharField(max_length=10, choices=(('percent', 'Percentage'), ('fixed', 'Fixed')))
     # discount_value = models.DecimalField(max_digits=10, decimal_places=2)
     # valid_from = models.DateTimeField()
     # valid_to = models.DateTimeField()
@@ -2253,3 +2335,69 @@ class UserGiftCard(models.Model): # Tracks usage of a gift card
 
     def __str__(self): return f"{self.user.username} used {self.amount_used} from Gift Card {self.gift_card.code}"
 # --- END: Coupon & Gift Card Models ---
+
+# --- START: Pricing Plan Model ---
+class PricingPlan(models.Model):
+    PLAN_TYPE_CHOICES = (
+        ('vendor_premium', _('Vendor Premium Plan')),
+        # Add other types here if you expand, e.g., ('rider_boost_pack', 'Rider Boost Pack')
+    )
+    name = models.CharField(max_length=100, verbose_name=_("Plan Name"))
+    description = models.TextField(blank=True, verbose_name=_("Description"))
+    plan_type = models.CharField(max_length=50, choices=PLAN_TYPE_CHOICES, default='vendor_premium')
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name=_("Price"))
+    currency = models.CharField(max_length=3, default='GHS', help_text=_("ISO 4217 currency code."))
+    duration_days = models.PositiveIntegerField(help_text=_("Duration of the plan in days (e.g., 30 for monthly, 365 for yearly)."))
+    features = models.TextField(blank=True, help_text=_("List of features, one per line."))
+    is_active = models.BooleanField(default=True, help_text=_("Is this plan available for purchase?"))
+    display_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['display_order', 'price']
+        verbose_name = _("Pricing Plan")
+        verbose_name_plural = _("Pricing Plans")
+
+    def __str__(self):
+        return f"{self.name} - {self.currency} {self.price}"
+
+    def get_features_list(self):
+        return [feature.strip() for feature in self.features.split('\n') if feature.strip()]
+# --- END: Pricing Plan Model ---
+
+class ProductQuestion(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='questions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class ProductAnswer(models.Model):
+    question = models.ForeignKey(ProductQuestion, on_delete=models.CASCADE, related_name='answers')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE) # Can be vendor or another user
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+# --- START: FraudReport Model ---
+class FraudReport(models.Model):
+    """
+    Represents a fraud report for an order.
+    """
+    STATUS_CHOICES = (
+        ('OPEN', _('Open')),
+        ('UNDER_REVIEW', _('Under Review')),
+        ('RESOLVED', _('Resolved')),
+    )
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='fraud_report')
+    risk_score = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
+    reasons = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = _("Fraud Report")
+        verbose_name_plural = _("Fraud Reports")
+
+    def __str__(self):
+        return f"Fraud Report for Order {self.order.order_id}"
+# --- END: FraudReport Model ---

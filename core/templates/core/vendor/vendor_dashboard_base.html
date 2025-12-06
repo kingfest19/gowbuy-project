@@ -1,0 +1,90 @@
+{% load static i18n %}
+<!DOCTYPE html>
+{% get_current_language as LANGUAGE_CODE %}<html lang="{{ LANGUAGE_CODE|default:"en" }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block page_title %}{% trans "Vendor Dashboard" %}{% endblock page_title %} - NEXUS</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% comment %} Font Awesome link removed as emojis are used for sidebar. Add back if main nav/footer needs it. {% endcomment %}
+    <!-- Custom Dashboard CSS -->
+    <link rel="stylesheet" href="{% static 'assets/css/vendor_dashboard.css' %}">
+
+    {% block extra_css %}{% endblock extra_css %}
+</head>
+<body>
+    {% include 'partials/_main_navbar.html' %} {# <<< Main site navigation bar #}
+
+    <div class="vendor-dashboard-content-wrapper">
+        <div class="sidebar">
+            <h4 class="mb-4">{% trans "Vendor Panel" %}</h4>
+            <ul class="nav flex-column d-flex h-100">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'vendor_dashboard' %}active{% endif %}" href="{% url 'core:vendor_dashboard' %}">
+                        <span aria-hidden="true">📊</span> {% trans "Dashboard" %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'dashboard/products' in request.path %}active{% endif %}" href="{% url 'core:vendor_product_list' %}">
+                        <span aria-hidden="true">📦</span> {% trans "Products" %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'dashboard/orders' in request.path %}active{% endif %}" href="{% url 'core:vendor_order_list' %}">
+                        <span aria-hidden="true">🛒</span> {% trans "Orders" %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'dashboard/messages' in request.path %}active{% endif %}" href="{% url 'core:vendor_message_list' %}">
+                        <span aria-hidden="true">💬</span> {% trans "Messages" %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'dashboard/reports' in request.path %}active{% endif %}" href="{% url 'core:vendor_reports' %}">
+                        <span aria-hidden="true">📄</span> {% trans "Reports" %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'dashboard/promotions' in request.path %}active{% endif %}" href="{% url 'core:vendor_promotion_list' %}">
+                        <span aria-hidden="true">📈</span> {% trans "Promotions" %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'dashboard/campaigns' in request.path %}active{% endif %}" href="{% url 'core:vendor_campaign_list' %}">
+                        <span aria-hidden="true">📢</span> {% trans "Campaigns" %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'edit_vendor_profile' %}active{% endif %}" href="{% url 'core:edit_vendor_profile' %}">
+                        <span aria-hidden="true">🏬</span> {% trans "Shop Profile" %}
+                    </a>
+                </li>
+                 <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'vendor_verification' %}active{% endif %}" href="{% url 'core:vendor_verification' %}">
+                        <span aria-hidden="true">✅</span> {% trans "Verification" %}
+                    </a>
+                </li>
+                <li class="nav-item mt-auto">
+                    <hr>
+                    <a class="nav-link" href="{% url 'core:home' %}"><span aria-hidden="true">🏠</span> {% trans "Back to Site" %}</a>
+                    <a class="nav-link text-danger" href="{% url 'authapp:signout' %}"><span aria-hidden="true">🚪</span> {% trans "Sign Out" %}</a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            {% block vendor_content %}
+            <!-- Content from child templates will go here -->
+            {% endblock vendor_content %}
+        </div>
+    </div> <!-- End vendor-dashboard-content-wrapper -->
+
+    {% include 'partials/_main_footer.html' %} {# <<< Main site footer #}
+
+    <!-- Bootstrap JS Bundle (Popper.js included) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock extra_js %}
+</body>
+</html>

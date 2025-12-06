@@ -142,6 +142,27 @@
         text-decoration: underline;
       }
 
+      .cart-item-actions .save-for-later-btn,
+      .cart-item-actions .move-to-cart-btn,
+      .cart-item-actions .delete-saved-btn {
+          background: none;
+          border: none;
+          color: var(--color-primary, #007bff);
+          font-size: 0.85rem;
+          cursor: pointer;
+          padding: 0;
+      }
+      .cart-item-actions .save-for-later-btn:hover,
+      .cart-item-actions .move-to-cart-btn:hover,
+      .cart-item-actions .delete-saved-btn:hover {
+          color: var(--color-danger, #dc3545);
+          text-decoration: underline;
+      }
+      .saved-for-later-section h2 {
+          font-size: 1.25rem;
+          margin-bottom: 1rem;
+      }
+
       .cart-item-price-section {
         text-align: right;
         min-width: 100px; /* Ensure price doesn't wrap too easily */
@@ -271,62 +292,122 @@
         <!-- Left Column: Cart Items -->
         <div class="cart-left">
           <h1>Shopping Cart</h1>
+          {% csrf_token %} {# Add token for AJAX requests #}
 
-          <div class="cart-items-list">
+          <div class="cart-items-list"
+               data-remove-url-template="{% url 'core:remove_from_cart' 0 %}"
+               data-update-url-template="{% url 'core:update_cart_item' 0 %}"
+               data-save-url-template="{% url 'core:save_for_later' 0 %}"
+               data-move-url-template="{% url 'core:move_to_cart' 0 %}"
+               data-delete-saved-url-template="{% url 'core:delete_saved_item' 0 %}">
             {# --- Start Loop Here in Django --- #}
             {% for item in cart_items %}
-                <div class="cart-item" data-item-id="{{ item.product.id }}"> {# Use actual product ID #}
+                <div class="cart-item" data-item-id="{{ item.id }}">
+                  
+                  {# --- IMAGE --- #}
                   <div class="cart-item-image">
-                    {% with first_product_image=item.product.images.first %}
-                        {% if first_product_image and first_product_image.image and first_product_image.image.url %}
-                            <img src="{{ first_product_image.image.url }}" alt="{{ item.product.name }}">
-                        {% else %}
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Placeholder"> {# Default placeholder #}
-                        {% endif %}
-                    {% endwith %}
+                    {% if item.product %}
+                        {% with first_image=item.product.images.first %}
+                            {% if first_image.image.url %}
+                                <img src="{{ first_image.image.url }}" alt="{{ item.name }}">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="Placeholder">
+                            {% endif %}
+                        {% endwith %}
+                    {% elif item.service_package %}
+                        {% with first_image=item.service_package.service.images.first %}
+                            {% if first_image.image.url %}
+                                <img src="{{ first_image.image.url }}" alt="{{ item.name }}">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="Placeholder">
+                            {% endif %}
+                        {% endwith %}
+                    {% else %}
+                        <img src="{% static 'assets/img/placeholder.png' %}" alt="Placeholder">
+                    {% endif %}
                   </div>
+
                   <div class="cart-item-details">
-                    <h3>{{ item.product.name }}</h3>
+                    
+                    {# --- NAME --- #}
+                    <h3>{{ item.name }}</h3>
+                    
+                    {# --- SPECS (Sold by / Offered by) --- #}
                     <div class="item-specs">
-                      {# Add dynamic specs if available, e.g., color, size #}
-                      {% if item.product.vendor %}
-                        <span class="d-block">Sold by: <a href="{{ item.product.vendor.get_absolute_url }}">{{ item.product.vendor.name }}</a></span>
-                      {% endif %}
+                        {% if item.product %}
+                            {% with vendor=item.product.vendor %}
+                                <span class="d-block">
+                                    Sold by:
+                                    {% if vendor %}
+                                        <a href="{{ vendor.get_absolute_url }}">{{ vendor.name }}</a>
+                                    {% else %}
+                                        NEXUS
+                                    {% endif %}
+                                </span>
+                            {% endwith %}
+                        {% elif item.service_package %}
+                            {% with provider=item.service_package.service.provider %}
+                                <span class="d-block">
+                                    Offered by:
+                                    {% if provider %}
+                                        <a href="{% url 'core:provider_profile_detail' username=provider.username %}">{{ provider.get_full_name|default:provider.username }}</a>
+                                    {% else %}
+                                        NEXUS
+                                    {% endif %}
+                                </span>
+                            {% endwith %}
+                        {% endif %}
                     </div>
+
+                    {# --- STOCK STATUS --- #}
                     <div class="item-stock">
-                      {% if item.product.is_in_stock %}
-                        In Stock
-                      {% else %}
-                        <span class="text-danger">Out of Stock</span>
-                      {% endif %}
+                        {% if item.product %}
+                            {% if item.product.is_in_stock %}
+                                In Stock
+                            {% else %}
+                                <span class="text-danger">Out of Stock</span>
+                            {% endif %}
+                        {% elif item.service_package %}
+                            <span class="text-info">Service</span>
+                        {% else %}
+                            {# Fallback for unknown item type #}
+                        {% endif %}
                     </div>
-                    <div class="cart-item-quantity">
-                      {# --- TODO: Implement Update Quantity Form/Links --- #}
-                      <button class="quantity-change" data-change="-1" data-item-id="{{ item.product.id }}">-</button>
-                      <input
-                        type="number"
-                        value="{{ item.quantity }}"
-                        min="1"
-                        max="{{ item.product.stock|default:99 }}" {# Use actual stock limit #}
-                        class="item-quantity-input"
-                        aria-label="Item Quantity"
-                        data-item-id="{{ item.product.id }}"
-                      />
-                      <button class="quantity-change" data-change="1" data-item-id="{{ item.product.id }}">+</button>
-                      {# --- END TODO --- #}
-                    </div>
+
+                    {# --- QUANTITY CONTROLS --- #}
+                    {% if item.product and item.product.product_type == 'physical' %}
+                        <div class="cart-item-quantity">
+                            <button class="quantity-change" data-change="-1" data-item-id="{{ item.id }}">-</button>
+                            <input
+                              type="number"
+                              value="{{ item.quantity }}"
+                              min="1"
+                              max="{{ item.product.stock|default:99 }}"
+                              class="item-quantity-input"
+                              aria-label="Item Quantity"
+                              data-item-id="{{ item.id }}"
+                            />
+                            <button class="quantity-change" data-change="1" data-item-id="{{ item.id }}">+</button>
+                        </div>
+                    {% endif %}
+
+                    {# --- ACTIONS (Remove button) --- #}
                     <div class="cart-item-actions">
-                      {# --- TODO: Implement Remove Item Form/Link --- #}
-                      <button class="remove-item-btn" data-item-id="{{ item.product.id }}">
+                      <button class="remove-item-btn" data-item-id="{{ item.id }}">
                         Remove
                       </button>
-                      {# --- END TODO --- #}
+                      <span class="mx-1 text-muted">|</span>
+                      <button class="save-for-later-btn" data-item-id="{{ item.id }}">
+                        Save for Later
+                      </button>
                     </div>
                   </div>
+
+                  {# --- PRICE SECTION --- #}
                   <div class="cart-item-price-section">
-                    <div class="unit-price">${{ item.product.price|floatformat:2 }}</div>
-                    <div class="item-subtotal" data-unit-price="{{ item.product.price }}">
-                      ${{ item.total_item_price|floatformat:2|intcomma }} {# Use calculated total #}
+                    <div class="unit-price">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}{{ item.price|floatformat:2 }}</div>
+                    <div class="item-subtotal" data-unit-price="{{ item.price }}">
+                      {{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}{{ item.total_item_price|floatformat:2|intcomma }} {# Use calculated total #}
                     </div>
                   </div>
                 </div>
@@ -344,9 +425,65 @@
           {% if cart_items %} {# Only show if cart is not empty #}
           <div class="cart-subtotal-row">
             Subtotal (<span id="cart-item-count-display">{{ cart_items|length }}</span> items): {# Dynamic count #}
-            <span id="cart-subtotal-display-left">${{ cart_total|floatformat:2|intcomma }}</span> {# Dynamic total #}
+            <span id="cart-subtotal-display-left">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}{{ cart_total|floatformat:2|intcomma }}</span> {# Dynamic total #}
           </div>
           {% endif %}
+
+          <!-- Saved For Later Section -->
+          <div id="saved-for-later-container">
+            {% if saved_for_later_items %}
+            <div class="saved-for-later-section mt-5">
+                <h2 class="h4 border-top pt-4">Saved for Later (<span id="saved-items-count">{{ saved_for_later_items|length }}</span> items)</h2>
+                <div class="saved-items-list">
+                    {% for saved_item in saved_for_later_items %}
+                        <div class="cart-item saved-item" data-saved-item-id="{{ saved_item.id }}">
+                            <!-- Image -->
+                            <div class="cart-item-image">
+                                {% if saved_item.product %}
+                                    {% with first_image=saved_item.product.images.first %}
+                                        {% if first_image.image.url %}
+                                            <img src="{{ first_image.image.url }}" alt="{{ saved_item.name }}">
+                                        {% else %}
+                                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Placeholder">
+                                        {% endif %}
+                                    {% endwith %}
+                                {% elif saved_item.service_package %}
+                                    {% with first_image=saved_item.service_package.service.images.first %}
+                                        {% if first_image.image.url %}
+                                            <img src="{{ first_image.image.url }}" alt="{{ saved_item.name }}">
+                                        {% else %}
+                                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Placeholder">
+                                        {% endif %}
+                                    {% endwith %}
+                                {% else %}
+                                    <img src="{% static 'assets/img/placeholder.png' %}" alt="Placeholder">
+                                {% endif %}
+                            </div>
+                            <!-- Details -->
+                            <div class="cart-item-details">
+                                <h3>{{ saved_item.name }}</h3>
+                                <div class="item-specs">Quantity: <span class="saved-item-quantity">{{ saved_item.quantity }}</span></div>
+          
+                                <div class="cart-item-actions">
+                                    <button class="move-to-cart-btn" data-saved-item-id="{{ saved_item.id }}">
+                                        Move to Cart
+                                    </button>
+                                    <span class="mx-1 text-muted">|</span>
+                                    <button class="delete-saved-btn" data-saved-item-id="{{ saved_item.id }}">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Price -->
+                            <div class="cart-item-price-section">
+                                <div class="item-subtotal">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}{{ saved_item.price|floatformat:2|intcomma }}</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+          </div>
         </div>
         <!-- End cart-left -->
 
@@ -360,7 +497,7 @@
                 >Subtotal (<span id="cart-item-count-summary">{{ cart_items|length }}</span>
                 items)</span
               >
-              <span id="summary-subtotal">${{ cart_total|floatformat:2|intcomma }}</span> {# Dynamic total #}
+              <span id="summary-subtotal">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}{{ cart_total|floatformat:2|intcomma }}</span> {# Dynamic total #}
             </div>
             <div class="summary-item">
               <span>Shipping</span>
@@ -368,12 +505,12 @@
             </div>
             <div class="summary-item">
               <span>Estimated Tax</span>
-              <span id="summary-tax">$0.00</span> {# TODO: Calculate tax later #}
+              <span id="summary-tax">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}0.00</span> {# TODO: Calculate tax later #}
             </div>
             <hr />
             <div class="summary-total">
               <span>Order total</span>
-              <span id="summary-total">${{ cart_total|floatformat:2|intcomma }}</span> {# TODO: Add tax/shipping later #}
+              <span id="summary-total">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}{{ cart_total|floatformat:2|intcomma }}</span> {# TODO: Add tax/shipping later #}
             </div>
             {# --- Link to checkout (defined in main urls.py) --- #}
             <form action="{% url 'core:checkout' %}" method="GET">
@@ -396,5 +533,292 @@
 {% block extra_js %}
     {{ block.super }} {# <<< ADD THIS LINE #}
     <!-- Link your cart JavaScript file if needed for quantity updates etc. -->
-    {# <script src="{% static 'assets/js/cart.js' %}"></script> #}
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+          const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+          const cartItemsList = document.querySelector('.cart-items-list');
+          const removeUrlTemplate = cartItemsList.dataset.removeUrlTemplate;
+          const updateUrlTemplate = cartItemsList.dataset.updateUrlTemplate;
+          const saveUrlTemplate = cartItemsList.dataset.saveUrlTemplate;
+          const moveUrlTemplate = cartItemsList.dataset.moveUrlTemplate;
+          const deleteSavedUrlTemplate = cartItemsList.dataset.deleteSavedUrlTemplate;
+          const cartLeftContainer = document.querySelector('.cart-left');
+          const currencySymbol = "{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}";
+
+          // --- Helper function to update cart summary ---
+          function updateCartSummary(data) {
+              // Update counts
+              const itemCountDisplay = document.getElementById('cart-item-count-display');
+              const itemCountSummary = document.getElementById('cart-item-count-summary');
+              if (itemCountDisplay) itemCountDisplay.textContent = data.cart_items_count;
+              if (itemCountSummary) itemCountSummary.textContent = data.cart_items_count;
+
+              // Update totals
+              const cartSubtotalLeft = document.getElementById('cart-subtotal-display-left');
+              const summarySubtotal = document.getElementById('summary-subtotal');
+              const summaryTotal = document.getElementById('summary-total');
+              
+              // The view now provides a pre-formatted string for the total
+              const formattedTotal = currencySymbol + data.cart_total;
+
+              if (cartSubtotalLeft) cartSubtotalLeft.textContent = formattedTotal;
+              if (summarySubtotal) summarySubtotal.textContent = formattedTotal;
+              if (summaryTotal) summaryTotal.textContent = formattedTotal; // Assumes total is same as subtotal for now
+          }
+
+          // --- Helper to update a single item's subtotal ---
+          function updateItemSubtotal(itemId, newSubtotal) {
+              const itemElement = document.querySelector(`.cart-item[data-item-id="${itemId}"]`);
+              if (itemElement) {
+                  const subtotalElement = itemElement.querySelector('.item-subtotal');
+                  if (subtotalElement) {
+                      subtotalElement.textContent = currencySymbol + newSubtotal;
+                  }
+              }
+          }
+
+          // --- Logic for removing an item from the cart ---
+          cartLeftContainer.addEventListener('click', function(event) {
+              if (event.target.classList.contains('remove-item-btn')) { // REMOVE FROM CART
+                  const button = event.target;
+                  const itemId = button.dataset.itemId;
+                  const url = removeUrlTemplate.replace('/0/', `/${itemId}/`);
+
+                  fetch(url, {
+                      method: 'POST',
+                      headers: {
+                          'X-CSRFToken': csrfToken,
+                          'X-Requested-With': 'XMLHttpRequest' // To identify AJAX requests on the server
+                      },
+                  })
+                  .then(response => response.json())
+                  .then(data => {
+                      if (data.success) {
+                          // Remove the item's HTML element from the DOM
+                          const cartItemElement = document.querySelector(`.cart-item[data-item-id="${itemId}"]`);
+                          if (cartItemElement) {
+                              cartItemElement.remove();
+                          }
+                          
+                          updateCartSummary(data);
+
+                          // Check if cart is now empty
+                          if (data.cart_items_count === 0) {
+                              const cartRight = document.querySelector('.cart-right');
+                              if(cartRight) cartRight.remove();
+                              
+                              const emptyCartHTML = `
+                                  <div class="empty-cart-message">
+                                    <h2>Your NEXUS Cart is empty.</h2>
+                                    <p>Check out Today's Deals or continue shopping.</p>
+                                    <p><a href="{% url 'core:home' %}">Continue Shopping</a></p>
+                                  </div>
+                              `;
+                              const subtotalRow = document.querySelector('.cart-subtotal-row');
+                              if (cartItemsList) cartItemsList.innerHTML = emptyCartHTML;
+                              if (subtotalRow) subtotalRow.remove();
+                          }
+                      } else {
+                          alert(data.error || 'There was an error removing the item.');
+                      }
+                  })
+                  .catch(error => console.error('Error removing item:', error));
+              }
+
+              // --- Logic for changing quantity with +/- buttons --- (in cart)
+              if (event.target.classList.contains('quantity-change')) {
+                  const button = event.target;
+                  const itemId = button.dataset.itemId;
+                  const change = parseInt(button.dataset.change, 10);
+                  const itemElement = document.querySelector(`.cart-item[data-item-id="${itemId}"]`);
+                  const quantityInput = itemElement.querySelector('.item-quantity-input');
+
+                  let newQuantity = parseInt(quantityInput.value, 10) + change;
+
+                  if (newQuantity < 1) {
+                      return; // Don't allow quantity to go below 1 with buttons
+                  }
+
+                  // Send the update to the server
+                  sendQuantityUpdate(itemId, newQuantity, quantityInput);
+              }
+
+              // --- Logic for saving an item for later ---
+              if (event.target.classList.contains('save-for-later-btn')) {
+                  const button = event.target;
+                  const itemId = button.dataset.itemId;
+                  const url = saveUrlTemplate.replace('/0/', `/${itemId}/`);
+
+                  fetch(url, {
+                      method: 'POST',
+                      headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+                  })
+                  .then(response => response.json())
+                  .then(data => {
+                    if (data.success) {
+                        // 1. Remove the item from the cart list
+                        const cartItemElement = document.querySelector(`.cart-item[data-item-id="${itemId}"]`);
+                        if (cartItemElement) {
+                            cartItemElement.remove();
+                        }
+
+                        // 2. Update the main cart summary
+                        updateCartSummary(data);
+
+                        // 3. Handle the "Saved for Later" section
+                        let savedForLaterContainer = document.getElementById('saved-for-later-container');
+                        let savedItemsList;
+
+                        // Check if the saved for later section exists. If not, create it.
+                        if (!savedForLaterContainer.querySelector('.saved-for-later-section')) {
+                            savedForLaterContainer.innerHTML = `
+                                <div class="saved-for-later-section mt-5">
+                                    <h2 class="h4 border-top pt-4">Saved for Later (<span id="saved-items-count">0</span> items)</h2>
+                                    <div class="saved-items-list"></div>
+                                </div>
+                            `;
+                        }
+                        
+                        savedItemsList = savedForLaterContainer.querySelector('.saved-items-list');
+                        
+                        const savedItem = data.saved_item;
+
+                        if (data.created_new_saved_item) {
+                            // 4a. If it's a new item, create and append the element
+                            const newSavedItemHTML = `
+                                <div class="cart-item saved-item" data-saved-item-id="${savedItem.id}">
+                                    <div class="cart-item-image">
+                                        <img src="${savedItem.image_url}" alt="${savedItem.name}">
+                                    </div>
+                                    <div class="cart-item-details">
+                                        <h3>${savedItem.name}</h3>
+                                        <div class="item-specs">Quantity: <span class="saved-item-quantity">${savedItem.quantity}</span></div>
+                                        <div class="cart-item-actions">
+                                            <button class="move-to-cart-btn" data-saved-item-id="${savedItem.id}">
+                                                Move to Cart
+                                            </button>
+                                            <span class="mx-1 text-muted">|</span>
+                                            <button class="delete-saved-btn" data-saved-item-id="${savedItem.id}">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="cart-item-price-section">
+                                        <div class="item-subtotal">${currencySymbol}${savedItem.price}</div>
+                                    </div>
+                                </div>
+                            `;
+                            savedItemsList.insertAdjacentHTML('beforeend', newSavedItemHTML);
+                        } else {
+                            // 4b. If it's an existing item, find it and update its quantity
+                            const existingSavedItemEl = savedItemsList.querySelector(`.saved-item[data-saved-item-id="${savedItem.id}"]`);
+                            if (existingSavedItemEl) {
+                                const quantityEl = existingSavedItemEl.querySelector('.saved-item-quantity');
+                                if (quantityEl) {
+                                    quantityEl.textContent = savedItem.quantity;
+                                }
+                            } else {
+                                // Fallback: if element not found (e.g., if saved list was empty on page load), just reload.
+                                window.location.reload();
+                                return;
+                            }
+                        }
+
+                        // 5. Update the saved items count
+                        const savedItemsCountEl = document.getElementById('saved-items-count');
+                        if (savedItemsCountEl) {
+                            savedItemsCountEl.textContent = data.saved_items_count;
+                        }
+
+                        // 6. Check if cart is now empty and update UI accordingly
+                        if (data.cart_items_count === 0) {
+                            const cartRight = document.querySelector('.cart-right');
+                            if(cartRight) cartRight.remove();
+                            
+                            const emptyCartHTML = `
+                                <div class="empty-cart-message">
+                                  <h2>Your NEXUS Cart is empty.</h2>
+                                  <p>Check out Today's Deals or continue shopping.</p>
+                                  <p><a href="{% url 'core:home' %}">Continue Shopping</a></p>
+                                </div>
+                            `;
+                            const subtotalRow = document.querySelector('.cart-subtotal-row');
+                            if (cartItemsList) cartItemsList.innerHTML = emptyCartHTML;
+                            if (subtotalRow) subtotalRow.remove();
+                        }
+
+                    } else {
+                        alert(data.error || 'Could not save item for later.');
+                    }
+                  })
+                  .catch(error => console.error('Error saving item for later:', error));
+              }
+
+              // --- Logic for moving an item to the cart ---
+              if (event.target.classList.contains('move-to-cart-btn')) {
+                  const button = event.target;
+                  const savedItemId = button.dataset.savedItemId;
+                  const url = moveUrlTemplate.replace('/0/', `/${savedItemId}/`);
+
+                  fetch(url, {
+                      method: 'POST',
+                      headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+                  })
+                  .then(response => response.json())
+                  .then(data => {
+                      if (data.success) {
+                          window.location.reload();
+                      } else {
+                          alert(data.error || 'Could not move item to cart.');
+                      }
+                  })
+                  .catch(error => console.error('Error moving item to cart:', error));
+              }
+
+              // --- Logic for deleting a saved item ---
+              if (event.target.classList.contains('delete-saved-btn')) {
+                  const button = event.target;
+                  const savedItemId = button.dataset.savedItemId;
+                  const url = deleteSavedUrlTemplate.replace('/0/', `/${savedItemId}/`);
+
+                  fetch(url, { method: 'POST', headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' } })
+                  .then(response => response.json())
+                  .then(data => { if (data.success) { window.location.reload(); } else { alert(data.error || 'Could not delete saved item.'); } })
+                  .catch(error => console.error('Error deleting saved item:', error));
+              }
+          });
+
+          // --- Function to send the AJAX quantity update ---
+          function sendQuantityUpdate(itemId, quantity, inputElement) {
+              const url = updateUrlTemplate.replace('/0/', `/${itemId}/`);
+
+              fetch(url, {
+                  method: 'POST',
+                  headers: {
+                      'X-CSRFToken': csrfToken,
+                      'Content-Type': 'application/json',
+                      'X-Requested-With': 'XMLHttpRequest'
+                  },
+                  body: JSON.stringify({ quantity: quantity })
+              })
+              .then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      // Update UI with confirmed data from server
+                      inputElement.value = data.new_quantity;
+                      updateItemSubtotal(itemId, data.item_subtotal);
+                      updateCartSummary(data);
+                  } else {
+                      // Revert the input value if server rejects the change
+                      inputElement.value = data.new_quantity || (quantity - 1); // Revert to previous or suggested
+                      alert(data.error || 'Could not update quantity.');
+                  }
+              })
+              .catch(error => {
+                  console.error('Error updating quantity:', error);
+                  alert('An error occurred. Please try again.');
+              });
+          }
+      });
+    </script>
 {% endblock extra_js %}

@@ -1,139 +1,936 @@
 {% extends "base.html" %}
-{% load static i18n humanize notification_tags %}
+{% load static i18n humanize %}
 
 {% block title %}{% trans "Reports" %} - {{ vendor.name }} {% trans "Dashboard" %}{% endblock title %}
 
 {% block extra_css %}
-    {# Reuse dashboard CSS or add specific report styles #}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
-        .dashboard-sidebar {
-            background-color: #f8f9fa;
+/* Styles adapted from vendor_product_list.html for consistency */
+        .list-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #ebe8e8;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+            border: 1px solid #959aa0; /* Softer border */
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
             padding: 1.5rem;
-            border-radius: 0.375rem;
-            height: 100%;
+            margin-bottom: 2.5rem;
+            border-radius: 8px;
+            background-color: #ffffff; /* White background */
+            border-left: 5px solid #323232ff; /* Prominent black left border */
+            border: 1px solid #c7c9cb; /* Subtle border for separation */
         }
-        .dashboard-sidebar .nav-link {
-            color: #495057;
-            padding: 0.75rem 1rem;
-            margin-bottom: 0.25rem;
+
+        .page-header h1 {
+            font-weight: 600;
+            color: #323232ff; /* Black text for contrast */
+            margin-bottom: 0;
         }
-        .dashboard-sidebar .nav-link.active {
-            background-color: var(--bs-primary);
-            color: white;
-            font-weight: 500;
+
+        /* Custom override for the 'Back' button */
+        .page-header .btn-outline-secondary {
+            background-color: #474747;
+            color: #ffffff;
+            border-color: #474747;
         }
-        .dashboard-sidebar .nav-link:hover {
-            background-color: #e9ecef;
+        .page-header .btn-outline-secondary:hover {
+            background-color: #383838;
+            border-color: #383838;
         }
-        .report-card {
+
+        .details-card {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid #f0f2f5;
+        }
+
+        .filter-bar {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid #c7c9cb; /* Softer border */
+        }
+
+        .section-title {
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 1rem;
             margin-bottom: 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #343a40;
         }
-        /* Ensure text within cards is dark and readable */
-        .report-card .card-body,
-        .report-card .card-body .card-title,
-        .report-card .card-body .card-text,
-        .report-card .card-body .card-subtitle,
-        .report-card .list-group-item {
-            color: #212529 !important; /* Standard Bootstrap black - added !important for emphasis */
+
+        .trend-stat-item {
+            background-color: #f8f9fa;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
         }
-        /* Ensure muted text is also readable */
-        .report-card .card-body .text-muted {
-             color: #6c757d !important; /* Standard Bootstrap muted color */
+        .trend-stat-item h6 {
+            font-weight: 700;
+            color: #323232ff;
         }
-        .report-card .card-header {
-            background-color: #e9ecef; /* Light grey header */
-            color: #495057; /* Darker header text */
+
+        .chart-container {
+            position: relative;
+            height: 40vh;
+            width: 100%;
         }
-        .report-card .card {
-            border: 1px solid #dee2e6; /* Default subtle border */
+
+        /* --- New Section Styling --- */
+        fieldset {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 2rem; /* Base padding */
+            margin-bottom: 2.5rem; /* Adjusted space for the next legend */
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            position: relative; /* For legend positioning */
+            padding-top: 2rem; /* Adjusted space for legend */
+        }
+        
+        fieldset:last-of-type {
+            margin-bottom: 1rem; /* Keep some space at the bottom */
+        }
+
+        legend {
+            position: absolute;
+            top: -1.1rem; /* Position it to overlap the top border */
+            left: 2rem;
+            font-size: 1.1rem; /* Slightly smaller font */
+            font-weight: 600;
+            padding: 0.5rem 1rem; /* Adjust padding */
+            width: auto;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            /* The specific legend classes provide the background color, which hides the fieldset border */
+        }
+
+        .legend-summary {
+            background-color: #e9f5ff;
+            color: #0d6efd;
+            border: 1px solid #bde0fe;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Add a subtle shadow to lift it */
+        }
+
+        .legend-trends {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            border: 1px solid #a3cfbb;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Add a subtle shadow to lift it */
+        }
+
+        .legend-analysis {
+            background-color: #fff0f1;
+            color: #b31d28;
+            border: 1px solid #ffd5d9;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Add a subtle shadow to lift it */
+        }
+
+        /* --- Print-Friendly Styles --- */
+        @media print {
+            body {
+                background-color: #fff !important;
+            }
+
+            /* Hide non-essential elements for printing */
+            .navbar, .nav-bottom, .footer, .page-header, .filter-bar, .btn, #crispy-tailwind-form-errors {
+                display: none !important;
+            }
+
+            .list-container {
+                max-width: 100%;
+                margin: 0;
+                padding: 0;
+                border: none;
+                box-shadow: none;
+                background-color: #fff;
+            }
+
+            .container, .container-fluid {
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+            }
+
+            fieldset {
+                box-shadow: none;
+                border: 1px solid #ccc;
+                page-break-inside: avoid; /* Try to keep sections from breaking across pages */
+            }
         }
     </style>
 {% endblock extra_css %}
 
 {% block content %}
-<div class="container-fluid my-4">
-    <div class="row">
-        {# Sidebar Navigation #}
-        <div class="col-md-3">
-            <nav class="nav flex-column dashboard-sidebar mb-4 mb-md-0">
-                <h5 class="mb-3">{% trans "Dashboard Menu" %}</h5>
-                <a class="nav-link" href="{% url 'core:vendor_dashboard' %}">📊 {% trans "Overview" %}</a>
-               <a class="nav-link" href="{% url 'core:vendor_products' %}">📦 {% trans "Products" %}</a>
-               <a class="nav-link" href="{% url 'core:vendor_orders' %}">🧾 {% trans "Orders" %}</a>
-                <a class="nav-link active" href="{% url 'core:vendor_reports' %}">📈 {% trans "Reports" %}</a> {# Active link #}
-               <a class="nav-link" href="{% url 'core:vendor_profile_edit' %}">✏️ {% trans "Edit Profile" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_shipping_settings' %}">🚚 {% trans "Shipping" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_payment_settings' %}">💳 {% trans "Payments" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_payout_requests' %}">💰 {% trans "Payouts" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_verification_multistep' %}">✅ {% trans "Verification" %}</a>
-                 <a class="nav-link" href="{% url 'core:vendor_promotions' %}">🏷️ {% trans "Promotions" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_ads' %}">📢 {% trans "Ad Campaigns" %}</a>
-                <a class="nav-link" href="{% url 'core:vendor_reviews' %}">⭐ {% trans "Reviews" %}</a>
-                <a class="nav-link position-relative" href="{% url 'core:vendor_notification_list' %}">
-                    🔔 {% trans "Notifications" %}
-                    
-                    {% if notification_count > 0 %}
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7em; margin-left: -10px; margin-top: 5px;">
-                            {{ notification_count }}
-                            <span class="visually-hidden">unread notifications</span>
-                        </span>
-                    {% endif %}
-                </a>
-            </nav>
+<div class="container mt-5 mb-5">
+    <div class="list-container">
+        <div class="page-header">
+            <div>
+                <h1>{% trans "Store Reports" %}</h1>
+                <p class="text-muted mb-0">{% trans "Analyze your sales, top products, and order trends." %}</p>
+            </div>
+            <a href="{% url 'core:vendor_dashboard' %}" class="btn btn-lg btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>{% trans "Back to Dashboard" %}
+            </a>
         </div>
 
-        {# Main Content Area - Reports #}
-        <div class="col-md-9">
-            <h1 class="mb-4">{% trans "Store Reports" %}</h1>
+        {% include 'partials/_messages.html' %}
 
-            {% include 'partials/_messages.html' %}
-
-            <div class="row">
-                <!-- Sales Summary Card -->
-                <div class="col-md-6 col-lg-4 report-card">
-                    <div class="card h-100">
-                        <div class="card-header">Sales Summary</div>
-                        <div class="card-body">
-                            <h5 class="card-title">Total Revenue</h5>
-                            <p class="card-text fs-4 fw-bold">${{ total_revenue|floatformat:2|intcomma }}</p>
-                            <h6 class="card-subtitle mb-2 text-muted">Total Items Sold</h6>
-                            <p class="card-text fs-5">{{ total_items_sold|intcomma }}</p>
-                        </div>
+        <!-- Date Range Filter -->
+        <div class="filter-bar">
+            <form method="get" action="">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-auto">
+                        <label for="start_date" class="form-label mb-0">{% trans "From:" %}</label>
                     </div>
-                </div>
-
-                <!-- Order Summary Card -->
-                <div class="col-md-6 col-lg-4 report-card">
-                    <div class="card h-100">
-                        <div class="card-header">Order Summary</div>
-                        <div class="card-body">
-                            <h5 class="card-title">Total Orders</h5>
-                            <p class="card-text fs-4 fw-bold">{{ total_orders_count|intcomma }}</p>
-                            <h6 class="card-subtitle mt-3 mb-2 text-muted">Orders by Status</h6>
-                            <ul class="list-group list-group-flush">
-                                {% for status_data in order_status_counts %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                        {{ status_data.status|capfirst }}
-                                        <span class="badge bg-secondary rounded-pill">{{ status_data.count }}</span>
-                                    </li>
-                                {% empty %}
-                                    <li class="list-group-item px-0">No orders found.</li>
-                                {% endfor %}
+                    <div class="col-md">
+                        <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date|date:'Y-m-d'|default:'' }}">
+                    </div>
+                    <div class="col-md-auto">
+                        <label for="end_date" class="form-label mb-0">{% trans "To:" %}</label>
+                    </div>
+                    <div class="col-md">
+                        <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date|date:'Y-m-d'|default:'' }}">
+                    </div>
+                    <div class="col-md-auto d-flex flex-wrap gap-2">
+                        <button type="submit" class="btn btn-dark"><i class="bi bi-filter me-1"></i> {% trans "Apply Filter" %}</button>
+                        <a href="{% url 'core:vendor_reports' %}" class="btn btn-outline-secondary">{% trans "Reset" %}</a>
+                        <div class="dropdown">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="date-presets-btn" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-calendar-range me-1"></i> {% trans "Presets" %}
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="date-presets-btn">
+                                <li><a class="dropdown-item date-preset-option" href="#" data-preset="last-7">{% trans "Last 7 Days" %}</a></li>
+                                <li><a class="dropdown-item date-preset-option" href="#" data-preset="last-30">{% trans "Last 30 Days" %}</a></li>
+                                <li><a class="dropdown-item date-preset-option" href="#" data-preset="this-month">{% trans "This Month" %}</a></li>
+                                <li><a class="dropdown-item date-preset-option" href="#" data-preset="last-month">{% trans "Last Month" %}</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item date-preset-option" href="#" data-preset="this-year">{% trans "This Year" %}</a></li>
                             </ul>
                         </div>
+                        <button type="button" id="print-report-btn" class="btn btn-info"><i class="bi bi-printer me-1"></i> {% trans "Print Report" %} </button>
+                        <button type="button" id="export-csv-btn" class="btn btn-success"><i class="bi bi-file-earmark-spreadsheet me-1"></i> {% trans "Export CSV" %}</button>
                     </div>
                 </div>
+            </form>
+        </div>
 
-                <!-- Add more report cards here (e.g., Product Summary, Top Products) -->
+        <fieldset>
+            <legend class="legend-summary"><i class="bi bi-bar-chart-line-fill"></i> {% trans "Key Metrics Summary" %}</legend>
+            <div class="row">
+                <!-- Sales Summary -->
+                <div class="col-md-6 mb-4">
+                    <h5 class="section-title">{% trans "Sales Summary" %}</h5>
+                    <h6 class="card-title">{% trans "Total Revenue" %}</h6>
+                    <p class="card-text fs-4 fw-bold">GH₵{{ total_revenue|floatformat:2|intcomma }}</p>
+                    <h6 class="card-subtitle mb-2 text-muted">{% trans "Total Items Sold" %}</h6>
+                    <p class="card-text fs-5">{{ total_items_sold|intcomma }}</p>
+                </div>
 
-            </div> {# End row #}
-        </div> {# End col-md-9 #}
-    </div> {# End row #}
-</div> {# End container-fluid #}
+                <!-- Order Summary -->
+                <div class="col-md-6 mb-4">
+                    <h5 class="section-title">{% trans "Order Summary" %}</h5>
+                    <h6 class="card-title">{% trans "Total Orders" %}</h6>
+                    <p class="card-text fs-4 fw-bold">{{ total_orders_count|intcomma }}</p>
+                    <h6 class="card-subtitle mt-3 mb-2 text-muted">{% trans "Orders by Status" %}</h6>
+                    <ul class="list-group list-group-flush">
+                        {% for status_data in order_status_counts %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                                {{ status_data.status|capfirst }}
+                                <span class="badge bg-secondary rounded-pill">{{ status_data.count }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item px-0 bg-transparent">{% trans "No orders found." %}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Top Selling Products -->
+                <div class="col-md-6 mb-4 mb-md-0">
+                    <h5 class="section-title">{% trans "Top Selling Products" %}</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for product in top_selling_products %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                                <a href="{% url 'core:vendor_product_update' pk=product.product_id %}">
+                                    {{ product.product_name }}
+                                </a>
+                                <span class="badge bg-primary rounded-pill">{{ product.total_sold }} {% trans "sold" %}</span>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item px-0 bg-transparent">{% trans "No sales data available." %}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Inventory Insights -->
+                <div class="col-md-6">
+                    <h5 class="section-title">{% trans "Inventory Insights" %}</h5>
+                    <ul class="list-group list-group-flush">
+                        {# These values would need to be provided by the view context, e.g., as part of an `inventory_summary` dict #}
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                            {% trans "Active Products" %}
+                            <span class="badge bg-info rounded-pill">{{ inventory_summary.active_products_count|default:0 }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                            {% trans "Low Stock Products" %}
+                            <span class="badge bg-warning text-dark rounded-pill">{{ inventory_summary.low_stock_products_count|default:0 }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                            {% trans "Out of Stock Products" %}
+                            <span class="badge bg-danger rounded-pill">{{ inventory_summary.out_of_stock_products_count|default:0 }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend class="legend-trends"><i class="bi bi-graph-up-arrow"></i> {% trans "Revenue Trends" %}</legend>
+            <div class="row">
+                <!-- Monthly Sales Chart -->
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                    <h5 class="section-title">{% trans "Monthly Sales Trend (Last 12 Months)" %}</h5>
+                    <div class="row g-3 mb-3 text-center">
+                        <div class="col">
+                            <div class="trend-stat-item">
+                                <small class="text-muted">{% trans "Peak Month" %}</small>
+                                <h6 class="mb-0" id="monthly-highest-value">-</h6>
+                                <small class="text-muted" id="monthly-highest-label">-</small>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="trend-stat-item">
+                                <small class="text-muted">{% trans "Avg. Monthly Revenue" %}</small>
+                                <h6 class="mb-0" id="monthly-avg-value">-</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="monthlySalesChart"></canvas>
+                    </div>
+                </div>
+                <!-- Daily Sales Chart -->
+                <div class="col-lg-6">
+                    <h5 class="section-title">{% trans "Daily Sales Trend (Last 30 Days)" %}</h5>
+                    <div class="row g-3 mb-3 text-center">
+                        <div class="col">
+                            <div class="trend-stat-item">
+                                <small class="text-muted">{% trans "Best Day" %}</small>
+                                <h6 class="mb-0" id="daily-highest-value">-</h6>
+                                <small class="text-muted" id="daily-highest-label">-</small>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="trend-stat-item">
+                                <small class="text-muted">{% trans "Avg. Daily Revenue" %}</small>
+                                <h6 class="mb-0" id="daily-avg-value">-</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="dailySalesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend class="legend-analysis"><i class="bi bi-pie-chart-fill"></i> {% trans "Order & Category Analysis" %}</legend>
+            <div class="row">
+                <!-- Monthly Order Trend Chart -->
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                    <h5 class="section-title">{% trans "Monthly Order Trend" %}</h5>
+                    <div class="row g-3 mb-3 text-center">
+                        <div class="col">
+                            <div class="trend-stat-item">
+                                <small class="text-muted">{% trans "Busiest Month (Orders)" %}</small>
+                                <h6 class="mb-0" id="order-highest-value">-</h6>
+                                <small class="text-muted" id="order-highest-label">-</small>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="trend-stat-item">
+                                <small class="text-muted">{% trans "Avg. Monthly Orders" %}</small>
+                                <h6 class="mb-0" id="order-avg-value">-</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="monthlyOrdersChart"></canvas>
+                    </div>
+                </div>
+                <!-- Sales by Category Chart -->
+                <div class="col-lg-6">
+                    <h5 class="section-title">{% trans "Sales by Category" %}</h5>
+                    <div class="row g-3 mb-3 text-center">
+                        <div class="col">
+                            <div class="trend-stat-item">
+                                <small class="text-muted">{% trans "Top Category" %}</small>
+                                <h6 class="mb-0" id="top-category-label">-</h6>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="trend-stat-item">
+                                <small class="text-muted">{% trans "Revenue" %}</small>
+                                <h6 class="mb-0" id="top-category-value">-</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="categorySalesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend class="legend-analysis"><i class="bi bi-table"></i> {% trans "Detailed Order Data" %}</legend>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>{% trans "Order ID" %}</th>
+                            <th>{% trans "Date" %}</th>
+                            <th>{% trans "Customer" %}</th>
+                            <th class="text-center">{% trans "Items" %}</th>
+                            <th class="text-end">{% trans "Total" %}</th>
+                            <th>{% trans "Status" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td><a href="#">#{{ order.order_id }}</a></td> {# Replace # with vendor order detail URL if available #}
+                            <td>{{ order.created_at|date:"Y-m-d" }}</td>
+                            <td>{{ order.user.get_full_name|default:order.user.username }}</td>
+                            <td class="text-center">{{ order.items.count }}</td>
+                            <td class="text-end">GH₵{{ order.get_total|floatformat:2|intcomma }}</td>
+                            <td><span class="badge bg-secondary">{{ order.get_status_display }}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">{% trans "No orders found for the selected period." %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if orders.has_other_pages %}
+            <nav aria-label="Order pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if orders.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page={{ orders.previous_page_number }}{% if request.GET.start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if request.GET.end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}">{% trans "Previous" %}</a></li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">{% trans "Previous" %}</span></li>
+                    {% endif %}
+
+                    {% for i in orders.paginator.page_range %}
+                        {% if orders.number == i %}
+                            <li class="page-item active" aria-current="page"><span class="page-link">{{ i }}</span></li>
+                        {% else %}
+                            <li class="page-item"><a class="page-link" href="?page={{ i }}{% if request.GET.start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if request.GET.end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}">{{ i }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if orders.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ orders.next_page_number }}{% if request.GET.start_date %}&start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if request.GET.end_date %}&end_date={{ end_date|date:'Y-m-d' }}{% endif %}">{% trans "Next" %}</a></li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">{% trans "Next" %}</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </fieldset>
+    </div>
+</div>
 {% endblock content %}
 
 {% block extra_js %}
     {{ block.super }}
-    {# Add JS for charts later if needed #}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const currencySymbol = 'GH₵';
+            const formatCurrency = (value) => {
+                return currencySymbol + (value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            };
+
+            // --- Chart Data (kept global for CSV export) ---
+            const monthlyLabels = {{ monthly_sales_labels|safe }};
+            const monthlyValues = {{ monthly_sales_values|safe }};
+            const dailyLabels = {{ daily_sales_labels|safe }};
+            const dailyValues = {{ daily_sales_values|safe }};
+            const monthlyOrdersLabels = {{ monthly_orders_labels|default:"[]"|safe }};
+            const monthlyOrdersValues = {{ monthly_orders_values|default:"[]"|safe }};
+            const categoryLabels = {{ category_sales_labels|default:"[]"|safe }};
+            const categoryValues = {{ category_sales_values|default:"[]"|safe }};
+
+            // --- Function to calculate and display stats for all charts ---
+            // This is called on page load to ensure stats are always visible.
+            function displayAllChartStats() {
+                // Monthly Sales Stats
+                if (monthlyValues.length > 0) {
+                    const maxVal = Math.max(...monthlyValues);
+                    const maxIndex = monthlyValues.indexOf(maxVal);
+                    const avgVal = monthlyValues.reduce((a, b) => a + b, 0) / monthlyValues.length;
+                    document.getElementById('monthly-highest-value').textContent = formatCurrency(maxVal);
+                    document.getElementById('monthly-highest-label').textContent = monthlyLabels[maxIndex];
+                    document.getElementById('monthly-avg-value').textContent = formatCurrency(avgVal);
+                }
+
+                // Daily Sales Stats
+                if (dailyValues.length > 0) {
+                    const maxVal = Math.max(...dailyValues);
+                    const maxIndex = dailyValues.indexOf(maxVal);
+                    const avgVal = dailyValues.reduce((a, b) => a + b, 0) / dailyValues.length;
+                    document.getElementById('daily-highest-value').textContent = formatCurrency(maxVal);
+                    document.getElementById('daily-highest-label').textContent = dailyLabels[maxIndex];
+                    document.getElementById('daily-avg-value').textContent = formatCurrency(avgVal);
+                }
+
+                // Monthly Orders Stats
+                if (monthlyOrdersValues.length > 0) {
+                    const maxVal = Math.max(...monthlyOrdersValues);
+                    const maxIndex = monthlyOrdersValues.indexOf(maxVal);
+                    const avgVal = monthlyOrdersValues.reduce((a, b) => a + b, 0) / monthlyOrdersValues.length;
+                    document.getElementById('order-highest-value').textContent = maxVal.toLocaleString() + ' {% trans "orders" %}';
+                    document.getElementById('order-highest-label').textContent = monthlyOrdersLabels[maxIndex];
+                    document.getElementById('order-avg-value').textContent = avgVal.toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' {% trans "orders" %}';
+                }
+
+                // Category Sales Stats
+                if (categoryValues.length > 0) {
+                    const maxVal = Math.max(...categoryValues);
+                    const maxIndex = categoryValues.indexOf(maxVal);
+                    document.getElementById('top-category-label').textContent = categoryLabels[maxIndex];
+                    document.getElementById('top-category-value').textContent = formatCurrency(maxVal);
+                }
+            }
+
+            // --- Chart Initialization Functions (called by IntersectionObserver) ---
+
+            function initMonthlySalesChart() {
+                const monthlyCtx = document.getElementById('monthlySalesChart').getContext('2d');
+
+                const monthlyGradient = monthlyCtx.createLinearGradient(0, 0, 0, 300);
+                monthlyGradient.addColorStop(0, 'rgba(255, 99, 132, 0.5)');
+                monthlyGradient.addColorStop(1, 'rgba(255, 99, 132, 0)');
+
+                new Chart(monthlyCtx, {
+                type: 'line',
+                data: {
+                    labels: monthlyLabels,
+                    datasets: [{
+                        label: 'Monthly Revenue',
+                        data: monthlyValues,
+                        borderColor: 'rgba(255, 99, 132, 1)',      /* Vivid Pink/Red */
+                        backgroundColor: monthlyGradient,
+                        fill: true,
+                        tension: 0.4 // Smoother curve
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    return currencySymbol + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+                });
+            }
+
+            function initDailySalesChart() {
+                const dailyCtx = document.getElementById('dailySalesChart').getContext('2d');
+
+                const movingAvg = [];
+                const period = 7;
+                for (let i = 0; i < dailyValues.length; i++) {
+                    if (i < period - 1) {
+                        movingAvg.push(null);
+                    } else {
+                        const sum = dailyValues.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+                        movingAvg.push(sum / period);
+                    }
+                }
+
+                new Chart(dailyCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: dailyLabels,
+                        datasets: [
+                            {
+                                label: 'Daily Revenue',
+                                data: dailyValues,
+                                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1,
+                                order: 2
+                            },
+                            {
+                                type: 'line',
+                                label: '7-Day Moving Average',
+                                data: movingAvg,
+                                borderColor: 'rgba(255, 159, 64, 1)',
+                                tension: 0.4,
+                                fill: false,
+                                pointRadius: 0,
+                                order: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return currencySymbol + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function initMonthlyOrdersChart() {
+                const monthlyOrdersCtx = document.getElementById('monthlyOrdersChart').getContext('2d');
+
+                const monthlyOrdersGradient = monthlyOrdersCtx.createLinearGradient(0, 0, 0, 300);
+                monthlyOrdersGradient.addColorStop(0, 'rgba(75, 192, 192, 0.5)');
+                monthlyOrdersGradient.addColorStop(1, 'rgba(75, 192, 192, 0)');
+
+                new Chart(monthlyOrdersCtx, {
+                type: 'line',
+                data: {
+                    labels: monthlyOrdersLabels,
+                    datasets: [{
+                        label: '{% trans "Monthly Orders" %}',
+                        data: monthlyOrdersValues,
+                        borderColor: 'rgba(75, 192, 192, 1)', // Teal
+                        backgroundColor: monthlyOrdersGradient,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    if (Number.isInteger(value)) { return value; }
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: '{% trans "Number of Orders" %}'
+                            }
+                        }
+                    }
+                }
+                });
+            }
+
+            function initCategorySalesChart() {
+                const categorySalesCtx = document.getElementById('categorySalesChart').getContext('2d');
+
+                new Chart(categorySalesCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: categoryLabels,
+                    datasets: [{
+                        label: '{% trans "Sales by Category" %}',
+                        data: categoryValues,
+                        backgroundColor: [
+                            'rgba(153, 102, 255, 0.7)', // Purple
+                            'rgba(255, 206, 86, 0.7)',  // Yellow
+                            'rgba(75, 192, 192, 0.7)',  // Teal
+                            'rgba(255, 99, 132, 0.7)',   // Pink/Red
+                            'rgba(54, 162, 235, 0.7)',   // Blue
+                            'rgba(255, 159, 64, 0.7)'    // Orange
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed !== null) { label += formatCurrency(context.parsed); }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+                });
+            }
+
+            // --- Initializations on Page Load ---
+            displayAllChartStats(); // <-- Display stats immediately
+
+            // --- Date Filter Persistence ---
+            const startDateInput = document.getElementById('start_date');
+            const endDateInput = document.getElementById('end_date');
+            const filterForm = startDateInput.closest('form');
+            const resetButton = filterForm.querySelector('a.btn-outline-secondary');
+
+            // On page load, apply saved dates if the server hasn't provided any
+            const savedStartDate = localStorage.getItem('report_start_date');
+            if (savedStartDate && !startDateInput.value) {
+                startDateInput.value = savedStartDate;
+            }
+            const savedEndDate = localStorage.getItem('report_end_date');
+            if (savedEndDate && !endDateInput.value) {
+                endDateInput.value = savedEndDate;
+            }
+
+            // On form submit, save the dates to localStorage
+            if (filterForm) {
+                filterForm.addEventListener('submit', function() {
+                    if (startDateInput.value) {
+                        localStorage.setItem('report_start_date', startDateInput.value);
+                    } else {
+                        localStorage.removeItem('report_start_date');
+                    }
+                    if (endDateInput.value) {
+                        localStorage.setItem('report_end_date', endDateInput.value);
+                    } else {
+                        localStorage.removeItem('report_end_date');
+                    }
+                });
+            }
+
+            // On reset click, clear the saved dates from localStorage
+            if (resetButton) {
+                resetButton.addEventListener('click', function() {
+                    localStorage.removeItem('report_start_date');
+                    localStorage.removeItem('report_end_date');
+                    // The link will then navigate to the reset URL, clearing the inputs
+                });
+            }
+
+            // --- Date Preset Logic ---
+            document.querySelectorAll('.date-preset-option').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const preset = this.dataset.preset;
+                    const today = new Date();
+                    let startDate = new Date();
+                    let endDate = new Date();
+
+                    switch (preset) {
+                        case 'last-7':
+                            startDate.setDate(today.getDate() - 6);
+                            endDate = today;
+                            break;
+                        case 'last-30':
+                            startDate.setDate(today.getDate() - 29);
+                            endDate = today;
+                            break;
+                        case 'this-month':
+                            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                            endDate = today;
+                            break;
+                        case 'last-month':
+                            startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                            endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                            break;
+                        case 'this-year':
+                            startDate = new Date(today.getFullYear(), 0, 1);
+                            endDate = today;
+                            break;
+                    }
+
+                    // Helper to format date as YYYY-MM-DD
+                    const formatDate = (date) => {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+
+                    if (startDateInput && endDateInput) {
+                        startDateInput.value = formatDate(startDate);
+                        endDateInput.value = formatDate(endDate);
+                    }
+
+                    // Submit the form to apply the new date range
+                    if (filterForm) {
+                        // Save to local storage before submitting
+                        localStorage.setItem('report_start_date', startDateInput.value);
+                        localStorage.setItem('report_end_date', endDateInput.value);
+                        filterForm.submit();
+                    }
+                });
+            });
+
+            // --- Animate charts on scroll ---
+            const chartObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const chartId = entry.target.id;
+                        if (chartId === 'monthlySalesChart') initMonthlySalesChart();
+                        if (chartId === 'dailySalesChart') initDailySalesChart();
+                        if (chartId === 'monthlyOrdersChart') initMonthlyOrdersChart();
+                        if (chartId === 'categorySalesChart') initCategorySalesChart();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('canvas').forEach(canvas => {
+                chartObserver.observe(canvas);
+            });
+
+            // --- Print Button Logic ---
+            const printBtn = document.getElementById('print-report-btn');
+            if (printBtn) {
+                printBtn.addEventListener('click', function() {
+                    window.print();
+                });
+            }
+
+            // --- CSV Export Logic ---
+            const exportBtn = document.getElementById('export-csv-btn');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', function() {
+                    function escapeCsvCell(cell) {
+                        if (cell === null || cell === undefined) return '';
+                        let cellString = String(cell);
+                        if (cellString.search(/("|,|\n)/g) >= 0) {
+                            cellString = '"' + cellString.replace(/"/g, '""') + '"';
+                        }
+                        return cellString;
+                    }
+
+                    let csvContent = [];
+
+                    // Section 1: Key Metrics
+                    csvContent.push('Key Metrics & Inventory Summary');
+                    csvContent.push('Metric,Value');
+                    csvContent.push(`Total Revenue,{{ total_revenue|floatformat:2 }}`);
+                    csvContent.push(`Total Items Sold,{{ total_items_sold }}`);
+                    csvContent.push(`Total Orders,{{ total_orders_count }}`);
+                    {# Data from the new Inventory Insights section #}
+                    csvContent.push(`Active Products,{{ inventory_summary.active_products_count|default:0 }}`);
+                    csvContent.push(`Low Stock Products,{{ inventory_summary.low_stock_products_count|default:0 }}`);
+                    csvContent.push(`Out of Stock Products,{{ inventory_summary.out_of_stock_products_count|default:0 }}`);
+                    csvContent.push('');
+
+                    // Section 2: Order Status
+                    csvContent.push('Orders by Status');
+                    csvContent.push('Status,Count');
+                    {% for status_data in order_status_counts %}
+                    csvContent.push(`{{ status_data.status|capfirst }},{{ status_data.count }}`);
+                    {% empty %}
+                    csvContent.push('No order status data,0');
+                    {% endfor %}
+                    csvContent.push('');
+
+                    // Section 3: Top Selling Products
+                    csvContent.push('Top Selling Products');
+                    csvContent.push('Product Name,Total Sold');
+                    {% for product in top_selling_products %}
+                    csvContent.push(`${escapeCsvCell("{{ product.product_name|escapejs }}")},{{ product.total_sold }}`);
+                    {% empty %}
+                    csvContent.push('No top selling products,0');
+                    {% endfor %}
+                    csvContent.push('');
+
+                    // Section 4: Monthly Sales Trend
+                    csvContent.push('Monthly Sales Trend');
+                    csvContent.push('Month,Revenue');
+                    monthlyLabels.forEach((label, index) => csvContent.push(`${label},${monthlyValues[index]}`));
+                    csvContent.push('');
+
+                    // Section 5: Daily Sales Trend
+                    csvContent.push('Daily Sales Trend');
+                    csvContent.push('Day,Revenue');
+                    dailyLabels.forEach((label, index) => csvContent.push(`${label},${dailyValues[index]}`));
+                    csvContent.push('');
+
+                    // Section 6: Monthly Order Trend
+                    csvContent.push('Monthly Order Trend');
+                    csvContent.push('Month,Orders');
+                    monthlyOrdersLabels.forEach((label, index) => csvContent.push(`${label},${monthlyOrdersValues[index]}`));
+                    csvContent.push('');
+
+                    // Section 7: Sales by Category
+                    csvContent.push('Sales by Category');
+                    csvContent.push('Category,Revenue');
+                    categoryLabels.forEach((label, index) => csvContent.push(`${escapeCsvCell(label)},${categoryValues[index]}`));
+                    csvContent.push('');
+
+                    // Section 8: Detailed Order Data (from current page)
+                    csvContent.push('Detailed Orders (Current Page)');
+                    csvContent.push('Order ID,Date,Customer,Items,Total,Status');
+                    {% for order in orders %}
+                    csvContent.push([
+                        "{{ order.order_id }}",
+                        "{{ order.created_at|date:'Y-m-d' }}",
+                        escapeCsvCell("{{ order.user.get_full_name|default:order.user.username|escapejs }}"),
+                        "{{ order.items.count }}",
+                        "{{ order.get_total|floatformat:2 }}",
+                        escapeCsvCell("{{ order.get_status_display|escapejs }}")
+                    ].join(','));
+                    {% endfor %}
+
+                    const finalCsv = csvContent.join('\n');
+                    const blob = new Blob([finalCsv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `vendor-report-{{ start_date|date:'Y-m-d'|default:'all' }}-to-{{ end_date|date:'Y-m-d'|default:'today' }}.csv`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+            }
+        });
+    </script>
 {% endblock extra_js %}

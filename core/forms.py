@@ -4,15 +4,19 @@ from django.forms import inlineformset_factory
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Row, Column, Fieldset, HTML, Field
 from django.utils.translation import gettext_lazy as _
+from django.utils.html import format_html
+from django.utils import timezone
+from django.urls import reverse_lazy
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 import logging # <<< Add this import
 # Import models needed for forms
 from .utils import geocode_address # Import the new utility
 from decimal import Decimal # Ensure Decimal is imported
 from .models import (
-    VendorReview, ProductReview, Vendor, Promotion, AdCampaign, Product, Category, ServiceProviderProfile, PortfolioItem,
-    ServiceCategory, Service, ServiceReview, ServicePackage, Address, VendorShipping, VendorPayment, VendorAdditionalInfo, PayoutRequest, # Added PayoutRequest
-    RiderProfile, RiderApplication, DeliveryTask
+    VendorReview, ProductReview, Vendor, Promotion, AdCampaign, Product, Category, ServiceProviderProfile, PortfolioItem, ProductImage, ProductQuestion, ProductAnswer,
+    ServiceCategory, Service, ServiceReview, ServicePackage, Address, PayoutRequest,
+    RiderProfile, RiderApplication, DeliveryTask, UserProfile, UserPreferences, ServiceAvailability
 )
 from django.contrib.auth import get_user_model
 
@@ -22,14 +26,14 @@ class VendorReviewForm(forms.ModelForm):
     """
     class Meta:
         model = VendorReview
-        fields = ['rating', 'comment']
+        fields = ['rating', 'review']
         widgets = {
             'rating': forms.RadioSelect(attrs={'class': 'form-check-input'}),
-            'comment': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'Share your experience with this vendor...'}),
+            'review': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'Share your experience with this vendor...'}),
         }
         labels = {
             'rating': 'Your Rating',
-            'comment': 'Your Review (Optional)',
+            'review': 'Your Review (Optional)',
         }
 
 # --- ProductReviewForm ---
@@ -173,17 +177,19 @@ class VendorProfileUpdateForm(forms.ModelForm):
     class Meta:
         model = Vendor
         fields = [
-            'name', 'description', 'contact_email', 'phone_number',
-            'logo', 'location_city', 'location_country', 'shipping_policy', 'return_policy',
+            'name', 'description', 'story', 'contact_email', 'phone_number',
+            'logo', 'street_address', 'location_city', 'location_country', 'shipping_policy', 'return_policy',
             'public_phone_number', 'public_email', 'website_url',
             'facebook_url', 'instagram_url', 'twitter_url', 'linkedin_url', 'whatsapp_number'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Your Business Name'}),
+            'story': forms.Textarea(attrs={'rows': 5, 'class': 'form-control', 'placeholder': _('Tell customers the story behind your brand, your mission, or what makes your products special...')}),
             'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'Describe your business and products...'}),
             'contact_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Business Contact Email'}),
             'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Business Phone Number'}),
             'logo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'street_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Street Address'}),
             'location_city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City'}),
             'location_country': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Country'}),
             'shipping_policy': forms.Textarea(attrs={'rows': 5, 'class': 'form-control', 'placeholder': 'Describe your shipping policy...'}),
@@ -199,6 +205,7 @@ class VendorProfileUpdateForm(forms.ModelForm):
         }
         # Note: latitude and longitude fields are not included here as they are auto-generated
         labels = {
+            'story': _("Your Brand Story"),
             'contact_email': _("Primary Contact Email (Private)"),
             'phone_number': _("Primary Contact Phone (Private)"),
             'public_phone_number': _("Publicly Displayed Phone Number"),
@@ -217,7 +224,7 @@ class VendorProfileUpdateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs): # Add __init__ if not present
         super().__init__(*args, **kwargs)
         # Make fields optional if they are in the model
-        optional_fields = [
+        optional_fields = [ 'story',
             'description', 'contact_email', 'phone_number', 'logo',
             'street_address', 'location_city', 'location_country',
             'shipping_policy', 'return_policy',
@@ -306,9 +313,49 @@ class VendorPaymentForm(forms.ModelForm):
 
     class Meta:
         model = Vendor
-        fields = ['mobile_money_provider', 'mobile_money_number']
+        fields = [
+            'mobile_money_provider', 'mobile_money_number',
+            'paypal_email',
+            'bank_account_name', 'bank_account_number', 'bank_name', 'bank_branch',
+            # --- START: New Payout Fields ---
+            'stripe_account_id',
+            'payoneer_email',
+            'wise_email',
+            'crypto_wallet_address',
+            'crypto_wallet_network',
+            # --- END: New Payout Fields ---
+        ]
         widgets = {
             'mobile_money_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Enter your Mobile Money number')}),
+            'paypal_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('you@example.com')}),
+            'bank_account_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Full name as it appears on the account")}),
+            'bank_account_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Your account number")}),
+            'bank_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Name of your bank")}),
+            'bank_branch': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Branch where you opened the account")}),
+            # --- START: New Payout Widgets ---
+            'stripe_account_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., acct_xxxxxxxxxxxxxx')}),
+            'payoneer_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('your.payoneer.email@example.com')}),
+            'wise_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('your.wise.email@example.com')}),
+            'crypto_wallet_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 0xAbC... or bc1q...')}),
+            'crypto_wallet_network': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Ethereum (ERC20), Bitcoin')}),
+            # --- END: New Payout Widgets ---
+        }
+        labels = {
+            'paypal_email': _("PayPal Email Address"),
+            # --- START: New Payout Labels ---
+            'stripe_account_id': _("Stripe Connect Account ID"),
+            'payoneer_email': _("Payoneer Email Address"),
+            'wise_email': _("Wise Email Address"),
+            'crypto_wallet_address': _("Cryptocurrency Wallet Address"),
+            'crypto_wallet_network': _("Cryptocurrency Network"),
+            # --- END: New Payout Labels ---
+        }
+        help_texts = {
+            'paypal_email': _("Ensure this is the correct email for receiving PayPal payments."),
+            # --- START: New Payout Help Texts ---
+            'stripe_account_id': _("For automated payouts via Stripe. You can get this from your Stripe dashboard."),
+            'crypto_wallet_address': _("Ensure this address is correct for the specified network. Transactions are irreversible."),
+            # --- END: New Payout Help Texts ---
         }
 # --- End VendorPaymentForm ---
 
@@ -335,7 +382,22 @@ class PromotionForm(forms.ModelForm):
 
     class Meta:
         model = Promotion
-        exclude = ['vendor', 'current_uses', 'created_at', 'applicable_vendor']
+        fields = [
+            'name',
+            'description',
+            'code',
+            'promo_type',
+            'discount_value',
+            'start_date',
+            'end_date',
+            'is_active',
+            'scope',
+            'applicable_categories',
+            'applicable_products',
+            'minimum_purchase_amount',
+            'usage_limit',
+            'uses_per_customer',
+        ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
@@ -343,8 +405,8 @@ class PromotionForm(forms.ModelForm):
             'promo_type': forms.Select(attrs={'class': 'form-select'}),
             'discount_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'scope': forms.Select(attrs={'class': 'form-select'}),
-            'min_purchase_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'max_uses': forms.NumberInput(attrs={'class': 'form-control'}),
+            'minimum_purchase_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'usage_limit': forms.NumberInput(attrs={'class': 'form-control'}),
             'uses_per_customer': forms.NumberInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -354,8 +416,22 @@ class PromotionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if vendor:
             self.fields['applicable_products'].queryset = Product.objects.filter(vendor=vendor, is_active=True)
+            self.fields['applicable_categories'].queryset = Category.objects.filter(products__vendor=vendor).distinct()
+
+        # Optional: Add help text directly in the form for more control
+        self.fields['minimum_purchase_amount'].help_text = _("Apply discount only if cart subtotal is over this amount.")
+        self.fields['usage_limit'].help_text = _("How many times can this code be used in total? Leave blank for unlimited.")
 
 # --- End PromotionForm ---
+
+# --- START: Coupon Apply Form ---
+class CouponApplyForm(forms.Form):
+    """Form for a user to apply a coupon code to their cart."""
+    code = forms.CharField(widget=forms.TextInput(attrs={
+        'class': 'form-control',
+        'placeholder': _('Enter coupon code')
+    }))
+# --- END: Coupon Apply Form ---
 
 # --- AdCampaignForm ---
 class AdCampaignForm(forms.ModelForm):
@@ -389,22 +465,50 @@ class AdCampaignForm(forms.ModelForm):
 
 # --- End AdCampaignForm ---
 
+# --- Custom Fields for Multiple File Upload ---
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+class MultipleFileField(forms.FileField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", MultipleFileInput())
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        if isinstance(data, (list, tuple)):
+            result = [single_file_clean(d, initial) for d in data]
+        else:
+            result = single_file_clean(data, initial)
+        return result
+
 # --- VendorProductForm ---
 class VendorProductForm(forms.ModelForm):
     """
     Form for vendors to add or edit their products.
     """
+    images = MultipleFileField(
+        required=False,
+        help_text=_('Upload one or more images. Hold Ctrl or Cmd to select multiple files.')
+    )
+    videos = MultipleFileField(
+
+        required=False,
+        help_text=_('Optional: Upload one or more videos (MP4, WebM recommended).')
+    )
     category = forms.ModelChoiceField(
         queryset=Category.objects.filter(is_active=True),
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+    enhance_image = forms.BooleanField(required=False, label=_("Enhance with AI"), help_text=_("Enhance image quality using AI (Experimental)."))
+    remove_background = forms.BooleanField(required=False, label=_("Remove Image Background"), help_text=_("Automatically remove the background from uploaded images. Ideal for creating a clean, professional look."))
 
     class Meta:
         model = Product
         fields = [
             'product_type', 'fulfillment_method', 'vendor_delivery_fee',
             'category', 'name', 'description', 'keywords_for_ai', 'price', # Added keywords_for_ai
-            'stock', 'digital_file', 'three_d_model', # Added three_d_model
+            'stock', 'digital_file', 'three_d_model', 'ar_model', 'enhance_image', 'remove_background',
             'is_active', 'is_featured',
         ]
         widgets = {
@@ -419,26 +523,33 @@ class VendorProductForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'digital_file': forms.ClearableFileInput(attrs={'class': 'form-control'}),
-            'three_d_model': forms.ClearableFileInput(attrs={'class': 'form-control'}), # Added widget for consistency
+            'three_d_model': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'ar_model': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
-        help_texts = {
-            'fulfillment_method': _("Choose how this specific product will be fulfilled. If left blank, your store's default fulfillment method will be used."),
-            'vendor_delivery_fee': _("If you fulfill this product yourself ('Fulfilled by Vendor'), set your delivery fee here. Leave as 0.00 if delivery is free or included in product price, or if Nexus fulfills."),
-            'keywords_for_ai': _("Optional: Comma-separated keywords to guide AI description generation."),
-            'three_d_model': _("Upload a 3D model file (e.g., .glb, .gltf) for 3D viewing."),
-        }
+
     def __init__(self, *args, **kwargs): # Ensure blank option for fulfillment_method
         super().__init__(*args, **kwargs)
         self.fields['fulfillment_method'].choices = [('', _("Use Vendor Default"))] + list(Vendor.FULFILLMENT_CHOICES)
+        # Set help_texts dynamically in __init__ to avoid circular import from reverse_lazy at class definition time.
+        self.fields['fulfillment_method'].help_text = _("Choose how this specific product will be fulfilled. If left blank, your store's default fulfillment method will be used.")
+        self.fields['vendor_delivery_fee'].help_text = _("If you fulfill this product yourself ('Fulfilled by Vendor'), set your delivery fee here. Leave as 0.00 if delivery is free or included in product price, or if Nexus fulfills.")
+        self.fields['keywords_for_ai'].help_text = _("Optional: Comma-separated keywords to guide AI description generation.")
+        help_url = reverse_lazy('core:help_creating_3d_models')
+        help_text_format = _("Upload a .glb or .gltf file for 3D/AR. <a href=\"{url}\" target=\"_blank\">Learn how to create 3D models with your phone.</a>")
+        self.fields['three_d_model'].help_text = format_html(help_text_format, url=help_url)
+        self.fields['ar_model'].help_text = _("Optional: Upload a .usdz file for the best AR experience on Apple devices.")
+
+
 # --- End VendorProductForm ---
 
 # --- Vendor Additional Information Form ---
 class VendorAdditionalInfoForm(forms.ModelForm):
     class Meta:
         model = Vendor
-        fields = ['return_policy']
+        fields = ['shipping_policy', 'return_policy']
         widgets = {
             'return_policy': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
+            'shipping_policy': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
         }
 
 
@@ -450,6 +561,16 @@ class ServiceForm(forms.ModelForm):
     """
     Form for creating and editing services.
     """
+    images = MultipleFileField(
+        required=False,
+        label=_("Service Images"),
+        help_text=_('Upload one or more images for your service gallery. Hold Ctrl or Cmd to select multiple files.')
+    )
+    videos = MultipleFileField(
+        required=False,
+        label=_("Service Videos"),
+        help_text=_('Optional: Upload one or more videos (MP4, WebM recommended).')
+    )
     category = forms.ModelChoiceField(
         queryset=ServiceCategory.objects.filter(is_active=True).order_by('name'),
         widget=forms.Select(attrs={'class': 'form-select'}),
@@ -460,13 +581,13 @@ class ServiceForm(forms.ModelForm):
     class Meta:
         model = Service
         fields = [
-            'category', 'title', 'description', 'is_featured',
-             'skills', 'experience', 'education',
-            'location', 'is_active'
+            'category', 'title', 'description', 'price', 'images', 'videos', 'is_featured',
+            'skills', 'experience', 'education', 'location', 'is_active'
         ]
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Professional Logo Design')}),
             'description': forms.Textarea(attrs={'rows': 5, 'class': 'form-control', 'placeholder': _('Describe the service you offer in detail...')}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 50.00. Leave blank if price is per-package.')}),
             'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.e., Accra, Remote, Nationwide')}),
             'skills': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': _('e.g., Python, Graphic Design, Copywriting')}),
             'experience': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': _('e.g., 5 years experience in web development...')}),
@@ -477,6 +598,7 @@ class ServiceForm(forms.ModelForm):
         labels = {
             'title': _('Service Title'),
             'description': _('Detailed Description'),
+            'price': _('Base Price (Optional)'),
             'location': _('Service Location'),
             'is_active': _("Make this service listing active?"),
             'skills': _('Skills'),
@@ -486,13 +608,21 @@ class ServiceForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        user = kwargs.pop('user', None)  # Safely get the user and remove it from kwargs
+        super().__init__(*args, **kwargs)  # Call the parent __init__ with the cleaned kwargs
+
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.layout = Layout(
             Field('category', css_class='mb-3'),
             Field('title', css_class='mb-3'),
+            Field('price', css_class='mb-3'),
             Field('description', css_class='mb-3'),
+            Fieldset(_('Media Gallery'),
+                Field('images', css_class='mb-3'),
+                Field('videos', css_class='mb-3'),
+                css_class='border p-3 rounded mb-3'
+            ),
             Fieldset(_('Your Qualifications (Optional)'),
                 Field('skills', css_class='mb-3'),
                 Field('experience', css_class='mb-3'),
@@ -500,8 +630,8 @@ class ServiceForm(forms.ModelForm):
                 css_class='border p-3 rounded mb-3'
             ),
             Field('location', css_class='mb-3'),
-            Field('is_active', css_class='mb-3'),
-            Field('is_featured', css_class='mb-3')
+            Field('is_active', css_class='form-check form-switch mb-3'),
+            Field('is_featured', css_class='form-check form-switch mb-3')
         )
 
 # --- START: Service Package Form (Standalone Class) ---
@@ -513,10 +643,10 @@ class ServicePackageForm(forms.ModelForm):
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control form-control-sm', 'placeholder': _('Package Name')}),
             'description': forms.Textarea(attrs={'class': 'form-control form-control-sm', 'rows': 2, 'placeholder': _('Package Description')}),
-            'price': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01'}),
-            'delivery_time': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
-            'revisions': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
-            'display_order': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01', 'min': '0'}),
+            'delivery_time': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'min': '0'}),
+            'revisions': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'min': '0'}),
+            'display_order': forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'min': '0'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
@@ -550,6 +680,52 @@ ServicePackageFormSet = inlineformset_factory(
 )
 # --- END: Service Package Formset ---
 
+# --- START: Service Availability Form for Formset ---
+class ServiceAvailabilityInlineForm(forms.ModelForm):
+    """Form for individual availability slots within an inline formset."""
+    start_time = forms.DateTimeField(
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control form-control-sm'}),
+        label=_("Start Time"),
+        required=False # Allow empty forms in the formset
+    )
+    end_time = forms.DateTimeField(
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control form-control-sm'}),
+        label=_("End Time"),
+        required=False # Allow empty forms in the formset
+    )
+
+    class Meta:
+        model = ServiceAvailability
+        fields = ('start_time', 'end_time') # Only these fields are managed by the user here
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_time = cleaned_data.get("start_time")
+        end_time = cleaned_data.get("end_time")
+
+        # Only validate if both fields are provided
+        if start_time and end_time:
+            if start_time >= end_time:
+                self.add_error('end_time', ValidationError(_("End time must be after start time.")))
+            
+            if start_time < timezone.now():
+                self.add_error('start_time', ValidationError(_("Start time cannot be in the past.")))
+        
+        # If only one is provided, raise an error
+        elif start_time and not end_time:
+            self.add_error('end_time', ValidationError(_("End time is required if start time is provided.")))
+        elif end_time and not start_time:
+            self.add_error('start_time', ValidationError(_("Start time is required if end time is provided.")))
+
+        return cleaned_data
+# --- END: Service Availability Form for Formset ---
+
+# --- START: Service Availability Formset ---
+ServiceAvailabilityFormSet = inlineformset_factory(
+    Service, ServiceAvailability, form=ServiceAvailabilityInlineForm, extra=1, can_delete=True
+)
+# --- END: Service Availability Formset ---
+
 # --- START: Service Review Form ---
 class ServiceReviewForm(forms.ModelForm):
     """
@@ -557,16 +733,42 @@ class ServiceReviewForm(forms.ModelForm):
     """
     class Meta:
         model = ServiceReview
-        fields = ['rating', 'comment']
+        fields = ['rating', 'review']
         widgets = {
             'rating': forms.RadioSelect(attrs={'class': 'form-check-input'}),
-            'comment': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': _('Share your experience with this service...')}),
+            'review': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': _('Share your experience with this service...')}),
         }
         labels = {
             'rating': _('Your Rating'),
-            'comment': _('Your Review (Optional)'),
+            'review': _('Your Review (Optional)'),
         }
 # --- END: Service Review Form ---
+
+# --- START: Service Booking Details Form ---
+class ServiceBookingDetailsForm(forms.Form):
+    """
+    A non-model form to capture extra details for a service booking before adding to cart.
+    """
+    availability_slot = forms.ChoiceField(
+        required=True,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label=_("Select an Available Time Slot"),
+        help_text=_("The service provider has made these times available. This time will be reserved for you upon payment.")
+    )
+    specific_requirements = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': _("Please provide any specific details, questions, or requirements for this service (e.g., address for the service, description of the problem).")}),
+        label=_("Specific Requirements & Details (Optional)")
+    )
+
+    def __init__(self, *args, **kwargs):
+        availability_choices = kwargs.pop('availability_choices', [])
+        super().__init__(*args, **kwargs)
+        self.fields['availability_slot'].choices = availability_choices
+        if not availability_choices:
+            self.fields['availability_slot'].widget = forms.HiddenInput()
+            self.fields['availability_slot'].required = False
+# --- END: Service Booking Details Form ---
 
 # --- START: Service Search Form ---
 class ServiceSearchForm(forms.Form):
@@ -575,6 +777,56 @@ class ServiceSearchForm(forms.Form):
     """
     q = forms.CharField(label=_("Search Services"), required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Search Services')}))
 # --- END: Service Search Form ---
+
+# --- START: Service Availability Form ---
+class ServiceAvailabilityForm(forms.ModelForm):
+    start_time = forms.DateTimeField(
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+        label=_("Start Time")
+    )
+    end_time = forms.DateTimeField(
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+        label=_("End Time")
+    )
+
+    class Meta:
+        model = ServiceAvailability
+        fields = ['service', 'start_time', 'end_time']
+        widgets = {
+            'service': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        provider = kwargs.pop('provider', None)
+        super().__init__(*args, **kwargs)
+        if provider:
+            self.fields['service'].queryset = Service.objects.filter(provider=provider, is_active=True)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_time = cleaned_data.get("start_time")
+        end_time = cleaned_data.get("end_time")
+
+        if start_time and end_time:
+            if start_time >= end_time:
+                self.add_error('end_time', ValidationError(_("End time must be after start time.")))
+            
+            if not self.instance.pk and start_time < timezone.now():
+                self.add_error('start_time', ValidationError(_("Start time cannot be in the past.")))
+            
+            service = cleaned_data.get("service")
+            if service:
+                overlapping_slots = ServiceAvailability.objects.filter(
+                    service=service,
+                    start_time__lt=end_time,
+                    end_time__gt=start_time
+                ).exclude(pk=self.instance.pk if self.instance else None)
+
+                if overlapping_slots.exists():
+                    self.add_error(None, ValidationError(_("This time slot overlaps with another available slot for the same service.")))
+
+        return cleaned_data
+# --- END: Service Availability Form ---
 
 # --- START: Address Form ---
 class AddressForm(forms.ModelForm):
@@ -601,7 +853,8 @@ class AddressForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        user = kwargs.pop('user', None) # Pop the user kwarg to avoid passing it to the parent
+        super().__init__(*args, **kwargs) # Call parent __init__
         for field_name, field in self.fields.items():
             if field_name not in ['apartment_address', 'phone_number', 'is_default']:
                 field.required = False
@@ -660,22 +913,46 @@ class ServiceProviderRegistrationForm(forms.ModelForm):
     class Meta:
         model = ServiceProviderProfile
         fields = [
-            'business_name', 'bio',
-            'payout_mobile_money_provider', 'payout_mobile_money_number'
+            'business_name', 'bio', 'mobile_money_provider',
+            'mobile_money_number', 'stripe_account_id', 'payoneer_email',
+            'wise_email', 'crypto_wallet_address', 'crypto_wallet_network'
         ]
         widgets = {
             'bio': forms.Textarea(attrs={'rows': 5}),
-            'payout_mobile_money_provider': forms.Select(attrs={'class': 'form-select'}),
-            'payout_mobile_money_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 024xxxxxxx')}),
+            'mobile_money_provider': forms.Select(attrs={'class': 'form-select'}),
+            'mobile_money_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 024xxxxxxx')}),
+            'stripe_account_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., acct_xxxxxxxxxxxxxx')}),
+            'payoneer_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('your.payoneer.email@example.com')}),
+            'wise_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('your.wise.email@example.com')}),
+            'crypto_wallet_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 0xAbC... or bc1q...')}),
+            'crypto_wallet_network': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Ethereum (ERC20), Bitcoin')}),
+        }
+        labels = {
+            'stripe_account_id': _("Stripe Connect Account ID"),
+            'payoneer_email': _("Payoneer Email Address"),
+            'wise_email': _("Wise Email Address"),
+            'crypto_wallet_address': _("Cryptocurrency Wallet Address"),
+            'crypto_wallet_network': _("Cryptocurrency Network"),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['business_name'].widget.attrs.update({'class': 'form-control', 'placeholder': _('e.g., Your Awesome Services Inc.')})
         self.fields['bio'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Tell us about the services you offer, your experience, and what makes you stand out...')})
-        self.fields['payout_mobile_money_provider'].required = False
-        self.fields['payout_mobile_money_number'].required = False
-        self.fields['payout_mobile_money_number'].help_text = _("Ensure this number is registered for Mobile Money and can receive payments.")
+        
+        # Make all payout fields optional (using correct names)
+        self.fields['mobile_money_provider'].required = False
+        self.fields['mobile_money_number'].required = False
+        self.fields['stripe_account_id'].required = False
+        self.fields['payoneer_email'].required = False
+        self.fields['wise_email'].required = False
+        self.fields['crypto_wallet_address'].required = False
+        self.fields['crypto_wallet_network'].required = False
+
+        # Add help texts
+        self.fields['mobile_money_number'].help_text = _("Ensure this number is registered for Mobile Money and can receive payments.")
+        self.fields['stripe_account_id'].help_text = _("For automated payouts via Stripe. You can get this from your Stripe dashboard.")
+        self.fields['crypto_wallet_address'].help_text = _("Ensure this address is correct for the specified network. Transactions are irreversible.")
 
     def clean(self):
         cleaned_data = super().clean()
@@ -683,6 +960,108 @@ class ServiceProviderRegistrationForm(forms.ModelForm):
 
 # --- END: Service Provider Registration Form ---
 
+# --- START: Service Provider Profile Form ---
+class ServiceProviderProfileForm(forms.ModelForm):
+    """
+    Form for service providers to update their profile.
+    """
+    class Meta:
+        model = ServiceProviderProfile
+        fields = [
+            'business_name', 'bio',
+            'mobile_money_provider', 'mobile_money_number',
+            'paypal_email',
+            'bank_account_name', 'bank_account_number', 'bank_name', 'bank_branch',
+            'stripe_account_id', 'payoneer_email', 'wise_email',
+            'crypto_wallet_address', 'crypto_wallet_network',
+        ]
+        widgets = {
+            'business_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'bio': forms.Textarea(attrs={'rows': 5, 'class': 'form-control'}),
+            # Mobile Money
+            'mobile_money_provider': forms.Select(attrs={'class': 'form-select'}),
+            'mobile_money_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 024xxxxxxx')}),
+            # PayPal
+            'paypal_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('you@example.com')}),
+            # Bank
+            'bank_account_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Full name as it appears on the account")}),
+            'bank_account_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Your account number")}),
+            'bank_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Name of your bank")}),
+            'bank_branch': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Branch where you opened the account")}),
+            # Other
+            'stripe_account_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., acct_xxxxxxxxxxxxxx')}),
+            'payoneer_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('your.payoneer.email@example.com')}),
+            'wise_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('your.wise.email@example.com')}),
+            'crypto_wallet_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 0xAbC... or bc1q...')}),
+            'crypto_wallet_network': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Ethereum (ERC20), Bitcoin')}),
+        }
+        labels = {
+            'business_name': _("Business Name (Optional)"),
+            'bio': _("Your Bio / Service Description"),
+            'paypal_email': _("PayPal Email Address"),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make all fields on the edit form optional
+        for field_name in self.fields:
+            self.fields[field_name].required = False
+
+# --- END: Service Provider Profile Form ---
+ 
+ 
+# --- START: Service Provider Payout Form ---
+class ServiceProviderPayoutForm(forms.ModelForm):
+    """
+    Form for service providers to update their payout settings.
+    """
+    class Meta:
+        model = ServiceProviderProfile
+        fields = [
+            'mobile_money_provider', 'mobile_money_number', 'bank_account_name',
+            'bank_account_number', 'bank_name', 'bank_branch',
+            'stripe_account_id', 'payoneer_email', 'wise_email',
+            'crypto_wallet_address', 'crypto_wallet_network'
+        ]
+        widgets = {
+            'mobile_money_provider': forms.Select(attrs={'class': 'form-select'}),
+            'mobile_money_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 024xxxxxxx')}),
+            'bank_account_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Full name as it appears on the account")}),
+            'bank_account_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Your account number")}),
+            'bank_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Name of your bank")}),
+            'bank_branch': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Branch where you opened the account")}),
+            'stripe_account_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., acct_xxxxxxxxxxxxxx')}),
+            'payoneer_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('your.payoneer.email@example.com')}),
+            'wise_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('your.wise.email@example.com')}),
+            'crypto_wallet_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 0xAbC... or bc1q...')}),
+            'crypto_wallet_network': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Ethereum (ERC20), Bitcoin')}),
+        }
+        labels = {
+            'mobile_money_provider': _("Mobile Money Provider"),
+            'mobile_money_number': _("Mobile Money Number"),
+            'bank_account_name': _("Bank Account Holder's Name"),
+            'bank_account_number': _("Bank Account Number"),
+            'bank_name': _("Bank Name"),
+            'bank_branch': _("Bank Branch Name/Address"),
+            'stripe_account_id': _("Stripe Connect Account ID"),
+            'payoneer_email': _("Payoneer Email Address"),
+            'wise_email': _("Wise Email Address"),
+            'crypto_wallet_address': _("Cryptocurrency Wallet Address"),
+            'crypto_wallet_network': _("Cryptocurrency Network"),
+        }
+        help_texts = {
+            'mobile_money_number': _("Ensure this number is registered for Mobile Money and can receive payments."),
+            'stripe_account_id': _("For automated payouts via Stripe. You can get this from your Stripe dashboard."),
+            'crypto_wallet_address': _("Ensure this address is correct for the specified network. Transactions are irreversible."),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make all fields on the edit form optional as they are on the model
+        for field_name in self.fields:
+            self.fields[field_name].required = False
+# --- END: Service Provider Payout Form ---
+ 
 # --- START: Rider Forms ---
 class RiderProfileApplicationForm(forms.ModelForm):
     agreed_to_terms = forms.BooleanField(
@@ -845,21 +1224,23 @@ class RiderProfileUpdateForm(forms.ModelForm):
 class PortfolioItemForm(forms.ModelForm):
     class Meta:
         model = PortfolioItem
-        fields = ['title', 'description', 'image', 'video_url']
+        fields = ['title', 'description', 'image', 'link']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Title for this portfolio piece (optional)')}),
             'description': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': _('Brief description (optional)')}),
             'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
-            'video_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': _('e.g., https://www.youtube.com/watch?v=your_video_id')}),
+            'link': forms.URLInput(attrs={'class': 'form-control', 'placeholder': _('https://example.com/video-or-project')}),
         }
 
     def clean(self):
         cleaned_data = super().clean()
         image = cleaned_data.get("image")
-        video_url = cleaned_data.get("video_url")
+        link = cleaned_data.get("link")
 
-        if not image and not video_url:
-            raise forms.ValidationError(_("Please provide either an image or a video URL for your portfolio item."))
+        if not image and not link:
+            raise forms.ValidationError(_("You must provide either an image or a link."), code='required')
+        if image and link:
+            raise forms.ValidationError(_("You can only provide an image or a link, not both."), code='invalid')
         return cleaned_data
 # --- END: Portfolio Item Form ---
 
@@ -867,63 +1248,266 @@ class PortfolioItemForm(forms.ModelForm):
 class RiderPayoutRequestForm(forms.ModelForm):
     class Meta:
         model = PayoutRequest
-        fields = ['amount_requested'] # Only amount is needed from rider for now
-        widgets = {
-            'amount_requested': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': _('Enter amount to withdraw')}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        self.max_amount = kwargs.pop('max_amount', None)
-        super().__init__(*args, **kwargs)
-        if self.max_amount is not None:
-            self.fields['amount_requested'].widget.attrs['max'] = str(self.max_amount)
-            self.fields['amount_requested'].help_text = _(f"Maximum available: {self.max_amount}")
-            self.fields['amount_requested'].validators.append(MaxValueValidator(self.max_amount))
-            self.fields['amount_requested'].validators.append(MinValueValidator(Decimal('1.00'))) # Example minimum
-# --- END: Rider Payout Request Form ---
-
-# --- START: Vendor Payout Request Form ---
-class VendorPayoutRequestForm(forms.ModelForm):
-    class Meta:
-        model = PayoutRequest
-        fields = ['amount_requested', 'payment_method_details'] # Include payment_method_details
-        widgets = {
-            'amount_requested': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': _('Amount you want to withdraw')}),
-            'payment_method_details': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': _('E.g., Bank Name, Account Number, Mobile Money Number & Name.')}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        self.vendor_profile = kwargs.pop('vendor_profile', None) # To potentially use for validation
-        super().__init__(*args, **kwargs)
-
-    def clean_amount_requested(self):
-        amount = self.cleaned_data.get('amount_requested')
-        if amount is not None and amount <= 0:
-            raise ValidationError(_("The requested amount must be greater than zero."))
-        # Add more validation here if needed, e.g., check against vendor's available balance
-        return amount
-# --- END: Vendor Payout Request Form ---
-
-# --- START: Service Provider Payout Request Form ---
-class ServiceProviderPayoutRequestForm(forms.ModelForm):
-    class Meta:
-        model = PayoutRequest
         fields = ['amount_requested', 'payment_method_details']
         widgets = {
-            'amount_requested': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': _('Amount you want to withdraw')}),
+            'amount_requested': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': _('Enter amount to withdraw')}),
             'payment_method_details': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': _('E.g., Mobile Money Number & Registered Name.')}),
         }
 
     def __init__(self, *args, **kwargs):
-        self.service_provider_profile = kwargs.pop('service_provider_profile', None)
+        max_amount = kwargs.pop('max_amount', None)
         super().__init__(*args, **kwargs)
+        if max_amount is not None:
+            self.fields['amount_requested'].widget.attrs['max'] = str(max_amount)
+            self.fields['amount_requested'].help_text = _(f"Maximum available for withdrawal: {max_amount:.2f}")
+            self.fields['amount_requested'].validators.append(MaxValueValidator(max_amount))
+            self.fields['amount_requested'].validators.append(MinValueValidator(Decimal('1.00')))
+
         self.fields['payment_method_details'].help_text = _("Provide your Mobile Money number and the name registered to it. Payouts are typically via Mobile Money.")
 
     def clean_amount_requested(self):
         amount = self.cleaned_data.get('amount_requested')
         if amount is not None and amount <= 0:
             raise ValidationError(_("The requested amount must be greater than zero."))
-        # TODO: Add validation against provider's available balance
         return amount
-# --- END: Vendor Payout Request Form ---
 # --- END: Rider Payout Request Form ---
+
+
+# --- START: Vendor Payout Request Form ---
+class VendorPayoutRequestForm(forms.ModelForm):
+    payout_method = forms.ChoiceField(
+        widget=forms.RadioSelect,
+        required=True,
+        label=_("Select Payout Method")
+    )
+
+    class Meta:
+        model = PayoutRequest
+        fields = ['amount_requested', 'payout_method'] # Use payout_method instead of payment_method_details
+        widgets = {
+            'amount_requested': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': _('Amount you want to withdraw')}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        vendor_profile = kwargs.pop('vendor_profile', None)
+        max_amount = kwargs.pop('max_amount', None)
+        super().__init__(*args, **kwargs)
+
+        # Set up amount validation
+        if max_amount is not None:
+            self.fields['amount_requested'].widget.attrs['max'] = str(max_amount)
+            self.fields['amount_requested'].help_text = _(f"Maximum available for withdrawal: {max_amount:.2f}")
+            self.fields['amount_requested'].validators.append(MaxValueValidator(max_amount))
+            self.fields['amount_requested'].validators.append(MinValueValidator(Decimal('1.00'))) # Example minimum
+
+        # Dynamically build payout method choices
+        if vendor_profile:
+            choices = []
+            if vendor_profile.mobile_money_number and vendor_profile.mobile_money_provider:
+                choices.append(('mobile_money', f"Mobile Money: {vendor_profile.mobile_money_provider} - {vendor_profile.mobile_money_number}"))
+            if vendor_profile.bank_account_number and vendor_profile.bank_name:
+                choices.append(('bank', f"Bank Account: {vendor_profile.bank_name} - ...{vendor_profile.bank_account_number[-4:]}"))
+            if vendor_profile.paypal_email:
+                choices.append(('paypal', f"PayPal: {vendor_profile.paypal_email}"))
+            if vendor_profile.stripe_account_id:
+                choices.append(('stripe', f"Stripe: {vendor_profile.stripe_account_id}"))
+            if vendor_profile.payoneer_email:
+                choices.append(('payoneer', f"Payoneer: {vendor_profile.payoneer_email}"))
+            if vendor_profile.wise_email:
+                choices.append(('wise', f"Wise: {vendor_profile.wise_email}"))
+            if vendor_profile.crypto_wallet_address and vendor_profile.crypto_wallet_network:
+                choices.append(('crypto', f"Crypto: {vendor_profile.crypto_wallet_network} - ...{vendor_profile.crypto_wallet_address[-6:]}"))
+
+            if choices:
+                self.fields['payout_method'].choices = choices
+            else:
+                # If no payout methods are configured, disable the form/field and show a message.
+                self.fields['payout_method'].widget = forms.HiddenInput()
+                self.fields['payout_method'].required = False
+                self.fields['amount_requested'].disabled = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Check if payout methods were available. If not, raise the validation error here.
+        # This ensures the error is only raised during form processing (POST), not on initial render (GET).
+        if not self.fields['payout_method'].choices:
+            url = reverse_lazy('core:vendor_payment_settings')
+            error_message = _("You have not configured any payout methods. Please <a href='{url}'>update your payout settings</a> before requesting a payout.")
+            raise ValidationError(
+                format_html(error_message, url=url),
+                code='no_payout_methods'
+            )
+        return cleaned_data
+# --- END: Vendor Payout Request Form ---
+
+# --- START: Service Provider Payout Request Form (Inherits from Vendor's) ---
+class ServiceProviderPayoutRequestForm(VendorPayoutRequestForm):
+    """
+    A dedicated payout request form for Service Providers.
+    It inherits the structure from VendorPayoutRequestForm but overrides the
+    validation to point to the correct settings URL.
+    """
+    def __init__(self, *args, **kwargs):
+        # Pop the custom arguments before calling the parent's __init__
+        # The 'vendor_profile' kwarg is used by the parent's __init__
+        max_amount = kwargs.pop('max_amount', None)
+        
+        # Call the parent's __init__ method. It knows how to handle 'vendor_profile'.
+        super().__init__(*args, **kwargs)
+
+        # Now, apply the validation logic using the popped 'max_amount'
+        if max_amount is not None:
+            self.fields['amount_requested'].widget.attrs['max'] = str(max_amount)
+            self.fields['amount_requested'].help_text = _(f"Maximum available for withdrawal: {max_amount:.2f}")
+            self.fields['amount_requested'].validators.append(MaxValueValidator(max_amount))
+            self.fields['amount_requested'].validators.append(MinValueValidator(Decimal('1.00')))
+
+    def clean(self):
+        # We call the parent's clean method but catch the specific error to modify it.
+        try:
+            return super().clean() # Call parent's clean
+        except ValidationError as e:
+            if e.code == 'no_payout_methods':
+                # If the error is 'no_payout_methods', raise a new one with the correct URL.
+                url = reverse_lazy('core:service_provider_payout_settings')
+                error_message = _("You have not configured any payout methods. Please <a href='{url}'>update your payout settings</a> before requesting a payout.")
+                raise ValidationError(
+                    format_html(error_message, url=url),
+                    code='no_payout_methods'
+                )
+            else:
+                # If it's a different validation error, just re-raise it.
+                raise
+# --- END: Service Provider Payout Request Form ---
+
+# --- START: UserProfileForm ---
+class UserProfileForm(forms.ModelForm):
+    first_name = forms.CharField(max_length=150, required=False, label=_("First Name"))
+    last_name = forms.CharField(max_length=150, required=False, label=_("Last Name"))
+    email = forms.EmailField(required=False, label=_("Email Address"))
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            'profile_picture', 'bio', 'date_of_birth', 'phone_number',
+            'location', 'website_url', 'linkedin_url', 'twitter_url', 'github_url'
+        ]
+        widgets = {
+            'profile_picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'bio': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'date_of_birth': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'location': forms.TextInput(attrs={'class': 'form-control'}),
+            'website_url': forms.URLInput(attrs={'class': 'form-control'}),
+            'linkedin_url': forms.URLInput(attrs={'class': 'form-control'}),
+            'twitter_url': forms.URLInput(attrs={'class': 'form-control'}),
+            'github_url': forms.URLInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'profile_picture': _("Profile Picture"),
+            'bio': _("Biography"),
+            'date_of_birth': _("Date of Birth"),
+            'phone_number': _("Phone Number"),
+            'location': _("Location"),
+            'website_url': _("Website URL"),
+            'linkedin_url': _("LinkedIn Profile URL"),
+            'twitter_url': _("Twitter (X) Profile URL"),
+            'github_url': _("GitHub Profile URL"),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if self.user:
+            self.fields['first_name'].initial = self.user.first_name
+            self.fields['last_name'].initial = self.user.last_name
+            self.fields['email'].initial = self.user.email
+
+    def save(self, commit=True):
+        user_profile = super().save(commit=False)
+        if self.user:
+            self.user.first_name = self.cleaned_data.get('first_name', self.user.first_name)
+            self.user.last_name = self.cleaned_data.get('last_name', self.user.last_name)
+            self.user.email = self.cleaned_data.get('email', self.user.email)
+            self.user.save()
+        if commit:
+            user_profile.save()
+        return user_profile
+
+# --- END: UserProfileForm ---
+
+# --- START: UserPreferencesForm ---
+class UserPreferencesForm(forms.ModelForm):
+    class Meta:
+        model = UserPreferences
+        fields = ['receive_email_notifications', 'receive_promotional_emails']
+        widgets = {
+            'receive_email_notifications': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'receive_promotional_emails': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'receive_email_notifications': _("Receive general email notifications"),
+            'receive_promotional_emails': _("Receive promotional emails and newsletters"),
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)  # Accept and remove the 'user' argument
+        super().__init__(*args, **kwargs)  # Call the parent __init__ without 'user'
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Field('receive_email_notifications', css_class='mb-3'),
+            Field('receive_promotional_emails', css_class='mb-3'),
+        )
+# --- END: UserPreferencesForm ---
+
+# --- START: Product Q&A Forms ---
+class ProductQuestionForm(forms.ModelForm):
+    class Meta:
+        model = ProductQuestion
+        fields = ['text']
+        widgets = {
+            'text': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': _('Ask a question about this product...')
+            }),
+        }
+        labels = {
+            'text': '' # Hide the label, the placeholder is enough
+        }
+
+class ProductAnswerForm(forms.ModelForm):
+    class Meta:
+        model = ProductAnswer
+        fields = ['text']
+        widgets = {
+            'text': forms.Textarea(attrs={
+                'class': 'form-control form-control-sm',
+                'rows': 2,
+                'placeholder': _('Write an answer...')
+            }),
+        }
+        labels = {
+            'text': '' # Hide the label
+        }
+# --- END: Product Q&A Forms ---
+
+from .models import Message
+
+# --- START: Message Form ---
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ['content']
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': _('Type your message here...')
+            }),
+        }
+        labels = {
+            'content': '' # Hide the label
+        }
+# --- END: Message Form ---

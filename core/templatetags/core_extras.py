@@ -3,39 +3,28 @@ import re
 
 register = template.Library()
 
-@register.filter(name='get_embed_url')
-def get_embed_url(video_url):
-    if not video_url:
-        return ""
+@register.filter
+def get_embed_url(url):
+    """
+    Converts a YouTube or Vimeo URL to an embeddable URL.
+    Returns None if the URL is not recognized or cannot be embedded.
+    """
+    if not url:
+        return None
 
-    # Try to extract YouTube video ID
-    # Handles URLs like:
-    # - https://www.youtube.com/watch?v=VIDEO_ID
-    # - https://youtu.be/VIDEO_ID
-    # - https://www.youtube.com/embed/VIDEO_ID (already an embed link)
-    youtube_patterns = [
-        r"(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)",
-        r"(?:https?:\/\/)?(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]+)",
-        r"(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]+)"
-    ]
-    for pattern in youtube_patterns:
-        match = re.search(pattern, video_url)
-        if match:
-            video_id = match.group(1)
-            return f"https://www.youtube.com/embed/{video_id}"
+    # YouTube regex
+    youtube_regex = (
+        r'(https?://)?(www\.)?'
+        '(youtube|youtu|youtube-nocookie)\.(com|be)/'
+        '(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})')
+    match = re.match(youtube_regex, url)
+    if match:
+        return f"https://www.youtube.com/embed/{match.group(6)}"
 
-    # Try to extract Vimeo video ID
-    # Handles URLs like:
-    # - https://vimeo.com/VIDEO_ID
-    # - https://player.vimeo.com/video/VIDEO_ID (already an embed link)
-    vimeo_patterns = [
-        r"(?:https?:\/\/)?(?:www\.)?vimeo\.com\/([0-9]+)",
-        r"(?:https?:\/\/)?player\.vimeo\.com\/video\/([0-9]+)"
-    ]
-    for pattern in vimeo_patterns:
-        match = re.search(pattern, video_url)
-        if match:
-            video_id = match.group(1)
-            return f"https://player.vimeo.com/video/{video_id}"
+    # Vimeo regex
+    vimeo_regex = r'(https?://)?(www\.)?(player\.)?vimeo\.com/(video/)?(\d+)(/?.*)'
+    match = re.match(vimeo_regex, url)
+    if match:
+        return f"https://player.vimeo.com/video/{match.group(5)}"
 
-    return "" # Return empty if no known pattern matches, or original URL if preferred
+    return None # Not a recognized embeddable video URL

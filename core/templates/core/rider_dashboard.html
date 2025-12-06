@@ -6,53 +6,108 @@
 {% block extra_css %}
     {{ block.super }} {# Keep any CSS from the parent template #}
     <style>
-        /* Rider Dashboard Sidebar */
+        body {
+            background-color: #ebe8e8; /* Match vendor dashboard background */
+        }
+
+        .dashboard-container {
+            display: flex;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Sidebar styling from vendor_dashboard */
         .rider-dashboard-sidebar {
-            background-color: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            /* For sticky sidebar if desired later, similar to vendor dashboard */
-            /* position: sticky; 
-            top: 120px; /* Adjust based on main nav height */
-            /* height: calc(100vh - 120px); /* Adjust to match top */
-            /* overflow-y: auto; */
+            flex: 0 0 280px;
+            background-color: #ffffff;
+            padding: 1.5rem 1rem;
+            border-radius: 12px;
+            position: sticky;
+            top: 2rem;
+            align-self: flex-start;
+            height: calc(100vh - 4rem);
+            overflow-y: auto;
+            border: 1px solid #c7c9cb;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
         }
         .rider-dashboard-sidebar .nav-link {
-            color: #495057; padding: 0.6rem 1rem; margin-bottom: 0.3rem; border-radius: 0.25rem;
+            color: #495057;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.2rem;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s;
+            white-space: nowrap;
         }
-        .rider-dashboard-sidebar .nav-link:hover { background-color: #e9ecef; color: #007bff; }
-        .rider-dashboard-sidebar .nav-link.active { background-color: #007bff; color: white; }
-        .rider-dashboard-sidebar h5 { margin-bottom: 1rem; color: #343a40; }
-
-        /* Custom styles for Rider Dashboard */
-        .rider-dashboard-container {
-            background-color: #ffffff; /* White background for the main content area */
-            padding: 30px; /* More padding */
-            border-radius: 12px; /* More rounded corners */
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); /* Stronger, softer shadow */
-            border: 1px solid #e0e0e0; /* Lighter border */
+        .rider-dashboard-sidebar .nav-link.active {
+            background-color: #474747;
+            color: white;
+        }
+        .rider-dashboard-sidebar .nav-link:hover:not(.active) {
+            background-color: #e9ecef;
+            color: #323232ff;
+        }
+        .rider-dashboard-sidebar .nav {
+            flex-direction: column;
         }
 
-        .rider-dashboard-container h2.page-main-title {
-            color: #333; /* Darker title color */
-            margin-bottom: 25px;
-            text-align: center; /* Center the title */
+        /* New Sidebar Heading Style from vendor_dashboard */
+        .sidebar-heading {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6c757d;
+            text-transform: uppercase;
+            padding: 0 1rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            letter-spacing: .05em;
+        }
+        .dashboard-main {
+            flex-grow: 1;
         }
 
-        .dashboard-section { /* Re-using the section style from previous iteration */
-            background-color: #f8f9fa; /* Light background for sections */
-            padding: 20px; /* Add some padding */
-            margin-bottom: 30px; /* Space between sections */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2.5rem;
             border-radius: 8px; /* Rounded corners */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
-            border: 1px solid #e9ecef; /* Light border */
+            background-color: #ffffff;
+            border-left: 5px solid #323232ff;
+            border: 1px solid #828282ff;
+        }
+        .page-header h1 {
+            font-weight: 600;
+            color: #323232ff;
+            margin-bottom: 0;
         }
 
-        .dashboard-section h5 {
-            color: #007bff; /* Primary color for section titles */
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+        /* Dashboard Section Styling from vendor_dashboard */
+        .dashboard-section {
+            background-color: #fff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid #828282ff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .dashboard-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
             border-bottom: 1px solid #e9ecef; /* Separator line */
+        }
+        .dashboard-section-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #323232ff;
+            margin-bottom: 0;
         }
 
         .availability-status .badge {
@@ -60,69 +115,42 @@
             padding: 0.5em 0.75em;
         }
 
-        /* Animation for available tasks */
-        @keyframes pulseEffect {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); } /* Slightly larger */
-        }
-        .available-task-animation { animation: pulseEffect 1.5s infinite ease-in-out; }
-
         /* Style for the empty state illustration */
         .empty-state-illustration { max-width: 180px; height: auto; margin-bottom: 15px; }
 
         /* Task list styling */
-        .task-list .list-group-item {
-            border-color: #dee2e6; /* Standard list group border */
-            margin-bottom: 5px; /* Space between list items */
-            border-radius: 5px; /* Rounded corners for list items */
-        }
-
-        .task-list .list-group-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .task-list .list-group-item-action:hover {
-            background-color: #f0f0f0; /* Light hover effect */
-        }
-
-        .task-list .badge {
-             font-size: 0.8em; /* Smaller badge in list */
-        }
-
-        .task-list small strong {
-            color: #495057; /* Darker text for labels */
+        .list-group-item-action:hover {
+            background-color: #f8f9fa;
         }
     </style>
 {% endblock extra_css %}
 
 {% block content %}
 <div class="container mt-5 mb-5">
-    <div class="row justify-content-center">
+    <div class="dashboard-container">
          {# Include the Rider Dashboard Sidebar Snippet #}
-        {% include "core/rider/rider_dashboard_sidebar_snippet.html" %}
+        <aside class="rider-dashboard-sidebar">
+            {% include "core/rider/rider_dashboard_sidebar_snippet.html" %}
+        </aside>
 
         {# Main Content Area #}
-        <div class="col-md-9">
+        <main class="dashboard-main">
+            <div class="page-header">
+                <div>
+                    <h1>{{ page_title }}</h1>
+                    <p class="text-muted mb-0">{{ status_message }}</p>
+                </div>
+            </div>
 
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-
-            <div class="rider-dashboard-container">
-                <h2 class="page-main-title">{{ page_title }}</h2>
-
-                <p class="lead text-center mb-4">{{ status_message }}</p>
+            {% include 'partials/_messages.html' %}
 
                 {% if rider_profile.is_approved %}
 
                     {# --- Your Rider Details Section (Part of Overview) --- #}
                     <div class="dashboard-section">
-                        <h5>{% trans "Your Rider Details" %}</h5>
+                        <div class="dashboard-section-header">
+                            <h2>{% trans "Your Rider Details" %}</h2>
+                        </div>
                         <div class="mb-3 availability-status">
                             <strong>{% trans "Current Availability:" %}</strong>
                             {% if rider_profile.is_available %}
@@ -150,8 +178,10 @@
                     </div>
 
                     {# --- My Current Tasks Section (Part of Overview) --- #}
-                    <div class="dashboard-section task-list">
-                        <h5>{% trans "My Current Tasks" %}</h5>
+                    <div class="dashboard-section">
+                        <div class="dashboard-section-header">
+                            <h2>{% trans "My Current Tasks" %}</h2>
+                        </div>
                         {% if my_accepted_tasks %}
                             <ul class="list-group">
                                 {% for task in my_accepted_tasks %}
@@ -180,13 +210,15 @@
                     </div>
 
                     {# --- Available Delivery Tasks Section (Part of Overview) --- #}
-                    <div class="dashboard-section task-list">
-                        <h5>{% trans "Available Delivery Tasks" %}</h5>
+                    <div class="dashboard-section">
+                        <div class="dashboard-section-header">
+                            <h2>{% trans "Available Delivery Tasks" %}</h2>
+                        </div>
                         {% if rider_profile.is_available %}
                             {% if available_tasks %}
                                 <ul class="list-group">
                                     {% for task in available_tasks %}
-                                        <li class="list-group-item d-flex justify-content-between align-items-center available-task-animation">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
                                             <div>
                                                 <strong>{% trans "Order ID:" %}</strong> {{ task.order.order_id }} <br>
                                                 <small><strong>{% trans "Pickup:" %}</strong> {{ task.pickup_address_text|truncatewords:10 }}</small><br>
@@ -210,8 +242,7 @@
                         {% endif %}
                     </div>
                 {% endif %} {# End if rider_profile.is_approved #}
-            </div> {# Close rider-dashboard-container #}
-        </div>
+        </main>
     </div>
 </div>
 {% endblock content %}

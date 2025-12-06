@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load i18n crispy_forms_tags static %}
+
+{% block title %}{% trans "Edit Portfolio Item" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        .form-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color:  #ebe8e8;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+            border: 1px solid #c7c9cb;
+            font-family: "Outfit", sans-serif;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #f0f2f5;
+        }
+
+        .page-header h1 {
+            font-family: "Poppins", sans-serif;
+            font-weight: 700;
+            color: #1a2533;
+            margin-bottom: 0;
+        }
+
+        .form-container .form-control,
+        .form-container .form-select {
+            border: 1px solid #ced4da;
+            transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+        }
+        .form-container .form-control:focus,
+        .form-container .form-select:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+
+        .form-container .btn-primary {
+            background-color: #474747;
+            border-color: #474747;
+            font-weight: 500;
+        }
+        .form-container .btn-primary:hover {
+            background-color: #383838;
+            border-color: #383838;
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="form-container">
+        <div class="page-header">
+            <h1>{% trans "Edit Portfolio Item" %}</h1>
+            <a href="{% url 'core:edit_service_provider_profile' %}" class="btn btn-lg btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>{% trans "Back to Profile" %}
+            </a>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                <a href="{% url 'core:edit_service_provider_profile' %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+                <button type="submit" class="btn btn-primary">{% trans "Save Changes" %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}

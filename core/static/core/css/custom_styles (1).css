@@ -1,0 +1,23 @@
+/* c:\Users\Hp\Desktop\Nexus\core\static\core\css\custom_styles.css */
+
+/*
+   Custom CSS rules for NEXUS project.
+   This file is intended to override or supplement theme styles.
+*/
+
+/* --- Form Label Styling --- */
+
+/* Target all labels - try this first */
+label {
+    color: #000000 !important; /* Black. Use !important if theme styles are too strong */
+}
+
+/* More specific target for Bootstrap 5 form labels */
+.form-label {
+    color: #000000 !important;
+}
+
+/* Specifically for labels next to checkboxes and radio buttons */
+.form-check-label {
+    color: #000000 !important;
+}

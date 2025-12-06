@@ -139,6 +139,41 @@
     </section>
     {% endif %}
 
+    <!-- Recently Viewed Services Section -->
+    {% if recently_viewed_services %}
+    <section class="mb-5">
+        <h2 class="section-title">{% trans "Recently Viewed" %}</h2>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+            {% for service in recently_viewed_services %}
+            <div class="col">
+                <div class="service-item-flat">
+                    <a href="{{ service.get_absolute_url }}">
+                        {% if service.images.first.image.url %}
+                            <img src="{{ service.images.first.image.url }}" alt="{{ service.title }}">
+                        {% else %}
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                        {% endif %}
+                    </a>
+                    <h5 class="mb-1">
+                        <a href="{{ service.get_absolute_url }}" class="text-decoration-none stretched-link">{{ service.title|truncatechars:50 }}</a>
+                    </h5>
+                    <p class="provider-info mb-2">
+                        <i class="bi bi-person-fill"></i> {{ service.provider.username }}
+                        {% if service.provider.service_provider_profile and service.provider.service_provider_profile.is_approved %}
+                            <i class="bi bi-patch-check-fill text-success ms-1" title="{% trans 'Verified Provider' %}"></i>
+                        {% endif %}
+                    </p>
+                    {% if service.packages.exists %}
+                        <p class="service-price-flat mb-2">
+                             {% trans "From" %}: GH₵ {{ service.packages.all.first.price|floatformat:2|intcomma }}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
 
          <!-- "How It Works" Section (Static Example) -->
     <section class="mb-5 py-4 bg-light rounded">

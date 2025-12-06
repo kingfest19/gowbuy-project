@@ -1,36 +1,48 @@
-{% extends 'base.html' %} {# Or your main base template path, e.g., 'core/base.html' #}
+{% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
 
-{% block title %}{% trans "Help & Support" %} - {{ block.super }}{% endblock title %}
+{% block title %}{% trans "Help & Support" %}{% endblock %}
 
 {% block content %}
-<div class="container mt-5 mb-5">
-    <div class="row">
-        <div class="col-lg-10 offset-lg-1">
-            <h1 class="mb-4">{% trans "Help & Support" %}</h1>
+<div class="container my-5">
+    <div class="text-center">
+        <h1 class="mb-4">{% trans "Help & Support" %}</h1>
+        <p class="lead">{% trans "Find answers to common questions or get in touch with our support team." %}</p>
+    </div>
 
-            <section id="faq" class="mb-5">
-                <h2>{% trans "Frequently Asked Questions (FAQ)" %}</h2>
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-9">
+            <h2 class="mb-4">{% trans "Frequently Asked Questions" %}</h2>
+
+            {% if faqs %}
                 <div class="accordion" id="faqAccordion">
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="headingOne">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                                {% trans "How do I reset my password?" %}
-                            </button>
-                        </h2>
-                        <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body">
-                                {% blocktrans %}You can reset your password by clicking on the "Forgot Password?" link on the sign-in page.{% endblocktrans %}
+                    {% for faq in faqs %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ faq.id }}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ faq.id }}" aria-expanded="false" aria-controls="collapse{{ faq.id }}">
+                                    {{ faq.question }}
+                                </button>
+                            </h2>
+                            <div id="collapse{{ faq.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ faq.id }}" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body">
+                                    {{ faq.answer|linebreaksbr }}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    {# Add more FAQ items here #}
+                    {% endfor %}
                 </div>
-            </section>
+            {% else %}
+                <div class="alert alert-info" role="alert">
+                    {% trans "No frequently asked questions are available at this time. If you need help, please contact support." %}
+                </div>
+            {% endif %}
 
-            {# Add more sections like "Contact Us", "Guides", etc. #}
-
+            <div class="mt-5 p-4 bg-light rounded text-center">
+                <h3 class="h4">{% trans "Still need help?" %}</h3>
+                <p>{% trans "If you can't find the answer you're looking for, feel free to reach out to our support team." %}</p>
+                <a href="{% url 'core:support_ticket_create' %}" class="btn btn-primary">{% trans "Contact Support" %}</a>
+            </div>
         </div>
     </div>
 </div>

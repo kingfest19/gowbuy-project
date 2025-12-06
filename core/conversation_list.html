@@ -1,0 +1,77 @@
+{% extends "core/service_provider/provider_base.html" %}
+{% load static i18n humanize %}
+
+{% block title %}{% trans "Messages" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page-Title -->
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="page-title-box">
+                <h4 class="page-title">{% trans "My Messages" %}</h4>
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'core:service_provider_dashboard' %}">{% trans "Dashboard" %}</a></li>
+                    <li class="breadcrumb-item active">{% trans "Messages" %}</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    <!-- end page-title-box -->
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="mt-0 header-title">{% trans "Your Conversations" %}</h4>
+                    <p class="text-muted mb-4">{% trans "Here are all your conversations with customers and vendors." %}</p>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "With" %}</th>
+                                    <th>{% trans "Last Message" %}</th>
+                                    <th>{% trans "Date" %}</th>
+                                    <th>{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for conv in conversations %}
+                                <tr class="{% if conv.is_unread_by_user %}table-info fw-bold{% endif %}">
+                                    <td>
+                                        <img src="{{ conv.other_participant.userprofile.get_profile_picture_url }}" alt="user" class="rounded-circle thumb-sm mr-1">
+                                        {{ conv.other_participant.get_full_name|default:conv.other_participant.username }}
+                                    </td>
+                                    <td>
+                                        <span class="d-inline-block text-truncate" style="max-width: 400px;">
+                                            {% if conv.last_message_sender_id == request.user.id %}<i class="fas fa-reply me-1"></i>{% endif %}
+                                            {{ conv.last_message_content|default:"No messages yet." }}
+                                        </span>
+                                    </td>
+                                    <td>{{ conv.last_message_time|naturaltime }}</td>
+                                    <td>
+                                        <a href="{% url 'core:service_provider_message_detail' pk=conv.pk %}" class="btn btn-primary btn-sm">{% trans "View" %}</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">{% trans "You have no conversations yet." %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if is_paginated %}
+                    <div class="mt-4">
+                        {% include 'core/partials/pagination.html' with page_obj=page_obj %}
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div> <!-- end col -->
+    </div> <!-- end row -->
+</div>
+{% endblock content %}

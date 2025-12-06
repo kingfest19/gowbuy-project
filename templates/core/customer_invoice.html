@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice for Order #{{ order.order_id }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            @frame header_frame { -pdf-frame-content: header_content; left: 50pt; width: 512pt; top: 50pt; height: 80pt; }
+            @frame content_frame { left: 50pt; width: 512pt; top: 150pt; height: 572pt; }
+            @frame footer_frame { -pdf-frame-content: footer_content; left: 50pt; width: 512pt; top: 722pt; height: 20pt; }
+        }
+        body { font-family: "Helvetica", "sans-serif"; color: #333; font-size: 10pt; }
+        .header-container { overflow: auto; /* Clearfix */ }
+        .logo { float: left; width: 150px; }
+        .company-details { float: right; text-align: right; }
+        h1 { text-align: right; color: #555; }
+        .address-section { margin-top: 40px; margin-bottom: 30px; overflow: auto; }
+        .address-box { width: 45%; border: 1px solid #ccc; padding: 10px; min-height: 100px; }
+        .from-address { float: left; }
+        .to-address { float: right; }
+        .order-summary { margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .totals-section { margin-top: 20px; float: right; width: 40%; }
+        .totals-table { width: 100%; }
+        .totals-table td { border: none; padding: 4px 8px; }
+        .text-right { text-align: right; }
+        .grand-total { font-weight: bold; font-size: 1.2em; }
+        #footer_content { text-align: center; font-size: 9pt; color: #777; }
+    </style>
+</head>
+<body>
+    <div id="header_content">
+        <div class="header-container">
+            <div class="logo">
+                {# You can replace this with your actual logo image #}
+                <h2 style="color: #e65100;">NEXUS</h2>
+            </div>
+            <div class="company-details">
+                <h1>INVOICE</h1>
+                <strong>NEXUS Marketplace</strong><br>
+                123 Tech Avenue<br>
+                Accra, Ghana<br>
+                support@nexus.com
+            </div>
+        </div>
+    </div>
+    <div id="footer_content">
+        Thank you for your business! | Page <span class="pagenum"></span>
+    </div>
+
+    <div class="order-summary">
+        <strong>Order ID:</strong> #{{ order.order_id }}<br>
+        <strong>Order Date:</strong> {{ order.created_at|date:"F d, Y" }}<br>
+        <strong>Payment Method:</strong> {{ order.get_payment_method_display }}
+    </div>
+
+    <div class="address-section">
+        <div class="address-box to-address">
+            <strong>BILL TO:</strong><br>
+            {{ order.billing_address_text|linebreaksbr|default:"No billing address provided." }}
+        </div>
+    </div>
+
+    <h3>Order Items</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Product / Service</th>
+                <th class="text-right">Unit Price</th>
+                <th class="text-right">Quantity</th>
+                <th class="text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order.items.all %}
+            <tr>
+                <td>{{ item.product_name|default:item.service_package_name }}</td>
+                <td class="text-right">GH₵{{ item.price|floatformat:2 }}</td>
+                <td class="text-right">{{ item.quantity }}</td>
+                <td class="text-right">GH₵{{ item.get_total_item_price|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="totals-section">
+        <table class="totals-table">
+            <tr>
+                <td>Subtotal:</td>
+                <td class="text-right">GH₵{{ order.get_subtotal_cost|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <td>Delivery Fee:</td>
+                <td class="text-right">GH₵{{ order.delivery_fee|floatformat:2 }}</td>
+            </tr>
+            <tr class="grand-total">
+                <td><strong>TOTAL:</strong></td>
+                <td class="text-right"><strong>GH₵{{ order.get_total_cost|floatformat:2 }}</strong></td>
+            </tr>
+        </table>
+    </div>
+
+</body>
+</html>

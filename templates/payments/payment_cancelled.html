@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Payment Cancelled" %}{% endblock %}
+{% block content %}
+<div class="container mt-5 text-center">
+    <h1>{% trans "Payment Cancelled" %}</h1>
+    <p class="lead">{% trans "Your payment was not completed. You can try again from your order page." %}</p>
+    <a href="{% url 'core:order_history' %}" class="btn btn-secondary">{% trans "View My Orders" %}</a>
+</div>
+{% endblock %}

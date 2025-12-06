@@ -1,0 +1,340 @@
+{% load static i18n %}
+
+<style>
+    #nexusChatbotContainer {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1050; /* Ensure it's above most other content */
+    }
+
+    #nexusChatbotToggleButton {
+        background-color: var(--bs-primary, #007bff);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        font-size: 24px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+     #nexusChatbotToggleButton:hover {
+        background-color: var(--bs-primary-darker, #0056b3); /* You might need to define --bs-primary-darker or use a slightly darker hex */
+     }
+
+
+    #nexusChatWindow {
+        display: none; /* Hidden by default */
+        position: fixed;
+        bottom: 90px; /* Above the toggle button */
+        right: 20px;
+        width: 350px;
+        max-width: 90vw;
+        height: 450px;
+        max-height: 70vh;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .nexus-chat-header {
+        background-color: var(--bs-light, #f8f9fa);
+        padding: 10px 15px;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .nexus-chat-header h5 {
+        margin-bottom: 0;
+        font-size: 1.1rem;
+    }
+    .nexus-chat-header .btn-close-chat {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+    }
+
+    .nexus-chat-messages {
+        flex-grow: 1;
+        padding: 15px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .nexus-chat-message {
+        padding: 8px 12px;
+        border-radius: 15px;
+        max-width: 80%;
+        word-wrap: break-word;
+    }
+
+    .nexus-chat-message.user {
+        background-color: var(--bs-primary, #007bff);
+        color: white;
+        align-self: flex-end;
+        border-bottom-right-radius: 5px;
+    }
+
+    .nexus-chat-message.ai {
+        background-color: #e9ecef;
+        color: #333;
+        align-self: flex-start;
+        border-bottom-left-radius: 5px;
+    }
+     .nexus-chat-message.error {
+        background-color: var(--bs-danger-bg-subtle, #f8d7da);
+        color: var(--bs-danger-text-emphasis, #721c24);
+        border: 1px solid var(--bs-danger-border-subtle, #f5c6cb);
+        align-self: flex-start;
+     }
+
+
+    .nexus-chat-input-area {
+        padding: 10px;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+    }
+
+    .nexus-chat-input-area input[type="text"] {
+        flex-grow: 1;
+        border: 1px solid #ced4da;
+        border-radius: 20px;
+        padding: 8px 15px;
+        margin-right: 8px;
+        font-size: 0.9rem;
+    }
+    .nexus-chat-input-area input[type="text"]:focus {
+        outline: none;
+        border-color: var(--bs-primary, #007bff);
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+
+    .nexus-chat-input-area button {
+        background-color: var(--bs-primary, #007bff);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .nexus-chat-input-area button:hover {
+        background-color: var(--bs-primary-darker, #0056b3);
+    }
+    .nexus-chat-input-area button:disabled {
+        background-color: #adb5bd;
+        cursor: not-allowed;
+    }
+    .typing-indicator span {
+        height: 8px;
+        width: 8px;
+        background-color: #adb5bd;
+        border-radius: 50%;
+        display: inline-block;
+        margin: 0 2px;
+        animation: bounce 1.4s infinite ease-in-out both;
+    }
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1.0); }
+    }
+
+</style>
+
+<div id="nexusChatbotContainer">
+    <button id="nexusChatbotToggleButton" aria-label="{% trans 'Open Chat' %}" aria-expanded="false">
+        <i class="bi bi-chat-dots-fill"></i> <!-- Bootstrap Icon -->
+    </button>
+
+    <div id="nexusChatWindow">
+        <div class="nexus-chat-header">
+            <h5>{% trans "NEXUS Chat" %}</h5>
+            <button class="btn-close-chat" id="nexusChatCloseButton" aria-label="{% trans 'Close Chat' %}">&times;</button>
+        </div>
+        <div class="nexus-chat-messages" id="nexusChatMessages" role="log" aria-live="polite" aria-atomic="false">
+            <!-- Chat messages will appear here, aria-live will announce new messages -->
+            <div class="nexus-chat-message ai">{% trans "Hello! How can I help you shop today?" %}</div>
+        </div>
+        <div class="nexus-chat-input-area">
+            <input type="text" id="nexusChatMessageInput" placeholder="{% trans 'Type your message...' %}" aria-label="{% trans 'Chat message input' %}">
+            <button id="nexusChatSendButton" aria-label="{% trans 'Send Message' %}">
+                <i class="bi bi-send-fill"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const toggleButton = document.getElementById('nexusChatbotToggleButton');
+    const chatWindow = document.getElementById('nexusChatWindow');
+    const closeButton = document.getElementById('nexusChatCloseButton');
+    const messagesContainer = document.getElementById('nexusChatMessages');
+    const messageInput = document.getElementById('nexusChatMessageInput');
+    const sendButton = document.getElementById('nexusChatSendButton');
+
+    const MAX_HISTORY_MESSAGES = 10; // e.g., send last 5 turns (user + AI = 10 messages)
+    let conversationHistory = []; // Simple array to store chat history [{role: 'user'/'model', text: '...'}, ...]
+
+    // Function to toggle chat window visibility
+    function toggleChatWindow() {
+        const isOpen = chatWindow.style.display === 'flex';
+        chatWindow.style.display = isOpen ? 'none' : 'flex';
+        toggleButton.setAttribute('aria-expanded', String(!isOpen)); // Update aria-expanded
+        toggleButton.innerHTML = isOpen ? '<i class="bi bi-chat-dots-fill"></i>' : '<i class="bi bi-x-lg"></i>';
+        if (!isOpen) {
+            messageInput.focus(); // Manage focus when opening
+            // Add initial AI greeting to history if chat is opened for the first time in session or history is empty
+            if (conversationHistory.length === 0) {
+                 const initialAiMessage = messagesContainer.querySelector('.nexus-chat-message.ai');
+                 if (initialAiMessage && initialAiMessage.textContent) {
+                    conversationHistory.push({ role: 'model', text: initialAiMessage.textContent.trim() });
+                 }
+            }
+        }
+    }
+
+    toggleButton.addEventListener('click', () => {
+        toggleChatWindow();
+        // Optionally, announce chat window state if not handled by aria-expanded alone
+    });
+    closeButton.addEventListener('click', toggleChatWindow);
+
+    // Function to add a message to the chat display
+    function addMessageToDisplay(text, type) { // type can be 'user', 'ai', or 'error'
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('nexus-chat-message', type);
+        messageDiv.textContent = text;
+        // For screen readers, new messages in an aria-live region are usually announced.
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight; // Scroll to bottom
+    }
+    
+    function showTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.classList.add('nexus-chat-message', 'ai', 'typing-indicator');
+        typingDiv.innerHTML = '<span></span><span></span><span></span>';
+        typingDiv.setAttribute('aria-label', '{% trans "AI is typing" %}'); // Announce typing
+        messagesContainer.appendChild(typingDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        return typingDiv;
+    }
+
+    function removeTypingIndicator(indicatorElement) {
+        if (indicatorElement && indicatorElement.parentNode === messagesContainer) {
+            messagesContainer.removeChild(indicatorElement);
+        }
+    }
+
+
+    // Function to send message to backend
+    async function sendMessage() {
+        const userMessageText = messageInput.value.trim();
+        if (!userMessageText) return;
+
+        addMessageToDisplay(userMessageText, 'user');
+        conversationHistory.push({ role: 'user', text: userMessageText });
+        messageInput.value = '';
+        sendButton.disabled = true;
+        
+        const typingIndicator = showTypingIndicator();
+
+        // --- Gather Contextual State ---
+        let pageContext = {
+            url: window.location.href,
+            page_title: document.title,
+            // Example: Try to get product ID if on a product page
+            product_id_on_page: null, 
+            // Example: Try to get category if on a category page
+            category_on_page: null 
+        };
+
+        // This is a very simplified example; you'd need more robust selectors
+        // For instance, if your product detail page has a specific container with a data attribute:
+        const productDetailElement = document.querySelector('[data-product-id]'); 
+        if (productDetailElement && productDetailElement.dataset.productId) {
+            pageContext.product_id_on_page = productDetailElement.dataset.productId;
+        }
+        // Similarly for category pages:
+        // const categoryPageElement = document.querySelector('[data-category-slug]');
+        // if (categoryPageElement && categoryPageElement.dataset.categorySlug) {
+        //     pageContext.category_on_page = categoryPageElement.dataset.categorySlug;
+        // }
+        // --- End Gather Contextual State ---
+
+        let relevantHistory = conversationHistory.slice(-MAX_HISTORY_MESSAGES);
+
+        try {
+            const response = await fetch("{% url 'core:ajax_chatbot_message' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}' // Make sure CSRF token is available
+                },
+                body: JSON.stringify({
+                    user_message: userMessageText,
+                    conversation_history: relevantHistory,
+                    page_context: pageContext // <<< Send page context
+                })
+            });
+
+            removeTypingIndicator(typingIndicator);
+            sendButton.disabled = false;
+
+            if (!response.ok) {
+                let errorMsg = `{% trans "An unexpected error occurred. Status:" %} ${response.status}`;
+                try {
+                    const errData = await response.json();
+                    // Use the specific error from backend if available
+                    errorMsg = errData.error || `{% trans "Error from server:" %} ${errData.detail || JSON.stringify(errData)}`;
+                } catch (e) { /* Ignore if response not JSON, use the status-based message */ }
+                addMessageToDisplay(errorMsg, 'error');
+                // Log the more detailed error to the console for debugging
+                console.error('Chatbot backend error:', response.status, await response.text().catch(() => 'Could not read error response body'));
+                conversationHistory.push({ role: 'model', text: errorMsg }); // Log error as AI response
+                return;
+            }
+
+            const data = await response.json();
+            if (data.ai_response) {
+                addMessageToDisplay(data.ai_response, 'ai');
+                conversationHistory.push({ role: 'model', text: data.ai_response });
+            } else if (data.error) {
+                addMessageToDisplay(data.error, 'error');
+                conversationHistory.push({ role: 'model', text: data.error });
+            }
+        } catch (error) {
+            removeTypingIndicator(typingIndicator);
+            sendButton.disabled = false;
+            console.error('Chatbot fetch/network error:', error);
+            const networkErrorMsg = "{% trans 'Network error or AI assistant is unavailable. Please try again.' %}";
+            addMessageToDisplay(networkErrorMsg, 'error');
+            conversationHistory.push({ role: 'model', text: networkErrorMsg });
+        }
+        messageInput.focus();
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+});
+</script>

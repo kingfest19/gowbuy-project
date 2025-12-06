@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load static i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ page_title|default:_("Vendor Verification") }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">{{ form_title|default:_("Verification Process") }}</h2>
+                </div>
+                <div class="card-body p-4">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        {% if form %}
+                            {{ form|crispy }}
+                        {% else %}
+                            <p>{% trans "Form is not available for this step." %}</p>
+                        {% endif %}
+                        
+                        <div class="mt-4 d-flex justify-content-between">
+                            {% if show_previous_button %}
+                                <button type="submit" name="action" value="previous" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left"></i> {% trans "Previous" %}
+                                </button>
+                            {% else %}
+                                <span></span> {# Placeholder to keep "Next" button to the right #}
+                            {% endif %}
+
+                            {% if current_step == "confirmation" %}
+                                <button type="submit" name="action" value="submit" class="btn btn-success">
+                                    <i class="fas fa-check-circle"></i> {% trans "Submit Verification" %}
+                                </button>
+                            {% else %}
+                                <button type="submit" name="action" value="next" class="btn btn-primary">
+                                    {% trans "Next" %} <i class="fas fa-arrow-right"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}{% endblock %} {# JavaScript for dynamic fields is not needed here #}

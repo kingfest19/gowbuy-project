@@ -1,0 +1,223 @@
+ {% extends "base.html" %}
+ {% load static i18n humanize %}
+ 
+ {% block title %}{% trans "Booking Details" %} #{{ booking.id }}{% endblock title %}
+ 
+ {% block extra_css %}
+     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+     <style>
+         .detail-container {
+             max-width: 1100px;
+             margin: 0 auto;
+             background-color: #ebe8e8;
+             padding: 2rem 2.5rem;
+             border-radius: 12px;
+             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+             border: 1px solid #959aa0; /* Softer border */
+         }
+ 
+         .page-header {
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+             flex-wrap: wrap;
+             gap: 1rem;
+             padding: 1.5rem;
+             margin-bottom: 2.5rem;
+             border-radius: 8px;
+             background-color: #ffffff; /* White background */
+             border-left: 5px solid #323232ff; /* Prominent black left border */
+             border: 1px solid #c7c9cb; /* Subtle border for separation */
+         }
+ 
+         .page-header h1 {
+             font-weight: 600;
+             color: #323232ff; /* Black text for contrast */
+             margin-bottom: 0;
+         }
+ 
+         .detail-card {
+             background-color: #fff;
+             border-radius: 8px;
+             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+             border: 1px solid #f0f2f5;
+             margin-bottom: 1.5rem;
+         }
+ 
+         .detail-card .card-header {
+             background-color: #f8f9fa;
+             border-bottom: 1px solid #e9ecef;
+             font-weight: 600;
+             color: #495057;
+         }
+ 
+         .detail-card .card-body {
+             padding: 1.5rem;
+         }
+ 
+         .detail-item {
+             display: flex;
+             justify-content: space-between;
+             padding: 0.75rem 0;
+             border-bottom: 1px solid #f0f2f5;
+         }
+         .detail-item:last-child {
+             border-bottom: none;
+         }
+         .detail-item .label {
+             color: #6c757d;
+             font-weight: 500;
+         }
+         .detail-item .value {
+             font-weight: 500;
+             text-align: right;
+         }
+ 
+         .btn-dark {
+             background-color: #474747;
+             border-color: #474747;
+         }
+         .btn-dark:hover {
+             background-color: #383838; /* A darker shade for hover */
+             border-color: #383838;
+         }
+ 
+         .page-header .btn-outline-secondary {
+             background-color: #474747;
+             color: #ffffff;
+             border-color: #474747;
+         }
+         .page-header .btn-outline-secondary:hover {
+             background-color: #383838;
+             border-color: #383838;
+         }
+     </style>
+ {% endblock extra_css %}
+ 
+ {% block content %}
+ <div class="container mt-5 mb-5">
+     <div class="detail-container">
+         <div class="page-header">
+             <div>
+                 <h1>{% trans "Booking Details" %} <span class="text-muted">#{{ booking.id }}</span></h1>
+                 <p class="text-muted mb-0">{% trans "Review and manage this service booking." %}</p>
+             </div>
+             <a href="{% url 'core:service_provider_bookings_list' %}" class="btn btn-lg btn-outline-secondary">
+                 <i class="bi bi-arrow-left me-2"></i>{% trans "Back to Bookings" %}
+             </a>
+         </div>
+ 
+         {% include 'partials/_messages.html' %}
+ 
+         <div class="row">
+             <div class="col-lg-8">
+                 <!-- Service and Package Details -->
+                 <div class="detail-card">
+                     <div class="card-header">{% trans "Service Details" %}</div>
+                     <div class="card-body">
+                         <div class="detail-item">
+                             <span class="label">{% trans "Service Title" %}</span>
+                             <span class="value">{{ booking.service_package.service.title }}</span>
+                         </div>
+                         <div class="detail-item">
+                             <span class="label">{% trans "Package" %}</span>
+                             <span class="value">{{ booking.service_package.name }}</span>
+                         </div>
+                         <div class="pt-3">
+                             <p class="text-muted">{{ booking.service_package.description|linebreaksbr }}</p>
+                         </div>
+                     </div>
+                 </div>
+ 
+                 <!-- Customer Details -->
+                 <div class="detail-card">
+                     <div class="card-header">{% trans "Customer Details" %}</div>
+                     <div class="card-body">
+                         <div class="detail-item">
+                             <span class="label">{% trans "Customer Name" %}</span>
+                             <span class="value">{{ booking.user.get_full_name|default:booking.user.username }}</span>
+                         </div>
+                         <div class="detail-item">
+                             <span class="label">{% trans "Contact Email" %}</span>
+                             <span class="value">{{ booking.user.email }}</span>
+                         </div>
+                         {% if booking.specific_requirements %}
+                         <div class="pt-3">
+                             <h6 class="label">{% trans "Specific Requirements from Customer" %}</h6>
+                             <blockquote class="blockquote bg-light p-3 rounded mt-2">
+                                 <p class="mb-0 fst-italic">{{ booking.specific_requirements|linebreaksbr }}</p>
+                             </blockquote>
+                         </div>
+                         {% endif %}
+                     </div>
+                 </div>
+             </div>
+ 
+             <div class="col-lg-4">
+                 <!-- Booking Summary & Actions -->
+                 <div class="detail-card">
+                     <div class="card-header">{% trans "Booking Summary" %}</div>
+                     <div class="card-body">
+                         <div class="detail-item">
+                             <span class="label">{% trans "Status" %}</span>
+                             <span class="value">
+                                 <span class="badge rounded-pill
+                                     {% if booking.status == 'completed' %}bg-success
+                                     {% elif booking.status == 'cancelled' %}bg-danger
+                                     {% elif booking.status == 'confirmed' %}bg-primary
+                                     {% else %}bg-warning text-dark{% endif %}">
+                                     {{ booking.get_status_display }}
+                                 </span>
+                             </span>
+                         </div>
+                         <div class="detail-item">
+                             <span class="label">{% trans "Date Booked" %}</span>
+                             <span class="value">{{ booking.created_at|date:"M d, Y" }}</span>
+                         </div>
+                         <div class="detail-item">
+                             <span class="label">{% trans "Scheduled For" %}</span>
+                             <div class="value">
+                                 {% if booking.availability_slot %}
+                                     <span class="d-block">{{ booking.availability_slot.start_time|date:"M d, Y" }}</span>
+                                     <small class="text-muted">{{ booking.availability_slot.start_time|time:"H:i" }} - {{ booking.availability_slot.end_time|time:"H:i" }}</small>
+                                 {% else %}
+                                     <span class="text-muted">{% trans "To be coordinated" %}</span>
+                                 {% endif %}
+                             </div>
+                         </div>
+                         <div class="detail-item">
+                             <span class="label">{% trans "Amount" %}</span>
+                             <span class="value fs-5">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ booking.service_package.price|floatformat:2|intcomma }}</span>
+                         </div>
+                     </div>
+                     <div class="card-footer bg-white border-top-0 p-3">
+                         <div class="d-grid gap-2">
+                             {% if booking.status == 'pending' %}
+                                 <form action="{% url 'core:service_provider_confirm_booking' booking.id %}" method="post" onsubmit="return confirm('{% trans "Are you sure you want to confirm this booking?" %}');">
+                                     {% csrf_token %}
+                                     <button type="submit" class="btn btn-success w-100">{% trans "Confirm Booking" %}</button>
+                                 </form>
+                                 <form action="#" method="post"> {# TODO: Create URL and view for cancelling #}
+                                     {% csrf_token %}
+                                     <button type="submit" class="btn btn-outline-danger w-100">{% trans "Cancel Booking" %}</button>
+                                 </form>
+                             {% elif booking.status == 'confirmed' %}
+                                 <form action="#" method="post"> {# TODO: Create URL and view for completing #}
+                                     {% csrf_token %}
+                                     <button class="btn btn-primary w-100">{% trans "Mark as Completed" %}</button>
+                                 </form>
+                                 <button class="btn btn-outline-danger w-100">{% trans "Cancel Booking" %}</button>
+                             {% elif booking.status == 'completed' %}
+                                 <p class="text-center text-success mb-0"><i class="bi bi-check-circle-fill me-2"></i>{% trans "This booking is complete." %}</p>
+                             {% elif booking.status == 'cancelled' %}
+                                 <p class="text-center text-danger mb-0"><i class="bi bi-x-circle-fill me-2"></i>{% trans "This booking was cancelled." %}</p>
+                             {% endif %}
+                             <a href="#" class="btn btn-outline-secondary mt-2"><i class="bi bi-chat-dots me-2"></i>{% trans "Message Customer" %}</a>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+         </div>
+     </div>
+ </div>
+ {% endblock content %}

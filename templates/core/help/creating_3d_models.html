@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{{ page_title }} - NEXUS{% endblock title %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<style>
+    /* Styles adapted from product_detail.html for consistency */
+    body {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 100%);
+        min-height: 100vh;
+    }
+
+    .container {
+        background: rgba(255,255,255,0.97);
+        border-radius: 18px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.09);
+        background: transparent;
+        box-shadow: none;
+        border: none;
+        padding: 32px 24px;
+        margin-bottom: 32px;
+        transition: box-shadow 0.3s;
+        border: 1px solid #000000ff; /* As requested */
+    }
+    .container:hover {
+        box-shadow: 0 16px 48px rgba(0,123,255,0.12);
+    }
+
+    .page-header {
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+    }
+
+    .page-header h1 {
+        font-weight: 600;
+    }
+
+    .step-section {
+        margin-bottom: 2.5rem;
+    }
+
+    .step-section h3 {
+        color: var(--bs-primary);
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .step-section p, .step-section li {
+        font-size: 1.1rem;
+        line-height: 1.7;
+    }
+
+    .step-section .img-fluid {
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        box-shadow: none;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .alert-info {
+        background-color: #e3f2fd;
+        border-color: #bde0fe;
+        color: #0c5460;
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="page-header text-center">
+        <h1>{% trans "How to Create 3D Models With Your Phone" %}</h1>
+        <p class="lead text-muted">{% trans "Turn your products into immersive 3D/AR experiences right from your smartphone." %}</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+
+            <div class="alert alert-info" role="alert">
+                <h4 class="alert-heading"><i class="bi bi-lightbulb-fill me-2"></i>{% trans "Quick Tip!" %}</h4>
+                <p>{% blocktrans %}Creating a great 3D model requires good lighting and a steady hand. The goal is to capture your product from all angles so the AI can build a complete model.{% endblocktrans %}</p>
+                <hr>
+                <p class="mb-0">{% trans "We recommend using apps that specialize in 'photogrammetry' or '3D scanning'." %}</p>
+            </div>
+
+            <div class="step-section" id="step1">
+                <h3>{% trans "Step 1: Choose a 3D Scanning App" %}</h3>
+                <p>{% trans "Several apps can turn a series of photos into a 3D model. Here are a few popular options available on iOS and Android:" %}</p>
+                <ul>
+                    <li><strong>Polycam:</strong> {% trans "A powerful and user-friendly app available on both iOS and Android. It has a great 'Photo Mode' for creating high-quality models." %}</li>
+                    <li><strong>Scaniverse:</strong> {% trans "Excellent for iPhone and iPad users with a LiDAR sensor, but also works well on other devices." %}</li>
+                    <li><strong>Kiri Engine:</strong> {% trans "Another great cross-platform option that processes the photos in the cloud." %}</li>
+                </ul>
+                <p>{% trans "Download one of these apps from your device's app store to get started." %}</p>
+            </div>
+
+            <div class="step-section" id="step2">
+                <h3>{% trans "Step 2: Prepare Your Product and Space" %}</h3>
+                <p>{% trans "Good preparation is key to a successful scan." %}</p>
+                <ul>
+                    <li><strong>Lighting:</strong> {% trans "Use bright, even, and diffuse lighting. Avoid harsh shadows and direct sunlight. An overcast day outdoors or a well-lit room is ideal." %}</li>
+                    <li><strong>Surface:</strong> {% trans "Place your product on a non-reflective, textured surface. A newspaper or a textured mat works well. Avoid plain white or glossy surfaces." %}</li>
+                    <li><strong>Space:</strong> {% trans "Ensure you have enough space to walk all the way around your product." %}</li>
+                </ul>
+                <img src="{% static 'assets/img/help/3d-setup-placeholder.jpg' %}" class="img-fluid" alt="{% trans 'A product set up in a well-lit area for 3D scanning' %}">
+            </div>
+
+            <div class="step-section" id="step3">
+                <h3>{% trans "Step 3: Capture the Photos" %}</h3>
+                <p>{% trans "Open your chosen 3D scanning app and start a new scan using the photo or photogrammetry mode." %}</p>
+                <ol>
+                    <li>{% trans "Take photos in a full circle around your product at one height (e.g., eye-level)." %} <strong>{% trans "Overlap each photo by about 60-70%." %}</strong> {% trans "Most apps will show you guides." %}</li>
+                    <li>{% trans "Take another full circle of photos from a higher angle, looking down at the product." %}</li>
+                    <li>{% trans "If possible, take a third circle from a lower angle, looking up." %}</li>
+                    <li>{% trans "Capture the top and any intricate details separately." %}</li>
+                </ol>
+                <p>{% blocktrans %}You should aim for at least 40-70 high-quality, sharp photos for a good result. More is often better!{% endblocktrans %}</p>
+            </div>
+
+            <div class="step-section" id="step4">
+                <h3>{% trans "Step 4: Process and Export" %}</h3>
+                <p>{% trans "Once you've taken all your photos, tell the app to process them. This may take a few minutes as it uploads the images and builds the model in the cloud." %}</p>
+                <p>{% trans "After processing is complete, inspect the 3D model in the app. If it looks good, find the 'Export' or 'Share' option." %}</p>
+                <ul>
+                    <li>{% trans "Choose the format:" %} <strong>GLB</strong> {% trans "or" %} <strong>GLTF</strong>. {% trans "GLB is usually the best choice as it's a single, compact file." %}</li>
+                    <li>{% trans "Choose a texture resolution. 'Medium' or 'High' (e.g., 2K or 2048x2048) is usually a good balance of quality and file size." %}</li>
+                    <li>{% trans "Save the exported .glb file to your device, cloud storage, or email it to yourself." %}</li>
+                </ul>
+            </div>
+
+            <div class="step-section" id="step5">
+                <h3>{% trans "Step 5: Upload to NEXUS" %}</h3>
+                <p>{% trans "You're at the final step! Navigate back to the product creation or editing page on NEXUS." %}</p>
+                <ol>
+                    <li>{% trans "Find the '3D Model' field." %}</li>
+                    <li>{% trans "Click 'Choose File' and select the .glb or .gltf file you just exported." %}</li>
+                    <li>{% trans "Save your product. Your new 3D model will now be available on the product detail page!" %}</li>
+                </ol>
+            </div>
+
+            <div class="text-center">
+                <a href="{% url 'core:vendor_product_list' %}" class="btn btn-primary btn-lg">{% trans "Back to My Products" %}</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock content %}

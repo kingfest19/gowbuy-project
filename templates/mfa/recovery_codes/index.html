@@ -1,0 +1,33 @@
+{% extends "core/user_dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Your Recovery Codes" %}{% endblock %}
+
+{% block dashboard_content %}
+<h2 class="mb-4">{% trans "Your Recovery Codes" %}</h2>
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="dashboard-section">
+            <div class="alert alert-warning" role="alert">
+                <strong>{% trans "Important:" %}</strong> {% blocktrans %}Store these codes in a safe place, like a password manager. Each code can only be used once.{% endblocktrans %}
+            </div>
+
+            <div class="row my-4">
+                {% for code in unused_codes %}
+                <div class="col-md-6 mb-2">
+                    <p class="fs-5" style="font-family: monospace; letter-spacing: 2px;">{{ code }}</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <p>{% blocktrans with total=total_count unused=unused_codes|length %}You have {{ unused }} of {{ total }} recovery codes remaining.{% endblocktrans %}</p>
+
+            <div class="mt-4">
+                <a href="{% url 'mfa_download_recovery_codes' %}" class="btn btn-primary"><i class="fas fa-download me-2"></i>{% trans "Download Codes" %}</a>
+                <a href="{% url 'mfa_generate_recovery_codes' %}" class="btn btn-outline-danger"><i class="fas fa-sync-alt me-2"></i>{% trans "Generate New Codes" %}</a>
+                <a href="{% url 'mfa_index' %}" class="btn btn-secondary">{% trans "Back to MFA Settings" %}</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock dashboard_content %}

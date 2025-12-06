@@ -1,44 +1,29 @@
 {% load i18n %}
-<div class="col-md-3">
-    <div class="list-group mb-4 shadow-sm">
-        <a href="{% url 'core:service_provider_dashboard' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'service_provider_dashboard' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'service_provider_dashboard' %}page{% else %}false{% endif %}">
-            <i class="fas fa-tachometer-alt fa-fw me-2"></i>{% trans "Dashboard" %}
-        </a>
-        <a href="{% url 'core:service_provider_services_list' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'service_provider_services_list' or request.resolver_match.url_name == 'service_provider_service_create' or request.resolver_match.url_name == 'service_provider_service_edit' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'service_provider_services_list' or request.resolver_match.url_name == 'service_provider_service_create' or request.resolver_match.url_name == 'service_provider_service_edit' %}page{% else %}false{% endif %}">
-            <i class="fas fa-concierge-bell fa-fw me-2"></i>{% trans "My Services" %}
-        </a>
-        {# Placeholder for Bookings - ensure 'service_provider_bookings_list' URL is defined before uncommenting #}
-         <a href="{% url 'core:service_provider_bookings_list' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'service_provider_bookings_list' or request.resolver_match.url_name == 'service_provider_booking_detail' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'service_provider_bookings_list' or request.resolver_match.url_name == 'service_provider_booking_detail' %}page{% else %}false{% endif %}">
-            <i class="fas fa-calendar-check fa-fw me-2"></i>{% trans "Bookings" %}
-        </a> 
-        <a class="list-group-item list-group-item-action disabled" href="#" tabindex="-1" aria-disabled="true"><i class="fas fa-calendar-check fa-fw me-2"></i>{% trans "Bookings (Coming Soon)" %}</a>
-        <a href="{% url 'core:edit_service_provider_profile' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'edit_service_provider_profile' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'edit_service_provider_profile' %}page{% else %}false{% endif %}">
-            <i class="fas fa-user-edit fa-fw me-2"></i>{% trans "Edit Profile" %}
-        </a>
-        {# Placeholder for Verification - ensure 'service_provider_verification_multistep' URL is defined before uncommenting #}
-        {# <a href="{% url 'core:service_provider_verification_multistep' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'service_provider_verification_multistep' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'service_provider_verification_multistep' %}page{% else %}false{% endif %}"> #}
-           {#  <i class="fas fa-user-check fa-fw me-2"></i>{% trans "Verification" %} #}
-       {# </a> #}
-        <a class="list-group-item list-group-item-action disabled" href="#" tabindex="-1" aria-disabled="true"><i class="fas fa-user-check fa-fw me-2"></i>{% trans "Verification (Coming Soon)" %}</a>
-        {# Placeholder for Payouts #}
-        <a class="list-group-item list-group-item-action disabled" href="#" tabindex="-1" aria-disabled="true"><i class="fas fa-hand-holding-usd fa-fw me-2"></i>{% trans "Payouts (Coming Soon)" %}</a>
-        <a href="{% url 'core:service_provider_payout_requests' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'service_provider_payout_requests' or request.resolver_match.url_name == 'service_provider_payout_request_create' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'service_provider_payout_requests' or request.resolver_match.url_name == 'service_provider_payout_request_create' %}page{% else %}false{% endif %}"> 
-             <i class="fas fa-hand-holding-usd fa-fw me-2"></i>{% trans "Payouts" %} 
-        </a> 
-        {# Placeholder for Advertisements #}
-        <a class="list-group-item list-group-item-action disabled" href="#" tabindex="-1" aria-disabled="true"><i class="fas fa-bullhorn fa-fw me-2"></i>{% trans "Advertisements (Coming Soon)" %}</a>
-        {# <a href="{% url 'core:service_provider_ads' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'service_provider_ads' or request.resolver_match.url_name == 'service_provider_ad_create' or request.resolver_match.url_name == 'service_provider_ad_edit' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'service_provider_ads' or request.resolver_match.url_name == 'service_provider_ad_create' or request.resolver_match.url_name == 'service_provider_ad_edit' %}page{% else %}false{% endif %}"> #}
-            {# <i class="fas fa-bullhorn fa-fw me-2"></i>{% trans "Advertisements" %} #}
-        {# </a> #}
-        {# Placeholder for Client Reviews #}
-        <a class="list-group-item list-group-item-action disabled" href="#" tabindex="-1" aria-disabled="true"><i class="fas fa-star fa-fw me-2"></i>{% trans "Client Reviews (Coming Soon)" %}</a>
-        {# <a href="{% url 'core:service_provider_reviews' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'service_provider_reviews' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'service_provider_reviews' %}page{% else %}false{% endif %}"> #}
-            {# <i class="fas fa-star fa-fw me-2"></i>{% trans "Client Reviews" %} #}
-        {# </a> #}
-        {# The link below is a placeholder. The example for the notification count has been removed. #}
-        {# Ensure 'core:service_provider_notifications' URL is defined if you uncomment a functional link. #}
-        <a href="#" class="list-group-item list-group-item-action position-relative disabled" tabindex="-1" aria-disabled="true">
-            <i class="fas fa-bell fa-fw me-2"></i>{% trans "Notifications" %}
-        </a>
-    </div>
+<div class="list-group mb-4 shadow-sm dashboard-sidebar">
+    <a href="{% url 'core:service_provider_dashboard' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'service_provider_dashboard' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'service_provider_dashboard' %}page{% else %}false{% endif %}">
+        <i class="fas fa-tachometer-alt fa-fw me-2"></i>{% trans "Dashboard" %}
+    </a>
+    <a href="{% url 'core:service_provider_services_list' %}" class="list-group-item list-group-item-action {% if 'service_provider_service' in request.resolver_match.url_name %}active{% endif %}" aria-current="{% if 'service_provider_service' in request.resolver_match.url_name %}page{% else %}false{% endif %}">
+        <i class="fas fa-concierge-bell fa-fw me-2"></i>{% trans "My Services" %}
+    </a>
+    <a href="#" class="list-group-item list-group-item-action disabled" aria-disabled="true">
+        <i class="fas fa-cube fa-fw me-2"></i>{% trans "AR/3D Models (Coming Soon)" %}
+    </a>
+    <a href="{% url 'core:service_provider_bookings_list' %}" class="list-group-item list-group-item-action {% if 'service_provider_booking' in request.resolver_match.url_name %}active{% endif %}" aria-current="{% if 'service_provider_booking' in request.resolver_match.url_name %}page{% else %}false{% endif %}">
+        <i class="fas fa-calendar-check fa-fw me-2"></i>{% trans "My Bookings" %}
+    </a>
+    <a href="{% url 'core:edit_service_provider_profile' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'edit_service_provider_profile' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'edit_service_provider_profile' %}page{% else %}false{% endif %}">
+        <i class="fas fa-user-edit fa-fw me-2"></i>{% trans "Edit Profile" %}
+    </a>
+    <a href="{% url 'core:service_provider_verification_multistep' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'service_provider_verification_multistep' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'service_provider_verification_multistep' %}page{% else %}false{% endif %}">
+        <i class="fas fa-user-check fa-fw me-2"></i>{% trans "Verification" %}
+    </a>
+    <a href="{% url 'core:service_provider_payout_requests' %}" class="list-group-item list-group-item-action {% if 'service_provider_payout' in request.resolver_match.url_name %}active{% endif %}" aria-current="{% if 'service_provider_payout' in request.resolver_match.url_name %}page{% else %}false{% endif %}">
+        <i class="fas fa-hand-holding-usd fa-fw me-2"></i>{% trans "Payouts" %}
+    </a>
+    <a href="{% url 'core:service_provider_advertisements' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'service_provider_advertisements' %}active{% endif %}" aria-current="{% if request.resolver_match.url_name == 'service_provider_advertisements' %}page{% else %}false{% endif %}">
+        <i class="fas fa-bullhorn fa-fw me-2"></i>{% trans "Advertisements" %}
+    </a>
+    <a class="list-group-item list-group-item-action disabled" href="#" tabindex="-1" aria-disabled="true"><i class="fas fa-star fa-fw me-2"></i>{% trans "Client Reviews (Coming Soon)" %}</a>
+    <a class="list-group-item list-group-item-action disabled" href="#" tabindex="-1" aria-disabled="true"><i class="fas fa-bell fa-fw me-2"></i>{% trans "Notifications (Coming Soon)" %}</a>
 </div>

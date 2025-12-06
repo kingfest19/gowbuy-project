@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% load core_extras %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            {% include 'core/service_provider/provider_sidebar.html' %}
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <h2>{{ page_title }}</h2>
+            <hr>
+
+            <!-- Profile Update Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Update Your Profile</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ profile_form|crispy }}
+                        <button type="submit" name="submit_profile" class="btn btn-primary mt-3">Update Profile</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Portfolio Management -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Manage Your Portfolio</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Add New Portfolio Item Form -->
+                    <h6>Add New Item</h6>
+                    <form method="post" enctype="multipart/form-data" class="mb-4 border p-3 rounded">
+                        {% csrf_token %}
+                        {{ portfolio_item_form|crispy }}
+                        <button type="submit" name="submit_portfolio_item" class="btn btn-success mt-3">Add to Portfolio</button>
+                    </form>
+
+                    <hr>
+
+                    <!-- Existing Portfolio Items -->
+                    <h6>Your Current Portfolio</h6>
+                    {% if portfolio_items %}
+                        <div class="row">
+                            {% for item in portfolio_items %}
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card h-100">
+                                    {% if item.image %}
+                                        <img src="{{ item.image.url }}" class="card-img-top" alt="{{ item.title }}">
+                                        {% elif item.video_url %}
+                                            <div class="ratio ratio-16x9">
+                                                {% with embed_url=item.video_url|get_embed_url %}
+                                                    {% if embed_url %}
+                                                        <iframe src="{{ embed_url }}" title="{{ item.title|default:'Portfolio video' }}" allowfullscreen></iframe>
+                                                    {% else %}
+                                                        <a href="{{ item.video_url }}" target="_blank" class="btn btn-outline-primary m-auto">{% trans "Watch Video" %}</a>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            </div>
+                                    {% elif item.link %}
+                                            <a href="{{ item.link }}" target="_blank" class="btn btn-outline-primary m-auto">{% trans "View Link" %}</a>
+                                    {% else %}
+                                        <div class="bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                                            <span class="text-muted">No Media</span>
+                                        </div>
+                                    {% endif %}
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ item.title }}</h6>
+                                        {% if item.description %}
+                                            <p class="card-text small">{{ item.description|truncatewords:15 }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="card-footer bg-transparent border-top-0">
+                                        <a href="{% url 'core:edit_portfolio_item' item.id %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                        <form action="{% url 'core:delete_portfolio_item' item.id %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this item?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">You have not added any portfolio items yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

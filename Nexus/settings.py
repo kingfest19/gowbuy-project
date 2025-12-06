@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     # ... your apps first (optional, but common)
     'core.apps.CoreConfig',
     'authapp.apps.AuthappConfig',
+    'channels',
+
 
     # Django contrib apps
     'django.contrib.admin',
@@ -55,23 +57,38 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'jazzmin',
+    'django_filters',
+    'paypal.standard.ipn',
 
     # Allauth apps
     'allauth',
     'allauth.account',
+    'allauth.mfa', # Ensure this line is present
     'allauth.socialaccount',
+    'django_ratelimit',  # <-- Add this line
+    
     # Specific provider apps:
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.facebook',
     # 'allauth.socialaccount.providers.apple', # Removed Apple
 ]
 
+# PayPal settings
+PAYPAL_TEST = True  # Use True for Sandbox, False for live
+PAYPAL_RECEIVER_EMAIL = 'sb-wezmm45982851@business.example.com' # The email of your PayPal Sandbox Business account
+# You can get this from your PayPal Developer Dashboard
+
 SITE_ID = 1
 
 
 # settings.py
 
+ASGI_APPLICATION = 'Nexus.asgi.application' # Corrected path to match your project structure
+ 
 # ... (after INSTALLED_APPS) ...
+
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -81,6 +98,7 @@ MIDDLEWARE = [
     'core.middleware.SanitizeLanguageMiddleware', # <<< Add your custom middleware AFTER LocaleMiddleware
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_ratelimit.middleware.RatelimitMiddleware', # <-- Corrected module name
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',  # <<< ADD THIS LINE
@@ -113,6 +131,7 @@ TEMPLATES = [
                 'core.context_processors.provider_info', # <<< Add this line for provider info
                 'core.context_processors.categories_processor', # <<< Add this for categories
                 'django.template.context_processors.i18n', # Removed 'core.views.menu'
+                'core.context_processors.unread_message_count', # <<< Add this for unread messages
                 # 'core.views.menu', # <<< THIS WAS THE PROBLEM
             ],
         },
@@ -135,6 +154,33 @@ DATABASES = {
     }
 }
 
+# --- START: Caching Settings (for django-ratelimit and performance) ---
+# Using Redis as the cache backend, since it's already configured for Channels.
+# This is required by django-ratelimit for a shared cache.
+if DEBUG:
+    # Use a simple in-memory cache for development to avoid Redis dependency
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+        }
+    }
+else:
+    # Production settings using Redis
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": "redis://127.0.0.1:6379/1",  # Use a different DB number (e.g., 1) from Channels
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+            "KEY_PREFIX": "nexus" # Optional: prefix for all cache keys
+        }
+    }
+
+# Setting for django-ratelimit to use the 'default' cache defined above.
+RATELIMIT_USE_CACHE = 'default'
+# --- END: Caching Settings ---
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -257,20 +303,13 @@ AUTHENTICATION_BACKENDS = [
 # These settings configure django-allauth for email-based authentication,
 # while still allowing username collection during signup (as your form does).
 
-ACCOUNT_AUTHENTICATION_METHODS = ['email']          # Users log in with their email.
-ACCOUNT_LOGIN_METHODS = ['email']               # Users log in with their email.
+ACCOUNT_AUTHENTICATION_METHOD = 'email'         # Users log in with their email.
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None        # Important: Set to None if 'username' is not the primary login field.
-                                                # This tells allauth not to treat the User model's 'username'
-                                                # as the sole login identifier if you're using email for login.
-
-# ACCOUNT_EMAIL_REQUIRED = True                 # Deprecated when ACCOUNT_SIGNUP_FORM_CLASS is used.
-                                                # Requirement is handled by the custom form.
-# ACCOUNT_USERNAME_REQUIRED = False             # Deprecated when ACCOUNT_SIGNUP_FORM_CLASS is used.
-                                                # Requirement is handled by the custom form.
+ACCOUNT_EMAIL_REQUIRED = True                   # Email is required for signup.
+ACCOUNT_USERNAME_REQUIRED = False               # Username is not required by allauth's default forms.
+                                                # Your custom form handles the username field.
 ACCOUNT_SIGNUP_FORM_CLASS = 'authapp.forms.UserRegisterForm' # Specify your custom signup form.
-ACCOUNT_SIGNUP_FIELDS = ('email',)             # For allauth's internal checks/forms, only 'email' is a signup field.
-                                                # ACCOUNT_SIGNUP_FIELDS is not needed when using a custom form class.
-
+# ACCOUNT_SIGNUP_FIELDS is not needed when using a custom form class, as the form defines the fields.
 
 ACCOUNT_EMAIL_VERIFICATION = 'optional'         # Options: 'optional', 'mandatory', 'none'.
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False     # Align with 'optional' email verification.
@@ -280,7 +319,7 @@ ACCOUNT_UNIQUE_EMAIL = True                     # Current setting: True. Enforce
 ACCOUNT_LOGOUT_ON_GET = True                    # Current setting: True. Allows logout via GET request.
 
 # Redirect URLs
-LOGIN_REDIRECT_URL = 'home'  # Name of the URL to redirect to after login
+LOGIN_REDIRECT_URL = 'core:home'  # Name of the URL to redirect to after login
 ACCOUNT_LOGOUT_REDIRECT_URL = 'signin' # Name of the URL to redirect to after logout
 
 DEFAULT_CURRENCY_CODE = 'GHS' # Example default currency
@@ -436,3 +475,30 @@ NEGOTIABLE_PRODUCT_CATEGORY_SLUGS = [
     # Add any other category slugs that should allow direct payment
 ]
 
+# --- START: Channels Settings ---
+if DEBUG:
+    # Use an in-memory channel layer for development to avoid Redis dependency
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer"
+        }
+    }
+else:
+    # Production settings using Redis
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [("127.0.0.1", 6379)],
+            },
+        },
+    }
+# --- END: Channels Settings ---
+
+# --- START: Silenced System Checks ---
+# Acknowledge and silence non-critical warnings for specific environments.
+SILENCED_SYSTEM_CHECKS = [
+    'django_ratelimit.W001', # W001: LocMemCache is fine for development.
+    'django_ratelimit.E003', # E003: LocMemCache is not a shared cache, but acceptable for development.
+]
+# --- END: Silenced System Checks ---

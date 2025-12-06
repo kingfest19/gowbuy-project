@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Packing Slip for Order #{{ order.order_id }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            @frame header_frame {
+                -pdf-frame-content: header_content;
+                left: 50pt; width: 512pt; top: 50pt; height: 40pt;
+            }
+            @frame content_frame {
+                left: 50pt; width: 512pt; top: 90pt; height: 632pt;
+            }
+            @frame footer_frame {
+                -pdf-frame-content: footer_content;
+                left: 50pt; width: 512pt; top: 722pt; height: 20pt;
+            }
+        }
+        body {
+            font-family: "Helvetica", "sans-serif";
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header, .footer {
+            width: 100%;
+            text-align: center;
+            position: fixed;
+        }
+        .header { top: 0px; }
+        .footer { bottom: 0px; }
+        .pagenum:before {
+            content: counter(page);
+        }
+        .address-section {
+            margin-bottom: 30px;
+            overflow: auto; /* Clearfix */
+        }
+        .address-box {
+            width: 45%;
+            border: 1px solid #ccc;
+            padding: 10px;
+            min-height: 100px;
+        }
+        .from-address {
+            float: left;
+        }
+        .to-address {
+            float: right;
+        }
+        .order-details {
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+    </style>
+</head>
+<body>
+    <div id="header_content">
+        <h2>Packing Slip</h2>
+    </div>
+    <div id="footer_content" style="text-align: right;">
+        Page <span class="pagenum"></span>
+    </div>
+
+    <div class="order-details">
+        <strong>Order ID:</strong> #{{ order.order_id }}<br>
+        <strong>Order Date:</strong> {{ order.created_at|date:"F d, Y" }}
+    </div>
+
+    <div class="address-section">
+        <div class="address-box from-address">
+            <strong>FROM:</strong><br>
+            {{ vendor.name }}<br>
+            {{ vendor.business_address|linebreaksbr|default:"N/A" }}
+        </div>
+        <div class="address-box to-address">
+            <strong>SHIP TO:</strong><br>
+            {{ order.shipping_address_text|linebreaksbr|default:"No shipping address provided." }}
+        </div>
+    </div>
+
+    <h3>Items in this Shipment</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Product Name</th>
+                <th class="text-center">Quantity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in vendor_items %}
+            <tr>
+                <td>{{ item.product.sku|default:"N/A" }}</td>
+                <td>{{ item.product.name }}</td>
+                <td class="text-center">{{ item.quantity }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="margin-top: 40px; text-align: center;">
+        <p>Thank you for your order!</p>
+    </div>
+</body>
+</html>
+

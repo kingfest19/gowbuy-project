@@ -4,16 +4,123 @@
 
 {% block title %}{% trans "Edit Vendor Profile" %} - {{ vendor.name }}{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        .form-container {
+            max-width: 900px; /* Good width for forms */
+            margin: 0 auto;
+            background-color:  #ebe8e8;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+            border: 1px solid #c7c9cb;
+            font-family: "Outfit", sans-serif; /* Consistent font from theme */
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #f0f2f5;
+        }
+
+        .page-header h1 {
+            font-family: "Poppins", sans-serif; /* Consistent font from theme */
+            font-weight: 700;
+            color: #1a2533;
+            margin-bottom: 0;
+        }
+
+        fieldset {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+
+        fieldset:last-of-type {
+            margin-bottom: 0;
+        }
+
+        legend {
+            font-family: "Poppins", sans-serif; /* Consistent font from theme */
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a2533;
+            padding: 0;
+            width: 100%;
+            float: left;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .form-container .form-control,
+        .form-container .form-select {
+            border: 1px solid #ced4da;
+            transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+        }
+        .form-container .form-control:focus,
+        .form-container .form-select:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: #495057;
+            font-size: 0.9rem;
+        }
+
+        .form-container .btn-primary {
+            background-color: #474747;
+            border-color: #474747;
+            font-weight: 500;
+        }
+        .form-container .btn-primary:hover {
+            background-color: #383838;
+            border-color: #383838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .form-container .btn-outline-secondary {
+            background-color: #474747;
+            color: #ffffffff;
+            border-color: #474747;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #474747;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+{% endblock extra_css %}
+
 {% block content %}
 <div class="container mt-5 mb-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-9"> {# Increased width slightly for more fields #}
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h2 class="card-title mb-0">{% trans "Edit Vendor Profile" %}</h2>
-                    <p class="card-subtitle">{% trans "Update details for" %} {{ vendor.name }}</p>
-                </div>
-                <div class="card-body p-4"> {# Added more padding #}
+    <div class="form-container">
+        <div class="page-header">
+            <div>
+                <h1>{% trans "Edit Vendor Profile" %}</h1>
+                <p class="text-muted mb-0">{% trans "Update details for" %} {{ vendor.name }}</p>
+            </div>
+            <a href="{% url 'core:vendor_dashboard' %}" class="btn btn-lg btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>{% trans "Back to Dashboard" %}
+            </a>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
                     {% if messages %}
                         {% for message in messages %}
                             <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -23,8 +130,6 @@
                         {% endfor %}
                     {% endif %}
 
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
 
                         {% if form.non_field_errors %}
                             <div class="alert alert-danger">
@@ -34,8 +139,9 @@
                             </div>
                         {% endif %}
 
-                        {# --- Basic Information --- #}
-                        <h5 class="mb-3">{% trans "Basic Information" %}</h5>
+            <div class="form-body">
+                        <fieldset>
+                        <legend>{% trans "Basic Information" %}</legend>
                         <div class="mb-3">
                             <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
                             {{ form.name }}
@@ -55,9 +161,10 @@
                             {% if form.logo.help_text %}<div class="form-text">{{ form.logo.help_text|safe }}</div>{% endif %}
                             {% if form.logo.errors %}<div class="invalid-feedback d-block">{% for error in form.logo.errors %}{{ error }}{% endfor %}</div>{% endif %}
                         </div>
+                        </fieldset>
 
-                        <hr class="my-4">
-                        <h5 class="mb-3">{% trans "Private Contact Information" %}</h5>
+                        <fieldset>
+                        <legend>{% trans "Private Contact Information" %}</legend>
                         <p class="text-muted small mb-3">{% trans "This information is for administrative purposes and will not be displayed publicly unless specified otherwise." %}</p>
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -73,9 +180,10 @@
                                 {% if form.phone_number.errors %}<div class="invalid-feedback d-block">{% for error in form.phone_number.errors %}{{ error }}{% endfor %}</div>{% endif %}
                             </div>
                         </div>
+                        </fieldset>
 
-                        <hr class="my-4">
-                        <h5 class="mb-3">{% trans "Location" %}</h5>
+                        <fieldset>
+                        <legend>{% trans "Location" %}</legend>
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="{{ form.location_city.id_for_label }}" class="form-label">{{ form.location_city.label }}</label>
@@ -90,9 +198,10 @@
                                 {% if form.location_country.errors %}<div class="invalid-feedback d-block">{% for error in form.location_country.errors %}{{ error }}{% endfor %}</div>{% endif %}
                             </div>
                         </div>
+                        </fieldset>
 
-                        <hr class="my-4">
-                        <h5 class="mb-3">{% trans "Policies" %}</h5>
+                        <fieldset>
+                        <legend>{% trans "Policies" %}</legend>
                         <div class="mb-3">
                             <label for="{{ form.shipping_policy.id_for_label }}" class="form-label">{{ form.shipping_policy.label }}</label>
                             {{ form.shipping_policy }}
@@ -105,9 +214,10 @@
                             {% if form.return_policy.help_text %}<div class="form-text">{{ form.return_policy.help_text|safe }}</div>{% endif %}
                             {% if form.return_policy.errors %}<div class="invalid-feedback d-block">{% for error in form.return_policy.errors %}{{ error }}{% endfor %}</div>{% endif %}
                         </div>
+                        </fieldset>
 
-                        <hr class="my-4">
-                        <h5 class="mb-3">{% trans "Public Contact & Social Media" %}</h5>
+                        <fieldset>
+                        <legend>{% trans "Public Contact & Social Media" %}</legend>
                         <p class="text-muted small mb-3">{% trans "This information will be displayed on your public profile and may be used by customers to contact you." %}</p>
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -165,14 +275,14 @@
                                 {% if form.linkedin_url.errors %}<div class="invalid-feedback d-block">{% for error in form.linkedin_url.errors %}{{ error }}{% endfor %}</div>{% endif %}
                             </div>
                         </div>
+                        </fieldset>
 
-                        <div class="mt-4 d-grid"> {# d-grid for full-width button #}
-                            <button type="submit" class="btn btn-success btn-lg">{% trans "Save Profile Changes" %}</button>
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{% url 'core:vendor_dashboard' %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+                            <button type="submit" class="btn btn-primary">{% trans "Save Profile Changes" %}</button>
                         </div>
-                    </form>
-                </div>
             </div>
-        </div>
+                    </form>
     </div>
 </div>
 {% endblock %}

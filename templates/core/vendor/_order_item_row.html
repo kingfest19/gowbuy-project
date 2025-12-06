@@ -1,0 +1,24 @@
+{% load i18n humanize fulfillment_filters %}
+{% with currency_symbol=settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" %}
+    <tr>
+        <td>
+            <div class="d-flex align-items-center">
+                {% if item.product.images.first %}
+                    <img src="{{ item.product.images.first.image.url }}" alt="{{ item.product_name }}" class="order-item-image me-2">
+                {% else %}
+                    <div class="order-item-image me-2 bg-light d-flex align-items-center justify-content-center text-muted" style="width:60px; height:60px;">?</div>
+                {% endif %}
+                {{ item.product_name }}
+            </div>
+        </td>
+        <td>{{ item.product.sku|default:"N/A" }}</td>
+        <td class="text-center">{{ item.quantity }}</td>
+        <td class="text-end">{{ currency_symbol }}{{ item.price|floatformat:2 }}</td>
+        <td class="text-end">{{ currency_symbol }}{{ item.get_total_item_price|floatformat:2 }}</td>
+        <td>
+            <span class="badge {% if item.fulfillment_method == 'nexus' %}bg-primary{% else %}bg-secondary{% endif %}">
+                {{ item.get_fulfillment_method_display }}
+            </span>
+        </td>
+    </tr>
+{% endwith %}

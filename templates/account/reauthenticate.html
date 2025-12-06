@@ -1,0 +1,21 @@
+{% extends "core/user_dashboard_base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Re-authenticate" %}{% endblock %}
+
+{% block dashboard_content %}
+<h2 class="mb-4">{% trans "Re-authenticate" %}</h2>
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="dashboard-section">
+            <p>{% trans "For your security, please re-enter your password to continue." %}</p>
+            <form method="post" action="{% url 'account_reauthenticate' %}">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button class="btn btn-primary w-100" type="submit">{% trans "Continue" %}</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock dashboard_content %}

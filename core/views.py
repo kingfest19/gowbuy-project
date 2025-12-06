@@ -1,50 +1,67 @@
 # c:\Users\Hp\Desktop\Nexus\core\views.py
 import logging
-import json
+import json, datetime
 import random # For selecting random spotlights
 from decimal import Decimal
+from django.core.mail import EmailMessage
+from typing import Optional
 import stripe
 import requests # For making HTTP requests to Paystack
 import uuid # For generating unique references
+from itertools import chain
+from operator import attrgetter
 from django.db.models.fields.files import FieldFile # Import FieldFile for type checking
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth import update_session_auth_hash
-from django import forms # <<< Add this import
+from django.contrib.messages.views import SuccessMessageMixin
+from django import forms
+from django.contrib.sessions.models import Session # Added import
+from django.core.files.storage import FileSystemStorage
+from django.core.files.base import ContentFile # Added import
 from django.contrib.auth.forms import PasswordChangeForm
+from django.core.mail import EmailMessage
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse, HttpResponseForbidden, HttpResponseRedirect
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden, HttpResponseRedirect, FileResponse, Http404
+from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
+from xhtml2pdf import pisa
+from formtools.wizard.views import SessionWizardView
 from django.views.decorators.http import require_POST
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View, TemplateView, FormView # Added FormView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View, TemplateView, FormView
 from django.db import transaction
-from django.db.models import Q, Avg, Count, Sum, F, ExpressionWrapper, fields
+from django.db.models import Q, Avg, Count, Sum, F, ExpressionWrapper, fields, Prefetch, Max, OuterRef, Subquery, Exists
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from channels.layers import get_channel_layer
+from django.core.cache import cache # Import the cache
+from asgiref.sync import async_to_sync
 from django.core.paginator import Paginator
+from allauth.account.models import EmailAddress
+from allauth.mfa.models import Authenticator # For checking 2FA methods with django-allauth
+from io import BytesIO
+from django.contrib.auth import get_user_model
 from authapp.models import CustomUser # <<< Import CustomUser from authapp
-from django.core.files.uploadedfile import InMemoryUploadedFile # Import for type checking
-from django.db.models.functions import TruncMonth # <<< Import TruncMonth
+from django.core.files.uploadedfile import InMemoryUploadedFile, os
+from django.db.models.functions import TruncDay, TruncMonth
 from .models import ( # Ensure UserProfile is imported
     Product, Category, Cart, CartItem, Order, OrderItem, Address,
     Wishlist, ProductReview, Vendor, VendorReview, Promotion, AdCampaign,
-    Service, ServiceCategory, ServicePackage, ServiceReview, ServiceProviderProfile, PortfolioItem,
-    Notification, UserProfile, Transaction, Escrow, Dispute, Message, Conversation, ProductImage, ProductVideo, # Added ProductImage, ProductVideo
+    Notification, UserProfile, Transaction, Escrow, Dispute, Message, Conversation, ProductImage, ProductVideo, SavedForLaterItem, # Added ProductImage, ProductVideo
     ShippingMethod, PaymentGateway, TaxRate, Currency, SiteSettings, BlogPost, BlogCategory,
     FAQ, SupportTicket, TicketResponse, UserActivity, AuditLog, APIKey, WebhookEvent,
-    FeatureFlag, ABTest, UserSegment, EmailTemplate, SMSTemplate, PushNotificationTemplate,
+    FeatureFlag, ABTest, UserSegment, EmailTemplate, SMSTemplate, PushNotificationTemplate, Reward,
     Affiliate, AffiliateClick, AffiliatePayout, LoyaltyProgram, LoyaltyTier, UserPoints,
-    Reward, UserReward, Coupon, UserCoupon, GiftCard, UserGiftCard,
-    VendorShipping, VendorPayment, VendorAdditionalInfo, # Added for vendor onboarding
+    Reward, UserCoupon, GiftCard, UserGiftCard, PricingPlan,
     FAQ, TermsAndConditions, PrivacyPolicy, # For chatbot knowledge base
     # CustomUser, # Assuming CustomUser is your user model - THIS LINE IS NOW COMMENTED OUT
     ProductVariant, # Added for product variants
-    ServiceBooking, # Added for service bookings PayoutRequest, # Already imported
+    ServiceBooking, PayoutRequest,
     ServiceAvailability, # Added for service availability
-    ServiceAddon, # Added for service addons
+    ServiceAddon, ServiceImage, ServiceVideo, # Added for service addons
     UserFeedback, # Added for general user feedback
     SystemNotification, # Added for system-wide notifications
     UserPreferences, # Added for user preferences
@@ -54,32 +71,98 @@ from .models import ( # Ensure UserProfile is imported
     OrderNote, # Added for order notes
     # ... any other models you have ...
     RiderProfile, DeliveryTask, RiderApplication, ActiveRiderBoost, # Import RiderProfile, DeliveryTask, RiderApplication, ActiveRiderBoost
-    BoostPackage, PayoutRequest # Import PayoutRequest
+    BoostPackage,
+    Service, ServiceCategory, ServicePackage, ServiceReview, ServiceProviderProfile, PortfolioItem, ProductQuestion, ProductAnswer, Coupon,
+    FraudReport,
 )
 from .forms import ( # Ensure RiderApplication is imported if needed by forms, but it's a model
     AddressForm, ProductReviewForm, VendorReviewForm,
-    VendorRegistrationForm, VendorProfileUpdateForm, # VendorVerificationForm, # Commented out
-    VendorProductForm, PromotionForm, AdCampaignForm,
-    ServiceForm, ServicePackageFormSet, ServiceReviewForm, ServiceSearchForm,
-    ServiceProviderRegistrationForm, PortfolioItemForm, VendorPayoutRequestForm, # Added VendorPayoutRequestForm
+    VendorRegistrationForm, VendorProfileUpdateForm, MessageForm, ServiceProviderProfileForm, # VendorVerificationForm, # Commented out
+    ProductQuestionForm, ProductAnswerForm, ServiceBookingDetailsForm, ServiceAvailabilityForm,
+    ServiceForm, ServicePackageFormSet, ServiceReviewForm, ServiceSearchForm, ServiceAvailabilityFormSet, ServiceProviderPayoutForm,
+    PortfolioItemForm, VendorPayoutRequestForm, CouponApplyForm, # Added VendorPayoutRequestForm and CouponApplyForm
     VendorShippingForm, VendorPaymentForm, VendorAdditionalInfoForm, RiderPayoutRequestForm, # Added RiderPayoutRequestForm
     VerificationMethodSelectionForm, ServiceProviderPayoutRequestForm, # New multi-step forms, Added ServiceProviderPayoutRequestForm
     BusinessDetailsForm,             # New multi-step forms
     IndividualDetailsForm,           # New multi-step forms
-    VerificationConfirmationForm,    # New multi-step forms
+    VerificationConfirmationForm,    # New multi-step forms,
+    VendorProductForm, PromotionForm, AdCampaignForm,
     # ... any other forms you have ...
-    RiderProfileApplicationForm,RiderProfileUpdateForm  # Import Rider form
+    RiderProfileApplicationForm,RiderProfileUpdateForm, UserProfileForm, UserPreferencesForm,
 )
 from authapp.forms import UserProfileUpdateForm as AuthUserProfileUpdateForm # Renamed to avoid clash
 
 from .utils import (
     send_order_confirmation_email, generate_invoice_pdf,
-    calculate_shipping_cost, process_payment_with_gateway,
-    # ... any other utility functions ...
+    calculate_shipping_cost, process_payment_with_gateway, haversine
 )
 # from .tasks import process_order_task # Example for Celery tasks
-from .signals import order_placed # Example for signals
-from .ai_services_gemini import generate_text_with_gemini, generate_response_from_image_and_text # Import Gemini services
+from .signals import order_placed
+from .ai_services_gemini import (
+    generate_text_with_gemini,
+    generate_response_from_image_and_text,
+    enhance_image_with_gemini,
+    get_chatbot_response,
+    generate_structured_text_with_gemini,
+    remove_image_background, # These will be used in tasks.py
+)
+from .filters import ProductFilter
+from .fraud_detection import calculate_fraud_score
+
+
+@login_required
+@require_POST
+def vendor_email_packing_slip(request, pk):
+    """
+    Generates a PDF packing slip and emails it to the vendor.
+    """
+    try:
+        vendor = request.user.vendor_profile
+    except Vendor.DoesNotExist:
+        messages.error(request, _("You are not a registered vendor."))
+        return redirect('core:vendor_dashboard')
+
+    if not vendor.user.email:
+        messages.error(request, _("Your profile does not have an email address to send the packing slip to."))
+        return redirect('core:vendor_order_detail', pk=pk)
+
+    order = get_object_or_404(Order, pk=pk)
+
+    # Security check: ensure the order actually contains items from this vendor
+    vendor_items = order.items.filter(product__vendor=vendor)
+    if not vendor_items.exists():
+        messages.error(request, _("You do not have permission to email a packing slip for this order."))
+        return redirect('core:vendor_order_list')
+
+    context = {
+        'order': order,
+        'vendor_items': vendor_items,
+        'vendor': vendor,
+    }
+
+    # Render the HTML template to a string
+    html = render_to_string('core/vendor/packing_slip.html', context)
+
+    # Create a PDF in memory
+    pdf_buffer = BytesIO()
+    pisa_status = pisa.CreatePDF(html, dest=pdf_buffer)
+
+    if pisa_status.err:
+        logger.error(f"PDF generation failed for emailing order {order.order_id} for vendor {vendor.name}. Error: {pisa_status.err}")
+        messages.error(request, _("There was an error generating the PDF for the email. Please try again later."))
+        return redirect('core:vendor_order_detail', pk=pk)
+
+    pdf_buffer.seek(0)
+
+    subject = _("Packing Slip for Your Order #{order_id}").format(order_id=order.order_id)
+    body = _("Hello {vendor_name},\n\nPlease find the packing slip for order #{order_id} attached.\n\nThank you,\nThe NEXUS Team").format(vendor_name=vendor.name, order_id=order.order_id)
+    email = EmailMessage(subject, body, settings.DEFAULT_FROM_EMAIL, [vendor.user.email])
+    email.attach(f'packing_slip_{order.order_id}.pdf', pdf_buffer.getvalue(), 'application/pdf')
+    email.send(fail_silently=False)
+
+    messages.success(request, _("The packing slip has been sent to {email}.").format(email=vendor.user.email))
+    return redirect('core:vendor_order_detail', pk=pk)
+
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -88,7 +171,133 @@ logger = logging.getLogger(__name__)
 # stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
+from .task import process_image_enhancement, process_background_removal
 # --- Helper Functions (Consider moving to utils.py if they grow) ---
+
+def _get_ai_review_summary(product: Product, reviews: list) -> str | None:
+    """
+    Generates a concise summary for a product based on its reviews using an AI model.
+    Returns the summary text or a fallback message if generation fails or is not possible.
+    """
+    if not reviews:
+        return _("There are no reviews yet to summarize for this product.")
+
+    # --- START: Caching Logic ---
+    cache_key = f"ai_summary_prod_{product.id}"
+    cached_summary = cache.get(cache_key)
+    if cached_summary:
+        logger.debug(f"AI Review Summary - Cache HIT for product {product.id}")
+        return cached_summary
+    logger.debug(f"AI Review Summary - Cache MISS for product {product.id}")
+    # --- END: Caching Logic ---
+
+    review_texts = []
+    # Take up to 15 most recent approved reviews for the prompt
+    for i, r in enumerate(reviews[:15]):
+        review_text = f"{i+1}. Rating: {r.rating}/5. Review: {r.review}"
+        if r.video:
+            review_text += " (Includes video)"
+        review_texts.append(review_text)
+
+    reviews_str = "\n".join(review_texts)
+
+    prompt_for_summary = f"""You are an e-commerce assistant for NEXUS marketplace.
+A user is looking at the product "{product.name}".
+Based ONLY on the following customer reviews, provide a concise summary (around 50-70 words) highlighting the main positive and negative points.
+If there are no clear negative points, focus on the positives.
+If the reviews are generally mixed, reflect that.
+Do not invent any information not present in the reviews.
+
+Customer Reviews:
+{reviews_str}
+
+Concise Summary:
+"""
+    logger.debug(f"AI Review Summary - Prompt for '{product.name}':\n{prompt_for_summary}")
+    summary_text = generate_text_with_gemini(prompt_for_summary)
+
+    if summary_text and not summary_text.startswith("Error:"):
+        final_summary = summary_text.strip()
+        # --- START: Caching Logic ---
+        cache.set(cache_key, final_summary, timeout=3600) # Cache for 1 hour
+        # --- END: Caching Logic ---
+        return final_summary
+    else:
+        logger.error(f"AI Review Summary - Gemini error for '{product.name}': {summary_text}")
+        return _("Could not generate a review summary at this time.")
+
+def _get_ai_recommendations(product: Product) -> list:
+    """
+    Generates a list of recommended product objects using an AI model.
+    Returns a list of Product objects or an empty list on failure.
+    """
+    # --- START: Caching Logic ---
+    cache_key = f"ai_recs_prod_{product.id}"
+    cached_recs = cache.get(cache_key)
+    if cached_recs is not None: # Check for None, as an empty list is a valid cached value
+        logger.debug(f"AI Recs - Cache HIT for product {product.id}")
+        return cached_recs
+    # --- END: Caching Logic ---
+
+    try:
+        # 1. Fetch candidate products
+        max_candidates_for_ai = 15
+        candidate_products_list = list(
+            Product.objects.filter(category=product.category, is_active=True)
+            .exclude(id=product.id)
+            .order_by('?')[:max_candidates_for_ai]
+        )
+
+        # Fallback logic if not enough candidates
+        if len(candidate_products_list) < 5:
+            current_ids = {p.id for p in candidate_products_list} | {product.id}
+            fallback_candidates = list(
+                Product.objects.filter(is_active=True, is_featured=True)
+                .exclude(id__in=current_ids)
+                .order_by('?')[:max_candidates_for_ai - len(candidate_products_list)]
+            )
+            candidate_products_list.extend(fallback_candidates)
+            candidate_products_list = list(dict.fromkeys(candidate_products_list)) # Remove duplicates
+
+        candidate_products = candidate_products_list[:max_candidates_for_ai]
+        logger.debug(f"AI Recs - Product: {product.name}, Final candidate products count: {len(candidate_products)}")
+
+        if not candidate_products:
+            return []
+
+        # 2. Construct the prompt
+        candidate_list_str = "\n".join(
+            [f"- {p.name} (Category: {p.category.name}, Price: {p.price})" for p in candidate_products]
+        )
+        prompt_for_ai = f"""You are an expert e-commerce recommendation engine for an online marketplace called NEXUS.
+A user is currently viewing the following product:
+Product Name: "{product.name}"
+Category: "{product.category.name}"
+Description Snippet: "{product.description[:250]}..."
+
+Your task is to select exactly 3 distinct products from the 'Available Products List' below that this user might also be interested in.
+Return ONLY the names of the 3 recommended products, each on a new line. Do NOT include any other text.
+
+Available Products List:
+{candidate_list_str}
+"""
+        # 3. Call Gemini API and process response
+        raw_recommendations_text = generate_text_with_gemini(prompt_for_ai)
+        if raw_recommendations_text and not raw_recommendations_text.startswith("Error:"):
+            recommended_names = [name.strip() for name in raw_recommendations_text.split('\n') if name.strip()]
+            if recommended_names:
+                recommended_products = list(Product.objects.filter(name__in=recommended_names, is_active=True).distinct()[:3])
+                # --- START: Caching Logic ---
+                cache.set(cache_key, recommended_products, timeout=86400) # Cache for 24 hours
+                # --- END: Caching Logic ---
+                return recommended_products
+    except Exception as e:
+        logger.error(f"Error generating AI recommendations for product {product.id}: {e}", exc_info=True)
+    # --- START: Caching Logic ---
+    cache.set(cache_key, [], timeout=600) # Cache failure (empty list) for 10 mins to prevent retries
+    # --- END: Caching Logic ---
+    return []
+
 def get_cart_data(user):
     """
     Retrieves cart items and total for a given user.
@@ -106,7 +315,850 @@ def get_cart_data(user):
         item_count = 0
     return {'cart_items': cart_items, 'cart_total': cart_total, 'item_count': item_count}
 
+# --- A simple decorator for API key authentication ---
+def api_key_required(view_func):
+    """
+    Decorator to require an API key for a view.
+    Assumes the key is passed in the 'X-API-KEY' header.
+    """
+    @csrf_exempt # API clients won't have a CSRF token
+    def _wrapped_view(request, *args, **kwargs):
+        api_key_str = request.headers.get('X-API-KEY')
+        if not api_key_str:
+            return JsonResponse({'error': 'API key is missing.'}, status=401)
+        
+        try:
+            api_key = APIKey.objects.get(key=api_key_str, is_active=True)
+            request.user = api_key.user # Authenticate the user associated with the key
+            
+            # Update last_used timestamp
+            api_key.last_used = timezone.now()
+            api_key.save(update_fields=['last_used'])
+
+        except APIKey.DoesNotExist:
+            return JsonResponse({'error': 'Invalid or inactive API key.'}, status=401)
+        
+        if not hasattr(request.user, 'vendor_profile') or not request.user.vendor_profile:
+             return JsonResponse({'error': 'User is not a vendor.'}, status=403)
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
 # --- Core Views ---
+
+class IsVendorMixin(UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.is_authenticated and \
+               hasattr(self.request.user, 'vendor_profile') and \
+               self.request.user.vendor_profile is not None
+
+    def handle_no_permission(self):
+        if not self.request.user.is_authenticated:
+            return redirect(reverse('authapp:signin') + f'?next={self.request.path}') # Corrected redirect
+        messages.info(self.request, _("You need to register as a vendor to access this page."))
+        return redirect('core:sell_on_nexus') # Changed from vendor_registration to sell_on_nexus
+
+
+class IsServiceProviderMixin(UserPassesTestMixin):
+    """
+    Mixin to check if the user is an approved service provider.
+    """
+    def test_func(self):
+        return (
+            self.request.user.is_authenticated and
+            hasattr(self.request.user, 'service_provider_profile') and
+            self.request.user.service_provider_profile is not None and
+            self.request.user.service_provider_profile.is_approved
+        )
+
+    def handle_no_permission(self):
+        if not self.request.user.is_authenticated:
+            return redirect(reverse('authapp:signin') + f'?next={self.request.path}')
+        if not hasattr(self.request.user, 'service_provider_profile'):
+            messages.info(self.request, _("You need to register as a service provider to access this page."))
+            return redirect('core:become_service_provider')
+        else:
+            messages.warning(self.request, _("Your service provider profile is pending approval."))
+            return redirect('core:user_profile')
+
+
+class IsRiderMixin(UserPassesTestMixin):
+    """
+    Mixin to check if the user is an approved rider.
+    """
+    def test_func(self):
+        return (
+            self.request.user.is_authenticated and
+            hasattr(self.request.user, 'rider_profile') and
+            self.request.user.rider_profile is not None and
+            self.request.user.rider_profile.is_approved
+        )
+
+    def handle_no_permission(self):
+        if not self.request.user.is_authenticated:
+            return redirect(reverse('authapp:signin') + f'?next={self.request.path}')
+        if not hasattr(self.request.user, 'rider_profile'):
+            messages.info(self.request, _("You need to apply to be a rider to access this page."))
+            return redirect('core:become_rider_info_page')
+        else:
+            messages.warning(self.request, _("Your rider profile is pending approval."))
+            return redirect('core:user_profile')
+
+
+# --- Vendor Dashboard Views ---
+
+class VendorDashboardView(LoginRequiredMixin, IsVendorMixin, TemplateView):
+    template_name = 'core/vendor_dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        vendor = self.request.user.vendor_profile
+
+        # Sales and Order Stats
+        completed_orders = Order.objects.filter(
+            items__product__vendor=vendor,
+            status__in=['COMPLETED', 'DELIVERED', 'PENDING_PAYOUT', 'SHIPPED']
+        ).distinct()
+
+        total_sales = completed_orders.aggregate(
+            total=Sum(F('items__price') * F('items__quantity'), filter=Q(items__product__vendor=vendor))
+        )['total'] or Decimal('0.00')
+
+        total_orders_count = Order.objects.filter(items__product__vendor=vendor).distinct().count()
+
+        # Product Stats
+        total_products_count = Product.objects.filter(vendor=vendor).count()
+        active_products_count = Product.objects.filter(vendor=vendor, is_active=True).count()
+        low_stock_products = Product.objects.filter(vendor=vendor, stock__lte=5, stock__gt=0, is_active=True)
+
+        # Recent Orders
+        recent_orders = Order.objects.filter(items__product__vendor=vendor).distinct().order_by('-created_at')[:5]
+
+        # Onboarding status
+        onboarding_steps = {
+            'shop_info': vendor.is_shop_info_complete(),
+            'business_info': vendor.get_business_info_status_display() == 'COMPLETED',
+            'shipping_info': vendor.is_shipping_info_complete(),
+            'payment_info': vendor.is_payment_info_complete(),
+            'additional_info': vendor.is_additional_info_complete(),
+        }
+        onboarding_complete = all(onboarding_steps.values())
+
+        context.update({
+            'vendor': vendor,
+            'total_sales': total_sales,
+            'total_orders_count': total_orders_count,
+            'total_products_count': total_products_count,
+            'active_products_count': active_products_count,
+            'low_stock_products': low_stock_products,
+            'recent_orders': recent_orders,
+            'onboarding_steps': onboarding_steps,
+            'onboarding_complete': onboarding_complete,
+            'page_title': _("Vendor Dashboard"),
+        })
+        return context
+
+
+# --- Multi-Step Vendor Verification ---
+class MultiStepVendorVerificationView(LoginRequiredMixin, IsVendorMixin, SessionWizardView):
+    file_storage = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'vendor_verification_temp'))
+
+    form_list = [
+        ("method", VerificationMethodSelectionForm),
+        ("individual", IndividualDetailsForm), # Swapped with business
+        ("business", BusinessDetailsForm),   # Swapped with individual
+        ("confirmation", VerificationConfirmationForm),
+    ]
+
+    def dispatch(self, request, *args, **kwargs):
+        vendor = self.request.user.vendor_profile
+        
+        # Prevent access if verification is complete or pending
+        if vendor.verification_status == Vendor.VERIFICATION_STATUS_VERIFIED:
+            messages.info(request, _("Your account is already verified."))
+            return redirect('core:vendor_dashboard')
+        
+        if vendor.verification_status == Vendor.VERIFICATION_STATUS_PENDING_REVIEW:
+            messages.info(request, _("Your verification is currently under review."))
+            return redirect('core:vendor_dashboard')
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_template_names(self):
+        if self.steps.current == 'confirmation':
+            return ['core/vendor_verification_step_confirmation.html']
+        return ['core/vendor_verification_wizard_step.html']
+
+    def get_form_instance(self, step):
+        # This method must return a model instance for ModelForms, not a form instance.
+        if step in ['business', 'individual']:
+            return self.request.user.vendor_profile
+        return None
+
+    def condition_business(self):
+        cleaned_data = self.get_cleaned_data_for_step('method') or {}
+        return cleaned_data.get('verification_method', '') == Vendor.VERIFICATION_METHOD_BUSINESS
+
+    def condition_individual(self):
+        cleaned_data = self.get_cleaned_data_for_step('method') or {}
+        return cleaned_data.get('verification_method', '') == Vendor.VERIFICATION_METHOD_INDIVIDUAL
+
+    def get_condition_dict(self):
+        return {
+            'business': self.condition_business,
+            'individual': self.condition_individual,
+        }
+
+    def done(self, form_list, **kwargs):
+        vendor = self.request.user.vendor_profile
+        all_cleaned_data = self.get_all_cleaned_data()
+
+        # Update the vendor instance from the collected data in one go.
+        # This is more efficient and robust than multiple saves.
+        vendor.verification_method = all_cleaned_data.get('verification_method')
+
+        # Update fields from the conditional forms, using existing value as a fallback.
+        vendor.business_registration_document = all_cleaned_data.get('business_registration_document', vendor.business_registration_document)
+        vendor.tax_id_number = all_cleaned_data.get('tax_id_number', vendor.tax_id_number)
+        vendor.national_id_type = all_cleaned_data.get('national_id_type', vendor.national_id_type)
+        vendor.national_id_number = all_cleaned_data.get('national_id_number', vendor.national_id_number)
+        vendor.national_id_document = all_cleaned_data.get('national_id_document', vendor.national_id_document)
+
+        vendor.verification_status = Vendor.VERIFICATION_STATUS_PENDING_REVIEW
+        vendor.save()
+
+        messages.success(self.request, _("Your verification documents have been submitted for review."))
+        return redirect('core:vendor_dashboard')
+
+class EditVendorProfileView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, UpdateView):
+    model = Vendor
+    form_class = VendorProfileUpdateForm
+    template_name = 'core/edit_vendor_profile.html'
+    success_url = reverse_lazy('core:edit_vendor_profile')
+    success_message = _("Your profile has been updated successfully.")
+
+    def get_object(self, queryset=None):
+        return self.request.user.vendor_profile
+
+
+class EditVendorShippingView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, UpdateView):
+    model = Vendor
+    form_class = VendorShippingForm
+    template_name = 'core/edit_vendor_shipping.html'
+    success_url = reverse_lazy('core:vendor_shipping_settings')
+    success_message = _("Your shipping settings have been updated successfully.")
+
+    def get_object(self, queryset=None):
+        return self.request.user.vendor_profile
+
+
+class EditVendorPaymentView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, UpdateView):
+    model = Vendor
+    form_class = VendorPaymentForm
+    template_name = 'core/edit_vendor_payment.html'
+    success_url = reverse_lazy('core:vendor_payment_settings')
+    success_message = _("Your payment settings have been updated successfully.")
+
+    def get_object(self, queryset=None):
+        return self.request.user.vendor_profile
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _("Payout Settings")
+        context['active_page'] = 'vendor_payout_settings'
+        return context
+
+
+
+class EditVendorAdditionalInfoView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, UpdateView):
+    model = Vendor
+    form_class = VendorAdditionalInfoForm
+    template_name = 'core/edit_vendor_additional_info.html'
+    success_url = reverse_lazy('core:edit_vendor_additional_info')
+    success_message = _("Your additional information has been updated successfully.")
+
+    def get_object(self, queryset=None):
+        return self.request.user.vendor_profile
+
+
+class VendorOrderListView(LoginRequiredMixin, IsVendorMixin, ListView):
+    model = Order
+    template_name = 'core/vendor_order_list.html'
+    context_object_name = 'orders'
+    paginate_by = 15
+
+    def get_queryset(self):
+        vendor = self.request.user.vendor_profile
+        return Order.objects.filter(items__product__vendor=vendor).distinct().order_by('-created_at')
+
+
+class VendorOrderDetailView(LoginRequiredMixin, IsVendorMixin, DetailView):
+    model = Order
+    template_name = 'core/vendor_order_detail.html'
+    context_object_name = 'order'
+
+    def get_queryset(self):
+        vendor = self.request.user.vendor_profile
+        return Order.objects.filter(items__product__vendor=vendor).distinct()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        vendor = self.request.user.vendor_profile
+        order = self.get_object()
+        context['vendor_items'] = order.items.filter(product__vendor=vendor)
+        return context
+
+
+@login_required
+@require_POST
+def vendor_mark_all_notifications_read(request):
+    """
+    Marks all unread notifications for the current user as read.
+    """
+    # Ensure the user is a vendor before proceeding
+    if not hasattr(request.user, 'vendor_profile') or not request.user.vendor_profile:
+        messages.error(request, _("You are not authorized to perform this action."))
+        return redirect('core:home')
+
+    updated_count = Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+
+    if updated_count > 0:
+        messages.success(request, _("{count} notification(s) marked as read.").format(count=updated_count))
+    else:
+        messages.info(request, _("You have no unread notifications."))
+
+    return redirect('core:vendor_notification_list')
+
+
+@login_required
+@require_POST
+def vendor_delete_notification(request, pk):
+    """
+    Deletes a single notification for the current user.
+    """
+    # Ensure the user is a vendor before proceeding
+    if not hasattr(request.user, 'vendor_profile') or not request.user.vendor_profile:
+        messages.error(request, _("You are not authorized to perform this action."))
+        return redirect('core:home')
+
+    notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
+    notification.delete()
+    messages.success(request, _("Notification deleted."))
+    return redirect('core:vendor_notification_list')
+
+
+@login_required
+@require_POST
+def vendor_delete_all_notifications(request):
+    """
+    Deletes all notifications for the current user.
+    """
+    # Ensure the user is a vendor before proceeding
+    if not hasattr(request.user, 'vendor_profile') or not request.user.vendor_profile:
+        messages.error(request, _("You are not authorized to perform this action."))
+        return redirect('core:home')
+
+    deleted_count, _ = Notification.objects.filter(recipient=request.user).delete()
+
+    if deleted_count > 0:
+        messages.success(request, _("{count} notification(s) have been deleted.").format(count=deleted_count))
+    else:
+        messages.info(request, _("You had no notifications to delete."))
+
+    return redirect('core:vendor_notification_list')
+
+
+@login_required
+@require_POST
+def vendor_mark_order_shipped(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    vendor = request.user.vendor_profile
+
+    # Security check
+    if not order.items.filter(product__vendor=vendor).exists():
+        messages.error(request, _("You do not have permission to modify this order."))
+        return redirect('core:vendor_order_list')
+
+    if order.status == 'PROCESSING':
+        order.status = 'SHIPPED'
+        order.save(update_fields=['status'])
+        messages.success(request, _("Order #{order_id} has been marked as shipped.").format(order_id=order.order_id))
+    else:
+        messages.warning(request, _("This order cannot be marked as shipped at its current status."))
+
+    return redirect('core:vendor_order_detail', pk=order.pk)
+
+
+class VendorReportsView(LoginRequiredMixin, IsVendorMixin, TemplateView):
+    template_name = 'core/vendor_reports.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        vendor = self.request.user.vendor_profile
+
+        # Total revenue
+        completed_orders = Order.objects.filter(
+            items__product__vendor=vendor,
+            status__in=['COMPLETED', 'DELIVERED', 'PENDING_PAYOUT', 'SHIPPED']
+        ).distinct()
+        total_revenue = completed_orders.aggregate(
+            total=Sum(F('items__price') * F('items__quantity'), filter=Q(items__product__vendor=vendor))
+        )['total'] or Decimal('0.00')
+
+        # Total items sold
+        total_items_sold = OrderItem.objects.filter(
+            order__in=completed_orders, product__vendor=vendor
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+
+        # Order status counts
+        order_status_counts = Order.objects.filter(items__product__vendor=vendor).values('status').annotate(count=Count('id')).order_by('status')
+
+        context['vendor'] = vendor
+        context['total_revenue'] = total_revenue
+        context['total_items_sold'] = total_items_sold
+        context['total_orders_count'] = completed_orders.count()
+        context['order_status_counts'] = order_status_counts
+        context['low_stock_products'] = Product.objects.filter(vendor=vendor, stock__lte=5, stock__gt=0, is_active=True)
+        context['page_title'] = _("Reports")
+        return context
+
+# --- Vendor Plan & Upgrade Views ---
+
+class VendorUpgradeView(LoginRequiredMixin, IsVendorMixin, ListView):
+    """
+    Displays available pricing plans for vendors to upgrade their accounts.
+    """
+    model = PricingPlan
+    template_name = 'core/vendor_upgrade.html' # Ensure this template exists
+    context_object_name = 'plans'
+
+    def get_queryset(self):
+        """
+        Returns only active vendor premium plans.
+        """
+        return PricingPlan.objects.filter(is_active=True, plan_type='vendor_premium').order_by('display_order', 'price')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _("Upgrade Your Vendor Account")
+        return context
+
+
+class VendorPromotionListView(LoginRequiredMixin, IsVendorMixin, ListView):
+    model = Promotion
+    template_name = 'core/vendor_promotion_list.html'
+    context_object_name = 'promotions'
+    paginate_by = 10
+
+    def get_queryset(self):
+        return Promotion.objects.filter(applicable_vendor=self.request.user.vendor_profile)
+
+
+class VendorPromotionCreateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, CreateView):
+    model = Promotion
+    form_class = PromotionForm
+    template_name = 'core/vendor_promotion_form.html'
+    success_url = reverse_lazy('core:vendor_promotion_list')
+    success_message = _("Promotion created successfully.")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['vendor'] = self.request.user.vendor_profile
+        return kwargs
+
+    def form_valid(self, form):
+        form.instance.applicable_vendor = self.request.user.vendor_profile
+        return super().form_valid(form)
+
+
+class VendorPromotionUpdateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, UpdateView):
+    model = Promotion
+    form_class = PromotionForm
+    template_name = 'core/vendor_promotion_form.html'
+    success_url = reverse_lazy('core:vendor_promotion_list')
+    success_message = _("Promotion updated successfully.")
+
+    def get_queryset(self):
+        return Promotion.objects.filter(applicable_vendor=self.request.user.vendor_profile)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['vendor'] = self.request.user.vendor_profile
+        return kwargs
+
+
+class VendorPromotionDeleteView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, DeleteView):
+    model = Promotion
+    template_name = 'core/vendor_promotion_confirm_delete.html'
+    success_url = reverse_lazy('core:vendor_promotion_list')
+    success_message = _("Promotion deleted successfully.")
+
+    def get_queryset(self):
+        return Promotion.objects.filter(applicable_vendor=self.request.user.vendor_profile)
+
+
+class VendorCampaignListView(LoginRequiredMixin, IsVendorMixin, ListView):
+    model = AdCampaign
+    template_name = 'core/vendor_campaign_list.html'
+    context_object_name = 'campaigns'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = AdCampaign.objects.filter(vendor=self.request.user.vendor_profile)
+
+        search_query = self.request.GET.get('q')
+        if search_query:
+            queryset = queryset.filter(name__icontains=search_query)
+
+        status = self.request.GET.get('status')
+        if status == 'active':
+            queryset = queryset.filter(is_active=True)
+        elif status == 'inactive':
+            queryset = queryset.filter(is_active=False)
+
+        return queryset.order_by('-start_date')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_query'] = self.request.GET.get('q', '')
+        context['current_status'] = self.request.GET.get('status', '')
+        context['vendor'] = self.request.user.vendor_profile
+        return context
+
+class VendorCampaignCreateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, CreateView):
+    model = AdCampaign
+    form_class = AdCampaignForm
+    template_name = 'core/vendor_campaign_form.html'
+    success_url = reverse_lazy('core:vendor_campaign_list')
+    success_message = _("Ad Campaign created successfully.")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['vendor'] = self.request.user.vendor_profile
+        return kwargs
+
+    def form_valid(self, form):
+        form.instance.vendor = self.request.user.vendor_profile
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_title'] = _("Create New Campaign")
+        context['vendor'] = self.request.user.vendor_profile
+        return context
+
+
+class VendorCampaignUpdateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, UpdateView):
+    model = AdCampaign
+    form_class = AdCampaignForm
+    template_name = 'core/vendor_campaign_form.html'
+    success_url = reverse_lazy('core:vendor_campaign_list')
+    success_message = _("Ad Campaign updated successfully.")
+
+    def get_queryset(self):
+        return AdCampaign.objects.filter(vendor=self.request.user.vendor_profile)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['vendor'] = self.request.user.vendor_profile
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_title'] = _("Edit Campaign")
+        context['vendor'] = self.request.user.vendor_profile
+        return context
+
+
+class VendorCampaignDeleteView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, DeleteView):
+    model = AdCampaign
+    template_name = 'core/vendor_campaign_confirm_delete.html'
+    success_url = reverse_lazy('core:vendor_campaign_list')
+    success_message = _("Ad Campaign deleted successfully.")
+
+    def get_queryset(self):
+        return AdCampaign.objects.filter(vendor=self.request.user.vendor_profile)
+
+
+class VendorNotificationListView(LoginRequiredMixin, IsVendorMixin, ListView):
+    model = Notification
+    template_name = 'core/vendor_notification_list.html'
+    context_object_name = 'notifications'
+    paginate_by = 20
+
+    def get_queryset(self):
+        queryset = Notification.objects.filter(recipient=self.request.user)
+
+        # Filter by search query
+        search_query = self.request.GET.get('q')
+        if search_query:
+            queryset = queryset.filter(message__icontains=search_query)
+
+        # Filter by status (read/unread)
+        status = self.request.GET.get('status')
+        if status == 'unread':
+            queryset = queryset.filter(is_read=False)
+        elif status == 'read':
+            queryset = queryset.filter(is_read=True)
+
+        return queryset.order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _("Your Notifications")
+        context['search_query'] = self.request.GET.get('q', '')
+        context['current_status'] = self.request.GET.get('status', '')
+        return context
+
+class VendorProductListView(LoginRequiredMixin, IsVendorMixin, ListView):
+    model = Product
+    template_name = 'core/vendor_product_list.html'
+    context_object_name = 'products'
+    paginate_by = 10
+
+    def get_queryset(self):
+        return Product.objects.filter(vendor=self.request.user.vendor_profile).order_by('-created_at')
+
+
+class VendorProductCreateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, CreateView):
+    model = Product
+    form_class = VendorProductForm
+    template_name = 'core/vendor_product_form.html'
+    success_url = reverse_lazy('core:vendor_product_list')
+    success_message = _("Product created successfully.")
+
+    def form_valid(self, form):
+        # Save the product instance but don't commit to the database yet
+        form.instance.vendor = self.request.user.vendor_profile
+        self.object = form.save() # This saves the product and returns the instance
+
+        # Check if AI enhancement or background removal is requested
+        enhance_image = form.cleaned_data.get('enhance_image')
+        remove_background = form.cleaned_data.get('remove_background')
+
+        # Handle multiple image uploads
+        images = self.request.FILES.getlist('images')
+        for image_file in images:
+            product_image = ProductImage.objects.create(product=self.object, image=image_file, alt_text=f"Image for {self.object.name}")
+            if enhance_image:
+                process_image_enhancement.delay(product_image.id)
+            if remove_background:
+                process_background_removal.delay(product_image.id)
+
+        messages.success(self.request, self.get_success_message(form.cleaned_data))
+        return HttpResponseRedirect(self.get_success_url())
+
+
+class VendorProductUpdateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, UpdateView):
+    model = Product
+    form_class = VendorProductForm
+    template_name = 'core/vendor_product_form.html'
+    success_url = reverse_lazy('core:vendor_product_list')
+    success_message = _("Product updated successfully.")
+
+    def get_queryset(self):
+        return Product.objects.filter(vendor=self.request.user.vendor_profile)
+
+
+class VendorProductDeleteView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, DeleteView):
+    model = Product
+    template_name = 'core/vendor_product_confirm_delete.html'
+    success_url = reverse_lazy('core:vendor_product_list')
+    success_message = _("Product deleted successfully.")
+
+    def get_queryset(self):
+        return Product.objects.filter(vendor=self.request.user.vendor_profile)
+
+
+class VendorPayoutListView(LoginRequiredMixin, IsVendorMixin, ListView):
+    model = PayoutRequest
+    template_name = 'core/vendor/vendor_payout_list.html'
+    context_object_name = 'payout_requests'
+    paginate_by = 10
+
+    def get_queryset(self):
+        vendor = self.request.user.vendor_profile
+        queryset = PayoutRequest.objects.filter(vendor_profile=vendor)
+
+        # Filtering logic from GET parameters
+        self.search_query = self.request.GET.get('q', '')
+        if self.search_query:
+            # Assuming search by ID
+            queryset = queryset.filter(id__icontains=self.search_query)
+
+        self.current_status = self.request.GET.get('status', '')
+        if self.current_status:
+            queryset = queryset.filter(status=self.current_status)
+
+        return queryset.order_by('-requested_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        vendor = self.request.user.vendor_profile
+
+        # --- Payout Summary Calculations ---
+        completed_orders_value = OrderItem.objects.filter(
+            product__vendor=vendor,
+            order__status__in=['COMPLETED', 'DELIVERED', 'PENDING_PAYOUT']
+        ).aggregate(
+            total=Sum(F('price') * F('quantity'))
+        )['total'] or Decimal('0.00')
+
+        commission_rate = getattr(settings, 'PLATFORM_COMMISSION_RATE', Decimal('0.10'))
+        total_commission = completed_orders_value * commission_rate
+        net_earnings = completed_orders_value - total_commission
+
+        total_paid_out = PayoutRequest.objects.filter(
+            vendor_profile=vendor, status='completed'
+        ).aggregate(total=Sum('amount_requested'))['total'] or Decimal('0.00')
+
+        pending_payouts = PayoutRequest.objects.filter(
+            vendor_profile=vendor, status__in=['pending', 'processing']
+        ).aggregate(total=Sum('amount_requested'))['total'] or Decimal('0.00')
+
+        context['available_for_payout'] = max(Decimal('0.00'), net_earnings - total_paid_out - pending_payouts)
+        context['pending_payouts'] = pending_payouts
+        context['total_paid_out'] = total_paid_out
+        context['can_request_payout'] = context['available_for_payout'] >= getattr(settings, 'MINIMUM_VENDOR_PAYOUT_AMOUNT', 50)
+        context['search_query'] = self.search_query
+        context['current_status'] = self.current_status
+        context['page_title'] = _("Payouts")
+        context['vendor'] = vendor
+        return context
+
+class VendorPayoutRequestCreateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, CreateView):
+    model = PayoutRequest
+    form_class = VendorPayoutRequestForm
+    template_name = 'core/vendor/vendor_payout_request_form.html'
+    success_url = reverse_lazy('core:vendor_payout_request_list')
+    success_message = _("Your payout request has been submitted.")
+
+    def get_form_kwargs(self):
+        """Passes the maximum available payout amount and vendor profile to the form."""
+        kwargs = super().get_form_kwargs()
+        vendor = self.request.user.vendor_profile
+
+        # --- Payout Summary Calculations (mirrors VendorPayoutListView) ---
+        completed_orders_value = OrderItem.objects.filter(
+            product__vendor=vendor,
+            order__status__in=['COMPLETED', 'DELIVERED', 'PENDING_PAYOUT']
+        ).aggregate(
+            total=Sum(F('price') * F('quantity'))
+        )['total'] or Decimal('0.00')
+
+        commission_rate = getattr(settings, 'PLATFORM_COMMISSION_RATE', Decimal('0.10'))
+        total_commission = completed_orders_value * commission_rate
+        net_earnings = completed_orders_value - total_commission
+
+        total_paid_out = PayoutRequest.objects.filter(
+            vendor_profile=vendor, status='completed'
+        ).aggregate(total=Sum('amount_requested'))['total'] or Decimal('0.00')
+
+        pending_payouts = PayoutRequest.objects.filter(
+            vendor_profile=vendor, status__in=['pending', 'processing']
+        ).aggregate(total=Sum('amount_requested'))['total'] or Decimal('0.00')
+
+        kwargs['max_amount'] = max(Decimal('0.00'), net_earnings - total_paid_out - pending_payouts)
+        kwargs['vendor_profile'] = vendor # Pass the vendor profile to the form
+        return kwargs
+
+    def form_valid(self, form):
+        form.instance.vendor_profile = self.request.user.vendor_profile
+        
+        # Get the selected payout method and construct the details string
+        payout_method_key = form.cleaned_data.get('payout_method')
+        vendor = self.request.user.vendor_profile
+        details_string = "Payout method not found." # Fallback
+
+        if payout_method_key == 'mobile_money':
+            details_string = f"Mobile Money: {vendor.mobile_money_provider} - {vendor.mobile_money_number}"
+        elif payout_method_key == 'bank':
+            details_string = f"Bank Account: {vendor.bank_name}, Acc No: {vendor.bank_account_number}, Name: {vendor.bank_account_name}"
+        elif payout_method_key == 'paypal':
+            details_string = f"PayPal: {vendor.paypal_email}"
+        elif payout_method_key == 'stripe':
+            details_string = f"Stripe: {vendor.stripe_account_id}"
+        elif payout_method_key == 'payoneer':
+            details_string = f"Payoneer: {vendor.payoneer_email}"
+        elif payout_method_key == 'wise':
+            details_string = f"Wise: {vendor.wise_email}"
+        elif payout_method_key == 'crypto':
+            details_string = f"Crypto: {vendor.crypto_wallet_network} - {vendor.crypto_wallet_address}"
+        
+        form.instance.payment_method_details = details_string
+        
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _("Request New Payout")
+        context['vendor'] = self.request.user.vendor_profile
+        return context
+
+class VendorReviewListView(LoginRequiredMixin, IsVendorMixin, ListView):
+    model = VendorReview
+    template_name = 'core/vendor/vendor_review_list.html' # Corrected path
+    context_object_name = 'reviews'
+    paginate_by = 10
+
+    def get_queryset(self):
+        vendor = self.request.user.vendor_profile
+        queryset = VendorReview.objects.filter(vendor=vendor).order_by('-created_at')
+
+        # Get the rating from the URL query parameters
+        rating_filter = self.request.GET.get('rating')
+        if rating_filter and rating_filter.isdigit():
+            queryset = queryset.filter(rating=int(rating_filter))
+
+        # Get the search query from the URL
+        search_query = self.request.GET.get('q')
+        if search_query:
+            # The model has `review`, not `comment`.
+            queryset = queryset.filter(
+                Q(user__username__icontains=search_query) |
+                Q(review__icontains=search_query)
+            )
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        vendor = self.request.user.vendor_profile
+
+        # Get all reviews for the vendor for accurate stats, ignoring filters
+        all_reviews_for_vendor = VendorReview.objects.filter(vendor=vendor)
+
+        context['page_title'] = _("Your Reviews")
+        context['total_reviews'] = all_reviews_for_vendor.count()
+        context['average_rating'] = all_reviews_for_vendor.aggregate(Avg('rating'))['rating__avg']
+
+        # Pass the current filter state to the template
+        context['current_rating'] = self.request.GET.get('rating')
+        context['search_query'] = self.request.GET.get('q', '')
+
+        return context
+
+class VendorReviewReplyView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, UpdateView):
+    model = VendorReview
+    fields = ['reply'] # Use fields directly for simplicity
+    success_url = reverse_lazy('core:vendor_review_list')
+    success_message = _("Your reply has been posted successfully.")
+
+    def get_queryset(self):
+        # Ensure vendor can only reply to reviews for their own store
+        return VendorReview.objects.filter(vendor=self.request.user.vendor_profile)
+
+    def form_valid(self, form):
+        # Set the reply timestamp when the form is submitted
+        if form.instance.reply and not form.instance.replied_at:
+             form.instance.replied_at = timezone.now()
+        elif not form.instance.reply: # Clear timestamp if reply is removed
+            form.instance.replied_at = None
+        return super().form_valid(form)
+
+
+# --- Core Views ---
+
+
+
 
 def home(request):
     # Example: Fetch some products and categories for the homepage
@@ -141,6 +1193,133 @@ def home(request):
     }
     return render(request, 'core/home.html', context)
 
+def menu(request):
+    """
+    Displays a full menu of all product and service categories.
+    """
+    product_categories = Category.objects.filter(is_active=True, parent__isnull=True).prefetch_related(
+        Prefetch('subcategories', queryset=Category.objects.filter(is_active=True).order_by('name'))
+    )
+    service_categories = ServiceCategory.objects.filter(is_active=True, parent__isnull=True).prefetch_related(
+        Prefetch('subcategories', queryset=ServiceCategory.objects.filter(is_active=True).order_by('name'))
+    )
+
+    context = {
+        'product_categories': product_categories,
+        'service_categories': service_categories,
+        'page_title': _("Menu"),
+    }
+    return render(request, 'core/menu.html', context)
+
+def sell_on_nexus(request):
+    """
+    Displays the 'Sell on Nexus' landing page.
+    """
+    context = {'page_title': _("Sell on NEXUS")}
+    return render(request, 'core/sell_on_nexus.html', context)
+
+@login_required
+def vendor_registration_view(request):
+    if hasattr(request.user, 'vendor_profile') and request.user.vendor_profile:
+        messages.info(request, _("You are already a registered vendor."))
+        return redirect('core:vendor_dashboard')
+
+    if request.method == 'POST':
+        form = VendorRegistrationForm(request.POST, request.FILES)
+        if form.is_valid():
+            vendor = form.save(commit=False)
+            vendor.user = request.user
+            vendor.is_approved = False
+            vendor.is_verified = False
+            vendor.save()
+            messages.success(request, _("Your vendor application has been submitted! It will be reviewed by our team shortly."))
+            # The vendor dashboard template is missing the logic to display messages.
+            # Redirecting to the product list, which does display messages, until the
+            # dashboard is updated.
+            return redirect('core:vendor_product_list')
+    else:
+        form = VendorRegistrationForm()
+
+    context = {'form': form, 'page_title': _("Become a Vendor")}
+    return render(request, 'core/vendor_registration.html', context)
+
+
+class VendorVerificationView(LoginRequiredMixin, IsVendorMixin, FormView):
+    template_name = 'core/vendor_verification.html'
+    form_class = VerificationMethodSelectionForm # Using the first step form as an example
+    success_url = reverse_lazy('core:vendor_dashboard')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        # This is a simplified handler. The multi-step view is the primary one.
+        messages.success(self.request, _("Verification form submitted."))
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['vendor'] = self.request.user.vendor_profile
+        context['page_title'] = _("Vendor Verification")
+        return context
+
+
+# --- Static & Legal Pages ---
+
+class Creating3DModelsHelpView(TemplateView):
+    """
+    Displays the help page for creating 3D models.
+    """
+    template_name = 'core/help/creating_3d_models.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _("How to Create 3D Models")
+        return context
+
+# This alias is added to resolve an ImportError from a file not in context.
+# The traceback indicates `HelpPageView` is being imported from `core.views`.
+HelpPageView = Creating3DModelsHelpView
+
+
+class LegalDocumentView(TemplateView):
+    """
+    A generic view to display the content of an active legal document.
+    Subclasses should specify the `model` and `page_title_base`.
+    """
+    template_name = 'core/legal_document.html' # A generic template for legal docs
+    model = None
+    page_title_base = ""
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        active_document = None
+        if self.model:
+            # Get the most recently effective, active document
+            active_document = self.model.objects.filter(is_active=True).order_by('-effective_date').first()
+        
+        context['document'] = active_document
+        context['page_title'] = self.page_title_base
+        if active_document:
+            context['page_title'] = f"{self.page_title_base} (v{active_document.version})"
+        return context
+
+class TermsView(LegalDocumentView):
+    """
+    Displays the currently active Terms and Conditions.
+    This resolves the ImportError from the project's urls.py.
+    """
+    model = TermsAndConditions
+    page_title_base = _("Terms and Conditions")
+
+class PrivacyPolicyView(LegalDocumentView):
+    """
+    Displays the currently active Privacy Policy.
+    """
+    model = PrivacyPolicy
+    page_title_base = _("Privacy Policy")
 class ProductListView(ListView):
     model = Product
     template_name = 'core/product_list.html'
@@ -148,48 +1327,183 @@ class ProductListView(ListView):
     paginate_by = 12 # Show 12 products per page
 
     def get_queryset(self):
-        queryset = Product.objects.filter(is_active=True).order_by('-created_at')
-        category_slug = self.kwargs.get('category_slug')
-        query = self.request.GET.get('q')
-
-        if category_slug:
-            category = get_object_or_404(Category, slug=category_slug, is_active=True)
-            queryset = queryset.filter(category=category)
-            self.category = category # For use in get_context_data
-        else:
-            self.category = None
-
-        if query:
-            queryset = queryset.filter(
-                Q(name__icontains=query) |
-                Q(description__icontains=query) |
-                Q(category__name__icontains=query) |
-                Q(vendor__name__icontains=query)
-            )
-            self.search_query = query
-        else:
-            self.search_query = None
-
-        return queryset
+        queryset = super().get_queryset() # Your existing logic
+        self.filterset = ProductFilter(self.request.GET, queryset=queryset)
+        return self.filterset.qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['categories'] = Category.objects.filter(is_active=True).annotate(product_count=Count('products')).filter(product_count__gt=0)
-        context['current_category'] = getattr(self, 'category', None)
-        context['search_query'] = getattr(self, 'search_query', None)
-        if self.category:
-            context['page_title'] = self.category.name
-        elif self.search_query:
-            context['page_title'] = _("Search Results for '{}'").format(self.search_query)
-        else:
-            context['page_title'] = _("All Products")
+        context['filter'] = self.filterset
         return context
+
+class CategoryDetailView(ListView):
+    model = Product
+    template_name = 'core/category_detail.html' # Assumes this template exists
+    context_object_name = 'products'
+    paginate_by = 12
+
+    def get_queryset(self):
+        self.category = get_object_or_404(Category, slug=self.kwargs['category_slug'], is_active=True)
+
+        # Get all descendant categories. This is not the most performant way for deep trees
+        # but is self-contained. For large-scale apps, consider `django-mptt`.
+        all_categories = [self.category]
+        queue = [self.category]
+        while queue:
+            parent = queue.pop(0)
+            for child in parent.subcategories.all():
+                all_categories.append(child)
+                queue.append(child)
+
+        return Product.objects.filter(
+            category__in=all_categories,
+            is_active=True,
+            vendor__is_approved=True
+        ).select_related('vendor').prefetch_related('images').order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['category'] = self.category
+        context['page_title'] = self.category.name
+        context['is_product_list'] = True # For template consistency
+        return context
+
+def daily_offers(request):
+    """
+    Displays products that are currently on promotion.
+    """
+    now = timezone.now()
+    active_promotions = Promotion.objects.filter(
+        is_active=True, start_date__lte=now, end_date__gte=now
+    )
+
+    promoted_product_ids = set()
+    for promo in active_promotions:
+        if promo.scope == 'all':
+            promoted_product_ids.update(Product.objects.filter(is_active=True, is_featured=True).values_list('id', flat=True)[:20])
+            break
+        elif promo.scope == 'product':
+            promoted_product_ids.update(promo.applicable_products.values_list('id', flat=True))
+        elif promo.scope == 'category':
+            products_in_cat = Product.objects.filter(category__in=promo.applicable_categories.all(), is_active=True)
+            promoted_product_ids.update(products_in_cat.values_list('id', flat=True))
+        elif promo.scope == 'vendor' and promo.applicable_vendor:
+            products_from_vendor = Product.objects.filter(vendor=promo.applicable_vendor, is_active=True)
+            promoted_product_ids.update(products_from_vendor.values_list('id', flat=True))
+
+    products = Product.objects.filter(id__in=list(promoted_product_ids)).select_related('category', 'vendor').prefetch_related('images')
+    paginator = Paginator(products, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'products': page_obj,
+        'page_title': _("Daily Offers"),
+        'is_product_list': True, # To help template rendering
+    }
+    # We can reuse the product_list.html template for this view
+    return render(request, 'core/product_list.html', context)
+
+@login_required
+@require_POST
+def apply_coupon(request):
+    now = timezone.now()
+    form = CouponApplyForm(request.POST)
+    if form.is_valid():
+        code = form.cleaned_data['code']
+        try:
+            promo = Promotion.objects.get(code__iexact=code, is_active=True)
+            cart = Cart.objects.get(user=request.user, ordered=False)
+            cart_total = cart.get_cart_total()
+
+            # --- Start Validation ---
+            if not (promo.start_date <= now <= promo.end_date):
+                messages.error(request, _("This coupon is not currently active."))
+                return redirect('core:checkout')
+
+            if promo.usage_limit is not None and promo.usage_count >= promo.usage_limit:
+                messages.error(request, _("This coupon has reached its usage limit."))
+                return redirect('core:checkout')
+
+            if promo.minimum_purchase_amount is not None and cart_total < promo.minimum_purchase_amount:
+                msg = _("Your cart total does not meet the minimum purchase amount of {amount} for this coupon.").format(amount=promo.minimum_purchase_amount)
+                messages.error(request, msg)
+                return redirect('core:checkout')
+
+            if promo.uses_per_customer is not None:
+                times_used = Order.objects.filter(user=request.user, promotion=promo).count()
+                if times_used >= promo.uses_per_customer:
+                    messages.error(request, _("You have already used this coupon the maximum number of times."))
+                    return redirect('core:checkout')
+
+            # Scope validation
+            applicable_items_total = Decimal('0.00')
+            cart_items = cart.items.all()
+
+            if promo.scope == 'all':
+                applicable_items_total = cart_total
+            elif promo.scope == 'vendor' and promo.applicable_vendor:
+                for item in cart_items:
+                    if item.product and item.product.vendor == promo.applicable_vendor:
+                        applicable_items_total += item.get_total_item_price()
+            elif promo.scope == 'category':
+                applicable_categories = promo.applicable_categories.all()
+                if applicable_categories.exists():
+                    for item in cart_items:
+                        if item.product and item.product.category in applicable_categories:
+                            applicable_items_total += item.get_total_item_price()
+            elif promo.scope == 'product':
+                applicable_products = promo.applicable_products.all()
+                if applicable_products.exists():
+                    for item in cart_items:
+                        if item.product and item.product in applicable_products:
+                            applicable_items_total += item.get_total_item_price()
+
+            if applicable_items_total == Decimal('0.00'):
+                messages.error(request, _("This coupon is not valid for any of the items in your cart."))
+                return redirect('core:checkout')
+            # --- End Validation ---
+
+            # --- Calculate Discount ---
+            discount_amount = Decimal('0.00')
+            if promo.promo_type == 'percentage':
+                discount_amount = (applicable_items_total * (promo.discount_value / Decimal(100))).quantize(Decimal('0.01'))
+            elif promo.promo_type == 'fixed_amount':
+                discount_amount = min(promo.discount_value, applicable_items_total)
+
+            # --- Store in session ---
+            request.session['promotion_id'] = promo.id
+            request.session['discount_amount'] = str(discount_amount)
+
+            messages.success(request, _("Coupon '{code}' applied successfully.").format(code=promo.code))
+
+        except Promotion.DoesNotExist:
+            messages.error(request, _("Invalid coupon code."))
+            # Clear any existing coupon from session if a new invalid one is entered
+            if 'promotion_id' in request.session: del request.session['promotion_id']
+            if 'discount_amount' in request.session: del request.session['discount_amount']
+        except Cart.DoesNotExist:
+            messages.error(request, _("Your cart is empty."))
+    
+    return redirect('core:checkout')
+
+@login_required
+def remove_coupon(request):
+    """Removes the applied coupon from the session."""
+    if 'promotion_id' in request.session:
+        del request.session['promotion_id']
+    if 'discount_amount' in request.session:
+        del request.session['discount_amount']
+    messages.info(request, _("Coupon has been removed."))
+    return redirect('core:checkout')
+
 
 class ProductDetailView(DetailView):
     model = Product
     template_name = 'core/product_detail.html'
     context_object_name = 'product'
-    slug_url_kwarg = 'product_slug' # If using slug in URL
+    slug_url_kwarg = 'product_slug'
+    slug_field = 'slug'
 
     def get_queryset(self):
         # Ensure only active products are accessible
@@ -206,163 +1520,313 @@ class ProductDetailView(DetailView):
         # Check if product is in wishlist
         if self.request.user.is_authenticated:
             context['in_wishlist'] = Wishlist.objects.filter(user=self.request.user, products=product).exists()
-        else:
-            context['in_wishlist'] = False # Or handle session-based wishlist
-
-        # Add 3D model URL to context
-        if product.three_d_model:
-            context['three_d_model_url'] = product.three_d_model.url
-        else:
-            context['three_d_model_url'] = None
-
-        # --- CORRECTED PLACEMENT for product_images and debug print ---
-        context['product_images'] = product.images.all() # Assuming 'images' is the related_name from ProductImage to Product
-
-        # --- DEBUG PRINT ---
-        print(f"DEBUG (ProductDetailView): Product: {product.name}, Images found: {context['product_images']}")
-        # --- END DEBUG PRINT ---
-
-        context['product_videos'] = product.videos.all() # Assuming 'videos' is the related_name for ProductVideo
-        # context['average_product_rating'] = product.average_rating # This was already set from context['average_rating']
-        context['product_reviews'] = context['reviews'] # Re-use for clarity if needed
-
-        # For the review form
-        if self.request.user.is_authenticated:
             context['user_has_reviewed_product'] = ProductReview.objects.filter(product=product, user=self.request.user).exists()
         else:
+            context['in_wishlist'] = False # Or handle session-based wishlist
             context['user_has_reviewed_product'] = False
 
-        # --- START: AI Review Summarization ---
-        context['ai_review_summary'] = None
-        # Use existing reviews, limit to a reasonable number for the prompt
-        reviews_for_summary = list(context['reviews'][:15]) # Take up to 15 most recent approved reviews
+        # --- START: Product Q&A ---
+        context['questions'] = ProductQuestion.objects.filter(product=product).prefetch_related(
+            Prefetch('answers', queryset=ProductAnswer.objects.select_related('user', 'user__userprofile').order_by('created_at'))
+        ).select_related('user', 'user__userprofile').order_by('-created_at')
+        context['question_form'] = ProductQuestionForm()
+        context['answer_form'] = ProductAnswerForm() # Pass one instance for the template to use in loops
+        # --- END: Product Q&A ---
 
-        if reviews_for_summary:
-            review_texts = []
-            for i, r in enumerate(reviews_for_summary):
-                review_text = f"{i+1}. Rating: {r.rating}/5. Review: {r.review}"
-                if r.video: # Optionally mention if there's a video, though AI won't see it
-                    review_text += " (Includes video)"
-                review_texts.append(review_text)
-            
-            reviews_str = "\n".join(review_texts)
+        # Add 3D model URL to context
+        context['three_d_model_url'] = product.three_d_model.url if product.three_d_model else None
 
-            prompt_for_summary = f"""You are an e-commerce assistant for NEXUS marketplace.
-A user is looking at the product "{product.name}".
-Based ONLY on the following customer reviews, provide a concise summary (around 50-70 words) highlighting the main positive and negative points.
-If there are no clear negative points, focus on the positives.
-If the reviews are generally mixed, reflect that.
-Do not invent any information not present in the reviews.
+        # --- START: Unified Media Gallery ---
+        media_gallery = []
+        for img in product.images.all():
+            media_gallery.append({'id': img.id, 'type': 'image', 'url': img.image.url, 'thumbnail_url': img.image.url})
+        for vid in product.videos.all():
+            media_gallery.append({'id': vid.id, 'type': 'video', 'url': vid.video.url, 'thumbnail_url': settings.STATIC_URL + 'assets/img/video_placeholder.png'})
+        context['media_gallery'] = media_gallery
+        # --- END: Unified Media Gallery ---
 
-Customer Reviews:
-{reviews_str}
-
-Concise Summary:
-"""
-            logger.debug(f"AI Review Summary - Prompt for '{product.name}':\n{prompt_for_summary}")
-            summary_text = generate_text_with_gemini(prompt_for_summary)
-            if summary_text and not summary_text.startswith("Error:"):
-                context['ai_review_summary'] = summary_text.strip()
-            else:
-                logger.error(f"AI Review Summary - Gemini error for '{product.name}': {summary_text}")
-                context['ai_review_summary'] = _("Could not generate a review summary at this time.")
-        else:
-            context['ai_review_summary'] = _("There are no reviews yet to summarize for this product.")
-        # --- END: AI Review Summarization ---
-
-        # --- START: AI Product Recommendations ---
-        recommended_product_objects = []
-        try:
-            # 1. Fetch candidate products (e.g., from the same category, excluding current product)
-            # Initial attempt: products from the same category
-            primary_candidate_products = Product.objects.filter(
-                category=product.category,
-                is_active=True
-            ).exclude(id=product.id).order_by('?')[:10] # Get up to 10 random candidates
-
-            candidate_products_list = list(primary_candidate_products)
-            min_candidates_for_ai = 5 # Let's say we want at least 5 candidates for the AI
-            max_candidates_for_ai = 15 # Max to send to AI to keep prompt reasonable
-
-            # If not enough candidates from the same category, try a broader fallback
-            if len(candidate_products_list) < min_candidates_for_ai:
-                logger.debug(f"AI Recs - Not enough candidates from same category ({len(candidate_products_list)}). Fetching fallback candidates.")
-                
-                # Fallback 1: Other Featured Products (not already included)
-                current_candidate_ids = [p.id for p in candidate_products_list]
-                featured_fallback = list(Product.objects.filter(
-                    is_active=True, is_featured=True
-                ).exclude(id=product.id).exclude(id__in=current_candidate_ids).order_by('-updated_at')[:max_candidates_for_ai - len(candidate_products_list)])
-                candidate_products_list.extend(featured_fallback)
-                candidate_products_list = list(dict.fromkeys(candidate_products_list)) # Remove duplicates while preserving order
-
-                # Fallback 2: Recently Added Active Products (not already included)
-                if len(candidate_products_list) < min_candidates_for_ai:
-                    current_candidate_ids = [p.id for p in candidate_products_list]
-                    recent_fallback = list(Product.objects.filter(
-                        is_active=True
-                    ).exclude(id=product.id).exclude(id__in=current_candidate_ids).order_by('-created_at')[:max_candidates_for_ai - len(candidate_products_list)])
-                    candidate_products_list.extend(recent_fallback)
-                    candidate_products_list = list(dict.fromkeys(candidate_products_list))
-
-                # Fallback 3: Random Active Products (if still needed and other fallbacks didn't suffice)
-                if len(candidate_products_list) < min_candidates_for_ai:
-                    current_candidate_ids = [p.id for p in candidate_products_list]
-                    random_fallback = list(Product.objects.filter(is_active=True).exclude(id=product.id).exclude(id__in=current_candidate_ids).order_by('?')[:max_candidates_for_ai - len(candidate_products_list)])
-                    candidate_products_list.extend(random_fallback)
-                    candidate_products_list = list(dict.fromkeys(candidate_products_list))
-
-                # Combine primary and fallback, ensuring no duplicates and limiting total
-            candidate_products = candidate_products_list[:max_candidates_for_ai] # Final list, capped at max_candidates_for_ai
-
-            logger.debug(f"AI Recs - Product: {product.name}, Final candidate products count: {len(candidate_products)}")
-
-            if candidate_products: # Check if the list is not empty
-                # 2. Construct the prompt
-                candidate_list_str = "\n".join(
-                    [f"- {p.name} (Category: {p.category.name}, Price: {p.price})" for p in candidate_products]
-                )
-                # Refined Prompt
-                prompt_for_ai = f"""You are an expert e-commerce recommendation engine for an online marketplace called NEXUS.
-A user is currently viewing the following product:
-Product Name: "{product.name}"
-Category: "{product.category.name}"
-Description Snippet: "{product.description[:250]}..."
-
-Your task is to select exactly 3 distinct products from the 'Available Products List' below that this user might also be interested in, based on the product they are currently viewing.
-The recommendations should be relevant and appealing.
-
-Output Instructions:
-Return ONLY the names of the 3 recommended products.
-Each product name must be on a new, separate line.
-Do NOT include any other text, numbering, bullet points, or explanations in your response.
-
-Available Products List:
-                {candidate_list_str}
-
-Recommended product names (3 names, each on a new line):
-                """
-
-                logger.debug(f"AI Recs - Prompt sent to Gemini:\n{prompt_for_ai}")
-
-                # 3. Call Gemini API
-                raw_recommendations_text = generate_text_with_gemini(prompt_for_ai)
-                logger.debug(f"AI Recs - Raw response from Gemini: '{raw_recommendations_text}'")
-
-                if raw_recommendations_text and not raw_recommendations_text.startswith("Error:"):
-                    recommended_names = [name.strip() for name in raw_recommendations_text.split('\n') if name.strip()]
-                    logger.debug(f"AI Recs - Parsed recommended names: {recommended_names}")
-                    # 4. Fetch actual product objects
-                    if recommended_names:
-                        recommended_product_objects = Product.objects.filter(name__in=recommended_names, is_active=True).distinct()[:3]
-                        logger.debug(f"AI Recs - Fetched product objects from DB: {list(recommended_product_objects.values_list('name', flat=True))}")
-            logger.debug(f"AI Recs - Final recommended_product_objects count: {len(recommended_product_objects)}")
-        except Exception as e:
-            logger.error(f"Error generating AI recommendations for product {product.id}: {e}")
-        context['ai_recommended_products'] = recommended_product_objects
-        # --- END CORRECTED PLACEMENT ---
+        # --- START: Refactored AI Features ---
+        context['ai_review_summary'] = _get_ai_review_summary(product, list(context['reviews']))
+        context['ai_recommended_products'] = _get_ai_recommendations(product)
+        # --- END: Refactored AI Features ---
 
         return context
+
+
+class ConversationListView(LoginRequiredMixin, ListView):
+    """
+    A generic view to display a list of conversations for any logged-in user.
+    It dynamically selects the template and context based on the user's role
+    (vendor, service provider, or customer).
+    """
+    model = Conversation
+    context_object_name = 'conversations'
+    paginate_by = 15
+
+    def get_template_names(self):
+        """Dynamically determine the template based on the URL's name."""
+        resolver_match = self.request.resolver_match
+        url_name = resolver_match.url_name if resolver_match else ''
+
+        if url_name == 'vendor_message_list':
+            return ['core/vendor/vendor_conversation_list.html']
+        elif url_name == 'service_provider_message_list':
+            return ['core/service_provider/conversation_list.html']
+        elif url_name == 'customer_message_list':
+            return ['core/customer/customer_message_list.html']
+        else:
+            # Fallback for any other case, defaults to customer view.
+            return ['core/customer/customer_message_list.html']
+
+    def get_queryset(self):
+        """
+        Returns conversations for the current user, annotated with last message details.
+        This efficient query is now shared by all user types.
+        """
+        last_message_subquery = Message.objects.filter(conversation=OuterRef('pk')).order_by('-timestamp').values('content')[:1]
+        last_message_sender_subquery = Message.objects.filter(conversation=OuterRef('pk')).order_by('-timestamp').values('sender_id')[:1]
+        unread_subquery = Message.objects.filter(conversation=OuterRef('pk'), is_read=False).exclude(sender=self.request.user)
+
+        queryset = Conversation.objects.filter(
+            participants=self.request.user
+        ).prefetch_related(
+            'participants__userprofile'
+        ).annotate(
+            last_message_time=Max('messages__timestamp'),
+            last_message_content=Subquery(last_message_subquery),
+            last_message_sender_id=Subquery(last_message_sender_subquery),
+            is_unread_by_user=Exists(unread_subquery)
+        ).order_by(F('last_message_time').desc(nulls_last=True))
+
+        # --- START: Add Search and Filter Logic ---
+        self.search_query = self.request.GET.get('q', '')
+        if self.search_query:
+            # Filter based on the other participant's name/username or conversation subject
+            other_participant_filter = (
+                Q(participants__username__icontains=self.search_query) |
+                Q(participants__first_name__icontains=self.search_query) |
+                Q(participants__last_name__icontains=self.search_query)
+            )
+            # Exclude the current user from the search criteria to only match the other participant
+            queryset = queryset.filter(
+                Q(subject__icontains=self.search_query) |
+                (other_participant_filter & ~Q(participants=self.request.user))
+            ).distinct()
+
+        self.current_status = self.request.GET.get('status', '')
+        if self.current_status == 'unread':
+            queryset = queryset.filter(is_unread_by_user=True)
+        # --- END: Add Search and Filter Logic ---
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        """Adds the 'other_participant' to each conversation for easy template access."""
+        context = super().get_context_data(**kwargs)
+        for conv in context.get('conversations', []):
+            conv.other_participant = conv.get_other_participant(self.request.user)
+        context['page_title'] = _("Messages")
+
+        # Pass search and filter state to the template
+        context['search_query'] = getattr(self, 'search_query', '')
+        context['current_status'] = getattr(self, 'current_status', '')
+
+        return context
+
+class ServiceProviderConversationListView(LoginRequiredMixin, IsServiceProviderMixin, ListView):
+    """
+    Displays a list of conversations for the logged-in service provider.
+    """
+    model = Conversation
+    template_name = 'core/service_provider/conversation_list.html'
+    context_object_name = 'conversations'
+    paginate_by = 15
+
+    def get_queryset(self):
+        """
+        Returns conversations for the current user, annotated with last message details.
+        This logic is shared across different user types viewing their message lists.
+        """
+        last_message_subquery = Message.objects.filter(conversation=OuterRef('pk')).order_by('-timestamp').values('content')[:1]
+        last_message_sender_subquery = Message.objects.filter(conversation=OuterRef('pk')).order_by('-timestamp').values('sender_id')[:1]
+        unread_subquery = Message.objects.filter(conversation=OuterRef('pk'), is_read=False).exclude(sender=self.request.user)
+
+        queryset = Conversation.objects.filter(
+            participants=self.request.user
+        ).prefetch_related(
+            'participants__userprofile'
+        ).annotate(
+            last_message_time=Max('messages__timestamp'),
+            last_message_content=Subquery(last_message_subquery),
+            last_message_sender_id=Subquery(last_message_sender_subquery),
+            is_unread_by_user=Exists(unread_subquery)
+        ).order_by(F('last_message_time').desc(nulls_last=True))
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        for conv in context.get('conversations', []):
+            conv.other_participant = conv.get_other_participant(self.request.user)
+        return context
+
+
+class StartConversationView(LoginRequiredMixin, View):
+    """
+    Initiates a conversation with a vendor from a product page.
+    Finds an existing 2-person conversation or creates a new one.
+    """
+    def get(self, request, product_id):
+        product = get_object_or_404(Product, id=product_id)
+        vendor_user = product.vendor.user
+        current_user = request.user
+
+        if vendor_user == current_user:
+            messages.error(request, _("You cannot start a conversation with yourself."))
+            return redirect(product.get_absolute_url())
+
+        # Find an existing conversation with exactly these two participants
+        conversation = Conversation.objects.annotate(
+            num_participants=Count('participants')
+        ).filter(
+            participants=current_user, num_participants=2
+        ).filter(
+            participants=vendor_user
+        ).first()
+
+        if conversation:
+            # Redirect to the existing conversation
+            return redirect('core:vendor_message_detail', pk=conversation.pk)
+        else:
+            # Create a new conversation
+            new_conversation = Conversation.objects.create(subject=f"Inquiry about: {product.name}")
+            new_conversation.participants.add(current_user, vendor_user)
+            return redirect('core:vendor_message_detail', pk=new_conversation.pk)
+
+class ConversationDetailView(LoginRequiredMixin, View):
+    """
+    Displays a single conversation thread and handles new messages.
+    This view is generic and can be accessed by any participant of the conversation.
+    """
+    def get_template_names(self):
+        """Dynamically selects the template based on the URL's name."""
+        resolver_match = self.request.resolver_match
+        url_name = resolver_match.url_name if resolver_match else ''
+
+        if url_name == 'vendor_message_detail':
+            return ['core/vendor/conversation_detail.html']
+        elif url_name == 'service_provider_message_detail':
+            return ['core/service_provider/conversation_detail.html']
+        # Default to the customer template
+        return ['core/customer/customer_conversation_detail.html']
+
+    def get(self, request, *args, **kwargs):
+        template_to_render = self.get_template_names()[0]
+
+        # Securely fetch the conversation, ensuring the current user is a participant.
+        conversation = get_object_or_404(
+            Conversation.objects.prefetch_related(
+                Prefetch('messages', queryset=Message.objects.order_by('timestamp').select_related('sender__userprofile'))
+            ),
+            pk=self.kwargs['pk'],
+            participants=request.user
+        )
+
+        # Mark messages as read
+        unread_messages = conversation.messages.filter(is_read=False).exclude(sender=request.user)
+        unread_message_ids = list(unread_messages.values_list('id', flat=True))
+
+        if unread_message_ids:
+            unread_messages.update(is_read=True, read_at=timezone.now())
+
+            # Broadcast that these messages have been read
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f'chat_{conversation.id}',
+                {
+                    'type': 'read_receipts_broadcast',
+                    'message_ids': unread_message_ids,
+                    'read_by': request.user.username
+                }
+            )
+
+        # This logic now correctly handles finding the other participant(s)
+        other_participants = conversation.participants.exclude(id=request.user.id)
+        other_participant_names = ", ".join([p.username for p in other_participants])
+
+        # Add the other participant to the conversation object for the template
+        conversation.other_participant = conversation.get_other_participant(request.user)
+        
+        form = kwargs.get('form', MessageForm())
+
+        context = {
+            'conversation': conversation,
+            'other_participants': other_participants, # Pass the queryset of other participants
+            'other_participant_names': other_participant_names, # Pass the formatted string of names
+            'form': form,
+            'page_title': _("Conversation with %(participants)s") % {'participants': other_participant_names or '...'},
+        }
+
+        # Add a dynamic back URL to the context based on the template being rendered
+        if 'vendor' in template_to_render:
+            context['back_url'] = reverse('core:vendor_message_list')
+            context['back_text'] = _("Back to Messages")
+        elif 'service_provider' in template_to_render:
+            context['back_url'] = reverse('core:service_provider_message_list')
+            context['back_text'] = _("Back to Messages")
+        else:
+            context['back_url'] = reverse('core:customer_message_list')
+            context['back_text'] = _("Back to My Messages")
+
+        return render(request, template_to_render, context)
+
+    def post(self, request, *args, **kwargs):
+        # Securely fetch the conversation for posting as well.
+        conversation = get_object_or_404(Conversation, pk=self.kwargs['pk'], participants=request.user)
+ 
+        form = MessageForm(request.POST)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.conversation = conversation
+            message.sender = request.user
+            message.save()
+            # Redirect back to the correct detail page based on the URL used
+            return redirect(request.resolver_match.view_name, pk=conversation.pk)
+
+        # If form is invalid, re-render the page with errors
+        # Re-calling get() to rebuild the context correctly
+        return self.get(request, form=form, *args, **kwargs)
+
+
+@login_required
+@require_POST
+def add_product_question(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    form = ProductQuestionForm(request.POST)
+    if form.is_valid():
+        question = form.save(commit=False)
+        question.product = product
+        question.user = request.user
+        question.save()
+        messages.success(request, _("Your question has been submitted successfully."))
+    else:
+        messages.error(request, _("There was an error submitting your question. Please try again."))
+    return redirect(product.get_absolute_url())
+
+@login_required
+@require_POST
+def add_product_answer(request, question_id):
+    question = get_object_or_404(ProductQuestion, id=question_id)
+    form = ProductAnswerForm(request.POST)
+    if form.is_valid():
+        answer = form.save(commit=False)
+        answer.question = question
+        answer.user = request.user
+        answer.save()
+        messages.success(request, _("Your answer has been posted."))
+    else:
+        messages.error(request, _("There was an error posting your answer."))
+    return redirect(question.product.get_absolute_url())
 
 @login_required
 def add_to_cart(request, product_id):
@@ -375,45 +1839,228 @@ def add_to_cart(request, product_id):
     cart_item.save()
     messages.success(request, _(f"'{product.name}' added to your cart."))
     return redirect('core:cart_detail') # Or redirect to product page or wherever makes sense
-
+    
 @login_required
+@require_POST # This view should only accept POST requests for removal
 def remove_from_cart(request, item_id):
     cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user, cart__ordered=False)
-    product_name = cart_item.product.name # product was not defined, changed to cart_item.product.name
+    cart = cart_item.cart
+    item_name = cart_item.name # Use the property from the model
+
+    # --- START: Clean up session data for service bookings ---
+    if cart_item.service_package:
+        booking_details_session = request.session.get('booking_details', {})
+        if str(cart_item.id) in booking_details_session:
+            del booking_details_session[str(cart_item.id)]
+            request.session['booking_details'] = booking_details_session
+            request.session.modified = True
+    # --- END: Clean up session data ---
+    
     cart_item.delete()
-    messages.info(request, _(f"'{product_name}' removed from your cart.")) # used product_name
+
+    # For AJAX requests, return JSON
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        cart_total = cart.get_cart_total()
+        cart_items_count = cart.get_item_count()
+        return JsonResponse({
+            'success': True,
+            'message': _("'{item_name}' removed from your cart.").format(item_name=item_name),
+            'cart_total': f'{cart_total:,.2f}',
+            'cart_items_count': cart_items_count,
+        })
+
+    # For standard form submissions, redirect with a message
+    messages.info(request, _("'{item_name}' removed from your cart.").format(item_name=item_name))
     return redirect('core:cart_detail')
 
 @login_required
+@require_POST
 def update_cart_item(request, item_id):
-    if request.method == 'POST':
+    # This view is now primarily for AJAX requests.
+    if not request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        # Fallback for non-AJAX form submissions
         cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user, cart__ordered=False)
         quantity = request.POST.get('quantity')
         try:
             quantity = int(quantity)
             if quantity > 0:
-                cart_item.quantity = quantity
-                cart_item.save()
-                messages.success(request, _(f"Quantity for '{cart_item.product.name}' updated."))
+                if cart_item.product.stock is not None and quantity > cart_item.product.stock:
+                     messages.error(request, _('Not enough stock. Only {stock} items left.').format(stock=cart_item.product.stock))
+                else:
+                    cart_item.quantity = quantity
+                    cart_item.save()
+                    messages.success(request, _(f"Quantity for '{cart_item.product.name}' updated."))
             elif quantity == 0:
                 cart_item.delete()
                 messages.info(request, _(f"'{cart_item.product.name}' removed from cart."))
             else:
                 messages.error(request, _("Invalid quantity."))
-        except ValueError:
+        except (ValueError, TypeError):
             messages.error(request, _("Invalid quantity format."))
-    return redirect('core:cart_detail')
+        return redirect('core:cart_detail')
+
+    # AJAX request logic
+    try:
+        cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user, cart__ordered=False)
+        data = json.loads(request.body)
+        quantity = int(data.get('quantity'))
+
+        if quantity < 1:
+            return JsonResponse({'success': False, 'error': _('Quantity must be at least 1.')}, status=400)
+
+        product_stock = cart_item.product.stock
+        if product_stock is not None and quantity > product_stock:
+            return JsonResponse({
+                'success': False,
+                'error': _('Not enough stock. Only {stock} items left.').format(stock=product_stock),
+                'new_quantity': product_stock
+            }, status=400)
+
+        cart_item.quantity = quantity
+        cart_item.save()
+
+        cart = cart_item.cart
+        return JsonResponse({
+            'success': True,
+            'message': _('Cart updated.'),
+            'new_quantity': cart_item.quantity,
+            'item_subtotal': f'{cart_item.get_total_item_price():,.2f}',
+            'cart_total': f'{cart.get_cart_total():,.2f}',
+            'cart_items_count': cart.get_item_count(),
+        })
+
+    except CartItem.DoesNotExist:
+        return JsonResponse({'success': False, 'error': _('Item not found.')}, status=404)
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return JsonResponse({'success': False, 'error': _('Invalid data.')}, status=400)
+    except Exception as e:
+        logger.error(f"AJAX Error updating cart item {item_id}: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': _('An unexpected error occurred.')}, status=500)
 
 
 @login_required
 def cart_detail(request):
     cart_data = get_cart_data(request.user)
+    saved_for_later_items = SavedForLaterItem.objects.filter(user=request.user)
+
+    # --- START: Augment cart items with booking details from session ---
+    booking_details_session = request.session.get('booking_details', {})
+    for item in cart_data['cart_items']:
+        if item.service_package:
+            item_details = booking_details_session.get(str(item.id))
+            if item_details:
+                item.booking_details = item_details
+                # Optionally parse date for display
+                date_str = item_details.get('preferred_start_date')
+                if date_str:
+                    try:
+                        item.booking_details['preferred_start_date_obj'] = datetime.fromisoformat(date_str)
+                    except (ValueError, TypeError):
+                        item.booking_details['preferred_start_date_obj'] = None
+    # --- END: Augment cart items with booking details from session ---
+
     context = {
         'cart_items': cart_data['cart_items'],
         'cart_total': cart_data['cart_total'],
+        'saved_for_later_items': saved_for_later_items,
         'page_title': _("Your Shopping Cart"),
     }
     return render(request, 'core/cart_detail.html', context)
+
+@login_required
+@require_POST
+def save_for_later(request, item_id):
+    cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
+    
+    # Create or update a saved-for-later item
+    saved_item, created = SavedForLaterItem.objects.get_or_create(
+        user=request.user,
+        product=cart_item.product,
+        service_package=cart_item.service_package,
+        defaults={'quantity': cart_item.quantity}
+    )
+    
+    if not created:
+        # If item already exists in saved list, we just add the quantity
+        saved_item.quantity += cart_item.quantity
+        saved_item.save()
+
+    cart = cart_item.cart
+    item_name = cart_item.name
+    cart_item.delete()
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        image_url = settings.STATIC_URL + 'assets/img/placeholder.png'
+        # Determine the image URL for the saved item
+        if saved_item.product and saved_item.product.images.first():
+            image_url = saved_item.product.images.first().image.url
+        elif saved_item.service_package and saved_item.service_package.service.images.first():
+            image_url = saved_item.service_package.service.images.first().image.url
+
+        saved_item_data = {
+            'id': saved_item.id,
+            'name': saved_item.name,
+            'price': f'{saved_item.price:,.2f}',
+            'image_url': image_url,
+            'quantity': saved_item.quantity,
+        }
+        saved_items_count = SavedForLaterItem.objects.filter(user=request.user).count()
+        
+        return JsonResponse({
+            'success': True,
+            'message': _("'{item_name}' moved to Saved for Later.").format(item_name=item_name),
+            'cart_total': f'{cart.get_cart_total():,.2f}',
+            'cart_items_count': cart.get_item_count(),
+            'saved_item': saved_item_data,
+            'saved_items_count': saved_items_count,
+            'created_new_saved_item': created,
+        })
+    
+    messages.success(request, _("'{item_name}' moved to Saved for Later.").format(item_name=item_name))
+    return redirect('core:cart_detail')
+
+@login_required
+@require_POST
+def move_to_cart(request, saved_item_id):
+    saved_item = get_object_or_404(SavedForLaterItem, id=saved_item_id, user=request.user)
+    cart, created = Cart.objects.get_or_create(user=request.user, ordered=False)
+
+    cart_item, created = CartItem.objects.get_or_create(
+        cart=cart,
+        product=saved_item.product,
+        service_package=saved_item.service_package,
+        defaults={'quantity': saved_item.quantity}
+    )
+
+    if not created:
+        cart_item.quantity += saved_item.quantity
+        if cart_item.product and cart_item.product.product_type == 'physical' and cart_item.quantity > cart_item.product.stock:
+            error_message = _("Cannot move to cart. Not enough stock for '{item_name}'.").format(item_name=cart_item.name)
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': error_message}, status=400)
+            messages.error(request, error_message)
+            return redirect('core:cart_detail')
+        cart_item.save()
+
+    item_name = saved_item.name
+    saved_item.delete()
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'message': _("'{item_name}' moved to cart.").format(item_name=item_name)})
+
+    messages.success(request, _("'{item_name}' moved to cart.").format(item_name=item_name))
+    return redirect('core:cart_detail')
+
+@login_required
+@require_POST
+def delete_saved_item(request, saved_item_id):
+    saved_item = get_object_or_404(SavedForLaterItem, id=saved_item_id, user=request.user)
+    item_name = saved_item.name
+    saved_item.delete()
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'message': _("'{item_name}' removed from your saved items.").format(item_name=item_name)})
+    messages.info(request, _("'{item_name}' removed from your saved items.").format(item_name=item_name))
+    return redirect('core:cart_detail')
 
 @login_required
 def clear_cart(request):
@@ -439,7 +2086,7 @@ def checkout(request):
     shipping_addresses = Address.objects.filter(user=request.user, address_type='shipping')
 
     # Determine if shipping is required (e.g., if any cart item is physical)
-    requires_shipping = any(item.product.product_type == 'physical' for item in cart_data['cart_items'])
+    requires_shipping = any(item.product and item.product.product_type == 'physical' for item in cart_data['cart_items'])
 
     # --- START: Calculate Estimated Delivery Fees for Display ---
     estimated_platform_delivery_fee = Decimal('0.00')
@@ -453,16 +2100,28 @@ def checkout(request):
     if requires_shipping and default_shipping_address:
         estimated_platform_delivery_fee = calculate_shipping_cost(cart=cart_data['cart_items'][0].cart, shipping_address=default_shipping_address) # Pass the cart object
 
-        for item in cart_data['cart_items']:
-            product_fulfillment = item.product.fulfillment_method
-            vendor_default_fulfillment = item.product.vendor.default_fulfillment_method if item.product.vendor else 'vendor'
-            actual_fulfillment = product_fulfillment if product_fulfillment else vendor_default_fulfillment
-            if actual_fulfillment == 'vendor' and item.product.product_type == 'physical' and item.product.vendor_delivery_fee is not None:
-                estimated_total_vendor_delivery_fees += item.product.vendor_delivery_fee # Assuming vendor_delivery_fee is per product line
+        for item in cart_data['cart_items']: # This loop is for vendor fees
+            if item.product: # Only calculate for products
+                product_fulfillment = item.product.fulfillment_method
+                vendor_default_fulfillment = item.product.vendor.default_fulfillment_method if item.product.vendor else 'vendor'
+                actual_fulfillment = product_fulfillment if product_fulfillment else vendor_default_fulfillment
+                if actual_fulfillment == 'vendor' and item.product.product_type == 'physical' and item.product.vendor_delivery_fee is not None:
+                    estimated_total_vendor_delivery_fees += item.product.vendor_delivery_fee # Assuming vendor_delivery_fee is per product line
     estimated_total_delivery_fee = estimated_platform_delivery_fee + estimated_total_vendor_delivery_fees
     # --- END: Calculate Estimated Delivery Fees for Display ---
 
-    address_form = AddressForm() # For adding new addresses
+    # --- START: Promotion Logic ---
+    coupon_apply_form = CouponApplyForm()
+    discount_amount = Decimal(request.session.get('discount_amount', '0.00'))
+    promotion = None
+    promotion_id = request.session.get('promotion_id')
+    if promotion_id:
+        try:
+            promotion = Promotion.objects.get(id=promotion_id)
+        except Promotion.DoesNotExist:
+            if 'promotion_id' in request.session: del request.session['promotion_id']
+            if 'discount_amount' in request.session: del request.session['discount_amount']
+    # --- END: Promotion Logic ---
 
     # --- Logic to determine available payment methods ---
     default_payment_choices = list(Order.PAYMENT_METHOD_CHOICES) # Make a mutable copy
@@ -474,31 +2133,42 @@ def checkout(request):
     negotiable_slugs = getattr(settings, 'NEGOTIABLE_PRODUCT_CATEGORY_SLUGS', [])
 
     for item in cart_data['cart_items']:
-        if item.product.product_type != 'digital':
+        if item.product: # This logic only applies to products
+            if item.product.product_type != 'digital':
+                cart_is_digital_only = False
+            if negotiable_slugs and item.product.category and item.product.category.slug in negotiable_slugs:
+                cart_has_negotiable_product = True
+        else: # If a service is in the cart, it's not digital-only in the same sense
             cart_is_digital_only = False
-        if negotiable_slugs and item.product and item.product.category and item.product.category.slug in negotiable_slugs:
-            cart_has_negotiable_product = True
 
     if cart_is_digital_only:
         available_payment_choices = [choice for choice in default_payment_choices if choice[0] == 'escrow']
     elif cart_has_negotiable_product:
-        available_payment_choices = default_payment_choices
+        # Only allow direct arrangement for negotiable products
+        available_payment_choices = [choice for choice in default_payment_choices if choice[0] == 'direct']
     else:
-        available_payment_choices = [choice for choice in default_payment_choices if choice[0] == 'escrow']
+        # For all other standard orders (digital or physical), allow online payments
+        available_payment_choices = [choice for choice in default_payment_choices if choice[0] in ['escrow', 'paypal']]
 
     payment_method_choices = available_payment_choices
+
+    # Calculate final total
+    grand_total = cart_data['cart_total'] + estimated_total_delivery_fee - discount_amount
 
     context = {
         'cart_items': cart_data['cart_items'],
         'cart_total': cart_data['cart_total'],
         'billing_addresses': billing_addresses,
         'shipping_addresses': shipping_addresses,
-        'address_form': address_form,
+        'address_form': AddressForm(), # For adding new addresses
         'requires_shipping': requires_shipping,
         'payment_method_choices': payment_method_choices,
         'estimated_platform_delivery_fee': estimated_platform_delivery_fee,
         'estimated_total_vendor_delivery_fees': estimated_total_vendor_delivery_fees,
         'estimated_total_delivery_fee': estimated_total_delivery_fee,
+        'coupon_apply_form': coupon_apply_form,
+        'discount_amount': discount_amount,
+        'grand_total': grand_total,
         'page_title': _("Checkout"),
     }
     return render(request, 'core/checkout.html', context)
@@ -583,7 +2253,7 @@ def place_order(request):
             messages.error(request, _("Please select a valid payment method."))
             return redirect('core:checkout')
 
-        requires_shipping = any(item.product.product_type == 'physical' for item in cart_items_qs)
+        requires_shipping = any(item.product and item.product.product_type == 'physical' for item in cart_items_qs)
 
         try:
             billing_address_id = request.POST.get('billing_address_id')
@@ -612,6 +2282,26 @@ def place_order(request):
         # Calculate cart subtotal (sum of item.price * item.quantity)
         cart_subtotal = user_cart.get_cart_total()
 
+        # --- Get promotion from session and re-validate ---
+        promotion_id = request.session.get('promotion_id')
+        discount_amount = Decimal(request.session.get('discount_amount', '0.00'))
+        promotion = None
+        if promotion_id:
+            try:
+                # Lock the promotion row to prevent race conditions on usage_count
+                promotion = Promotion.objects.select_for_update().get(id=promotion_id)
+                # Re-validate usage limit just before placing the order
+                if promotion.usage_limit is not None and promotion.usage_count >= promotion.usage_limit:
+                    messages.error(request, _("Sorry, the coupon '{code}' has just reached its usage limit.").format(code=promotion.code))
+                    # Clear from session and redirect
+                    if 'promotion_id' in request.session: del request.session['promotion_id']
+                    if 'discount_amount' in request.session: del request.session['discount_amount']
+                    return redirect('core:checkout')
+            except Promotion.DoesNotExist:
+                # If promo was deleted, ensure discount is zero
+                discount_amount = Decimal('0.00')
+        # --- End promotion handling ---
+
         # --- Initialize delivery fee components ---
         platform_calculated_delivery_fee = Decimal('0.00')
         current_order_item_total_delivery_charges = Decimal('0.00') # This will sum up vendor-set fees
@@ -621,6 +2311,13 @@ def place_order(request):
             # calculate_shipping_cost now internally filters for Nexus-fulfilled items
             platform_calculated_delivery_fee = calculate_shipping_cost(user_cart, shipping_address)
 
+        # Get client IP address
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+
         order = Order.objects.create(
             user=request.user,
             billing_address=billing_address,
@@ -628,58 +2325,171 @@ def place_order(request):
             delivery_fee=Decimal('0.00'), # Initialize, will be updated after items
             total_amount=Decimal('0.00'),   # Initialize, will be updated after items
             platform_delivery_fee=platform_calculated_delivery_fee, # Store the Nexus part
+            promotion=promotion, # Link the promotion
+            discount_amount=discount_amount, # Store the discount
+            currency='USD' if payment_method_choice == 'paypal' else 'GHS', # Set currency based on payment
             payment_method=payment_method_choice,
-            status='PENDING'
+            status='PENDING',
+            ip_address=ip
         )
 
+        # --- START: Pre-validation for service availability ---
+        booking_details_session = request.session.get('booking_details', {})
         for cart_item in cart_items_qs:
-            # Determine fulfillment method for this item
-            product_fulfillment = cart_item.product.fulfillment_method
-            vendor_default_fulfillment = cart_item.product.vendor.default_fulfillment_method if cart_item.product.vendor else 'vendor'
-            actual_fulfillment = product_fulfillment if product_fulfillment else vendor_default_fulfillment
-
-            item_specific_delivery_charge = Decimal('0.00')
-            if actual_fulfillment == 'vendor' and cart_item.product.product_type == 'physical' and cart_item.product.vendor_delivery_fee is not None:
-                # Assuming vendor_delivery_fee is a flat fee per product type, not per quantity.
-                # If it's per quantity, you'd multiply by cart_item.quantity here.
-                # For simplicity, let's assume it's a flat fee for the product line item.
-                item_specific_delivery_charge = cart_item.product.vendor_delivery_fee 
-                # No, if it's a fee for the item, it should apply once for the line item, or be multiplied if it's per unit.
-                # Let's assume vendor_delivery_fee is per product line item for now.
-                # If it's per unit, it should be: item_specific_delivery_charge = cart_item.product.vendor_delivery_fee * cart_item.quantity
-
-            order_item = OrderItem.objects.create(
-                order=order,
-                product=cart_item.product,
-                quantity=cart_item.quantity,
-                price=cart_item.product.price,
-                # Set fulfillment method:
-                # 1. Prioritize product-specific setting if it's a physical product.
-                # 2. Fallback to vendor's default if product-specific is not set or not applicable.
-                # 3. Default to 'vendor' if no other setting is found (e.g., for non-physical or if vendor/product has no setting).
-                fulfillment_method=actual_fulfillment,
-                item_delivery_charge=item_specific_delivery_charge
-            )
-            current_order_item_total_delivery_charges += item_specific_delivery_charge # Sum up all item-specific charges
-
-            if cart_item.product.product_type == 'physical':
-                product = cart_item.product
-                if product.stock is not None:
-                    if product.stock >= cart_item.quantity:
-                        product.stock -= cart_item.quantity
-                        product.save(update_fields=['stock'])
-                    else:
-                        messages.error(request, _(f"Not enough stock for {product.name}. Order cannot be completed."))
-                        order.delete()
+            if cart_item.service_package:
+                item_booking_details = booking_details_session.get(str(cart_item.id))
+                if item_booking_details and item_booking_details.get('availability_slot_id'):
+                    slot_id = item_booking_details.get('availability_slot_id')
+                    try:
+                        # Lock the row for update to prevent race conditions
+                        slot = ServiceAvailability.objects.select_for_update().get(id=slot_id)
+                        if slot.is_booked:
+                            messages.error(request, _("Sorry, the time slot for '{service}' has just been booked by someone else. Please remove it from your cart and select a new time.").format(service=cart_item.name))
+                            # No need to delete order, it's in a transaction that will be rolled back
+                            return redirect('core:cart_detail')
+                    except ServiceAvailability.DoesNotExist:
+                        messages.error(request, _("Sorry, a selected time slot for '{service}' no longer exists. Please remove it from your cart and select a new one.").format(service=cart_item.name))
                         return redirect('core:cart_detail')
+        # --- END: Pre-validation for service availability ---
+
+        for cart_item in cart_items_qs:
+            if cart_item.product:
+                # --- Handle Product Items ---
+                product_fulfillment = cart_item.product.fulfillment_method
+                vendor_default_fulfillment = cart_item.product.vendor.default_fulfillment_method if cart_item.product.vendor else 'vendor'
+                actual_fulfillment = product_fulfillment if product_fulfillment else vendor_default_fulfillment
+
+                item_specific_delivery_charge = Decimal('0.00')
+                if actual_fulfillment == 'vendor' and cart_item.product.product_type == 'physical' and cart_item.product.vendor_delivery_fee is not None:
+                    item_specific_delivery_charge = cart_item.product.vendor_delivery_fee
+
+                OrderItem.objects.create(
+                    order=order,
+                    product=cart_item.product,
+                    quantity=cart_item.quantity,
+                    price=cart_item.product.price,
+                    fulfillment_method=actual_fulfillment,
+                    item_delivery_charge=item_specific_delivery_charge
+                )
+                current_order_item_total_delivery_charges += item_specific_delivery_charge
+
+                if cart_item.product.product_type == 'physical':
+                    product = cart_item.product
+                    if product.stock is not None:
+                        if product.stock >= cart_item.quantity:
+                            product.stock -= cart_item.quantity
+                            product.save(update_fields=['stock'])
+                        else:
+                            messages.error(request, _(f"Not enough stock for {product.name}. Order cannot be completed."))
+                            order.delete()
+                            return redirect('core:cart_detail')
+            
+            elif cart_item.service_package:
+                # --- Handle Service Items ---
+                service_pkg = cart_item.service_package
+                order_item = OrderItem.objects.create( # Assign to variable
+                    order=order,
+                    service_package=service_pkg,
+                    quantity=cart_item.quantity,
+                    price=service_pkg.price,
+                    provider=service_pkg.service.provider,
+                    # Services don't have delivery charges in this model
+                    item_delivery_charge=Decimal('0.00'),
+                    # Services are fulfilled by the provider, equivalent to 'vendor' fulfillment
+                    fulfillment_method='vendor' 
+                )
+                # --- START: Create ServiceBooking from session data ---
+                booking_details_session = request.session.get('booking_details', {})
+                item_booking_details = booking_details_session.get(str(cart_item.id))
+                
+                start_date = None
+                availability_slot_id = None
+
+                if item_booking_details:
+                    availability_slot_id = item_booking_details.get('availability_slot_id')
+                    date_str = item_booking_details.get('preferred_start_date')
+                    if start_date:
+                        # Convert ISO format string back to datetime object
+                        start_date = datetime.fromisoformat(start_date)
+
+                    # --- Mark the availability slot as booked ---
+                    if availability_slot_id:
+                        try:
+                            # We already locked and checked this slot above, so we can just update it.
+                            slot_to_book = ServiceAvailability.objects.get(id=availability_slot_id)
+                            slot_to_book.is_booked = True
+                            slot_to_book.save(update_fields=['is_booked'])
+                            logger.info(f"ServiceAvailability slot {slot_to_book.id} marked as booked for Order {order.order_id}.")
+                        except ServiceAvailability.DoesNotExist:
+                            # This case should be caught by the pre-validation loop.
+                            # If it happens, it's an issue, but the transaction will roll back.
+                            logger.error(f"Could not find ServiceAvailability slot {availability_slot_id} to mark as booked during order placement for Order {order.order_id}.")
+                            # The transaction will rollback, so no inconsistent state is saved.
+                            messages.error(request, _("An error occurred with a booking time slot. Please try again."))
+                            return redirect('core:cart_detail')
+
+                    ServiceBooking.objects.create(
+                        order=order,
+                        service_package=service_pkg,
+                        user=request.user,
+                        provider=service_pkg.service.provider,
+                        preferred_start_date=start_date,
+                        specific_requirements=item_booking_details.get('specific_requirements', ''),
+                        status='PENDING' # Initial status for a new booking
+                    )
+                else:
+                    # Fallback if no details found in session (e.g., session expired)
+                    # Still create a basic booking record
+                    ServiceBooking.objects.create(
+                        order=order,
+                        service_package=service_pkg,
+                        user=request.user,
+                        provider=service_pkg.service.provider,
+                        status='PENDING'
+                    )
+                    logger.warning(f"No booking details found in session for CartItem {cart_item.id}. Created a basic ServiceBooking for Order {order.order_id}.")
+                # --- END: Create ServiceBooking from session data ---
+                # No stock to decrement for services
+
+            else:
+                logger.warning(f"CartItem {cart_item.id} in cart {user_cart.id} has neither a product nor a service. Skipping.")
 
         # Now update the order's total delivery fee and total amount
         order.delivery_fee = order.platform_delivery_fee + current_order_item_total_delivery_charges
-        order.total_amount = cart_subtotal + order.delivery_fee
-        order.save(update_fields=['delivery_fee', 'total_amount', 'platform_delivery_fee'])
+        order.total_amount = cart_subtotal + order.delivery_fee - order.discount_amount
+        order.save(update_fields=['delivery_fee', 'total_amount', 'platform_delivery_fee', 'promotion', 'discount_amount'])
+
+        # --- Increment promotion usage count if applicable ---
+        if promotion:
+            # Use F() expression for a race-condition-safe increment
+            promotion.usage_count = F('usage_count') + 1
+            promotion.save(update_fields=['usage_count'])
+
+        # --- Fraud Detection ---
+        fraud_check_result = calculate_fraud_score(order)
+        if fraud_check_result["score"] >= 50: # Threshold can be adjusted
+            FraudReport.objects.create(
+                order=order,
+                risk_score=fraud_check_result["score"],
+                reasons=fraud_check_result["reasons"]
+            )
+            order.status = 'ON_HOLD_FRAUD_REVIEW'
+            order.save(update_fields=['status'])
+            messages.warning(request, _("Your order has been placed and is currently under review. You will be notified shortly."))
+            return redirect(order.get_absolute_url())
 
         user_cart.ordered = True
         user_cart.save()
+
+        # --- START: Clean up all booking details from session after order is placed ---
+        if 'booking_details' in request.session:
+            del request.session['booking_details']
+        # --- Clean up promotion from session ---
+        if 'promotion_id' in request.session:
+            del request.session['promotion_id']
+        if 'discount_amount' in request.session:
+            del request.session['booking_details']
+        # --- END: Clean up all booking details from session ---
 
         if 'cart' in request.session:
             del request.session['cart']
@@ -758,6 +2568,7 @@ class OrderHistoryView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = _("My Order History")
+        context['active_page'] = 'orders'
         return context
 
 class OrderDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
@@ -851,6 +2662,12 @@ def process_checkout_choice(request, order_id):
         messages.success(request, _("You've chosen Direct Arrangement. Please contact the service provider to arrange payment. Your order status has been updated."))
         return redirect('core:order_detail', order_id=order.order_id)
 
+    elif payment_method_choice == 'paypal':
+        order.status = 'AWAITING_ESCROW_PAYMENT' # Use same status as Paystack
+        order.save()
+        messages.info(request, _("Please proceed to make your payment via PayPal."))
+        return redirect('core:process_payment', order_id=order.id)
+
     else:
         messages.error(request, _("An unexpected error occurred. Please try again."))
         return redirect('core:order_detail', order_id=order.order_id)
@@ -893,6 +2710,96 @@ def customer_confirm_product_delivery(request, order_id):
         messages.success(request, _("Thank you for confirming delivery! The vendor will be notified."))
     else:
         messages.error(request, _("This order's delivery cannot be confirmed at this time, or has already been confirmed."))
+
+    return redirect('core:order_detail', order_id=order.order_id)
+
+@login_required
+def vendor_generate_packing_slip(request, pk):
+    """
+    Generates and serves a PDF packing slip for a vendor's specific order.
+    """
+    try:
+        vendor = request.user.vendor_profile
+    except Vendor.DoesNotExist:
+        return HttpResponseForbidden(_("You are not a registered vendor."))
+
+    order = get_object_or_404(Order, pk=pk)
+    vendor_items = order.items.filter(product__vendor=vendor)
+    if not vendor_items.exists():
+        return HttpResponseForbidden(_("You do not have permission to generate a packing slip for this order."))
+
+    context = {'order': order, 'vendor_items': vendor_items, 'vendor': vendor}
+    html = render_to_string('core/vendor/packing_slip.html', context)
+    pdf_buffer = BytesIO()
+    pisa_status = pisa.CreatePDF(html, dest=pdf_buffer)
+    if pisa_status.err:
+        return HttpResponse("Error generating PDF")
+    pdf_buffer.seek(0)
+    return FileResponse(pdf_buffer, as_attachment=False, filename=f'packing_slip_{order.order_id}.pdf')
+
+def _generate_customer_invoice_pdf(order: Order) -> Optional[BytesIO]:
+    """
+    Renders the customer invoice HTML to a PDF and returns it in a BytesIO buffer.
+    Returns None on failure.
+    """
+    try:
+        html = render_to_string('core/customer_invoice.html', {'order': order})
+        pdf_buffer = BytesIO()
+        pisa_status = pisa.CreatePDF(html, dest=pdf_buffer)
+        if pisa_status.err:
+            logger.error(f"PDF generation failed for order {order.order_id}. Error: {pisa_status.err}")
+            return None
+        pdf_buffer.seek(0)
+        return pdf_buffer
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during PDF generation for order {order.order_id}: {e}", exc_info=True)
+        return None
+
+
+@login_required
+def customer_generate_invoice(request, order_id):
+    """
+    Generates and serves a PDF invoice for a customer's specific order.
+    """
+    order = get_object_or_404(Order, order_id=order_id)
+
+    # Security check: ensure the user is the owner of the order or staff
+    if not (request.user == order.user or request.user.is_staff):
+        messages.error(request, _("You do not have permission to view this invoice."))
+        return redirect('core:order_history')
+
+    pdf_buffer = _generate_customer_invoice_pdf(order)
+
+    if not pdf_buffer:
+        messages.error(request, _("There was an error generating the invoice PDF. Please try again later."))
+        return redirect('core:order_detail', order_id=order.order_id)
+
+    return FileResponse(pdf_buffer, as_attachment=False, filename=f'invoice_{order.order_id}.pdf')
+
+
+@login_required
+@require_POST
+def customer_email_invoice(request, order_id):
+    """
+    Generates a PDF invoice and emails it to the customer.
+    """
+    order = get_object_or_404(Order, order_id=order_id)
+
+    # Security check
+    if not (request.user == order.user or request.user.is_staff):
+        messages.error(request, _("You do not have permission to email this invoice."))
+        return redirect('core:order_history')
+
+    if not request.user.email:
+        messages.error(request, _("Your profile does not have an email address to send the invoice to."))
+        return redirect('core:order_detail', order_id=order.order_id)
+
+    # Use the utility function from utils.py to generate and send the invoice
+    # This centralizes the logic and makes it reusable.
+    if generate_invoice_pdf(order=order, user=request.user, request=request):
+        messages.success(request, _("The invoice has been sent to {email}.").format(email=request.user.email))
+    else:
+        messages.error(request, _("There was a problem sending the email. Please try again."))
 
     return redirect('core:order_detail', order_id=order.order_id)
 
@@ -943,6 +2850,72 @@ def initiate_paystack_payment(request, order_id):
         messages.error(request, _("Could not connect to payment gateway. Please try again later."))
 
     return redirect('core:order_detail', order_id=order.order_id)
+
+@login_required
+def initiate_plan_payment(request, plan_id):
+    """
+    Initiates payment for a vendor subscription plan via Paystack.
+    """
+    plan = get_object_or_404(PricingPlan, id=plan_id, is_active=True)
+    vendor = get_object_or_404(Vendor, user=request.user)
+
+    url = "https://api.paystack.co/transaction/initialize"
+    amount_in_kobo = int(plan.price * 100)
+    reference = f"NEXUS-PLAN-{plan.id}-{vendor.id}-{uuid.uuid4().hex[:6]}"
+
+    headers = {
+        "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "email": request.user.email,
+        "amount": amount_in_kobo,
+        "currency": plan.currency,
+        "reference": reference,
+        "callback_url": request.build_absolute_uri(reverse('core:plan_payment_callback')),
+        "metadata": {
+            "plan_id": plan.id,
+            "vendor_id": vendor.id,
+            "user_id": request.user.id,
+            "type": "vendor_plan_purchase"
+        }
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        response_data = response.json()
+
+        if response_data.get("status"):
+            Transaction.objects.create(
+                user=request.user,
+                transaction_type='vendor_plan_purchase',
+                amount=plan.price,
+                currency=plan.currency,
+                status='pending',
+                gateway_transaction_id=reference,
+                description=f"Payment for plan '{plan.name}' by vendor '{vendor.name}'."
+            )
+            authorization_url = response_data["data"]["authorization_url"]
+            return redirect(authorization_url)
+        else:
+            messages.error(request, _("Could not initialize payment: {error}").format(error=response_data.get("message", "Unknown error")))
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Paystack API request failed for plan payment: {e}")
+        messages.error(request, _("Could not connect to payment gateway. Please try again later."))
+
+    return redirect('core:vendor_upgrade')
+
+def search_results(request):
+    query = request.GET.get('q', '')
+    product_results = Product.objects.filter(is_active=True, vendor__is_approved=True)
+    if query:
+        product_results = product_results.filter(
+            Q(name__icontains=query) | Q(description__icontains=query) | Q(category__name__icontains=query)
+        ).distinct()
+
+    context = {'products': product_results, 'query': query}
+    return render(request, 'core/search_results.html', context)
 
 @csrf_exempt
 def paystack_callback(request):
@@ -997,63 +2970,229 @@ def paystack_callback(request):
         messages.error(request, _("An unexpected error occurred during payment verification."))
         return redirect('core:order_history')
 
-@login_required
-def user_profile_view(request):
-    is_vendor = hasattr(request.user, 'vendor_profile') and request.user.vendor_profile is not None
-    is_service_provider = hasattr(request.user, 'service_provider_profile') and request.user.service_provider_profile is not None
+@csrf_exempt
+def plan_payment_callback(request):
+    """
+    Callback URL for Paystack to verify vendor plan payments.
+    """
+    reference = request.GET.get('reference')
+    if not reference:
+        messages.error(request, _("Payment reference not found in callback."))
+        return redirect('core:vendor_upgrade')
 
-    if not is_vendor and not is_service_provider:
-        messages.warning(request, _("You must be a vendor or service provider to view your profile."))
-        return redirect('core:home')
+    url = f"https://api.paystack.co/transaction/verify/{reference}"
+    headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
 
     try:
-        user_profile_instance = request.user.userprofile
-    except UserProfile.DoesNotExist:
-        user_profile_instance = UserProfile.objects.create(user=request.user)
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        response_data = response.json()
+
+        if response_data.get("status") and response_data["data"]["status"] == "success":
+            transaction = get_object_or_404(Transaction, gateway_transaction_id=reference)
+            metadata = response_data["data"].get("metadata", {})
+            vendor_id = metadata.get("vendor_id")
+            plan_id = metadata.get("plan_id")
+
+            if transaction.status == 'pending':
+                with db_transaction.atomic():
+                    transaction.status = 'completed'
+                    transaction.save(update_fields=['status'])
+                    vendor = get_object_or_404(Vendor, id=vendor_id)
+                    plan = get_object_or_404(PricingPlan, id=plan_id)
+                    if "3d" in plan.name.lower():
+                        vendor.has_premium_3d_generation_access = True
+                        vendor.save(update_fields=['has_premium_3d_generation_access'])
+                    messages.success(request, _("Your payment was successful and your plan has been activated!"))
+            else:
+                messages.info(request, _("This payment has already been processed."))
+            return redirect('core:vendor_dashboard')
+        else:
+            messages.error(request, _("Payment verification failed. If you were charged, please contact support."))
+    except (requests.exceptions.RequestException, Transaction.DoesNotExist, Vendor.DoesNotExist, PricingPlan.DoesNotExist) as e:
+        logger.error(f"Error in plan_payment_callback for reference {reference}: {e}")
+        messages.error(request, _("An error occurred during payment confirmation. Please contact support."))
+    return redirect('core:vendor_upgrade')
+
+@login_required
+def user_profile_view(request):
+    profile_owner = request.user
+    user_profile, created = UserProfile.objects.get_or_create(user=profile_owner)
+    user_preferences, created = UserPreferences.objects.get_or_create(user=profile_owner)
+
+    # --- Email Verification Status ---
+    # This will be used to show verification status and management links on the profile.
+    primary_email_obj = EmailAddress.objects.get_primary(profile_owner)
+    is_email_verified = primary_email_obj.verified if primary_email_obj else False
+
+    # --- 2FA Status Check ---
+    # Check which 2FA methods are enabled for the user to display in the dashboard.
+    authenticators = Authenticator.objects.filter(user=profile_owner)
+    has_totp_enabled = authenticators.filter(type=Authenticator.Type.TOTP).exists()
+    has_fido_enabled = authenticators.filter(type=Authenticator.Type.WEBAUTHN).exists()
+    has_any_2fa_enabled = has_totp_enabled or has_fido_enabled
+
+    # --- Profile Completeness Calculation ---
+    # Fields to check for completeness in CustomUser and UserProfile
+    completeness_fields = {
+        'first_name': profile_owner.first_name,
+        'last_name': profile_owner.last_name,
+        'email': profile_owner.email,
+        'profile_picture': user_profile.profile_picture,
+        'bio': user_profile.bio,
+        'date_of_birth': user_profile.date_of_birth,
+        'phone_number': user_profile.phone_number,
+        'location': user_profile.location,
+        'website_url': user_profile.website_url,
+        'linkedin_url': user_profile.linkedin_url,
+        'twitter_url': user_profile.twitter_url,
+        'github_url': user_profile.github_url,
+    }
+
+    total_fields = len(completeness_fields)
+    completed_fields = sum(1 for field_value in completeness_fields.values() if field_value)
+    profile_completeness = int((completed_fields / total_fields) * 100) if total_fields > 0 else 0
+
+    # --- Fetch Recent Orders for Dashboard ---
+    # --- Determine Next Step for Profile Completion ---
+    next_step_text = ''
+    next_step_url = ''
+    if not user_profile.profile_picture:
+        next_step_text = _("Add a profile picture")
+        next_step_url = reverse('core:edit_user_profile')
+    elif not user_profile.phone_number:
+        next_step_text = _("Add your phone number")
+        next_step_url = reverse('core:edit_user_profile')
+    elif not Address.objects.filter(user=profile_owner).exists():
+        next_step_text = _("Add an address")
+        next_step_url = reverse('core:address_list')
+    elif not user_profile.bio:
+        next_step_text = _("Write a short bio")
+        next_step_url = reverse('core:edit_user_profile')
+    recent_orders = Order.objects.filter(user=profile_owner).order_by('-created_at')[:5]
+
+    # --- Fetch Recent Reviews for Dashboard ---
+    product_reviews = ProductReview.objects.filter(user=profile_owner).select_related('product').order_by('-created_at')[:3]
+    vendor_reviews = VendorReview.objects.filter(user=profile_owner).select_related('vendor').order_by('-created_at')[:3]
+    service_reviews = ServiceReview.objects.filter(user=profile_owner).select_related('service', 'service__provider').order_by('-created_at')[:3]
+
+    # Combine and sort all recent reviews by creation date
+    all_recent_reviews = sorted(
+        chain(product_reviews, vendor_reviews, service_reviews),
+        key=attrgetter('created_at'),
+        reverse=True
+    )[:5] # Limit to a total of 5 recent reviews on the dashboard
+
+    # --- Wishlist Summary ---
+    wishlist, created = Wishlist.objects.get_or_create(user=profile_owner)
+    wishlist_summary_items = wishlist.products.all()[:3] # Get first 3 items
+    wishlist_total_count = wishlist.products.count()
+
+    # --- Loyalty Points ---
+    user_points, created = UserPoints.objects.get_or_create(user=profile_owner)
+    user_points_balance = user_points.points_balance
+    # --- Check for other user roles ---
+    # --- START: New context data for added sections ---
+
+    # --- Fetch Default Addresses ---
+    default_billing_address = Address.objects.filter(user=profile_owner, address_type='billing', is_default=True).first()
+    default_shipping_address = Address.objects.filter(user=profile_owner, address_type='shipping', is_default=True).first()
+
+    # --- Fetch Saved Payment Methods (Placeholder) ---
+    # In a real application, this would come from your payment gateway's vault.
+    # For demonstration, we'll create a dummy list.
+    saved_payment_methods = [
+        {'card_type': 'visa', 'last4': '4242', 'exp_month': '12', 'exp_year': '2025'},
+        {'card_type': 'mastercard', 'last4': '5555', 'exp_month': '08', 'exp_year': '2026'},
+    ]
+
+    # --- Fetch Digital Products ---
+    # Find all order items for this user where the product is digital and the order is complete.
+    # Using a database-agnostic method to get distinct products, as DISTINCT ON is not supported by all backends.
+    all_digital_order_items = OrderItem.objects.filter(
+        order__user=profile_owner,
+        product__product_type='digital',
+        order__status__in=['COMPLETED', 'DELIVERED', 'PENDING_PAYOUT'] # Use relevant statuses
+    ).select_related('product').order_by('product_id', '-order__created_at')
+    # Get the most recent OrderItem for each unique product.
+    # The dictionary comprehension ensures uniqueness based on product.id.
+    digital_products = list({item.product.id: item for item in all_digital_order_items}.values())
+
+    # --- Fetch Active Subscriptions (Placeholder) ---
+    # In a real application, this would come from a Subscription model.
+    # For demonstration, we'll create a dummy list.
+    active_subscriptions = [
+        {'plan': {'name': 'Nexus Pro Monthly'}, 'expires_at': timezone.now() + timezone.timedelta(days=25)},
+        {'plan': {'name': 'Nexus Content Creator Tier'}, 'expires_at': timezone.now() + timezone.timedelta(days=150)},
+    ]
+
+    # --- END: New context data ---
+
+    # --- Check for other user roles ---
+    is_vendor = hasattr(request.user, 'vendor_profile') and request.user.vendor_profile is not None
+    is_service_provider = hasattr(request.user, 'service_provider_profile') and request.user.service_provider_profile is not None
+    is_rider = hasattr(request.user, 'rider_profile') and request.user.rider_profile is not None
 
     context = {
-        'profile_owner': request.user,
-        'user_profile': user_profile_instance,
-        'page_title': _("My Profile"),
+        'page_title': _('User Dashboard'),
+        'profile_owner': profile_owner,
+        'user_profile': user_profile,
+        'user_preferences': user_preferences,
+        'profile_completeness': profile_completeness,
+        'recent_orders': recent_orders,
+        'recent_reviews': all_recent_reviews,
+        'wishlist_summary_items': wishlist_summary_items,
+        'wishlist_total_count': wishlist_total_count,
+        'user_points_balance': user_points_balance,
+        'active_page': 'dashboard', # For new sidebar navigation
+        'is_vendor': is_vendor,
+        'is_service_provider': is_service_provider,
+        'is_rider': is_rider,
+        'primary_email': primary_email_obj,
+        'is_email_verified': is_email_verified,
+        'has_totp_enabled': has_totp_enabled,
+        'has_fido_enabled': has_fido_enabled,
+        'has_any_2fa_enabled': has_any_2fa_enabled,
+        # --- Add new context variables ---
+        'default_billing_address': default_billing_address,
+        'default_shipping_address': default_shipping_address,
+        'saved_payment_methods': saved_payment_methods,
+        'digital_products': digital_products,
+        'active_subscriptions': active_subscriptions,
+        'next_step_text': next_step_text,
+        'next_step_url': next_step_url,
     }
     return render(request, 'core/user_profile.html', context)
 
 
 @login_required
 def edit_user_profile(request):
-    is_vendor = hasattr(request.user, 'vendor_profile') and request.user.vendor_profile is not None
-    is_service_provider = hasattr(request.user, 'service_provider_profile') and request.user.service_provider_profile is not None
-
-    if not is_vendor and not is_service_provider:
-        messages.warning(request, _("You must be a vendor or service provider to edit your profile."))
-        return redirect('core:home')
-
     user = request.user
-    try:
-        user_profile_instance = user.userprofile
-    except UserProfile.DoesNotExist:
-        user_profile_instance = UserProfile.objects.create(user=user)
+    user_profile, created = UserProfile.objects.get_or_create(user=user)
+    user_preferences, created = UserPreferences.objects.get_or_create(user=user)
 
     if request.method == 'POST':
-        form = UserProfileUpdateForm(request.POST, request.FILES, instance=user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, _("Profile updated successfully!"))
+        profile_form = UserProfileForm(request.POST, request.FILES, instance=user_profile, user=user)
+        preferences_form = UserPreferencesForm(request.POST, instance=user_preferences)
+
+        if profile_form.is_valid() and preferences_form.is_valid():
+            profile_form.save()
+            preferences_form.save()
+            messages.success(request, _("Profile and preferences updated successfully!"))
             return redirect('core:user_profile')
         else:
             messages.error(request, _("Please correct the errors below."))
     else:
-        form = UserProfileUpdateForm(instance=user)
-
-    print(f"DEBUG (VIEW): Form object in view: {form}")
-    print(f"DEBUG (VIEW): Form fields in view: {form.fields if form else 'Form is None'}")
+        profile_form = UserProfileForm(instance=user_profile, user=user)
+        preferences_form = UserPreferencesForm(instance=user_preferences)
 
     context = {
-        'form': form,
+        'profile_form': profile_form,
+        'preferences_form': preferences_form,
         'page_title': _("Edit Profile"),
-        'profile_owner': request.user
+        'profile_owner': request.user,
+        'active_page': 'profile',
     }
-    print(f"DEBUG (VIEW): Context being passed to template: {context}")
     return render(request, 'core/edit_user_profile.html', context)
 
 @login_required
@@ -1063,6 +3202,17 @@ def change_password(request):
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)
+
+            # --- START: Send Password Change Notification ---
+            mail_subject = _('Your NEXUS Password Has Been Changed')
+            message = render_to_string('core/emails/password_change_notification.html', {
+                'user': user,
+                'change_time': timezone.now(),
+                'ip_address': request.META.get('REMOTE_ADDR'),
+            })
+            user.email_user(mail_subject, message)
+            # --- END: Send Password Change Notification ---
+
             messages.success(request, _('Your password was successfully updated!'))
             return redirect('core:user_profile')
         else:
@@ -1072,6 +3222,7 @@ def change_password(request):
     context = {
         'form': form,
         'page_title': _("Change Password"),
+        'active_page': 'profile', # Part of the profile section
     }
     return render(request, 'core/change_password.html', context)
 
@@ -1081,6 +3232,7 @@ def view_wishlist(request):
     context = {
         'wishlist_items': wishlist.products.all(),
         'page_title': _("My Wishlist"),
+        'active_page': 'wishlist', # For new sidebar navigation
     }
     return render(request, 'core/wishlist.html', context)
 
@@ -1108,6 +3260,7 @@ def add_to_wishlist(request):
 
 
 @login_required
+@require_POST
 def remove_from_wishlist(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     wishlist = get_object_or_404(Wishlist, user=request.user)
@@ -1116,7 +3269,7 @@ def remove_from_wishlist(request, product_id):
         messages.success(request, _(f"'{product.name}' removed from your wishlist."))
     else:
         messages.info(request, _(f"'{product.name}' was not in your wishlist."))
-    return redirect('core:wishlist_detail') # Changed from wishlist_view
+    return redirect('core:wishlist_detail')
 
 
 @login_required
@@ -1234,10 +3387,8 @@ class ServiceListView(ListView):
         self.category = None # Initialize
         if final_category_slug:
             self.category = get_object_or_404(ServiceCategory, slug=final_category_slug, is_active=True)
-             # Ensure we are using self.category for filtering
-            # If line 1095 was "queryset = queryset.filter(category=category)", this is the fix:
-            queryset = queryset.filter(category=self.category) 
-            print(f"Filtered by category: {self.category.name}")
+            # Ensure we are using self.category for filtering
+            queryset = queryset.filter(category=self.category)
 
 
         self.search_query = None # Initialize
@@ -1265,2653 +3416,1331 @@ class ServiceListView(ListView):
         ).select_related('provider', 'category').prefetch_related('images', 'packages')[:4]
 
         context['top_service_categories'] = ServiceCategory.objects.filter(
-            is_active=True,
-            parent__isnull=True
-        ).annotate(num_services=Count('services')).filter(num_services__gt=0).order_by('-num_services')[:6]
+            is_active=True
+        ).annotate(
+            num_services=Count('services', filter=Q(services__is_active=True, services__provider__service_provider_profile__is_approved=True))
+        ).filter(num_services__gt=0).order_by('-num_services')[:8]
 
-        context['all_service_categories'] = ServiceCategory.objects.filter(is_active=True, parent__isnull=True).annotate(
-            num_services=Count('services')
-        ).filter(num_services__gt=0).order_by('name')
+        context['categories'] = ServiceCategory.objects.filter(is_active=True).order_by('name')
+        context['current_category'] = self.category
+        context['search_query'] = self.search_query
+        context['page_title'] = self.category.name if self.category else _("All Services")
+        if self.search_query:
+            context['page_title'] = _("Search results for '{query}'").format(query=self.search_query)
 
-        context['current_provider_id'] = self.request.GET.get('provider')
-        context['search_form'] = ServiceSearchForm(initial={'q': getattr(self, 'search_query', None)})
-        context['search_query'] = self.search_query # Use the instance variable
-        context['current_category_slug'] = self.category.slug if self.category else self.request.GET.get('category')
-
-        if context['current_category_slug']:
-            try:
-                current_category_obj = ServiceCategory.objects.get(slug=context['current_category_slug'], is_active=True)
-                context['page_title'] = _("Services in {category_name}").format(category_name=current_category_obj.name)
-            except ServiceCategory.DoesNotExist:
-                context['page_title'] = _("Explore Services")
-        elif context['search_query']:
-            context['page_title'] = _("Search Results for Services: '{query}'").format(query=context['search_query'])
-        else:
-            context['page_title'] = _("Explore Our Services")
         return context
 
+class CategoryServiceListView(ServiceListView):
+    """
+    A specific view to list services by category, inheriting all the logic
+    from the main ServiceListView. The URL pattern provides the 'category_slug'.
+    The base ServiceListView already handles this kwarg.
+    """
+    template_name = 'core/service_list.html' # Reuse the same template
 
-class ServiceSearchResultsView(ListView):
+class ServiceCategoryDetailView(ListView):
     model = Service
-    template_name = 'core/service_search_results.html' # New template
+    template_name = 'core/service_category_detail.html' # Assumes this template exists
     context_object_name = 'services'
     paginate_by = 9
 
     def get_queryset(self):
-        query = self.request.GET.get('q', '').strip()
-        self.search_query = query # Store for context
+        self.category = get_object_or_404(ServiceCategory, slug=self.kwargs['category_slug'], is_active=True)
 
-        if not query:
-            return Service.objects.none() # Return no results if query is empty
+        all_categories = [self.category]
+        queue = [self.category]
+        while queue:
+            parent = queue.pop(0)
+            for child in parent.subcategories.all():
+                all_categories.append(child)
+                queue.append(child)
 
-        queryset = Service.objects.filter(
+        return Service.objects.filter(
+            category__in=all_categories,
             is_active=True,
             provider__service_provider_profile__is_approved=True
         ).select_related(
             'provider', 'provider__service_provider_profile', 'category'
-        ).prefetch_related('packages', 'images')
-
-        search_filters = (
-            Q(title__icontains=query) |
-            Q(description__icontains=query) |
-            Q(category__name__icontains=query) |
-            Q(provider__username__icontains=query) |
-            Q(provider__service_provider_profile__business_name__icontains=query) |
-            Q(packages__name__icontains=query)
-        )
-        queryset = queryset.filter(search_filters).distinct().order_by('-created_at')
-        return queryset
+        ).prefetch_related('images', 'packages').order_by('-created_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        query = getattr(self, 'search_query', '')
-        context['search_query'] = query
-        context['page_title'] = _("Search Results for '{query}'").format(query=query) if query else _("Service Search")
-        context['search_form'] = ServiceSearchForm(initial={'q': query}) # For a search bar on the results page
-        # You might want to pass categories if you plan to allow filtering on the results page
-        # context['all_service_categories'] = ServiceCategory.objects.filter(is_active=True).annotate(num_services=Count('services')).filter(num_services__gt=0).order_by('name')
+        context['category'] = self.category
+        context['page_title'] = self.category.name
         return context
 
-class CategoryServiceListView(ListView):
-    model = Service
-    template_name = 'core/category_service_list.html' # We'll create this new template
-    context_object_name = 'services'
-    paginate_by = 9  # Adjust as needed
+
+# --- Placeholder views for missing URLs ---
+
+@login_required
+def address_list_view(request):
+    addresses = Address.objects.filter(user=request.user).order_by('-is_default', 'address_type')
+    form = AddressForm()
+    context = {
+        'addresses': addresses,
+        'form': form,
+        'page_title': _("My Addresses"),
+        'active_page': 'addresses',
+    }
+    return render(request, 'core/address_list.html', context)
+
+@login_required
+def address_edit_view(request, address_id):
+    address = get_object_or_404(Address, id=address_id, user=request.user)
+    if request.method == 'POST':
+        form = AddressForm(request.POST, instance=address)
+        if form.is_valid():
+            form.save(user=request.user)
+            messages.success(request, _("Address updated successfully."))
+            return redirect('core:address_list')
+    else:
+        form = AddressForm(instance=address)
+    context = {
+        'form': form,
+        'page_title': _("Edit Address"),
+        'active_page': 'addresses',
+    }
+    return render(request, 'core/address_form.html', context)
+
+@login_required
+def address_delete_view(request, address_id):
+    address = get_object_or_404(Address, id=address_id, user=request.user)
+    if request.method == 'POST':
+        address.delete()
+        messages.success(request, _("Address deleted successfully."))
+        return redirect('core:address_list')
+    context = {
+        'address': address,
+        'page_title': _("Confirm Delete Address"),
+        'active_page': 'addresses',
+    }
+    return render(request, 'core/address_confirm_delete.html', context)
+
+@login_required
+def download_digital_product(request, product_id):
+    product = get_object_or_404(Product, id=product_id, product_type='digital')
+
+    # Check if the user has purchased this product
+    has_purchased = OrderItem.objects.filter(
+        order__user=request.user,
+        product=product,
+        order__status__in=['COMPLETED', 'DELIVERED', 'PROCESSING'] # Or whatever statuses grant access
+    ).exists()
+
+    if not has_purchased:
+        messages.error(request, _("You have not purchased this digital product or the order is not complete."))
+        return redirect('core:order_history')
+
+    if not product.digital_file:
+        messages.error(request, _("The file for this product is not available."))
+        return redirect(product.get_absolute_url())
+
+    # Serve the file for download
+    try:
+        return FileResponse(product.digital_file.open('rb'), as_attachment=True, filename=product.digital_file.name)
+    except FileNotFoundError:
+        raise Http404(_("Digital file not found."))
+
+@require_POST
+def update_location(request):
+    location = request.POST.get('location_input')
+    if location:
+        request.session['delivery_location'] = location
+        messages.success(request, _("Delivery location updated to {location}.").format(location=location))
+    return redirect('core:home')
+
+@require_POST
+def update_language(request):
+    lang_code = request.POST.get('language_input')
+    if lang_code and lang_code in [code for code, name in settings.LANGUAGES]:
+        request.session[translation.LANGUAGE_SESSION_KEY] = lang_code
+        messages.success(request, _("Language updated successfully."))
+    return redirect(request.META.get('HTTP_REFERER', 'core:home'))
+
+@login_required
+def customer_review_list(request):
+    product_reviews = ProductReview.objects.filter(user=request.user).select_related('product').order_by('-created_at')
+    vendor_reviews = VendorReview.objects.filter(user=request.user).select_related('vendor').order_by('-created_at')
+    service_reviews = ServiceReview.objects.filter(user=request.user).select_related('service').order_by('-created_at')
+
+    context = {
+        'product_reviews': product_reviews,
+        'vendor_reviews': vendor_reviews,
+        'service_reviews': service_reviews,
+        'page_title': _("My Reviews"),
+        'active_page': 'reviews',
+    }
+    return render(request, 'core/customer_review_list.html', context)
+
+@login_required
+def edit_review(request, review_type, review_id):
+    # This is a complex view. A full implementation would require a generic form and model handling.
+    # For now, this placeholder is more realistic.
+    messages.info(request, _("Editing reviews is not yet implemented."))
+    return redirect('core:customer_review_list')
+
+@login_required
+def delete_review(request, review_type, review_id):
+    messages.info(request, _("Deleting reviews is not yet implemented."))
+    return redirect('core:customer_review_list')
+
+@login_required
+def render_rewards_page(request):
+    messages.info(request, _("The rewards program is coming soon!"))
+    return render(request, 'core/rewards_page.html', {'page_title': _("My Rewards")})
+
+class LoginHistoryView(LoginRequiredMixin, ListView):
+    model = SecurityLog
+    template_name = 'core/login_history.html' # Assumed template
+    context_object_name = 'logs'
+    def get_queryset(self):
+        return SecurityLog.objects.filter(user=self.request.user, action__in=['login_success', 'login_failed'])
+
+@login_required
+def session_management_view(request):
+    # Placeholder
+    return HttpResponse("Session Management View")
+
+@login_required
+def logout_other_sessions_view(request):
+    # Placeholder
+    return HttpResponse("Logout Other Sessions View")
+
+class ProviderDashboardView(LoginRequiredMixin, IsServiceProviderMixin, TemplateView):
+    template_name = 'core/service_provider/provider_dashboard.html'
+
+@login_required
+def become_service_provider(request):
+    # Placeholder
+    return HttpResponse("Become Service Provider")
+
+class ProviderProfileDetailView(DetailView):
+    model = ServiceProviderProfile
+    template_name = 'core/provider_profile_detail.html'
+    context_object_name = 'provider_profile'
+
+    def get_object(self):
+        return get_object_or_404(ServiceProviderProfile, user__username=self.kwargs['username'])
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        provider_profile = self.get_object()
+
+        # The template expects 'profile_owner', which is the user associated with the profile.
+        context['profile_owner'] = provider_profile.user
+
+        # Fetch related data for the public profile page
+        context['services'] = Service.objects.filter(provider=provider_profile.user, is_active=True).prefetch_related('packages', 'images')
+        context['portfolio_items'] = PortfolioItem.objects.filter(provider_profile=provider_profile)
+        context['reviews'] = ServiceReview.objects.filter(service__provider=provider_profile.user, is_approved=True).select_related('user', 'service')
+        context['average_rating'] = context['reviews'].aggregate(Avg('rating'))['rating__avg']
+        context['page_title'] = provider_profile.business_name or provider_profile.user.get_full_name() or provider_profile.user.username
+        return context
+
+@login_required
+def edit_service_provider_profile(request):
+    """
+    Handles both updating the service provider's profile and adding new portfolio items.
+    """
+    provider_profile = get_object_or_404(ServiceProviderProfile, user=request.user)
+    portfolio_items = PortfolioItem.objects.filter(provider_profile=provider_profile).order_by('-uploaded_at')
+
+    if request.method == 'POST':
+        # Determine which form was submitted based on the submit button's name
+        if 'submit_profile' in request.POST:
+            profile_form = ServiceProviderProfileForm(request.POST, request.FILES, instance=provider_profile)
+            portfolio_item_form = PortfolioItemForm()  # Provide an empty form for the other section
+            if profile_form.is_valid():
+                profile_form.save()
+                messages.success(request, _("Your provider profile has been updated successfully."))
+                return redirect('core:edit_service_provider_profile')
+        elif 'submit_portfolio_item' in request.POST:
+            portfolio_item_form = PortfolioItemForm(request.POST, request.FILES)
+            profile_form = ServiceProviderProfileForm(instance=provider_profile)  # Keep the profile form populated with existing data
+            if portfolio_item_form.is_valid():
+                portfolio_item = portfolio_item_form.save(commit=False)
+                portfolio_item.provider_profile = provider_profile
+                portfolio_item.save()
+                messages.success(request, _("New item added to your portfolio."))
+                return redirect('core:edit_service_provider_profile')
+        else:
+            # Fallback if no specific submit button name is found
+            profile_form = ServiceProviderProfileForm(instance=provider_profile)
+            portfolio_item_form = PortfolioItemForm()
+            messages.error(request, _("An unexpected error occurred. Please try again."))
+    else:
+        # For GET requests, create unbound instances of both forms
+        profile_form = ServiceProviderProfileForm(instance=provider_profile)
+        portfolio_item_form = PortfolioItemForm()
+
+    context = {
+        'profile_form': profile_form,
+        'portfolio_item_form': portfolio_item_form,
+        'portfolio_items': portfolio_items,
+        'page_title': _("Edit Provider Profile & Portfolio"),
+        'active_page': 'provider_profile',
+    }
+    return render(request, 'core/edit_service_provider_profile.html', context)
+
+class EditServiceProviderPayoutView(LoginRequiredMixin, IsServiceProviderMixin, SuccessMessageMixin, UpdateView):
+    model = ServiceProviderProfile
+    form_class = ServiceProviderPayoutForm # Use the dedicated form for service providers
+    template_name = 'core/payout_settings.html'
+    success_url = reverse_lazy('core:service_provider_payout_settings')
+    success_message = _("Your payout settings have been updated successfully.")
+
+    def get_object(self, queryset=None):
+        return self.request.user.service_provider_profile
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _("Payout Settings")
+        context['active_page'] = 'provider_payout_settings'
+        return context
+
+class PortfolioItemUpdateView(LoginRequiredMixin, IsServiceProviderMixin, SuccessMessageMixin, UpdateView):
+    """
+    View for a service provider to edit one of their portfolio items.
+    """
+    model = PortfolioItem
+    form_class = PortfolioItemForm
+    template_name = 'core/portfolio_item_form.html' # A new template for editing
+    success_url = reverse_lazy('core:edit_service_provider_profile')
+    success_message = _("Portfolio item updated successfully.")
+    pk_url_kwarg = 'item_id'
 
     def get_queryset(self):
-        # Get the category object based on the slug from URL kwargs
-        self.category = get_object_or_404(ServiceCategory, slug=self.kwargs['category_slug'], is_active=True)
+        # Ensure the user can only edit their own portfolio items
+        provider_profile = get_object_or_404(ServiceProviderProfile, user=self.request.user)
+        return PortfolioItem.objects.filter(provider_profile=provider_profile)
+
+
+@login_required
+def delete_portfolio_item(request, item_id):
+    item = get_object_or_404(PortfolioItem, id=item_id, provider_profile__user=request.user)
+    if request.method == 'POST':
+        item.delete()
+        messages.success(request, _("Portfolio item deleted."))
+        return redirect('core:edit_service_provider_profile')
+    context = {
+        'item': item,
+        'page_title': _("Confirm Delete Portfolio Item"),
+    }
+    return render(request, 'core/portfolio_item_confirm_delete.html', context)
+
+@csrf_exempt
+def ajax_get_item_details(request):
+    """
+    AJAX endpoint to fetch basic details for a list of product and/or service IDs.
+    Used by the chatbot to render result cards.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Only POST requests are allowed.'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        product_ids = data.get('product_ids', [])
+        service_ids = data.get('service_ids', [])
+
+        if not isinstance(product_ids, list) or not isinstance(service_ids, list):
+            return JsonResponse({'error': 'product_ids and service_ids must be lists.'}, status=400)
+
+        # Fetch products
+        products = Product.objects.filter(id__in=product_ids, is_active=True).prefetch_related('images')
+        product_details = [{
+            'id': p.id, 'type': 'product', 'name': p.name,
+            'price': f'{p.price:,.2f}', 'url': p.get_absolute_url(),
+            'image_url': p.images.first().image.url if p.images.first() else settings.STATIC_URL + 'assets/img/placeholder.png'
+        } for p in products]
+
+        # Fetch services
+        services = Service.objects.filter(id__in=service_ids, is_active=True).prefetch_related('images')
+        service_details = [{
+            'id': s.id, 'type': 'service', 'name': s.title,
+            'price': f'{s.price:,.2f}' if s.price else 'Varies', 'url': s.get_absolute_url(),
+            'image_url': s.images.first().image.url if s.images.first() else settings.STATIC_URL + 'assets/img/placeholder.png'
+        } for s in services]
+
+        # Combine and return
+        all_items = product_details + service_details
         
-        # Filter services by the fetched category and other standard criteria
-        queryset = Service.objects.filter(
-            category=self.category,
-            is_active=True,
-            provider__service_provider_profile__is_approved=True
-        ).select_related(
-            'provider',
-            'provider__service_provider_profile',
-            'provider__userprofile',
-            'category'  # Though we are filtering by it, selecting it can be useful
-        ).prefetch_related('packages', 'images').order_by('-created_at')
+        # If you need to preserve order, you'd need a more complex sorting logic here
+        # based on the original order of IDs. For now, this is sufficient.
 
-        # Handle search query within this category
-        self.search_query = self.request.GET.get('q')
-        if self.search_query:
-            search_filters = (
-                Q(title__icontains=self.search_query) |
-                Q(description__icontains=self.search_query) |
-                Q(provider__username__icontains=self.search_query) |
-                Q(provider__service_provider_profile__business_name__icontains=self.search_query) |
-                Q(packages__name__icontains=self.search_query)
-            )
-            queryset = queryset.filter(search_filters).distinct()
-            
-        return queryset
+        return JsonResponse({'items': all_items})
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['current_category'] = self.category
-        context['current_category_slug'] = self.category.slug # For active state in sidebar
-        context['page_title'] = _("Services in {category_name}").format(category_name=self.category.name)
-        context['search_query'] = self.search_query
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON in request body.'}, status=400)
+    except Exception as e:
+        logger.error(f"Error in ajax_get_item_details view: {e}", exc_info=True)
+        return JsonResponse({'error': 'An internal error occurred.'}, status=500)
+
+@csrf_exempt
+def ajax_get_product_details(request):
+    """
+    AJAX endpoint to fetch basic details for a list of product IDs.
+    Used by the chatbot to render recommended products.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Only POST requests are allowed.'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        product_ids = data.get('product_ids')
+
+        if not isinstance(product_ids, list):
+            return JsonResponse({'error': 'product_ids must be a list.'}, status=400)
+
+        # Fetch products and ensure the order is preserved
+        products = Product.objects.filter(id__in=product_ids, is_active=True).prefetch_related('images')
+        products_dict = {p.id: p for p in products}
         
-        # For the sidebar filter, we still need all active categories
-        context['all_service_categories'] = ServiceCategory.objects.filter(is_active=True).annotate(
-            num_services=Count('services', filter=Q(services__is_active=True, services__provider__service_provider_profile__is_approved=True))
-        ).filter(num_services__gt=0).order_by('name')
-        
-        # If you have a specific search form you want to use:
-        # context['search_form'] = ServiceSearchForm(initial={'q': self.search_query})
-        return context
+        # Build the response list in the same order as the input IDs
+        product_details = []
+        for pid in product_ids:
+            product = products_dict.get(pid)
+            if product:
+                first_image = product.images.first()
+                image_url = first_image.image.url if first_image else settings.STATIC_URL + 'assets/img/placeholder.png'
+                
+                product_details.append({
+                    'id': product.id,
+                    'name': product.name,
+                    'price': f'{product.price:,.2f}',
+                    'url': product.get_absolute_url(),
+                    'image_url': image_url,
+                })
+
+        return JsonResponse({'products': product_details})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON in request body.'}, status=400)
+    except Exception as e:
+        logger.error(f"Error in ajax_get_product_details view: {e}", exc_info=True)
+        return JsonResponse({'error': 'An internal error occurred.'}, status=500)
+
+@csrf_exempt
+def ajax_enhance_product_description(request):
+    """
+    This view was misnamed but contained the chatbot logic.
+    It is kept here for reference but the URL now points to `ajax_chatbot_message`.
+    A real implementation for enhancing a description would be different.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Only POST requests are allowed.'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        product_description = data.get('description')
+        keywords = data.get('keywords', '')
+
+        if not product_description:
+            return JsonResponse({'error': 'Description is required.'}, status=400)
+
+        prompt = f"""
+You are an expert e-commerce copywriter for a marketplace called NEXUS.
+Your task is to rewrite and enhance the following product description to be more engaging, persuasive, and SEO-friendly.
+
+Focus on highlighting the benefits for the customer. Use clear, concise language and break up the text with bullet points for readability.
+
+If provided, incorporate these keywords naturally: {keywords}
+
+Original Description:
+"{product_description}"
+
+Enhanced Description:
+"""
+        enhanced_description = generate_text_with_gemini(prompt)
+
+        if enhanced_description and not enhanced_description.startswith("Error:"):
+            return JsonResponse({'enhanced_description': enhanced_description.strip()})
+        else:
+            logger.error(f"AI description enhancement failed. Raw response: {enhanced_description}")
+            return JsonResponse({'error': 'Failed to enhance description with AI.'}, status=500)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON in request body.'}, status=400)
+    except Exception as e:
+        logger.error(f"Error in ajax_enhance_product_description view: {e}", exc_info=True)
+        return JsonResponse({'error': 'An internal error occurred.'}, status=500)
 
 
+@csrf_exempt
+def ajax_visual_search(request):
+    return JsonResponse({'error': 'Not implemented'}, status=501)
+
+@csrf_exempt
+def ajax_generate_3d_model(request):
+    return JsonResponse({'error': 'Not implemented'}, status=501)
+
+@csrf_exempt
+def ajax_enhance_product_image(request):
+    return JsonResponse({'error': 'Not implemented'}, status=501)
+
+@csrf_exempt
+def ajax_remove_image_background(request):
+    return JsonResponse({'error': 'Not implemented'}, status=501)
+
+@api_key_required
+def api_upload_3d_model(request, product_id):
+    return JsonResponse({'error': 'Not implemented'}, status=501)
+
+class ServiceSearchResultsView(ListView):
+    model = Service
+    template_name = 'core/service_list.html'
+
+class ServiceCreateView(LoginRequiredMixin, IsServiceProviderMixin, CreateView):
+    model = Service
+    form_class = ServiceForm
+    template_name = 'core/service_form.html'
+    success_url = reverse_lazy('core:service_provider_dashboard')
+
+    def get_form_kwargs(self):
+        """Pass the current user to the form."""
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        """
+        This method is called when valid form data has been POSTed.
+        It should return an HttpResponse.
+        """
+        # Set the provider on the service instance before saving
+        form.instance.provider = self.request.user
+
+        # Save the Service instance and get the object
+        self.object = form.save()
+
+        # Handle multiple image uploads
+        images = self.request.FILES.getlist('images')
+        for image_file in images:
+            ServiceImage.objects.create(service=self.object, image=image_file)
+
+        # Handle multiple video uploads
+        videos = self.request.FILES.getlist('videos')
+        for video_file in videos:
+            ServiceVideo.objects.create(service=self.object, video=video_file)
+
+        messages.success(self.request, _("Your service has been created successfully."))
+        return HttpResponseRedirect(self.get_success_url())
 
 class ServiceDetailView(DetailView):
     model = Service
     template_name = 'core/service_detail.html'
     context_object_name = 'service'
     slug_url_kwarg = 'service_slug'
-
-    def get_queryset(self):
-        return Service.objects.filter(is_active=True).select_related(
-            'provider', 'provider__service_provider_profile', 'category'
-        ).prefetch_related('packages', 'images', 'videos')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        service = self.get_object()
-        context['reviews'] = ServiceReview.objects.filter(service=service, is_approved=True).order_by('-created_at')
-        context['review_form'] = ServiceReviewForm()
-        context['average_rating'] = context['reviews'].aggregate(Avg('rating'))['rating__avg']
-        context['page_title'] = service.title
-        context['service_packages'] = service.packages.filter(is_active=True).order_by('display_order', 'price')
-        context['service_images'] = service.images.all()
-        context['service_videos'] = service.videos.all()
-        user_has_reviewed = False
-        if self.request.user.is_authenticated:
-            user_has_reviewed = ServiceReview.objects.filter(service=service, user=self.request.user).exists()
-        context['user_has_reviewed'] = user_has_reviewed
-        return context
-
-@login_required
-@require_POST
-def submit_service_review(request, service_slug): # Changed from service_id to service_slug
-    service = get_object_or_404(Service, slug=service_slug) # Changed to slug
-    form = ServiceReviewForm(request.POST)
-
-    if ServiceReview.objects.filter(service=service, user=request.user).exists():
-        messages.warning(request, _("You have already reviewed this service."))
-        return redirect(service.get_absolute_url())
-
-    if form.is_valid():
-        review = form.save(commit=False)
-        review.service = service
-        review.user = request.user
-        review.save()
-        messages.success(request, _("Your review for '{service_title}' has been submitted!").format(service_title=service.title))
-        # service.update_average_rating() # Assuming this method exists
-    else:
-        error_str = " ".join([f"{field.label if field else ''}: {', '.join(errors)}" for field, errors in form.errors.items()])
-        messages.error(request, _("Failed to submit review. Please correct the errors: {errors}").format(errors=error_str))
-    return redirect(service.get_absolute_url())
-
-@login_required
-def add_service_to_order(request, package_id):
-    package = get_object_or_404(ServicePackage, id=package_id, is_active=True)
-
-    new_order = Order.objects.create(
-        user=request.user,
-        total_amount=package.price
-    )
-    OrderItem.objects.create(
-        order=new_order,
-        service_package=package,
-        price=package.price,
-        quantity=1
-    )
-    messages.success(request, _("'{package_name}' has been added to a new order. Please proceed to choose a payment method.").format(package_name=package.name))
-    return redirect('core:order_detail', order_id=new_order.order_id)
-
-class IsServiceProviderMixin(UserPassesTestMixin):
-    def test_func(self):
-        return self.request.user.is_authenticated and \
-               hasattr(self.request.user, 'service_provider_profile') and \
-               self.request.user.service_provider_profile is not None and \
-               self.request.user.service_provider_profile.is_approved
-
-    def handle_no_permission(self):
-        if not self.request.user.is_authenticated:
-            return redirect(reverse('authapp:signin') + f'?next={self.request.path}') # Corrected redirect
-        if not hasattr(self.request.user, 'service_provider_profile') or not self.request.user.service_provider_profile:
-            messages.info(self.request, _("You need to register as a service provider first."))
-            return redirect('core:become_service_provider')
-        if not self.request.user.service_provider_profile.is_approved:
-            messages.warning(self.request, _("Your service provider profile is pending approval."))
-            return redirect('core:home')
-        return super().handle_no_permission()
-
-
-@login_required
-def become_service_provider(request):
-    if hasattr(request.user, 'service_provider_profile') and request.user.service_provider_profile:
-        messages.info(request, _("You are already registered as a service provider."))
-        return redirect('core:provider_dashboard')
-
-    if request.method == 'POST':
-        form = ServiceProviderRegistrationForm(request.POST, request.FILES)
-        if form.is_valid():
-            profile = form.save(commit=False)
-            profile.user = request.user
-            profile.save()
-            messages.success(request, _("Congratulations! Your service provider profile has been created. It will be reviewed by our team shortly."))
-            return redirect('core:provider_dashboard')
-        else:
-            messages.error(request, _("Please correct the errors below."))
-    else:
-        form = ServiceProviderRegistrationForm()
-
-    context = {
-        'form': form,
-        'page_title': _("Become a Service Provider")
-    }
-    return render(request, 'core/become_service_provider.html', context)
-
-
-class ProviderDashboardView(LoginRequiredMixin, IsServiceProviderMixin, TemplateView):
-    template_name = 'core/provider_dashboard.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        provider_profile = self.request.user.service_provider_profile
-        services = Service.objects.filter(provider=self.request.user)
-        context['services'] = services
-        context['active_services_count'] = services.filter(is_active=True).count()
-        context['total_services_count'] = services.count()
-        service_orders = ServiceBooking.objects.filter(service_package__service__provider=self.request.user)
-        context['service_orders'] = service_orders
-        context['recent_service_orders'] = service_orders.order_by('-created_at')[:5]
-        context['in_progress_service_orders_count'] = service_orders.filter(status__in=['PENDING', 'ACCEPTED', 'IN_PROGRESS']).count()
-        context['completed_service_orders_count'] = service_orders.filter(status='COMPLETED').count()
-        context['page_title'] = _("Provider Dashboard")
-        context['provider_profile'] = provider_profile
-        return context
-
-class ServiceCreateView(LoginRequiredMixin, IsServiceProviderMixin, CreateView):
-    model = Service
-    form_class = ServiceForm
-    template_name = 'core/service_form.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        if self.request.POST:
-            context['package_formset'] = ServicePackageFormSet(self.request.POST, self.request.FILES, prefix='packages')
-        else:
-            context['package_formset'] = ServicePackageFormSet(prefix='packages')
-        context['page_title'] = _("Offer a New Service")
-        context['form_title'] = _("Create New Service")
-        context['submit_button_text'] = _("Create Service")
-        return context
-
-    def form_valid(self, form):
-        context = self.get_context_data()
-        package_formset = context['package_formset']
-        with transaction.atomic():
-            form.instance.provider = self.request.user
-            self.object = form.save()
-            if package_formset.is_valid():
-                package_formset.instance = self.object
-                package_formset.save()
-                messages.success(self.request, _("Service '{service_title}' created successfully!").format(service_title=self.object.title))
-                return redirect(self.get_success_url())
-            else:
-                messages.error(self.request, _("Please correct the errors in the service packages below."))
-                return self.form_invalid(form)
-
-    def get_success_url(self):
-        return reverse('core:provider_dashboard')
+    slug_field = 'slug'
 
 class ServiceUpdateView(LoginRequiredMixin, IsServiceProviderMixin, UpdateView):
     model = Service
     form_class = ServiceForm
     template_name = 'core/service_form.html'
+    success_url = reverse_lazy('core:service_provider_dashboard')
     slug_url_kwarg = 'service_slug'
-
-    def get_queryset(self):
-        return Service.objects.filter(provider=self.request.user)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        if self.request.POST:
-            context['package_formset'] = ServicePackageFormSet(self.request.POST, self.request.FILES, instance=self.object, prefix='packages')
-        else:
-            context['package_formset'] = ServicePackageFormSet(instance=self.object, prefix='packages')
-        context['page_title'] = _("Edit Service - {service_title}").format(service_title=self.object.title)
-        context['form_title'] = _("Edit Service Details")
-        context['submit_button_text'] = _("Save Changes")
-        return context
-
-    def form_valid(self, form):
-        context = self.get_context_data()
-        package_formset = context['package_formset']
-        with transaction.atomic():
-            self.object = form.save()
-            if package_formset.is_valid():
-                package_formset.save()
-                messages.success(self.request, _("Service '{service_title}' updated successfully!").format(service_title=self.object.title))
-                return redirect(self.get_success_url())
-            else:
-                messages.error(self.request, _("Please correct the errors in the service packages below."))
-                return self.form_invalid(form)
-
-    def get_success_url(self):
-        return reverse('core:provider_dashboard')
+    slug_field = 'slug'
 
 class ServiceDeleteView(LoginRequiredMixin, IsServiceProviderMixin, DeleteView):
     model = Service
     template_name = 'core/service_confirm_delete.html'
-    success_url = reverse_lazy('core:provider_dashboard')
-    slug_url_kwarg = 'service_slug'
-
-    def get_queryset(self):
-        return Service.objects.filter(provider=self.request.user)
-
-    def delete(self, request, *args, **kwargs):
-        response = super().delete(request, *args, **kwargs)
-        messages.success(request, _("Service '{service_title}' has been deleted.").format(service_title=self.object.title))
-        return response
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Confirm Delete Service - {service_title}").format(service_title=self.object.title)
-        return context
-
-
-class ProviderProfileDetailView(DetailView):
-    model = CustomUser
-    template_name = 'core/provider_profile_detail.html'
-    context_object_name = 'profile_owner'
-    slug_field = 'username'
-    slug_url_kwarg = 'username'
-
-    def get_queryset(self):
-        return CustomUser.objects.filter(
-            service_provider_profile__isnull=False,
-            service_provider_profile__is_approved=True
-        )
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        profile_owner = self.get_object()
-        provider_profile = getattr(profile_owner, 'service_provider_profile', None)
-        context['provider_profile'] = provider_profile
-
-        if provider_profile:
-            context['services'] = Service.objects.filter(provider=profile_owner, is_active=True)
-            context['service_reviews'] = ServiceReview.objects.filter(service__provider=profile_owner, is_approved=True).order_by('-created_at')[:5]
-            context['average_rating'] = ServiceReview.objects.filter(service__provider=profile_owner, is_approved=True).aggregate(Avg('rating'))['rating__avg']
-            context['review_count'] = ServiceReview.objects.filter(service__provider=profile_owner, is_approved=True).count()
-            context['portfolio_items'] = PortfolioItem.objects.filter(provider_profile=provider_profile).order_by('-uploaded_at')
-        else:
-            context['services'] = Service.objects.none()
-            context['service_reviews'] = ServiceReview.objects.none()
-            context['average_rating'] = None
-            context['review_count'] = 0
-            context['portfolio_items'] = PortfolioItem.objects.none()
-
-        context['page_title'] = _("{username}'s Provider Profile").format(username=profile_owner.username)
-        return context
-
+    success_url = reverse_lazy('core:service_provider_dashboard')
 
 @login_required
-def edit_service_provider_profile(request):
-    try:
-        provider_profile = request.user.service_provider_profile
-    except ServiceProviderProfile.DoesNotExist:
-        messages.error(request, _("You do not have a service provider profile to edit. Please register first."))
-        return redirect('core:become_service_provider')
-
+def submit_service_review(request, service_slug):
+    service = get_object_or_404(Service, slug=service_slug)
     if request.method == 'POST':
-        if 'submit_profile' in request.POST:
-            profile_form = ServiceProviderRegistrationForm(request.POST, request.FILES, instance=provider_profile)
-            if profile_form.is_valid():
-                profile_form.save()
-                messages.success(request, _("Provider profile updated successfully!"))
-                return redirect('core:edit_service_provider_profile')
-            else:
-                messages.error(request, _("Error updating profile. Please correct the issues below."))
-                portfolio_item_form = PortfolioItemForm()
-        elif 'submit_portfolio_item' in request.POST:
-            portfolio_item_form = PortfolioItemForm(request.POST, request.FILES)
-            if portfolio_item_form.is_valid():
-                item = portfolio_item_form.save(commit=False)
-                item.provider_profile = provider_profile
-                item.save()
-                messages.success(request, _("Portfolio item added successfully!"))
-                return redirect('core:edit_service_provider_profile')
-            else:
-                messages.error(request, _("Error adding portfolio item. Please correct the issues below."))
-                profile_form = ServiceProviderRegistrationForm(instance=provider_profile)
-        else:
-            profile_form = ServiceProviderRegistrationForm(instance=provider_profile)
-            portfolio_item_form = PortfolioItemForm()
-    else:
-        profile_form = ServiceProviderRegistrationForm(instance=provider_profile)
-        portfolio_item_form = PortfolioItemForm()
-
-    portfolio_items = PortfolioItem.objects.filter(provider_profile=provider_profile).order_by('-uploaded_at')
-
-    context = {
-        'profile_form': profile_form,
-        'portfolio_item_form': portfolio_item_form,
-        'portfolio_items': portfolio_items,
-        'page_title': _("Edit Provider Profile & Portfolio")
-    }
-    return render(request, 'core/edit_service_provider_profile.html', context)
-
-
-@login_required
-@require_POST
-def delete_portfolio_item(request, item_id):
-    try:
-        provider_profile = request.user.service_provider_profile
-        item = get_object_or_404(PortfolioItem, id=item_id, provider_profile=provider_profile)
-        item_title = item.title or "Untitled Item"
-        item.delete()
-        messages.success(request, _("Portfolio item '{title}' deleted successfully.").format(title=item_title))
-    except ServiceProviderProfile.DoesNotExist:
-        messages.error(request, _("You do not have a service provider profile."))
-    except PortfolioItem.DoesNotExist:
-        messages.error(request, _("Portfolio item not found or you do not have permission to delete it."))
-    except Exception as e:
-        messages.error(request, _("An error occurred: {error}").format(error=str(e)))
-    return redirect('core:edit_service_provider_profile')
-
-
-class IsVendorMixin(UserPassesTestMixin):
-    def test_func(self):
-        return self.request.user.is_authenticated and \
-               hasattr(self.request.user, 'vendor_profile') and \
-               self.request.user.vendor_profile is not None
-
-    def handle_no_permission(self):
-        if not self.request.user.is_authenticated:
-            return redirect(reverse('authapp:signin') + f'?next={self.request.path}') # Corrected redirect
-        messages.info(self.request, _("You need to register as a vendor to access this page."))
-        return redirect('core:sell_on_nexus') # Changed from vendor_registration to sell_on_nexus
-
-
-@login_required
-def vendor_registration_view(request):
-    if hasattr(request.user, 'vendor_profile') and request.user.vendor_profile:
-        messages.info(request, _("You are already registered as a vendor."))
-        return redirect('core:vendor_dashboard')
-
-    if request.method == 'POST':
-        form = VendorRegistrationForm(request.POST, request.FILES)
-        if form.is_valid():
-            vendor = form.save(commit=False)
-            vendor.user = request.user
-            vendor.save()
-            VendorShipping.objects.get_or_create(vendor=vendor)
-            VendorPayment.objects.get_or_create(vendor=vendor)
-            VendorAdditionalInfo.objects.get_or_create(vendor=vendor)
-            messages.success(request, _("Vendor registration submitted! Your application will be reviewed."))
-            return redirect('core:vendor_dashboard')
-    else:
-        form = VendorRegistrationForm()
-    context = {
-        'form': form,
-        'page_title': _("Become a Vendor")
-    }
-    return render(request, 'core/vendor_registration.html', context)
-
-
-class VendorDashboardView(LoginRequiredMixin, IsVendorMixin, TemplateView):
-    template_name = 'core/vendor_dashboard.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        vendor = self.request.user.vendor_profile
-
-        context['shop_info_complete'] = vendor.is_shop_info_complete()
-        context['business_info_status'] = vendor.get_business_info_status_display()
-        context['shipping_info_complete'] = vendor.is_shipping_info_complete()
-        context['payment_info_complete'] = vendor.is_payment_info_complete()
-        context['additional_info_complete'] = vendor.is_additional_info_complete()
-        context['all_sections_complete'] = all([
-            context['shop_info_complete'],
-            vendor.get_business_info_status_display() == 'COMPLETED',
-            context['shipping_info_complete'],
-            context['payment_info_complete'],
-            context['additional_info_complete']
-        ])
-
-        vendor_order_items = OrderItem.objects.filter(product__vendor=vendor)
-        context['total_sales'] = vendor_order_items.filter(order__status__in=['DELIVERED', 'COMPLETED']) \
-                                   .aggregate(total=Sum(F('quantity') * F('price')))['total'] or Decimal('0.00')
-        context['total_orders_count'] = Order.objects.filter(items__product__vendor=vendor).distinct().count()
-
-        vendor_products = Product.objects.filter(vendor=vendor)
-        context['active_products_count'] = vendor_products.filter(is_active=True).count()
-        context['total_products_count'] = vendor_products.count()
-        context['low_stock_products'] = vendor_products.filter(is_active=True, stock__lte=5, product_type='physical').order_by('stock')
-
-        context['recent_orders'] = Order.objects.filter(items__product__vendor=vendor).distinct().order_by('-created_at')[:5]
-
-        context['vendor'] = vendor
-        context['page_title'] = _("Vendor Dashboard") 
-        context['quick_links'] = [ # Ensure these names match your urls.py
-            {'name': _('View Products'), 'url_name': 'core:vendor_products', 'icon': 'fas fa-box-open'},
-            {'name': _('View Orders'), 'url_name': 'core:vendor_orders', 'icon': 'fas fa-receipt'},
-            {'name': _('Edit Store Profile'), 'url_name': 'core:vendor_profile_edit', 'icon': 'fas fa-store'},
-        ]
-        
-          # Add unread notification count
-        if self.request.user.is_authenticated:
-                context['unread_notification_count'] = Notification.objects.filter(recipient=self.request.user, is_read=False).count()
-        else:
-                context['unread_notification_count'] = 0 # Should not happen due to LoginRequiredMixin
-        
-        return context
-
-class VendorProductListView(LoginRequiredMixin, IsVendorMixin, ListView):
-    model = Product
-    template_name = 'core/vendor_product_list.html'
-    context_object_name = 'products'
-    paginate_by = 10
-
-    def get_queryset(self):
-        vendor = self.request.user.vendor_profile
-        queryset = Product.objects.filter(vendor=vendor).order_by('-created_at')
-
-        stock_status = self.request.GET.get('stock_status')
-        if stock_status == 'low':
-            queryset = queryset.filter(stock__lte=5, product_type='physical')
-        elif stock_status == 'out':
-            queryset = queryset.filter(stock=0, product_type='physical')
-
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['vendor'] = self.request.user.vendor_profile
-        context['page_title'] = _("Manage Products")
-        context['current_stock_status'] = self.request.GET.get('stock_status', '')
-        return context
-
-
-class VendorProductCreateView(LoginRequiredMixin, IsVendorMixin, CreateView):
-    model = Product
-    form_class = VendorProductForm
-    template_name = 'core/vendor_product_form.html'
-
-    def form_valid(self, form):
-        form.instance.vendor = self.request.user.vendor_profile
-        self.object = form.save()
-        product = self.object
-        images = self.request.FILES.getlist('images')
-        for img_file in images:
-            ProductImage.objects.create(product=product, image=img_file)
-        video_files = self.request.FILES.getlist('videos')
-        for vid_file in video_files:
-            ProductVideo.objects.create(product=product, video=vid_file)
-        messages.success(self.request, _("Product '{product_name}' created successfully! Images and videos (if provided) have been uploaded.").format(product_name=product.name))
-        return HttpResponseRedirect(self.get_success_url())
-
-    def get_success_url(self):
-        return reverse('core:vendor_product_list')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Add New Product")
-        context['form_title'] = _("Create Product")
-        context['is_update_form'] = False
-        return context
-
-class VendorProductUpdateView(LoginRequiredMixin, IsVendorMixin, UpdateView):
-    model = Product
-    form_class = VendorProductForm
-    template_name = 'core/vendor_product_form.html'
-
-    def get_queryset(self):
-        return Product.objects.filter(vendor=self.request.user.vendor_profile)
-
-    def form_valid(self, form):
-        self.object = form.save()
-        product = self.object
-        new_images = self.request.FILES.getlist('images')
-        for img_file in new_images:
-            ProductImage.objects.create(product=product, image=img_file)
-        new_video_files = self.request.FILES.getlist('videos')
-        for vid_file in new_video_files:
-            ProductVideo.objects.create(product=product, video=vid_file)
-        messages.success(self.request, _("Product '{product_name}' updated successfully!").format(product_name=product.name))
-        return HttpResponseRedirect(self.get_success_url())
-
-    def get_success_url(self):
-        return reverse('core:vendor_product_list')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Edit Product - {product_name}").format(product_name=self.object.name)
-        context['form_title'] = _("Edit Product")
-        context['existing_images'] = self.object.images.all()
-        context['existing_videos'] = self.object.videos.all()
-        context['is_update_form'] = True
-        return context
-
-class VendorProductDeleteView(LoginRequiredMixin, IsVendorMixin, DeleteView):
-    model = Product
-    template_name = 'core/vendor_product_confirm_delete.html'
-    success_url = reverse_lazy('core:vendor_product_list')
-
-    def get_queryset(self):
-        return Product.objects.filter(vendor=self.request.user.vendor_profile)
-
-    def delete(self, request, *args, **kwargs):
-        product_name = self.get_object().name
-        response = super().delete(request, *args, **kwargs)
-        messages.success(request, _("Product '{product_name}' has been deleted.").format(product_name=product_name))
-        return response
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Confirm Delete Product - {product_name}").format(product_name=self.object.name)
-        return context
-
-class VendorOrderListView(LoginRequiredMixin, IsVendorMixin, ListView):
-    model = Order
-    template_name = 'core/vendor_order_list.html'
-    context_object_name = 'orders'
-    paginate_by = 10
-
-    def get_queryset(self):
-        vendor = self.request.user.vendor_profile
-        return Order.objects.filter(items__product__vendor=vendor).distinct().order_by('-created_at')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['vendor'] = self.request.user.vendor_profile
-        context['page_title'] = _("Manage Orders")
-        for order in context['orders']:
-            order.vendor_items = order.items.filter(product__vendor=self.request.user.vendor_profile)
-        return context
-
-class VendorOrderDetailView(LoginRequiredMixin, IsVendorMixin, DetailView):
-    model = Order
-    template_name = 'core/vendor/vendor_order_detail.html' # Corrected path
-    context_object_name = 'order'
-
-    def get_queryset(self):
-        vendor = self.request.user.vendor_profile
-        return Order.objects.filter(items__product__vendor=vendor).distinct()
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        order = self.get_object()
-        vendor_profile = self.request.user.vendor_profile # Ensure vendor_profile is defined
-        context['vendor_order_items'] = order.items.filter(product__vendor=self.request.user.vendor_profile)
-        context['vendor'] = self.request.user.vendor_profile
-        context['page_title'] = _("Order Details - {order_id}").format(order_id=order.order_id)
-        context['google_maps_api_key'] = settings.GOOGLE_MAPS_API_KEY # Ensure this is always passed
-
-
- # --- Add Map Data for Vendor ---
-        context['show_map'] = False
-        context['vendor_location_lat'] = None
-        context['vendor_location_lng'] = None
-        context['delivery_lat'] = None
-        context['delivery_lng'] = None
-
-        # Check if vendor has coordinates
-        vendor_has_coords = vendor_profile.latitude is not None and vendor_profile.longitude is not None
-        if vendor_has_coords:
-            context['vendor_location_lat'] = float(vendor_profile.latitude)
-            context['vendor_location_lng'] = float(vendor_profile.longitude)
-
-        # Check if order shipping address has coordinates
-        shipping_address_has_coords = False
-        if order.shipping_address:
-            shipping_address_has_coords = order.shipping_address.latitude is not None and order.shipping_address.longitude is not None
-            if shipping_address_has_coords:
-                context['delivery_lat'] = float(order.shipping_address.latitude)
-                context['delivery_lng'] = float(order.shipping_address.longitude)
-
-        # Only show map if BOTH vendor and shipping address have coordinates
-        if vendor_has_coords and shipping_address_has_coords:
-            context['show_map'] = True
-
-        return context
-
-@login_required
-@require_POST
-def update_order_item_status_vendor(request, item_id):
-    vendor = request.user.vendor_profile
-    order_item = get_object_or_404(OrderItem, id=item_id, product__vendor=vendor)
-    new_status = request.POST.get('status')
-    allowed_statuses = ['PROCESSING', 'SHIPPED', 'DELIVERED_BY_VENDOR']
-
-    if new_status in allowed_statuses:
-        OrderNote.objects.create(
-            order=order_item.order,
-            user=request.user,
-            note=f"Vendor {vendor.name} updated item '{order_item.product.name}' status to {new_status}."
-        )
-        messages.success(request, _("Status for item '{item_name}' updated to {status}.").format(item_name=order_item.product.name, status=new_status))
-    else:
-        messages.error(request, _("Invalid status update."))
-
-    return redirect('core:vendor_order_detail', pk=order_item.order.pk)
-
-
-class VendorReportsView(LoginRequiredMixin, IsVendorMixin, TemplateView):
-    template_name = 'core/vendor_reports.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        vendor = self.request.user.vendor_profile
-
-        sales_data = OrderItem.objects.filter(
-            product__vendor=vendor,
-            order__status__in=['DELIVERED', 'COMPLETED']
-        ).annotate(month=TruncMonth('order__created_at')).values('month').annotate(
-            total_sales=Sum(F('quantity') * F('price'))
-        ).order_by('month')
-
-        context['sales_data_json'] = json.dumps(
-            [{'month': item['month'].strftime('%Y-%m'), 'total_sales': float(item['total_sales'])} for item in sales_data],
-            cls=DecimalEncoder
-        )
-
-        context['top_products'] = Product.objects.filter(vendor=vendor, order_items__order__status__in=['DELIVERED', 'COMPLETED']) \
-                                  .annotate(total_sold=Sum('order_items__quantity')) \
-                                  .order_by('-total_sold')[:5]
-
-        context['vendor'] = vendor
-        context['page_title'] = _("Sales & Performance Reports")
-        return context
-
-class DecimalEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Decimal):
-            return float(obj)
-        return super(DecimalEncoder, self).default(obj)
-
-
-class VendorProfileSectionUpdateView(LoginRequiredMixin, IsVendorMixin, UpdateView):
-    model = Vendor
-    template_name = 'core/vendor_profile_section_form.html'
-
-    def get_object(self, queryset=None):
-        return self.request.user.vendor_profile
-
-    def form_valid(self, form):
-        messages.success(self.request, _(f"{self.form_title} updated successfully!"))
-        vendor = self.get_object()
-        if vendor.is_onboarding_complete() and not vendor.is_approved:
-            messages.info(self.request, _("Your shop setup is complete and pending final review."))
-        return super().form_valid(form)
-    
-    def form_valid(self, form):
-        vendor_profile = form.save(commit=False)
-        vendor_profile.verification_status = Vendor.VERIFICATION_STATUS_PENDING_REVIEW
-        vendor_profile.verification_documents_submitted = True # Mark that some docs were submitted
-        vendor_profile.save()
-        messages.success(self.request, _("Your verification information has been submitted for review."))
-        return super().form_valid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['form_title'] = self.form_title
-        context['page_title'] = _("Edit {title} - Vendor Dashboard").format(title=self.form_title)
-        return context
-
-class VendorReviewListView(LoginRequiredMixin, IsVendorMixin, ListView):
-    model = VendorReview
-    template_name = 'core/vendor/vendor_review_list.html' # We'll create this template
-    context_object_name = 'reviews'
-    paginate_by = 10
-
-    def get_queryset(self):
-        # Filter reviews for the current vendor
-        return VendorReview.objects.filter(vendor=self.request.user.vendor_profile).order_by('-created_at')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['vendor'] = self.request.user.vendor_profile
-        context['page_title'] = _("Your Customer Reviews")
-        # Calculate average rating for the vendor
-        context['average_rating'] = VendorReview.objects.filter(vendor=self.request.user.vendor_profile, is_approved=True).aggregate(Avg('rating'))['rating__avg']
-        context['total_reviews'] = VendorReview.objects.filter(vendor=self.request.user.vendor_profile, is_approved=True).count()
-        return context
-
-
-class VendorPayoutListView(LoginRequiredMixin, IsVendorMixin, ListView):
-    model = PayoutRequest # Assuming PayoutRequest model is for vendors too, or you have a VendorPayoutRequest model
-    template_name = 'core/vendor/vendor_payout_list.html' # We'll need to create this template
-    context_object_name = 'payout_requests'
-    paginate_by = 10
-
-    def get_queryset(self):
-        # Filter payout requests for the current vendor
-        # This assumes PayoutRequest has a ForeignKey to Vendor or Vendor's User
-        # Adjust if your PayoutRequest model links to Vendor differently
-        return PayoutRequest.objects.filter(vendor_profile=self.request.user.vendor_profile).order_by('-requested_at')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['vendor'] = self.request.user.vendor_profile
-        context['page_title'] = _("My Payouts")
-        # You might want to add a form for requesting new payouts here if not on a separate page
-        return context
-
-    def get_success_url(self):
-        return reverse_lazy('core:vendor_dashboard')
-
-
-class EditVendorProfileView(VendorProfileSectionUpdateView):
-    form_class = VendorProfileUpdateForm
-    form_title = _("Shop Information")
-
-# class EditVendorVerificationView(VendorProfileSectionUpdateView): # Commented out old view
-#     form_class = VendorVerificationForm # This form is no longer defined or used
-#     form_title = _("Business/Verification Information")
-
-#     def form_valid(self, form):
-#         vendor = form.save(commit=False)
-#         vendor.save()
-#         messages.success(self.request, _("Verification information updated. This may be subject to review."))
-#         return HttpResponseRedirect(self.get_success_url())
-
-
-class MultiStepVendorVerificationView(LoginRequiredMixin, IsVendorMixin, View):
-    template_name = 'core/vendor_verification_multistep.html' # New template for multi-step
-
-    STEP_METHOD = 'method_selection'
-    STEP_BUSINESS = 'business_details'
-    STEP_INDIVIDUAL = 'individual_details'
-    STEP_CONFIRMATION = 'confirmation'
-
-    step_forms = {
-        STEP_METHOD: VerificationMethodSelectionForm,
-        STEP_BUSINESS: BusinessDetailsForm,
-        STEP_INDIVIDUAL: IndividualDetailsForm,
-        STEP_CONFIRMATION: VerificationConfirmationForm,
-    }
-
-    def get_vendor_profile(self):
-        return self.request.user.vendor_profile
-
-    def dispatch(self, request, *args, **kwargs):
-        if 'verification_step' not in request.session:
-            request.session['verification_step'] = self.STEP_METHOD
-            request.session['verification_data'] = {} # Initialize if not present
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_current_step(self):
-        return self.request.session.get('verification_step', self.STEP_METHOD)
-
-    def get_form_class(self, step=None):
-        current_step = step or self.get_current_step()
-        return self.step_forms.get(current_step)
-
-    def get_form_kwargs(self, step=None, form_class=None):
-        kwargs = {}
-        current_step = step or self.get_current_step()
-        _form_class = form_class or self.get_form_class(current_step)
-
-        if issubclass(_form_class, forms.ModelForm):
-            kwargs['instance'] = self.get_vendor_profile()
-        
-        # Load initial data from session for the current step, if any
-        # This is useful for non-ModelForms or if you want to pre-fill ModelForms from session
-        # For ModelForms, the instance usually handles pre-filling from the DB.
-        # However, for the 'method_selection' step, we might want to load the choice from session.
-        session_data_for_step = self.request.session.get('verification_data', {}).get(current_step, {})
-        
-        # If editing and method already set on vendor, use that as initial for the first step
-        if current_step == self.STEP_METHOD:
-            vendor_profile = self.get_vendor_profile()
-            if vendor_profile.verification_method and not session_data_for_step.get('verification_method'):
-                session_data_for_step['verification_method'] = vendor_profile.verification_method
-        
-        if session_data_for_step:
-            kwargs['initial'] = session_data_for_step
-        return kwargs
-
-    def get_next_step(self, current_step):
-        # Get verification_method from session, as it's decided in the first step
-        method = self.request.session.get('verification_data', {}).get(self.STEP_METHOD, {}).get('verification_method')
-        # Fallback to vendor profile if session is somehow empty (e.g., direct access to a later step URL)
-        if not method:
-            method = self.get_vendor_profile().verification_method
-
-        if current_step == self.STEP_METHOD:
-            if method == Vendor.VERIFICATION_METHOD_BUSINESS:
-                return self.STEP_BUSINESS
-            elif method == Vendor.VERIFICATION_METHOD_INDIVIDUAL:
-                return self.STEP_INDIVIDUAL
-        elif current_step == self.STEP_BUSINESS or current_step == self.STEP_INDIVIDUAL:
-            return self.STEP_CONFIRMATION
-        return None # No next step after confirmation
-
-    def get_previous_step(self, current_step):
-        method = self.request.session.get('verification_data', {}).get(self.STEP_METHOD, {}).get('verification_method')
-        if not method:
-            method = self.get_vendor_profile().verification_method
-
-        if current_step == self.STEP_CONFIRMATION:
-            if method == Vendor.VERIFICATION_METHOD_BUSINESS:
-                return self.STEP_BUSINESS
-            elif method == Vendor.VERIFICATION_METHOD_INDIVIDUAL:
-                return self.STEP_INDIVIDUAL
-        elif current_step == self.STEP_BUSINESS or current_step == self.STEP_INDIVIDUAL:
-            return self.STEP_METHOD
-        return None # No previous step from method selection
-
-    def get(self, request, *args, **kwargs):
-        current_step = self.get_current_step()
-        form_class = self.get_form_class(current_step)
-        form = form_class(**self.get_form_kwargs(current_step, form_class))
-        context = self.get_context_data(form=form, current_step=current_step)
-        return render(request, self.template_name, context)
-
-    def post(self, request, *args, **kwargs):
-        current_step = self.get_current_step()
-        form_class = self.get_form_class(current_step)
-        form_kwargs = self.get_form_kwargs(current_step, form_class)
-        
-        # For ModelForms, ensure instance is passed for updates
-        # For simple forms, data and files are enough
-        form_kwargs.update({'data': request.POST, 'files': request.FILES if request.FILES else None})
-        
-        form = form_class(**form_kwargs)
-        vendor_profile = self.get_vendor_profile()
-
-        action = request.POST.get('action')
-        if action == 'previous':
-            prev_step = self.get_previous_step(current_step)
-            if prev_step:
-                request.session['verification_step'] = prev_step
-            # No need to save data when going previous, just redirect
-            return redirect(reverse('core:vendor_verification_multistep'))
+        form = ServiceReviewForm(request.POST)
+
+        if ServiceReview.objects.filter(service=service, user=request.user).exists():
+            messages.warning(request, _("You have already reviewed this service."))
+            return redirect(service.get_absolute_url())
 
         if form.is_valid():
-            # Store cleaned data in session
-             session_step_data = {}
-        for key, value in form.cleaned_data.items():
-                if not isinstance(value, (InMemoryUploadedFile, FieldFile)): # Exclude file objects and FieldFile objects
-                    session_step_data[key] = value
-                # For file fields, we rely on form.save() for ModelForms.
-                # If this step was a non-ModelForm with a file, we'd need to handle the file
-                # (e.g., save to temp storage) and store a reference in session_step_data.
-            
-        self.request.session.setdefault('verification_data', {})[current_step] = session_step_data
-        self.request.session.modified = True # Ensure session is saved
-
-            # If it's a ModelForm step, save to the instance immediately
-        if isinstance(form, forms.ModelForm):
-                # Special handling for verification_method as it's on Vendor model but from a simple form
-                if current_step == self.STEP_METHOD:
-                    vendor_profile.verification_method = form.cleaned_data['verification_method']
-                    vendor_profile.save(update_fields=['verification_method'])
-                else: # For BusinessDetailsForm and IndividualDetailsForm
-                    # Re-initialize form with instance for saving, if not already done by get_form_kwargs
-                    # This ensures that `form.save()` updates the correct instance.
-                    if 'instance' not in form_kwargs: # Should be there for ModelForms
-                        form = form_class(request.POST, request.FILES, instance=vendor_profile)
-                        if not form.is_valid(): # Re-validate if re-initialized
-                            context = self.get_context_data(form=form, current_step=current_step)
-                            return render(request, self.template_name, context)
-                    form.save() # Saves data to the vendor_profile instance
-
-        if current_step == self.STEP_CONFIRMATION:
-                # Final submission logic: apply all session data to the vendor profile
-                # This is mostly for non-ModelForm steps or if we want to re-apply all data
-                # For ModelForms, data is already saved per step.
-                # Here, we mainly set the final status.
-                
-                # Ensure verification_method is set from session if it was the first step
-                method_data = self.request.session.get('verification_data', {}).get(self.STEP_METHOD, {})
-                if 'verification_method' in method_data:
-                    vendor_profile.verification_method = method_data['verification_method']
-
-                vendor_profile.verification_status = Vendor.VERIFICATION_STATUS_PENDING_REVIEW
-                vendor_profile.verification_documents_submitted = True # Mark that some docs were submitted
-                vendor_profile.save() # Save final status and any other pending changes
-
-                # Clear session data after successful submission
-                if 'verification_step' in request.session: del request.session['verification_step']
-                if 'verification_data' in request.session: del request.session['verification_data']
-                request.session.modified = True
-
-                messages.success(request, _("Your verification information has been submitted for review."))
-                return redirect('core:vendor_dashboard')
-
-        next_step = self.get_next_step(current_step)
-        if next_step:
-                request.session['verification_step'] = next_step
-                return redirect(reverse('core:vendor_verification_multistep'))
-        else: # Should be final step case handled above
-                messages.error(request, _("An error occurred in the verification process flow."))
-                return redirect('core:vendor_dashboard')
-        
-        # Form is not valid, re-render the current step with errors
-        context = self.get_context_data(form=form, current_step=current_step)
-        return render(request, self.template_name, context)
-
-    def get_context_data(self, **kwargs):
-        context = {} # Initialize context
-        current_step = kwargs.get('current_step', self.get_current_step())
-        context['form'] = kwargs.get('form') # The form instance passed from get() or post()
-        context['current_step'] = current_step
-        context['page_title'] = _("Vendor Verification")
-        context['form_title'] = self._get_step_title(current_step)
-        context['show_previous_button'] = self.get_previous_step(current_step) is not None
-        return context
-
-    def _get_step_title(self, step):
-        if step == self.STEP_METHOD: return _("Step 1: Select Verification Method")
-        elif step == self.STEP_BUSINESS: return _("Step 2: Business Details")
-        elif step == self.STEP_INDIVIDUAL: return _("Step 2: Individual Details")
-        elif step == self.STEP_CONFIRMATION: return _("Step 3: Confirm and Submit")
-        return _("Vendor Verification")
-
-
-class EditVendorShippingView(VendorProfileSectionUpdateView):
-    form_class = VendorShippingForm
-    form_title = _("Shipping Information")
-
-class EditVendorPaymentView(VendorProfileSectionUpdateView):
-    form_class = VendorPaymentForm
-    form_title = _("Payment Information")
-
-class EditVendorAdditionalInfoView(VendorProfileSectionUpdateView):
-    form_class = VendorAdditionalInfoForm
-    form_title = _("Additional Information")
-
-# --- START: Service Provider Dashboard Views ---
-class IsServiceProviderMixin(UserPassesTestMixin):
-    """
-    Mixin to ensure the user is an authenticated service provider and their profile is approved.
-    Redirects to a "become a provider" page or a "pending approval" page if not.
-    """
-    def test_func(self):
-        if not self.request.user.is_authenticated:
-            return False
-        try:
-            # Check if the user has a service provider profile
-            profile = self.request.user.service_provider_profile
-            # Optionally, check if the profile is approved
-            # return profile.is_approved
-            return True # For now, just check if profile exists
-        except ServiceProviderProfile.DoesNotExist:
-            return False
-
-    def handle_no_permission(self):
-        if not self.request.user.is_authenticated:
-            return redirect_to_login(self.request.get_full_path())
-        # If user is authenticated but not a service provider (or not approved)
-        # messages.info(self.request, _("You need to register as a service provider to access this page."))
-        return redirect(reverse('core:become_service_provider')) # Or a specific "pending approval" page
-
-class ServiceProviderDashboardView(LoginRequiredMixin, IsServiceProviderMixin, TemplateView):
-    template_name = 'core/provider_dashboard.html' # Point to the template you want to keep
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        provider_profile = None
-        services_qs = Service.objects.none() # Default to an empty queryset
-        recent_bookings_qs = ServiceBooking.objects.none()
-
-        try:
-            provider_profile = self.request.user.service_provider_profile
-            services_qs = Service.objects.filter(provider=self.request.user)
-            # Fetch recent bookings related to this provider's services
-            # Assuming ServiceBooking model links to ServicePackage which links to Service
-            recent_bookings_qs = ServiceBooking.objects.filter(
-                service_package__service__provider=self.request.user
-            ).select_related('service_package__service', 'user').order_by('-created_at')[:5] # Get latest 5
-
-        except ServiceProviderProfile.DoesNotExist:
-            # This case should ideally be handled by IsServiceProviderMixin,
-            # but good to have a fallback.
-            pass
-
-        context['service_provider_profile'] = provider_profile
-        context['total_services_count'] = services_qs.count()
-        context['active_services_count'] = services_qs.filter(is_active=True).count()
-        context['recent_bookings'] = recent_bookings_qs
-        context['page_title'] = _("Service Provider Dashboard")
-        return context
-
-class ServiceProviderServicesListView(LoginRequiredMixin, IsServiceProviderMixin, ListView):
-    model = Service
-    template_name = 'core/service_provider/service_provider_services_list.html' # New template
-    context_object_name = 'services'
-    paginate_by = 10
-
-    def get_queryset(self):
-        # Filter services to show only those belonging to the logged-in provider
-        return Service.objects.filter(provider=self.request.user).order_by('-created_at')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("My Services")
-        # Optionally, add counts or other relevant info
-        # context['active_services_count'] = self.get_queryset().filter(is_active=True).count()
-        # context['inactive_services_count'] = self.get_queryset().filter(is_active=False).count()
-        return context
-
-# We can reuse existing Create, Update, Delete views for services,
-# ensuring their querysets are filtered by the logged-in provider.
-# ServiceCreateView, ServiceUpdateView, ServiceDeleteView are already defined.
-
-# --- END: Service Provider Dashboard Views ---
-
-
-class ServiceProviderBookingsListView(LoginRequiredMixin, IsServiceProviderMixin, ListView):
-    model = ServiceBooking # Assuming you have a ServiceBooking model
-    template_name = 'core/service_provider/service_provider_bookings_list.html' # New template
-    context_object_name = 'bookings'
-    paginate_by = 15
-
-    def get_queryset(self):
-        # Filter bookings to show only those related to the logged-in provider's services
-        # This assumes ServiceBooking -> ServicePackage -> Service -> User (provider)
-        return ServiceBooking.objects.filter(
-            service_package__service__provider=self.request.user
-        ).select_related(
-            'service_package__service', 'user', 'service_package'
-        ).order_by('-booking_date', '-created_at')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("My Bookings")
-        return context
-
-
-class ServiceProviderPayoutRequestListView(LoginRequiredMixin, IsServiceProviderMixin, ListView):
-    model = PayoutRequest
-    template_name = 'core/service_provider/service_provider_payout_request_list.html' # New template
-    context_object_name = 'payout_requests'
-    paginate_by = 10
-
-    def get_queryset(self):
-        return PayoutRequest.objects.filter(service_provider_profile=self.request.user.service_provider_profile).order_by('-requested_at')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("My Payout Requests")
-        # TODO: Calculate available balance for payout
-        # context['available_balance_for_payout'] = ...
-        return context
-
-class ServiceProviderPayoutRequestCreateView(LoginRequiredMixin, IsServiceProviderMixin, CreateView):
-    model = PayoutRequest
-    form_class = ServiceProviderPayoutRequestForm
-    template_name = 'core/service_provider/service_provider_payout_request_form.html' # New template
-    success_url = reverse_lazy('core:service_provider_payout_requests') # Redirect to list after creation
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['service_provider_profile'] = self.request.user.service_provider_profile
-        return kwargs
-
-    def form_valid(self, form):
-        form.instance.service_provider_profile = self.request.user.service_provider_profile
-        messages.success(self.request, _("Your payout request has been submitted successfully."))
-        return super().form_valid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Request New Payout")
-        if hasattr(self.request.user, 'service_provider_profile') and self.request.user.service_provider_profile:
-            context['available_balance_for_payout'] = self.request.user.service_provider_profile.get_available_payout_balance()
-        return context
-
-
-class VendorPromotionListView(LoginRequiredMixin, IsVendorMixin, ListView):
-    model = Promotion
-    template_name = 'core/vendor_promotion_list.html'
-    context_object_name = 'promotions'
-    paginate_by = 10
-
-    def get_queryset(self):
-        return Promotion.objects.filter(applicable_vendor=self.request.user.vendor_profile).order_by('-start_date')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Manage Promotions")
-        return context
-
-class VendorPromotionCreateView(LoginRequiredMixin, IsVendorMixin, CreateView):
-    model = Promotion
-    form_class = PromotionForm
-    template_name = 'core/vendor_promotion_form.html'
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['vendor'] = self.request.user.vendor_profile
-        return kwargs
-
-    def form_valid(self, form):
-        form.instance.applicable_vendor = self.request.user.vendor_profile # Changed from vendor to applicable_vendor
-        messages.success(self.request, _("Promotion created successfully."))
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse('core:vendor_promotion_list')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Create New Promotion")
-        context['form_title'] = _("Create Promotion")
-        return context
-
-class VendorPromotionUpdateView(LoginRequiredMixin, IsVendorMixin, UpdateView):
-    model = Promotion
-    form_class = PromotionForm
-    template_name = 'core/vendor_promotion_form.html'
-
-    def get_queryset(self):
-        return Promotion.objects.filter(applicable_vendor=self.request.user.vendor_profile) # Changed from vendor
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['vendor'] = self.request.user.vendor_profile
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, _("Promotion updated successfully."))
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse('core:vendor_promotion_list')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Edit Promotion")
-        context['form_title'] = _("Edit Promotion")
-        return context
-
-class VendorPromotionDeleteView(LoginRequiredMixin, IsVendorMixin, DeleteView):
-    model = Promotion
-    template_name = 'core/vendor_promotion_confirm_delete.html'
-    success_url = reverse_lazy('core:vendor_promotion_list')
-
-    def get_queryset(self):
-        return Promotion.objects.filter(applicable_vendor=self.request.user.vendor_profile) # Changed from vendor
-
-    def delete(self, request, *args, **kwargs):
-        response = super().delete(request, *args, **kwargs)
-        messages.success(request, _("Promotion deleted successfully."))
-        return response
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Confirm Delete Promotion")
-        return context
-
-
-class VendorCampaignListView(LoginRequiredMixin, IsVendorMixin, ListView):
-    model = AdCampaign
-    template_name = 'core/vendor_campaign_list.html'
-    context_object_name = 'campaigns'
-    paginate_by = 10
-
-    def get_queryset(self):
-        return AdCampaign.objects.filter(vendor=self.request.user.vendor_profile).order_by('-start_date')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Manage Ad Campaigns")
-        return context
-
-class VendorCampaignCreateView(LoginRequiredMixin, IsVendorMixin, CreateView):
-    model = AdCampaign
-    form_class = AdCampaignForm
-    template_name = 'core/vendor_campaign_form.html'
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['vendor'] = self.request.user.vendor_profile
-        return kwargs
-
-    def form_valid(self, form):
-        form.instance.vendor = self.request.user.vendor_profile
-        messages.success(self.request, _("Ad Campaign created successfully."))
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse('core:vendor_campaign_list')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Create New Ad Campaign")
-        context['form_title'] = _("Create Ad Campaign")
-        return context
-
-class VendorCampaignUpdateView(LoginRequiredMixin, IsVendorMixin, UpdateView):
-    model = AdCampaign
-    form_class = AdCampaignForm
-    template_name = 'core/vendor_campaign_form.html'
-
-    def get_queryset(self):
-        return AdCampaign.objects.filter(vendor=self.request.user.vendor_profile)
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['vendor'] = self.request.user.vendor_profile
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, _("Ad Campaign updated successfully."))
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse('core:vendor_campaign_list')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Edit Ad Campaign")
-        context['form_title'] = _("Edit Ad Campaign")
-        return context
-
-class VendorCampaignDeleteView(LoginRequiredMixin, IsVendorMixin, DeleteView):
-    model = AdCampaign
-    template_name = 'core/vendor_campaign_confirm_delete.html'
-    success_url = reverse_lazy('core:vendor_campaign_list')
-
-    def get_queryset(self):
-        return AdCampaign.objects.filter(vendor=self.request.user.vendor_profile)
-
-    def delete(self, request, *args, **kwargs):
-        response = super().delete(request, *args, **kwargs)
-        messages.success(request, _("Ad Campaign deleted successfully."))
-        return response
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Confirm Delete Ad Campaign")
-        return context
-
-class AboutUsView(TemplateView):
-    template_name = "core/static/about_us.html"
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("About Us")
-        return context
-
-class ContactUsView(TemplateView):
-    template_name = "core/static/contact_us.html"
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Contact Us")
-        return context
-
-class TermsView(TemplateView):
-    template_name = "core/static/terms_and_conditions.html"
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        try:
-            context['terms'] = TermsAndConditions.objects.latest('version')
-        except TermsAndConditions.DoesNotExist:
-            context['terms'] = None
-        context['page_title'] = _("Terms and Conditions")
-        return context
-
-class PrivacyPolicyView(TemplateView):
-    template_name = "core/static/privacy_policy.html"
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        try:
-            context['policy'] = PrivacyPolicy.objects.latest('version')
-        except PrivacyPolicy.DoesNotExist:
-            context['policy'] = None
-        context['page_title'] = _("Privacy Policy")
-        return context
-
-
-def custom_404(request, exception):
-    return render(request, 'errors/404.html', {}, status=404)
-
-def custom_500(request):
-    return render(request, 'errors/500.html', {}, status=500)
-
-class HelpPageView(TemplateView):
-    template_name = "core/help_page.html"
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Help & Support")
-        return context
-    
+            review = form.save(commit=False)
+            review.service = service
+            review.user = request.user
+            review.save()
+
+            # --- Create a notification for the service provider ---
+            provider = service.provider
+            Notification.objects.create(
+                recipient=provider,
+                message=_("You have a new {rating}-star review for your service '{service_title}' from {user}.").format(rating=review.rating, service_title=service.title, user=request.user.get_full_name() or request.user.username),
+                link=reverse('core:service_provider_review_reply', kwargs={'pk': review.pk})
+            )
+            messages.success(request, _("Your review has been submitted successfully!"))
+            return redirect(service.get_absolute_url())
+    return redirect(service.get_absolute_url())
 
 @login_required
-@require_POST
-def ajax_enhance_product_description(request):
-    """
-    AJAX view to enhance product description using Gemini AI.
-    Expects JSON POST data: product_name, category_name, current_description, keywords (optional)
-    """
-    if not (hasattr(request.user, 'vendor_profile') and request.user.vendor_profile):
-        return JsonResponse({'error': _('User is not a vendor.')}, status=403)
-
-    try:
-        data = json.loads(request.body)
-        product_name = data.get('product_name', '').strip()
-        category_name = data.get('category_name', '').strip()
-        current_description = data.get('current_description', '').strip()
-        keywords = data.get('keywords', '').strip() # Get keywords from AJAX data
-
-        if not product_name or not category_name:
-            return JsonResponse({'error': _('Product name and category are required.')}, status=400)
-
-        prompt = f"""You are an expert e-commerce copywriter tasked with enhancing a product description for NEXUS marketplace.
-Product Name: "{product_name}"
-Category: "{category_name}"
-Current Description (if any): "{current_description if current_description else 'None provided. Please generate a compelling description from scratch.'}"
-Optional Keywords provided by vendor: "{keywords if keywords else 'Not provided'}"
-
-Task:
-Rewrite or generate a compelling, engaging, and SEO-friendly product description of about 100-150 words.
-Highlight key features and benefits.
-Use a persuasive and professional tone.
-If keywords are provided, try to naturally incorporate them.
-Ensure the description is unique and well-structured.
-
-Enhanced Description:
-"""
-        logger.info(f"AI Description Enhancement - Prompt for '{product_name}':\n{prompt}")
-        enhanced_description = generate_text_with_gemini(prompt)
-
-        if enhanced_description and not enhanced_description.startswith("Error:"):
-            return JsonResponse({'enhanced_description': enhanced_description.strip()})
-        else:
-            logger.error(f"AI Description Enhancement - Gemini error for '{product_name}': {enhanced_description}")
-            return JsonResponse({'error': _('Failed to enhance description with AI. Please try again or write manually.') + f" (Details: {enhanced_description})"}, status=500)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': _('Invalid JSON data.')}, status=400)
-    except Exception as e:
-        logger.error(f"AI Description Enhancement - Unexpected error for '{product_name}': {e}", exc_info=True)
-        return JsonResponse({'error': _('An unexpected error occurred.')}, status=500)
-    
-@login_required
-@require_POST
-def ajax_generate_3d_model(request):
-    """
-    AJAX view to simulate initiating an AI 3D model generation process for a product.
-    Expects JSON POST data: product_id
-    """
-    vendor_profile = getattr(request.user, 'vendor_profile', None)
-    if not vendor_profile:
-        return JsonResponse({'error': _('User is not a vendor.')}, status=403)
-
-
-    try:
-        data = json.loads(request.body)
-        product_id = data.get('product_id')
-
-        if not product_id:
-            return JsonResponse({'error': _('Product ID is required.')}, status=400)
-
-        product = get_object_or_404(Product, id=product_id, vendor=vendor_profile)
-
-        # Check for premium feature access
-        if not vendor_profile.has_premium_3d_generation_access:
-            logger.warning(f"Vendor {vendor_profile.name} (ID: {vendor_profile.id}) attempted to use premium 3D generation without access for product {product.id}.")
-            # Customize this message or redirect to an upgrade page
-            return JsonResponse({'error': _('This is a premium feature. Please upgrade your plan or contact support to enable AI 3D model generation.')}, status=403)
-
-        # Gather information that would be sent to the AI service
-        product_name = product.name
-        description = product.description
-        category_name = product.category.name if product.category else "N/A"
-        keywords = product.keywords_for_ai or ""
-        existing_2d_images = [img.image.url for img in product.images.all() if img.image]
-        # For actual API calls, you might need to pass image file paths or bytes, not just URLs.
-        # This would require fetching the image files from storage.
-
-        logger.info(
-            f"AI 3D Model Generation Request for Product ID: {product.id}\n"
-            f"Name: {product_name}\n"
-            f"Category: {category_name}\n"
-            f"Description: {description[:100]}...\n"
-            f"Keywords: {keywords}\n"
-            f"Number of 2D Images: {len(existing_2d_images)}"
-        )
-
-        # --- Placeholder for actual AI Service Integration ---
-        # Example: Triggering a Celery task
-        # from .tasks import generate_3d_model_task # You would create this Celery task
-
-        # try:
-        #     # Prepare data for the task (e.g., image file paths or bytes)
-        #     image_paths_for_task = [img.image.path for img in product.images.all() if img.image and hasattr(img.image, 'path')]
-
-        #     generate_3d_model_task.delay(
-        #         product_id=product.id,
-        #         product_name=product_name,
-        #         description=description,
-        #         image_paths=image_paths_for_task # Or image_bytes
-        #         # ... other necessary parameters for the chosen AI service
-        #     )
-        #     logger.info(f"Celery task initiated for 3D model generation for product ID: {product.id}")
-        #     return JsonResponse({'status': 'processing', 'message': _("AI 3D model generation has been started. You will be notified when it's ready. This may take several minutes.")})
-        # except Exception as e:
-        #     logger.error(f"Failed to initiate Celery task for 3D model generation (Product ID: {product.id}): {e}", exc_info=True)
-        #     return JsonResponse({'error': _('Could not start the 3D model generation process. Please try again later.')}, status=500)
-
-        return JsonResponse({'status': 'success', 'message': _("SIMULATED: AI 3D model generation process would be initiated here. You will be notified when it's ready. For now, please save any other product changes. The actual 3D model will need to be uploaded manually once available from the generation service.")})
-
-    except Product.DoesNotExist:
-        return JsonResponse({'error': _('Product not found or you do not have permission to access it.')}, status=404)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': _('Invalid JSON data.')}, status=400)
-    except Exception as e:
-        logger.error(f"AI 3D Model Generation - Unexpected error for product ID '{product_id}': {e}", exc_info=True)
-        return JsonResponse({'error': _('An unexpected error occurred while initiating 3D model generation.')}, status=500)
-
-def get_chatbot_knowledge_base_content(user_message=""):
-    """
-    Constructs the knowledge base content for the chatbot.
-    """
-    knowledge_parts = []
-
-    # Fetch active Terms and Conditions
-    try:
-        terms = TermsAndConditions.objects.filter(is_active=True).latest('effective_date')
-        knowledge_parts.append(f"Terms and Conditions (Version: {terms.version}, Effective: {terms.effective_date}):\n{terms.content}\n---")
-    except TermsAndConditions.DoesNotExist:
-        logger.warning("Chatbot Knowledge Base: Active Terms and Conditions not found.")
-
-    # Fetch active Privacy Policy
-    try:
-        policy = PrivacyPolicy.objects.filter(is_active=True).latest('effective_date')
-        knowledge_parts.append(f"Privacy Policy (Version: {policy.version}, Effective: {policy.effective_date}):\n{policy.content}\n---")
-    except PrivacyPolicy.DoesNotExist:
-        logger.warning("Chatbot Knowledge Base: Active Privacy Policy not found.")
-
-    # Fetch some relevant FAQs (e.g., top 5 or based on keywords in user_message - simplified here)
-    faqs = FAQ.objects.filter(is_active=True).order_by('display_order')[:10] # Get top 10 active FAQs
-    if faqs:
-        faq_content = "\n\nFrequently Asked Questions (FAQs):\n"
-        for faq_item in faqs:
-            faq_content += f"Q: {faq_item.question}\nA: {faq_item.answer}\n---\n"
-        knowledge_parts.append(faq_content)
-
-    return "\n".join(knowledge_parts)
-
-@require_POST # For now, let's assume chat messages are sent via POST
-# @csrf_exempt # REMOVE THIS LINE - CSRF token will now be enforced by default if not present
-def ajax_chatbot_message(request):
-    """
-    AJAX view to handle chatbot messages using Gemini AI.
-    Expects JSON POST data: user_message, conversation_history (optional), page_context (optional)
-    """
-    try:
-        data = json.loads(request.body)
-        user_message = data.get('user_message', '').strip()
-        conversation_history = data.get('conversation_history', []) 
-        page_context_data = data.get('page_context', {}) # Get page context
-
-        if not user_message:
-            return JsonResponse({'error': _('Message cannot be empty.')}, status=400)
-
-        # --- Enhanced System Prompt ---
-        system_prompt = """You are NEXUS Chat, a friendly and highly capable customer support assistant for the NEXUS online marketplace.
-Your primary goal is to answer customer questions accurately and helpfully based *only* on the 'Provided Knowledge Base' below.
-Do not use any external knowledge or make assumptions.
-If the answer to the user's question cannot be found in the Provided Knowledge Base, or if the question is too complex for you to handle (e.g., requires personal account access, or is a complaint needing human review), you MUST clearly state that you don't have the specific information and will escalate the query to a human support agent.
-Do NOT attempt to answer if the information is not in the knowledge base.
-"""
-        # --- Incorporate Page Context into the Prompt ---
-        product_details_for_ai_prompt = "" # Initialize to empty string
-        
-        contextual_info_for_ai = ""
-        if page_context_data:
-            contextual_info_for_ai += "\n\n[User's Current Context on NEXUS Marketplace]:"
-            if page_context_data.get('page_title'):
-                contextual_info_for_ai += f"\n- Page Title: \"{page_context_data.get('page_title')}\""
-            # The URL itself might be too noisy for the prompt unless specifically needed.
-            # if page_context_data.get('url'):
-            #     contextual_info_for_ai += f"\n- Viewing Page URL: {page_context_data.get('url')}"
-
-            product_id_on_page = page_context_data.get('product_id_on_page')
-            if product_id_on_page:
-                try:
-                    # IMPORTANT: Validate product_id_on_page thoroughly if used for DB queries
-                    product_id = int(product_id_on_page) # Convert to integer
-                    product = Product.objects.select_related('category').get(id=product_id, is_active=True) # Fetch safely
-                    
-                    # Prepare more detailed product information for the AI
-                    # Replacing newlines in description to keep the prompt cleaner
-                    clean_description = product.description[:250].replace('\n', ' ').replace('\r', '')
-                    # This will be added after the main system prompt and before the knowledge base
-                    product_details_for_ai_prompt = f"""\n\n[Details for Product Currently Being Viewed: "{product.name}"]:
-Product Name: "{product.name}"
-Product Category: "{product.category.name if product.category else 'N/A'}"
-Description Snippet: "{clean_description}..."
-Price: {product.price} 
-Product Page: {request.build_absolute_uri(product.get_absolute_url())}""" # Use request to build full URL
-
-                except (Product.DoesNotExist, ValueError, TypeError) as e:
-                    # Log this, but don't break the chat if product ID is invalid or not found
-                    logger.warning(f"Chatbot: Could not retrieve product details for product_id_on_page: {product_id_on_page} - {e}")
-                    product_details_for_ai_prompt = "\n\n[User might be on a product page, but specific product details could not be retrieved for the provided ID.]"
-            # Add more context as needed (e.g., category_on_page)
-            if contextual_info_for_ai: # Add separator only if context exists
-                contextual_info_for_ai += "\n---"
-
-        # --- Fetch Knowledge Base Content ---
-        knowledge_base_content = get_chatbot_knowledge_base_content(user_message)
-        if not knowledge_base_content:
-            knowledge_base_content = "No specific knowledge base articles are available for this query at the moment."
-
-        # --- Construct the full prompt ---
-        initial_prompt_content = system_prompt
-        if contextual_info_for_ai: # Add if available
-            initial_prompt_content += contextual_info_for_ai
-        if product_details_for_ai_prompt: # Add if available
-            initial_prompt_content += product_details_for_ai_prompt
-        
-        initial_prompt_content += f"\n\nUser's Question: \"{user_message}\""
-        initial_prompt_content += f"\n\nProvided Knowledge Base:\n---\n{knowledge_base_content}\n---\n"
-
-        prompt_parts = [initial_prompt_content]
-        for entry in conversation_history: # conversation_history is now the sliced version from frontend
-            role = "User" if entry.get('role') == 'user' else "NEXUS Chat"
-            prompt_parts.append(f"{role}: {entry.get('text')}")
-        prompt_parts.append("NEXUS Chat:") # Cue for the AI to respond
-        full_prompt_text = "\n".join(prompt_parts)
-
-        logger.info(f"Chatbot - Prompt (with context) for user message '{user_message}':\n{full_prompt_text}")
-        ai_response_text = generate_text_with_gemini(full_prompt_text)
-
-        if ai_response_text and not ai_response_text.startswith("Error:"):
-            # TODO: Intent recognition and action mapping would go here for more advanced features.
-            # Check if AI response indicates escalation
-            if "escalate this query" in ai_response_text.lower() or \
-               "escalate it to a human" in ai_response_text.lower() or \
-               "human support agent" in ai_response_text.lower():
-                logger.info(f"Chatbot indicated escalation for user: {request.user.username if request.user.is_authenticated else 'Anonymous'}, message: '{user_message}'")
-                # Future: Create a SupportTicket or send an admin notification here.
-                # SupportTicket.objects.create(user=request.user if request.user.is_authenticated else None, subject=f"Chatbot Escalation: {user_message[:50]}...", description=f"User: {user_message}\nAI: {ai_response_text}\nHistory: {conversation_history}")
-            return JsonResponse({'ai_response': ai_response_text.strip()})
-        else:
-            logger.error(f"Chatbot - Gemini error for user message '{user_message}': {ai_response_text}")
-            return JsonResponse({'error': _('AI assistant is currently unavailable. Please try again later.')}, status=500)
-
-    except json.JSONDecodeError:
-        logger.error("Chatbot - Invalid JSON data received.")
-        return JsonResponse({'error': _('Invalid JSON data.')}, status=400)
-    except Exception as e:
-        logger.error(f"Chatbot - Unexpected error: {e}", exc_info=True)
-        return JsonResponse({'error': _('An unexpected error occurred.')}, status=500)
-
-@require_POST
-# @csrf_exempt # For initial testing, remove for production and handle CSRF
-def ajax_visual_search(request):
-    if not request.FILES.get('image_file'):
-        return JsonResponse({'error': _('No image file provided.')}, status=400)
-
-    image_file = request.FILES['image_file']
-    
-    # Basic validation for image type and size (optional but recommended)
-    if not image_file.content_type.startswith('image/'):
-        return JsonResponse({'error': _('Invalid file type. Please upload an image.')}, status=400)
-    if image_file.size > 5 * 1024 * 1024: # Max 5MB
-        return JsonResponse({'error': _('Image file too large (max 5MB).')}, status=400)
-
-    image_bytes = image_file.read()
-
-    # --- Prepare a simplified catalog for the AI prompt ---
-    # This is a crucial part and needs careful consideration for performance and prompt length.
-    # For a real system, you'd likely use embeddings or a more sophisticated search.
-    # Here, we'll just take a small, random sample of active products.
-    
-    # Fetch a sample of product names and brief descriptions for the AI prompt
-    # This needs to be carefully managed to avoid overly long prompts.
-    sample_products = Product.objects.filter(is_active=True, vendor__is_approved=True).order_by('?')[:50] # Sample 50 products
-    
-    catalog_excerpt_parts = []
-    for p in sample_products:
-        desc_snippet = (p.description[:75] + '...') if len(p.description) > 75 else p.description
-        catalog_excerpt_parts.append(f"- Name: \"{p.name}\", Category: \"{p.category.name if p.category else 'N/A'}\", Description: \"{desc_snippet}\"")
-    
-    catalog_excerpt_str = "\n".join(catalog_excerpt_parts)
-
-    if not catalog_excerpt_str:
-        catalog_excerpt_str = "No catalog items available for comparison at the moment."
-
-    # --- Construct the prompt for Gemini Vision ---
-    prompt_text = f"""You are an expert visual product identification and recommendation assistant for NEXUS marketplace.
-Task:
-1. Analyze the uploaded image and identify the main product(s) visible.
-2. Based on the identified product(s), search the 'Available Catalog Products' list below and suggest up to 3 distinct products from that list that are most similar or relevant.
-
-Output Instructions:
-Return ONLY the names of the 3 (or fewer, if not enough matches) most similar products from the 'Available Catalog Products' list.
-Each product name must be on a new, separate line.
-Do NOT include any other text, numbering, bullet points, explanations, or the identified product from the image in your response. Only list names from the provided catalog.
-
-Available Catalog Products:
-{catalog_excerpt_str}
-
-Recommended product names from the catalog (up to 3, each on a new line):
-"""
-
-    logger.info(f"Visual Search - Prompt for AI (catalog excerpt length: {len(catalog_excerpt_str)} chars)")
-    # logger.debug(f"Visual Search - Full Prompt: {prompt_text}") # Be careful logging full catalog
-
-    ai_response_text = generate_response_from_image_and_text(image_bytes, prompt_text)
-
-    if ai_response_text and not ai_response_text.startswith("Error:"):
-        suggested_product_names = [name.strip() for name in ai_response_text.split('\n') if name.strip()]
-        logger.info(f"Visual Search - AI suggested product names: {suggested_product_names}")
-
-        found_products_data = []
-        if suggested_product_names:
-            # Fetch actual product objects from DB based on names
-            # Using __in query and ensuring distinct results
-            # This relies on names being unique enough or the AI picking exact names from the list.
-            # A more robust method would be to pass IDs to the AI and get IDs back.
-            matched_products = Product.objects.filter(
-                name__in=suggested_product_names, 
-                is_active=True, 
-                vendor__is_approved=True
-            ).distinct()[:3] # Limit to 3 results
-
-            for prod in matched_products:
-                first_image = prod.images.first()
-                found_products_data.append({
-                    'id': prod.id,
-                    'name': prod.name,
-                    'slug': prod.slug,
-                    'price': str(prod.price),
-                    'category': prod.category.name if prod.category else None,
-                    'vendor': prod.vendor.name if prod.vendor else None,
-                    'image_url': first_image.image.url if first_image and first_image.image else settings.STATIC_URL + 'assets/img/placeholder.png',
-                    'absolute_url': request.build_absolute_uri(prod.get_absolute_url())
-                })
-        
-        return JsonResponse({'suggested_products': found_products_data})
-    else:
-        logger.error(f"Visual Search - Gemini error: {ai_response_text}")
-        return JsonResponse({'error': _('Could not process image search with AI. Please try again.') + f" (Details: {ai_response_text})"}, status=500)
-
-
-
-class VendorNotificationListView(LoginRequiredMixin, IsVendorMixin, ListView):
-    model = Notification
-    template_name = 'core/vendor_notification_list.html'
-    context_object_name = 'notifications'
-    paginate_by = 15 # Show 15 notifications per page
-
-    def get_queryset(self):
-        # Get notifications for the current logged-in user (who is a vendor)
-        # and order them by newest first
-        queryset = Notification.objects.filter(recipient=self.request.user).order_by('-created_at')
-        # Mark notifications as read when the vendor views this page
-        # Notification.objects.filter(recipient=self.request.user, is_read=False).update(is_read=True)
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Your Notifications")
-        # Mark notifications as read when the vendor views this page - doing it here ensures it happens after queryset is evaluated
-        Notification.objects.filter(recipient=self.request.user, is_read=False).update(is_read=True)
-        return context
-    
-    
-class VendorPayoutRequestCreateView(LoginRequiredMixin, IsVendorMixin, CreateView):
-    model = PayoutRequest
-    form_class = VendorPayoutRequestForm # We'll need to create this form
-    template_name = 'core/vendor/vendor_payout_request_form.html' # And this template
-    success_url = reverse_lazy('core:vendor_payout_requests') # Redirect to the list after successful creation
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['vendor_profile'] = self.request.user.vendor_profile
-        return kwargs
-
-    def form_valid(self, form):
-        form.instance.vendor_profile = self.request.user.vendor_profile
-        # You might want to set other default fields here if needed
-        # e.g., form.instance.status = PayoutRequest.PENDING
-        messages.success(self.request, _("Your payout request has been submitted successfully."))
-        return super().form_valid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['vendor'] = self.request.user.vendor_profile
-        context['page_title'] = _("Request New Payout")
-        return context
-
-
-def menu(request):
-    context = {
-        'page_title': _("Menu"),
-    }
-    return render(request, 'core/menu.html', context)
-
-class CategoryDetailView(DetailView):
-    model = Category
-    template_name = 'core/category_detail.html'
-    context_object_name = 'category'
-    slug_url_kwarg = 'category_slug'
-
-    def get_queryset(self):
-        return Category.objects.filter(is_active=True)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        category = self.get_object()
-        context['products'] = Product.objects.filter(category=category, is_active=True, vendor__is_approved=True).order_by('-created_at')[:12]
-        context['page_title'] = category.name
-        return context
-
-category_detail = CategoryDetailView.as_view()
-product_detail = ProductDetailView.as_view()
-
-def search_results(request):
-    query = request.GET.get('q', '')
-    products = Product.objects.none()
-    services = Service.objects.none()
-
-    if query:
-        products = Product.objects.filter(
-            Q(name__icontains=query) |
-            Q(description__icontains=query) |
-            Q(category__name__icontains=query) |
-            Q(vendor__name__icontains=query),
-            is_active=True, vendor__is_approved=True
-        ).distinct().prefetch_related('images', 'category', 'vendor')
-
-    context = {
-        'query': query,
-        'products': products,
-        'services': services,
-        'page_title': _("Search Results for '{query}'").format(query=query) if query else _("Search"),
-    }
-    return render(request, 'core/search_results.html', context)
-
-def daily_offers(request):
-    offer_products = Product.objects.filter(is_active=True, is_featured=True, promotions__isnull=False).distinct()[:12]
-    context = {
-        'offer_products': offer_products,
-        'page_title': _("Today's Special Offers"),
-    }
-    return render(request, 'core/daily_offers.html', context)
-
-
-def sell_on_nexus(request):
-    context = {
-        'page_title': _("Sell on NEXUS"),
-    }
-    return render(request, 'core/sell_on_nexus.html', context)
-
-@login_required
-@require_POST
-def update_location(request):
-    logger.info("Placeholder: update_location view called.")
-    return JsonResponse({'status': 'info', 'message': 'Location update endpoint (placeholder).'})
-
-@require_POST
-def update_language(request):
-    logger.info("Placeholder: update_language view called.")
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
-
-class ServiceCategoryDetailView(DetailView):
-    model = ServiceCategory
-    template_name = 'core/service_category_detail.html'
-    context_object_name = 'category'
-    slug_url_kwarg = 'category_slug'
-
-    def get_queryset(self):
-        return ServiceCategory.objects.filter(is_active=True)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        category = self.get_object()
-        context['services'] = Service.objects.filter(category=category, is_active=True, provider__service_provider_profile__is_approved=True).order_by('-created_at')[:12]
-        context['page_title'] = category.name
-        return context
-
-service_category_detail = ServiceCategoryDetailView.as_view()
-
-
-# --- START: Rider Views ---
-class BecomeRiderView(LoginRequiredMixin, FormView):
-    template_name = 'core/become_rider_form.html' # We'll create this template
+def create_service_booking(request, package_id):
+    return HttpResponse(f"Create service booking for package {package_id}")
+class BecomeRiderView(LoginRequiredMixin, CreateView):
+    model = RiderApplication
     form_class = RiderProfileApplicationForm
-    success_url = reverse_lazy('core:home') # Redirect to home or a "pending approval" page
-
-    def dispatch(self, request, *args, **kwargs):
-        # Check if user already has an approved profile or a pending application
-        if hasattr(request.user, 'rider_profile') and request.user.rider_profile and request.user.rider_profile.is_approved:
-            messages.info(request, _("You are already an approved rider."))
-            return redirect('core:rider_dashboard')
-        if hasattr(request.user, 'rider_application') and request.user.rider_application:
-            messages.info(request, _("You have already submitted a rider application. Please check your dashboard for status updates."))
-            return redirect('core:rider_dashboard')
-        return super().dispatch(request, *args, **kwargs)
+    template_name = 'core/become_rider.html'
+    success_url = reverse_lazy('core:user_profile')
 
     def form_valid(self, form):
-        application = form.save(commit=False) # form is RiderProfileApplicationForm, model is RiderApplication
-        application.user = self.request.user
-        # Pre-fill phone number if available from UserProfile and not provided in form
-        if not application.phone_number and hasattr(self.request.user, 'userprofile') and self.request.user.userprofile.phone_number:
-            application.phone_number = self.request.user.userprofile.phone_number
-        application.save()
-        messages.success(self.request, _("Your rider application has been submitted! Our team will review it shortly."))
-        # TODO: Send notification to admin
+        form.instance.user = self.request.user
+        messages.success(self.request, _("Your rider application has been submitted successfully! We will review it shortly."))
         return super().form_valid(form)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Become a NEXUS Rider")
-        return context
-
-class RiderDashboardView(LoginRequiredMixin, TemplateView):
-    template_name = 'core/rider_dashboard.html' # We'll create this
-
-    def dispatch(self, request, *args, **kwargs):
-        # Check if the user has an approved rider profile OR a pending application
-        has_approved_profile = hasattr(request.user, 'rider_profile') and request.user.rider_profile and request.user.rider_profile.is_approved
-        has_application = hasattr(request.user, 'rider_application') and request.user.rider_application
-
-        if not has_approved_profile and not has_application:
-            messages.info(request, _("You haven't applied to be a rider yet."))
-            return redirect('core:become_rider') # Redirect to application page
-        return super().dispatch(request, *args, **kwargs)
+class RiderDashboardView(LoginRequiredMixin, IsRiderMixin, TemplateView):
+    template_name = 'core/rider_dashboard.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        rider_profile = getattr(self.request.user, 'rider_profile', None) # Use getattr to avoid error if no profile
-        rider_application = getattr(self.request.user, 'rider_application', None)
-        context['rider_profile'] = rider_profile
-        context['rider_application'] = rider_application
+        rider_profile = self.request.user.rider_profile
 
-        if rider_profile and rider_profile.is_approved: # Check if rider_profile exists and is approved
-            context['page_title'] = _("Rider Dashboard")
-            # TODO: Add data for approved riders (e.g., assigned deliveries, earnings)
-            context['status_message'] = _("Welcome to your Rider Dashboard!")
-            
-              # Fetch tasks assigned to this rider
-            my_accepted_tasks = DeliveryTask.objects.filter(
-                rider=rider_profile, 
-                status__in=['ACCEPTED_BY_RIDER', 'PICKED_UP', 'OUT_FOR_DELIVERY'] # Add other active statuses as needed
-            ).order_by('created_at')
-            context['my_accepted_tasks'] = my_accepted_tasks
+        # Tasks assigned to this rider
+        my_accepted_tasks = DeliveryTask.objects.filter(
+            rider=rider_profile,
+            status__in=['ACCEPTED_BY_RIDER', 'PICKED_UP', 'OUT_FOR_DELIVERY']
+        ).select_related('order').order_by('created_at')
 
-            
-            
-            # Fetch available delivery tasks if rider is available
-            if rider_profile.is_available:
-                available_tasks = DeliveryTask.objects.filter(status='PENDING_ASSIGNMENT').order_by('created_at')
-                context['available_tasks'] = available_tasks
-            else:
-                context['available_tasks'] = [] # Empty list if not available
-        else:
-            # No approved profile, check application status
-            context['page_title'] = _("Rider Application Status")
-            if rider_application:
-                if not rider_application.is_reviewed:
-                    context['status_message'] = _("Your rider application has been submitted and is pending review. We'll notify you once a decision has been made.")
-                elif rider_application.is_reviewed and not rider_application.is_approved: # Reviewed but not approved (i.e., rejected or needs more info)
-                    context['status_message'] = _("Your rider application has been reviewed. Please check your notifications or contact support for more details.") # Generic message for now
-            else: # Should not happen if dispatch logic is correct, but as a fallback
-                context['status_message'] = _("There seems to be an issue with your rider application status. Please contact support.")
-        return context
-
-@login_required
-@require_POST # Ensures this view can only be accessed via a POST request
-def toggle_rider_availability(request):
-    try:
-        rider_profile = request.user.rider_profile
-        if not rider_profile.is_approved:
-            messages.error(request, _("Your rider profile is not yet approved."))
-            return redirect('core:rider_dashboard')
-
-        rider_profile.is_available = not rider_profile.is_available
-        rider_profile.save(update_fields=['is_available'])
-
+        # Tasks available for any rider to accept
+        available_tasks = []
         if rider_profile.is_available:
-            messages.success(request, _("You are now ONLINE and available for deliveries."))
-        else:
-            messages.success(request, _("You are now OFFLINE and will not receive new delivery assignments."))
+            available_tasks = DeliveryTask.objects.filter(
+                status='PENDING_ASSIGNMENT'
+                # TODO: Add proximity filter here later
+            ).select_related('order').order_by('-created_at')[:10]
 
-    except RiderProfile.DoesNotExist:
-        messages.error(request, _("Rider profile not found."))
-    
+        context.update({
+            'rider_profile': rider_profile,
+            'my_accepted_tasks': my_accepted_tasks,
+            'available_tasks': available_tasks,
+            'page_title': _("Rider Dashboard"),
+            'status_message': _("Welcome to your dashboard. Here you can manage your tasks and availability."),
+        })
+        return context
+
+@login_required
+@require_POST
+def toggle_rider_availability(request):
+    rider_profile = get_object_or_404(RiderProfile, user=request.user)
+    rider_profile.is_available = not rider_profile.is_available
+    rider_profile.save(update_fields=['is_available'])
+    if rider_profile.is_available:
+        messages.success(request, _("You are now ONLINE and available for deliveries."))
+    else:
+        messages.info(request, _("You are now OFFLINE and will not receive new tasks."))
     return redirect('core:rider_dashboard')
 
 @login_required
-@require_POST # Good practice for actions that change data
+@require_POST
 def accept_delivery_task(request, task_id):
-    try:
-        rider_profile = request.user.rider_profile
-        if not rider_profile.is_approved or not rider_profile.is_available:
-            messages.error(request, _("You must be an approved and available rider to accept tasks."))
-            return redirect('core:rider_dashboard')
+    with transaction.atomic():
+        task = get_object_or_404(DeliveryTask.objects.select_for_update(), task_id=task_id, status='PENDING_ASSIGNMENT')
+        rider_profile = get_object_or_404(RiderProfile, user=request.user, is_approved=True, is_available=True)
 
-        # Use a transaction to prevent race conditions if multiple riders try to accept
-        with transaction.atomic():
-            task = DeliveryTask.objects.select_for_update().get(task_id=task_id, status='PENDING_ASSIGNMENT')
-            
-            task.rider = rider_profile
-            task.status = 'ACCEPTED_BY_RIDER' # Or 'ASSIGNED'
-            task.save(update_fields=['rider', 'status'])
+        task.rider = rider_profile
+        task.status = 'ACCEPTED_BY_RIDER'
+        task.save()
 
-            messages.success(request, _("Task for Order {order_id} accepted successfully!").format(order_id=task.order.order_id))
-            # TODO: Notify vendor/customer if needed
-
-    except RiderProfile.DoesNotExist:
-        messages.error(request, _("Rider profile not found."))
-    except DeliveryTask.DoesNotExist:
-        messages.warning(request, _("This task is no longer available or has already been assigned."))
-    
+        messages.success(request, _("Task #{task_id} accepted successfully!").format(task_id=task.task_id))
     return redirect('core:rider_dashboard')
 
-class RiderTaskDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
+class RiderTaskDetailView(LoginRequiredMixin, IsRiderMixin, DetailView):
     model = DeliveryTask
-    template_name = 'core/rider_task_detail.html' # We'll create this template
+    template_name = 'core/rider_task_detail.html'
+    pk_url_kwarg = 'task_id'
     context_object_name = 'task'
-    pk_url_kwarg = 'task_id' # To match the UUID in the URL
 
-    def get_object(self, queryset=None):
-        # Fetch the task using the UUID from the URL
-        return get_object_or_404(DeliveryTask, task_id=self.kwargs.get(self.pk_url_kwarg))
-
-    def test_func(self):
-        task = self.get_object()
-        # Check if the logged-in user has a rider profile and is the assigned rider for this task
-        return hasattr(self.request.user, 'rider_profile') and task.rider == self.request.user.rider_profile
+    def get_queryset(self):
+        # Rider can only view tasks assigned to them
+        return DeliveryTask.objects.filter(rider=self.request.user.rider_profile)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         task = self.get_object()
-        context['page_title'] = _("Delivery Task Details - Order {order_id}").format(order_id=task.order.order_id)
-        # Pass coordinates and API key for the map
-        task = self.object
-        if task.pickup_latitude and task.pickup_longitude and task.delivery_latitude and task.delivery_longitude:
-            context['show_map'] = True
-            context['pickup_lat'] = float(task.pickup_latitude)
-            context['pickup_lng'] = float(task.pickup_longitude)
-            context['delivery_lat'] = float(task.delivery_latitude)
-            context['delivery_lng'] = float(task.delivery_longitude)
+        context['page_title'] = _("Task Details - {task_id}").format(task_id=task.task_id)
         context['google_maps_api_key'] = settings.GOOGLE_MAPS_API_KEY
-        # You can add more context here if needed, e.g., related vendor details if not directly on task
         return context
 
 @login_required
 @require_POST
 def update_task_status_picked_up(request, task_id):
-    try:
-        task = get_object_or_404(DeliveryTask, task_id=task_id)
-        rider_profile = request.user.rider_profile
-
-        if task.rider != rider_profile:
-            messages.error(request, _("You are not assigned to this task."))
-            return redirect('core:rider_dashboard')
-
-        if task.status == 'ACCEPTED_BY_RIDER':
-            task.status = 'PICKED_UP'
-            task.actual_pickup_time = timezone.now()
-            task.save(update_fields=['status', 'actual_pickup_time'])
-            messages.success(request, _("Task for Order {order_id} marked as PICKED UP.").format(order_id=task.order.order_id))
-            # TODO: Notify customer/vendor that item has been picked up
-        else:
-            messages.warning(request, _("Task cannot be marked as picked up from its current status: {status}.").format(status=task.get_status_display()))
-
-    except RiderProfile.DoesNotExist:
-        messages.error(request, _("Rider profile not found."))
-        return redirect('core:home') # Or appropriate error page
-    
+    task = get_object_or_404(DeliveryTask, task_id=task_id, rider=request.user.rider_profile, status='ACCEPTED_BY_RIDER')
+    task.status = 'PICKED_UP'
+    task.actual_pickup_time = timezone.now()
+    task.save()
+    messages.success(request, _("Task status updated to 'Picked Up'."))
     return redirect('core:rider_task_detail', task_id=task.task_id)
 
 @login_required
 @require_POST
 def update_task_status_delivered(request, task_id):
-    try:
-        task = get_object_or_404(DeliveryTask, task_id=task_id)
-        rider_profile = request.user.rider_profile
+    task = get_object_or_404(DeliveryTask, task_id=task_id, rider=request.user.rider_profile, status__in=['PICKED_UP', 'OUT_FOR_DELIVERY'])
+    task.status = 'DELIVERED'
+    task.actual_delivery_time = timezone.now()
+    task.save()
+    messages.success(request, _("Task marked as 'Delivered'. Great job!"))
+    return redirect('core:rider_dashboard')
 
-        if task.rider != rider_profile:
-            messages.error(request, _("You are not assigned to this task."))
-            return redirect('core:rider_dashboard')
-
-        # Rider can mark as delivered if it's picked up or already out for delivery
-        if task.status in ['PICKED_UP', 'OUT_FOR_DELIVERY']:
-            task.status = 'DELIVERED'
-            task.actual_delivery_time = timezone.now()
-            task.save(update_fields=['status', 'actual_delivery_time'])
-            messages.success(request, _("Task for Order {order_id} marked as DELIVERED.").format(order_id=task.order.order_id))
-            # TODO: Notify customer/vendor that item has been delivered
-            # TODO: Potentially trigger order status update to 'COMPLETED' or 'PENDING_PAYOUT' if all items delivered
-        else:
-            messages.warning(request, _("Task cannot be marked as delivered from its current status: {status}.").format(status=task.get_status_display()))
-
-    except RiderProfile.DoesNotExist:
-        messages.error(request, _("Rider profile not found."))
-        return redirect('core:home')
-    return redirect('core:rider_task_detail', task_id=task.task_id)
-
-# --- START: Rider Dashboard Section Views ---
-
-class RiderAccessMixin(UserPassesTestMixin):
-    """
-    Ensures the user is authenticated and has an approved rider profile.
-    """
-    def test_func(self):
-        # This mixin is designed for pages *requiring* an approved profile.
-        # For the Verification page, we'll handle access in its dispatch method.
-        # Keep this mixin for other pages like Earnings, Boost, etc.
-        if not self.request.user.is_authenticated: return False # Should be handled by LoginRequiredMixin first
-        try:
-            return self.request.user.rider_profile and self.request.user.rider_profile.is_approved
-        # If RiderProfile doesn't exist or isn't approved, test_func fails, and handle_no_permission is called.
-        except RiderProfile.DoesNotExist:
-            return False
-
-    def handle_no_permission(self):
-        if not self.request.user.is_authenticated:
-            return redirect(reverse('authapp:signin') + f'?next={self.request.path}')
-        
-        # Check if they have an application first, even if not an approved profile
-        try:
-            # If they have an application but no approved profile, redirect to dashboard status page
-            if hasattr(self.request.user, 'rider_application') and self.request.user.rider_application and \
-               not (hasattr(self.request.user, 'rider_profile') and self.request.user.rider_profile and self.request.user.rider_profile.is_approved):
-                messages.info(self.request, _("Your rider application is still pending. You cannot access this page yet."))
-                return redirect('core:rider_dashboard')
-            # If no application and no profile, or profile exists but not approved (though test_func should catch this)
-            if not (hasattr(self.request.user, 'rider_profile') and self.request.user.rider_profile):
-                messages.info(self.request, _("You need to apply to be a rider first."))
-                return redirect('core:become_rider')
-        except (RiderProfile.DoesNotExist, RiderApplication.DoesNotExist): # Catch both potential exceptions
-            messages.info(self.request, _("Rider profile or application not found. Please apply or contact support."))
-            return redirect('core:become_rider') # Fallback to application page
-        return super().handle_no_permission()
-
-class RiderEarningsReportsView(LoginRequiredMixin, RiderAccessMixin, TemplateView):
-    template_name = 'core/rider/rider_earnings_reports.html'
+class RiderEarningsReportsView(LoginRequiredMixin, IsRiderMixin, TemplateView):
+    template_name = 'core/rider_earnings_reports.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        rider_profile = self.request.user.rider_profile
-
-        completed_tasks_qs = DeliveryTask.objects.filter(
-            rider=rider_profile,
-            status='DELIVERED',
-            rider_earning__isnull=False
-        )
-
-        # Total earnings
-        total_earned_agg = completed_tasks_qs.aggregate(total_earnings=Sum('rider_earning'))
-        context['total_earned'] = total_earned_agg['total_earnings'] or Decimal('0.00')
-
-        # Total completed deliveries
-        context['total_completed_deliveries'] = completed_tasks_qs.count()
-
-        # Average earning per delivery
-        if context['total_completed_deliveries'] > 0:
-            context['average_earning_per_delivery'] = context['total_earned'] / context['total_completed_deliveries']
-        else:
-            context['average_earning_per_delivery'] = Decimal('0.00')
-
-        # TODO: Add more advanced reporting, e.g., earnings by month, charts, etc.
-        # For example, earnings this month:
-        # current_month_earnings = completed_tasks_qs.filter(actual_delivery_time__month=timezone.now().month, actual_delivery_time__year=timezone.now().year).aggregate(Sum('rider_earning'))
-        # context['current_month_earnings'] = current_month_earnings['rider_earning__sum'] or Decimal('0.00')
-
-        context['page_title'] = _("Earnings & Reports Overview")
+        context['page_title'] = _("Earnings Reports")
+        # Add reporting data here
         return context
- # --- END: RiderAccessMixin (Moved Up) ---
-       
-        
-    
-class RiderProfileView(LoginRequiredMixin, RiderAccessMixin, TemplateView):
-    template_name = 'core/rider/rider_profile_view.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # RiderAccessMixin ensures rider_profile exists and is approved
-        # We can safely access it here.
-        rider_profile = self.request.user.rider_profile
-        context['rider_profile'] = rider_profile
-        context['page_title'] = _("My Rider Profile")
-        return context
-    
-
-class RiderProfileEditView(LoginRequiredMixin, RiderAccessMixin, View): # Changed from TemplateView to View
-    template_name = 'core/rider/rider_profile_edit.html' # Placeholder template
-    form_class = RiderProfileUpdateForm
-
+class RiderProfileView(LoginRequiredMixin, IsRiderMixin, DetailView):
+    model = RiderProfile
+    template_name = 'core/rider_profile_view.html'
     def get_object(self):
-        # Helper to get the RiderProfile instance
-        # RiderAccessMixin should ensure rider_profile exists and is approved
         return self.request.user.rider_profile
 
+class RiderProfileEditView(LoginRequiredMixin, IsRiderMixin, UpdateView):
+    model = RiderProfile
+    form_class = RiderProfileUpdateForm
+    template_name = 'core/rider_profile_edit.html'
+    success_url = reverse_lazy('core:rider_profile_view')
+    def get_object(self):
+        return self.request.user.rider_profile
+
+class RiderVerificationView(LoginRequiredMixin, IsRiderMixin, TemplateView):
+    template_name = 'core/rider_verification.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['rider_profile'] = self.request.user.rider_profile
+        context['page_title'] = _("My Verification Documents")
+        return context
+
+class RiderBoostVisibilityView(LoginRequiredMixin, IsRiderMixin, TemplateView):
+    template_name = 'core/rider_boost_visibility.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['boost_packages'] = BoostPackage.objects.filter(is_active=True).order_by('display_order')
+        context['page_title'] = _("Boost Your Visibility")
+        return context
+
+class ActivateRiderBoostView(LoginRequiredMixin, IsRiderMixin, View):
     def get(self, request, *args, **kwargs):
-        rider_profile = self.get_object()
-        form = self.form_class(instance=rider_profile, user=request.user)
-        context = {
-            'form': form,
-            'page_title': _("Edit My Profile"),
-            'rider_profile': rider_profile
-        }
-        return render(request, self.template_name, context)
+        return HttpResponse("Activate Rider Boost")
 
-    def post(self, request, *args, **kwargs):
-        rider_profile = self.get_object()
-        form = self.form_class(request.POST, request.FILES, instance=rider_profile, user=request.user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, _("Your profile has been updated successfully!"))
-            return redirect('core:rider_profile_edit') # Redirect back to the same page
-        else:
-            messages.error(request, _("Please correct the errors below."))
-        
-        context = { 'form': form, 'page_title': _("Edit My Profile"), 'rider_profile': rider_profile }
-        return render(request, self.template_name, context)
-
-class RiderVerificationView(LoginRequiredMixin, RiderAccessMixin, TemplateView):
-    template_name = 'core/rider/rider_verification.html'
-
-    # Override dispatch to allow access if user has an application OR an approved profile
-    # and to bypass RiderAccessMixin's test_func for this specific view.
-    def dispatch(self, request, *args, **kwargs):
-        # Debugging prints (can be removed after fixing)
-        # print(f"--- RiderVerificationView.dispatch DEBUG ---")
-        # print(f"self: {self}, type(self): {type(self)}")
-        # print(f"RiderAccessMixin in scope: {RiderAccessMixin}")
-        # print(f"AccessMixin in scope: {AccessMixin}") # Check if AccessMixin is available
-        # print(f"Is self an instance of RiderAccessMixin? {isinstance(self, RiderAccessMixin)}")
-        # print(f"MRO: {type(self).__mro__}")
-        # print(f"--- End RiderVerificationView.dispatch DEBUG ---")
-
-        # LoginRequiredMixin already ensures user is authenticated
-        has_approved_profile = hasattr(request.user, 'rider_profile') and request.user.rider_profile and request.user.rider_profile.is_approved
-        has_application = hasattr(request.user, 'rider_application') and request.user.rider_application
-        if not has_approved_profile and not has_application:
-            messages.info(request, _("You haven't applied to be a rider yet, or your application was not found."))
-            return redirect('core:become_rider') # Redirect to application page
-
-        # If they have an application or an approved profile, allow access to this view.
-        # We call super(RiderAccessMixin, self).dispatch to bypass RiderAccessMixin's own dispatch
-        # (which calls its test_func that requires a strictly approved profile).
-        return TemplateView.dispatch(self, request, *args, **kwargs)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Rider Verification")
-
-        rider_profile = getattr(self.request.user, 'rider_profile', None)
-        rider_application = getattr(self.request.user, 'rider_application', None)
-        
-        context['rider_profile'] = rider_profile # Pass profile to template
-        context['rider_application'] = rider_application # Pass application to template for displaying details
-        
-        if rider_profile and rider_profile.is_approved:
-            context['verification_status'] = 'approved'
-            context['verification_status_message'] = _("Your rider profile is fully verified and active. You can update your documents if needed via your profile edit page.")
-        elif rider_application:
-            if not rider_application.is_reviewed:
-                 context['verification_status'] = 'pending_review'
-                 context['verification_status_message'] = _("Your rider application has been submitted and is pending review.")
-            elif rider_application.is_reviewed and not rider_application.is_approved: # is_approved on RiderApplication
-                context['verification_status'] = 'reviewed_not_approved'
-                context['verification_status_message'] = _("Your application has been reviewed but not approved. Please check for any communications or contact support if you have questions.")
-            # Add other rider_application states if necessary (e.g., if it can be 'approved' itself before profile reflects it)
-        else:
-            # This state should ideally be prevented by the dispatch method redirecting.
-            context['verification_status'] = 'no_info'
-            context['verification_status_message'] = _("No verification information found. Please ensure you have completed your rider application.")
-        return context
-
-class RiderBoostVisibilityView(LoginRequiredMixin, RiderAccessMixin, TemplateView):
-    template_name = 'core/rider/rider_boost_visibility.html' # Placeholder template
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Boost Visibility")
-        context['boost_packages'] = BoostPackage.objects.filter(is_active=True).order_by('display_order', 'price')
-        return context
-    
-      # Get current rider's active boosts
-        try:
-            rider_profile = self.request.user.rider_profile
-            context['active_rider_boosts'] = ActiveRiderBoost.objects.filter(
-                rider_profile=rider_profile, is_active=True, expires_at__gt=timezone.now()
-            ).select_related('boost_package').order_by('expires_at')
-        except RiderProfile.DoesNotExist:
-            context['active_rider_boosts'] = None
-        return context
-
-class ActivateRiderBoostView(LoginRequiredMixin, RiderAccessMixin, View):
-    def post(self, request, *args, **kwargs):
-        print("--- DEBUG: ActivateRiderBoostView POST method CALLED ---") # Add this line
-        package_id = None # Initialize to see if it gets set
-        package_id = request.POST.get('package_id')
-        try:
-            print(f"--- DEBUG: Inside TRY block. Request POST data: {request.POST}")
-            package_id = request.POST.get('package_id')
-            print(f"--- DEBUG: package_id from POST: {package_id}")
-
-            if not package_id:
-                print("--- DEBUG: package_id is None or empty. Aborting early.")
-                messages.error(request, _("No boost package selected."))
-                return redirect('core:rider_boost_visibility')
-
-            boost_package = get_object_or_404(BoostPackage, id=package_id, is_active=True)
-            print(f"--- DEBUG: Fetched Boost Package: {boost_package.name} (ID: {boost_package.id})")
-            print(f"--- DEBUG: Package Price from DB: {boost_package.price} (Type: {type(boost_package.price)})")
-            print(f"--- DEBUG: Package Duration from DB: {boost_package.duration_hours} hours")
-
-            rider_profile = request.user.rider_profile # RiderAccessMixin ensures this exists and is approved
-            print(f"--- DEBUG: Rider Profile: {rider_profile.user.username}")
-
-            # --- START LOGGING (from previous attempts, now as print) ---
-            logger.info(f"--- Boost Activation Attempt (logger.info) ---") # Keep one logger.info to test if it appears now
-            logger.info(f"Package ID from POST: {package_id}")
-            logger.info(f"Fetched Boost Package: {boost_package.name} (DB ID: {boost_package.id})")
-            logger.info(f"Package Price from DB: {boost_package.price} (Type: {type(boost_package.price)})")
-            logger.info(f"Package Duration from DB: {boost_package.duration_hours} hours")
-            # --- END LOGGING ---
-
-            if boost_package.price > 0:
-                print(f"--- DEBUG: Price ({boost_package.price}) is > 0. Proceeding to Paystack.")
-                logger.info(f"Price ({boost_package.price}) is > 0. Proceeding to Paystack. (logger.info)")
-                # ... (Paystack initialization code from previous diff) ...
-                url = "https://api.paystack.co/transaction/initialize"
-                amount_in_kobo = int(boost_package.price * 100)
-                boost_activation_ref = f"NEXUS_BST_{rider_profile.id}_{boost_package.id}_{uuid.uuid4().hex[:6]}"
-                headers = {
-                    "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
-                    "Content-Type": "application/json",
-                }
-                payload = {
-                    "email": request.user.email,
-                    "amount": amount_in_kobo,
-                    "currency": "GHS",
-                    "reference": boost_activation_ref,
-                    "callback_url": request.build_absolute_uri(reverse('core:paystack_boost_callback')),
-                    "metadata": {
-                        "rider_profile_id": str(rider_profile.id),
-                        "boost_package_id": str(boost_package.id),
-                        "custom_fields": [
-                            {"display_name": "Service", "variable_name": "service_name", "value": f"Boost: {boost_package.name}"}
-                        ]
-                    }
-                }
-                try:
-                    print("--- DEBUG: Attempting Paystack API call ---")
-                    response = requests.post(url, headers=headers, json=payload)
-                    print(f"--- DEBUG: Paystack API response status: {response.status_code} ---")
-                    print(f"--- DEBUG: Paystack API response content: {response.text[:500]} ---") # Log first 500 chars
-                    response.raise_for_status()
-                    response_data = response.json()
-                    if response_data.get("status"):
-                        request.session['pending_boost_activation_ref'] = boost_activation_ref
-                        request.session['pending_boost_package_id'] = boost_package.id
-                        authorization_url = response_data["data"]["authorization_url"]
-                        print(f"--- DEBUG: Redirecting to Paystack: {authorization_url} ---")
-                        logger.info(f"Redirecting to Paystack: {authorization_url} (logger.info)")
-                        return redirect(authorization_url)
-                    else:
-                        error_msg = response_data.get("message", "Unknown Paystack error")
-                        print(f"--- DEBUG: Paystack initialization failed: {error_msg} ---")
-                        logger.error(f"Paystack initialization failed: {error_msg} (logger.error)")
-                        messages.error(request, _("Could not initialize payment with Paystack: {error}").format(error=error_msg))
-                except requests.exceptions.RequestException as e:
-                    print(f"--- DEBUG: Paystack API request failed: {e} ---")
-                    logger.error(f"Paystack API request failed for boost payment: {e} (logger.error)")
-                    messages.error(request, _("Could not connect to payment gateway. Please try again later."))
-                return redirect('core:rider_boost_visibility')
-
-            else: # This is the block being hit if price is not > 0
-                print(f"--- DEBUG: Price ({boost_package.price}) is NOT > 0. Activating as free boost.")
-                logger.info(f"Price ({boost_package.price}) is NOT > 0. Activating as free boost. (logger.info)")
-                expires_at_time = timezone.now() + boost_package.duration_timedelta
-                ActiveRiderBoost.objects.create(
-                    rider_profile=rider_profile,
-                    boost_package=boost_package,
-                    expires_at=expires_at_time
-                )
-                messages.success(request, _(f"The '{boost_package.name}' boost has been activated successfully! It will expire in {boost_package.duration_hours} hours."))
-        
-        except BoostPackage.DoesNotExist:
-            print(f"--- DEBUG: BoostPackage with ID {package_id} does not exist or is not active. ---")
-            logger.error(f"BoostPackage with ID {package_id} does not exist or is not active. (logger.error)")
-            messages.error(request, _("Invalid boost package selected or it is no longer available."))
-        except RiderProfile.DoesNotExist: # Should be caught by RiderAccessMixin, but good to have
-            print(f"--- DEBUG: RiderProfile does not exist for user {request.user.username}. ---")
-            logger.error(f"RiderProfile does not exist for user {request.user.username}. (logger.error)")
-            messages.error(request, _("Rider profile not found."))
-        except Exception as e:
-            print(f"--- DEBUG: An unexpected error occurred: {e} ---")
-            messages.error(request, _(f"An error occurred while activating the boost: {e}"))
-            logger.error(f"Error activating boost for rider {request.user.username}, package_id {package_id}: {e}", exc_info=True)
-        
-        print("--- DEBUG: Reached end of POST method, redirecting to rider_boost_visibility ---")
-        return redirect('core:rider_boost_visibility')
-
-@csrf_exempt # Paystack might POST here, or redirect with GET. GET is more common for callbacks.
+@csrf_exempt
 def paystack_boost_callback(request):
-    paystack_reference = request.GET.get('reference') # Paystack usually sends reference in GET
-    # session_reference = request.session.get('pending_boost_activation_ref') # Get our stored ref
+    return HttpResponse("Paystack Boost Callback")
+class RequestPayoutView(LoginRequiredMixin, IsRiderMixin, CreateView):
+    model = PayoutRequest
+    form_class = RiderPayoutRequestForm
+    template_name = 'core/rider_request_payout.html'
+    success_url = reverse_lazy('core:rider_earnings')
 
-    if not paystack_reference:
-        messages.error(request, _("Payment reference not found in callback."))
-        return redirect('core:rider_boost_visibility')
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        # Calculate available balance
+        # This is a simplified calculation. A real app would be more robust.
+        total_earnings = DeliveryTask.objects.filter(
+            rider=self.request.user.rider_profile, status='DELIVERED'
+        ).aggregate(total=Sum('rider_earning'))['total'] or Decimal('0.00')
 
-    # Verify the transaction with Paystack
-    url = f"https://api.paystack.co/transaction/verify/{paystack_reference}"
-    headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        response_data = response.json()
+        total_paid_out = PayoutRequest.objects.filter(
+            rider_profile=self.request.user.rider_profile, status='completed'
+        ).aggregate(total=Sum('amount_requested'))['total'] or Decimal('0.00')
 
-        if response_data.get("status") and response_data["data"]["status"] == "success":
-            metadata = response_data["data"].get("metadata", {})
-            rider_profile_id = metadata.get("rider_profile_id")
-            boost_package_id = metadata.get("boost_package_id")
-            
-            # Clear session reference if used
-            # if 'pending_boost_activation_ref' in request.session:
-            #     del request.session['pending_boost_activation_ref']
-            # if 'pending_boost_package_id' in request.session:
-            #     del request.session['pending_boost_package_id']
+        kwargs['max_amount'] = total_earnings - total_paid_out
+        return kwargs
 
-            if not rider_profile_id or not boost_package_id:
-                messages.error(request, _("Payment successful, but could not retrieve boost details. Please contact support."))
-                logger.error(f"Paystack boost callback: Missing rider_profile_id or boost_package_id in metadata for ref {paystack_reference}. Metadata: {metadata}")
-                return redirect('core:rider_boost_visibility')
+    def form_valid(self, form):
+        form.instance.rider_profile = self.request.user.rider_profile
+        messages.success(self.request, _("Your payout request has been submitted for review."))
+        return super().form_valid(form)
 
-            rider_profile = get_object_or_404(RiderProfile, id=rider_profile_id)
-            boost_package = get_object_or_404(BoostPackage, id=boost_package_id)
-
-            expires_at_time = timezone.now() + boost_package.duration_timedelta
-            ActiveRiderBoost.objects.create(
-                rider_profile=rider_profile,
-                boost_package=boost_package,
-                expires_at=expires_at_time
-            )
-            # Create a Transaction record for this boost payment
-            Transaction.objects.create(
-                user=rider_profile.user, # The user who made the payment
-                transaction_type='boost_purchase',
-                amount=boost_package.price, # The price of the boost
-                currency="GHS", # Assuming GHS, or get from boost_package if it stores currency
-                status='completed',
-                gateway_transaction_id=paystack_reference, # Paystack's reference for this transaction
-                description=f"Payment for '{boost_package.name}' boost by {rider_profile.user.username}."
-            )
-            logger.info(f"Transaction record created for boost purchase: {boost_package.name} by {rider_profile.user.username}, Ref: {paystack_reference}")
-            messages.success(request, _(f"Payment successful! The '{boost_package.name}' boost has been activated."))
-        else:
-            messages.error(request, _("Payment verification failed or payment was not successful. Please try again or contact support."))
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Paystack boost verification API request failed: {e}")
-        messages.error(request, _("Could not verify payment status. If payment was made, please contact support."))
-    
-    return redirect('core:rider_boost_visibility')
-
-class RiderNotificationListView(LoginRequiredMixin, RiderAccessMixin, ListView): # Using ListView for notifications
-    model = Notification # Assuming you'll use the same Notification model
-    template_name = 'core/rider/rider_notification_list.html' # Placeholder template
-    context_object_name = 'notifications'
-    paginate_by = 15
-
-    def get_queryset(self):
-        # Notifications for the current rider
-        queryset = Notification.objects.filter(recipient=self.request.user).order_by('-created_at')
-        # Mark notifications as read when the rider views this page
-        Notification.objects.filter(recipient=self.request.user, is_read=False).update(is_read=True)
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("My Notifications")
-        return context
-
-# --- END: Rider Views ---
-
-
-# --- START: Rider Earnings View ---
-class RiderEarningsView(LoginRequiredMixin, RiderAccessMixin, ListView):
-    model = DeliveryTask
-    template_name = 'core/rider/rider_earnings.html'
-    context_object_name = 'completed_tasks'
-    paginate_by = 10 # Optional: if you want pagination for tasks
-
-    def get_queryset(self):
-        rider_profile = self.request.user.rider_profile
-        return DeliveryTask.objects.filter(
-            rider=rider_profile,
-            status='DELIVERED',
-            rider_earning__isnull=False
-        ).select_related('order').order_by('-actual_delivery_time', '-created_at')
+class RiderEarningsView(LoginRequiredMixin, IsRiderMixin, TemplateView):
+    template_name = 'core/rider_earnings.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         rider_profile = self.request.user.rider_profile
 
-        # Calculate total earnings from delivered tasks
-        total_earned_agg = DeliveryTask.objects.filter(
-            rider=rider_profile,
-            status='DELIVERED',
-            rider_earning__isnull=False
-        ).aggregate(total_earnings=Sum('rider_earning'))
-        context['total_earned'] = total_earned_agg['total_earnings'] or Decimal('0.00')
+        # Simplified earnings calculation
+        total_earnings = DeliveryTask.objects.filter(
+            rider=rider_profile, status='DELIVERED'
+        ).aggregate(total=Sum('rider_earning'))['total'] or Decimal('0.00')
 
-        # Calculate total paid out (from 'payout' transactions for this rider)
-        total_paid_out_agg = Transaction.objects.filter(
-            user=self.request.user, # Assuming payout transactions are linked to the CustomUser
-            transaction_type='payout',
-            status='completed' # Only count completed payouts
-        ).aggregate(total_payouts=Sum('amount'))
-        context['total_paid_out'] = total_paid_out_agg['total_payouts'] or Decimal('0.00')
+        total_paid_out = PayoutRequest.objects.filter(
+            rider_profile=rider_profile, status='completed'
+        ).aggregate(total=Sum('amount_requested'))['total'] or Decimal('0.00')
 
-        context['current_balance'] = context['total_earned'] - context['total_paid_out']
+        pending_payouts = PayoutRequest.objects.filter(
+            rider_profile=rider_profile, status__in=['pending', 'processing']
+        ).aggregate(total=Sum('amount_requested'))['total'] or Decimal('0.00')
 
-        # Add PayoutRequestForm to context if balance is > 0 and no pending request
-        if context['current_balance'] > 0 and not PayoutRequest.objects.filter(rider_profile=rider_profile, status='pending').exists():
-            context['payout_form'] = RiderPayoutRequestForm(max_amount=context['current_balance'])
-        else:
-            context['payout_form'] = None
+        available_balance = total_earnings - total_paid_out - pending_payouts
 
-        # Fetch payout history (completed payout transactions for this rider)
-        context['payout_history'] = Transaction.objects.filter(
-            user=self.request.user,
-            transaction_type='payout',
-            status='completed'
-        ).order_by('-created_at')
-
-        context['page_title'] = _("My Earnings")
+        context.update({
+            'total_earnings': total_earnings,
+            'total_paid_out': total_paid_out,
+            'pending_payouts': pending_payouts,
+            'available_balance': available_balance,
+            'payout_history': PayoutRequest.objects.filter(rider_profile=rider_profile).order_by('-requested_at'),
+            'page_title': _("My Earnings"),
+        })
         return context
-# --- END: Rider Earnings View ---
 
-# --- START: Request Payout View ---
-class RequestPayoutView(LoginRequiredMixin, RiderAccessMixin, View):
-    def post(self, request, *args, **kwargs):
-        rider_profile = request.user.rider_profile
-
-        # Calculate current balance again to ensure accuracy
-        total_earned_agg = DeliveryTask.objects.filter(
-            rider=rider_profile, status='DELIVERED', rider_earning__isnull=False
-        ).aggregate(total_earnings=Sum('rider_earning'))
-        total_earned = total_earned_agg['total_earnings'] or Decimal('0.00')
-
-        total_paid_out_agg = Transaction.objects.filter(
-            user=request.user, transaction_type='payout', status='completed'
-        ).aggregate(total_payouts=Sum('amount'))
-        total_paid_out = total_paid_out_agg['total_payouts'] or Decimal('0.00')
-        current_balance = total_earned - total_paid_out
-
-        # Check if there's already a pending payout request
-        if PayoutRequest.objects.filter(rider_profile=rider_profile, status='pending').exists():
-            messages.warning(request, _("You already have a pending payout request. Please wait for it to be processed."))
-            return redirect('core:rider_earnings')
-
-        if current_balance <= 0:
-            messages.error(request, _("You do not have a sufficient balance to request a payout."))
-            return redirect('core:rider_earnings')
-
-        form = RiderPayoutRequestForm(request.POST, max_amount=current_balance)
-        if form.is_valid():
-            amount_requested = form.cleaned_data['amount_requested']
-            if amount_requested > current_balance: # Double check
-                messages.error(request, _("Requested amount exceeds your available balance."))
-            elif amount_requested < Decimal('1.00'): # Example minimum
-                 messages.error(request, _("Minimum payout amount is GH₵1.00.")) # Adjust currency and amount
-            else:
-                PayoutRequest.objects.create(
-                    rider_profile=rider_profile,
-                    amount_requested=amount_requested
-                )
-                messages.success(request, _(f"Your payout request for GH₵{amount_requested:.2f} has been submitted successfully. It will be reviewed by our team."))
-                # TODO: Notify admin about the new payout request
-                return redirect('core:rider_earnings')
-        else:
-            # If form is invalid, usually means amount was > max_amount or < min_amount
-            messages.error(request, _("Invalid amount requested. Please check the limits and try again."))
-        return redirect('core:rider_earnings') # Redirect back to earnings page if form invalid or other issues
-# --- END: Request Payout View ---
+class RiderNotificationListView(LoginRequiredMixin, IsRiderMixin, ListView):
+    model = Notification
+    template_name = 'core/rider_notification_list.html'
+    def get_queryset(self):
+        return Notification.objects.filter(recipient=self.request.user)
 
 class BecomeRiderInfoView(TemplateView):
-    template_name = "core/become_rider_info.html"
+    template_name = 'core/become_rider_info.html'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = "Why Ride with Nexus?" # Optional: if your base.html uses a page_title context variable
-        return context
-
-# --- START: RiderAccessMixin (Moved Up) ---
-class RiderAccessMixin(UserPassesTestMixin):
-    """
-    Ensures the user is authenticated and has an approved rider profile.
-    """
-    def test_func(self):
-        # This mixin is designed for pages *requiring* an approved profile.
-        # For the Verification page, we'll handle access in its dispatch method.
-        # Keep this mixin for other pages like Earnings, Boost, etc.
-        if not self.request.user.is_authenticated: return False # Should be handled by LoginRequiredMixin first
-        try:
-            return self.request.user.rider_profile and self.request.user.rider_profile.is_approved
-        # If RiderProfile doesn't exist or isn't approved, test_func fails, and handle_no_permission is called.
-        except RiderProfile.DoesNotExist:
-            return False
-
-    def handle_no_permission(self):
-        if not self.request.user.is_authenticated:
-            return redirect(reverse('authapp:signin') + f'?next={self.request.path}')
-        
-        # Simplified logic: if not an approved rider, redirect to become_rider or rider_dashboard for status
-        messages.info(self.request, _("You need an approved rider profile to access this page. Apply or check your application status."))
-        return redirect('core:rider_dashboard') # Rider dashboard will show status or prompt to apply
-# --- END: RiderAccessMixin (Moved Up) ---
-
-
-# --- START: Customer Notification View ---
-class CustomerNotificationListView(LoginRequiredMixin, ListView):
-    model = Notification
-    template_name = 'core/customer/customer_notification_list.html' # New template path
-    context_object_name = 'notifications'
-    paginate_by = 15
+class ServiceProviderServicesListView(LoginRequiredMixin, IsServiceProviderMixin, ListView):
+    model = Service
+    template_name = 'core/service_provider/service_provider_services_list.html' # Corrected path to match your file
+    context_object_name = 'services'
+    paginate_by = 10
 
     def get_queryset(self):
-        # Notifications for the current customer (user)
-        queryset = Notification.objects.filter(recipient=self.request.user).order_by('-created_at')
-        # Mark notifications as read when the customer views this page
-        Notification.objects.filter(recipient=self.request.user, is_read=False).update(is_read=True)
+        queryset = Service.objects.filter(provider=self.request.user).select_related('category').prefetch_related('packages').order_by('-created_at')
+
+        # --- Search logic ---
+        self.search_query = self.request.GET.get('q', '')
+        if self.search_query:
+            queryset = queryset.filter(
+                Q(title__icontains=self.search_query) |
+                Q(category__name__icontains=self.search_query)
+            )
+
+        # --- Status filter logic ---
+        self.current_status = self.request.GET.get('status', '')
+        if self.current_status == 'active':
+            queryset = queryset.filter(is_active=True)
+        elif self.current_status == 'inactive':
+            queryset = queryset.filter(is_active=False)
+
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['page_title'] = _("My Notifications")
+        context['page_title'] = _("My Services")
+        context['search_query'] = self.search_query
+        context['current_status'] = self.current_status
         return context
-# --- END: Customer Notification View ---
+
+def shop_local(request):
+    """
+    View to find and display local vendors based on the user's location.
+    """
+    user_lat = request.GET.get('lat')
+    user_lon = request.GET.get('lon')
+    radius_km_str = request.GET.get('radius', '25') # Default radius of 25km
+
+    nearby_vendors = []
+    context = {
+        'has_location': False,
+        'nearby_vendors': [],
+        'search_radius': int(radius_km_str),
+        'page_title': _("Shop Local"),
+    }
+
+    if user_lat and user_lon:
+        context['has_location'] = True
+        try:
+            user_lat_dec = Decimal(user_lat)
+            user_lon_dec = Decimal(user_lon)
+            radius_km = int(radius_km_str)
+
+            # Filter for approved vendors that have coordinates
+            vendors = Vendor.objects.filter(is_approved=True, latitude__isnull=False, longitude__isnull=False)
+
+            for vendor in vendors:
+                distance = haversine(user_lat_dec, user_lon_dec, vendor.latitude, vendor.longitude)
+                if distance <= radius_km:
+                    vendor.distance = round(distance, 1) # Add distance attribute to vendor object
+                    nearby_vendors.append(vendor)
+
+            # Sort vendors by distance, closest first
+            context['nearby_vendors'] = sorted(nearby_vendors, key=lambda v: v.distance)
+
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error processing location for Shop Local: {e}")
+
+    return render(request, 'core/shop_local.html', context)
+@login_required
+def service_provider_advertisements(request):
+    # This view is a placeholder for service provider advertisements.
+    # For now, we'll render a simple template indicating the feature is coming soon.
+    context = {
+        'page_title': _("Advertisements"),
+        'is_service_provider_view': True, # To help the template adapt
+    }
+    messages.info(request, _("Advertising features for service providers are coming soon!"))
+    return render(request, 'core/service_provider/provider_advertisements_placeholder.html', context)
+
+
+def _get_chatbot_knowledge_base():
+    """
+    Compiles a string of general knowledge from FAQs, T&C, and Privacy Policy
+    to be used as context for the chatbot.
+    """
+    knowledge_base = []
+
+    # Add FAQs
+    faqs = FAQ.objects.filter(is_active=True)
+    if faqs.exists():
+        knowledge_base.append("--- Frequently Asked Questions (FAQs) ---")
+        for faq in faqs:
+            knowledge_base.append(f"Q: {faq.question}\nA: {faq.answer}")
+        knowledge_base.append("--- End of FAQs ---")
+
+    # Add Terms and Conditions
+    terms = TermsAndConditions.objects.filter(is_active=True).order_by('-effective_date').first()
+    if terms:
+        knowledge_base.append("\n--- Summary of Terms and Conditions ---")
+        # Provide a summary or key points instead of the full text for brevity
+        knowledge_base.append(terms.content[:2000] + "...") # Truncate for prompt length
+        knowledge_base.append("--- End of Terms and Conditions ---")
+
+    # Add Privacy Policy
+    privacy = PrivacyPolicy.objects.filter(is_active=True).order_by('-effective_date').first()
+    if privacy:
+        knowledge_base.append("\n--- Summary of Privacy Policy ---")
+        knowledge_base.append(privacy.content[:2000] + "...") # Truncate
+        knowledge_base.append("--- End of Privacy Policy ---")
+
+    return "\n".join(knowledge_base)
+
+def _search_platform(query: str, limit: int = 5):
+    """
+    Performs a comprehensive search across products and services.
+    """
+    product_results = Product.objects.filter(
+        Q(name__icontains=query) | Q(description__icontains=query) | Q(category__name__icontains=query) | Q(vendor__name__icontains=query),
+        is_active=True, vendor__is_approved=True
+    ).distinct().prefetch_related('images')[:limit]
+
+    service_results = Service.objects.filter(
+        Q(title__icontains=query) | Q(description__icontains=query) | Q(category__name__icontains=query) | Q(provider__service_provider_profile__business_name__icontains=query),
+        is_active=True, provider__service_provider_profile__is_approved=True
+    ).distinct().prefetch_related('images', 'packages')[:limit]
+
+    return list(product_results), list(service_results)
+
+@csrf_exempt
+def ajax_chatbot_message(request):
+    """
+    Handles incoming messages for the AI chatbot, determines intent,
+    and returns a structured response.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Only POST requests are allowed.'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        user_message = data.get('message')
+        conversation_history = data.get('history', []) # Get conversation history
+
+        if not user_message:
+            return JsonResponse({'error': 'Message is required.'}, status=400)
+
+        # 1. Get Knowledge Base Context
+        knowledge_base = _get_chatbot_knowledge_base()
+
+        # 2. Construct the Prompt for the AI
+        prompt = f"""You are NEXUS AI, a helpful and friendly e-commerce assistant for the NEXUS marketplace.
+Your goal is to assist users with their questions and help them find products or services.
+
+Today's Date: {timezone.now().strftime('%Y-%m-%d')}
+
+--- Conversation History ---
+{conversation_history}
+
+--- User's Latest Message ---
+"{user_message}"
+
+--- Platform Knowledge Base (for answering general questions) ---
+{knowledge_base}
+--- End of Knowledge Base ---
+
+Based on the user's latest message and the conversation history, determine the user's intent and respond in a structured JSON format.
+
+The JSON object must have two fields: "intent" and "response_text".
+
+1.  **intent**: Can be one of the following strings:
+    - "answer_question": If the user is asking a general question about the platform (e.g., "what is your return policy?", "how do I sell?").
+    - "search_platform": If the user is looking for specific products or services (e.g., "show me red shoes", "I need a logo designer").
+    - "chit_chat": For greetings or conversational filler (e.g., "hello", "thank you").
+
+2.  **response_text**: A friendly, conversational text response to the user.
+
+3.  **search_query** (ONLY if intent is "search_platform"): A concise, keyword-focused search query string derived from the user's message.
+
+Example 1 (General Question):
+User Message: "How long does shipping take?"
+Your JSON Output: {{"intent": "answer_question", "response_text": "Shipping times can vary depending on the vendor and your location. You can find more details in the shipping policy on each product or vendor page."}}
+
+Example 2 (Product Search):
+User Message: "I'm looking for a handmade leather wallet for men"
+Your JSON Output: {{"intent": "search_platform", "response_text": "Of course! Searching for handmade leather wallets for you now...", "search_query": "handmade leather wallet men"}}
+
+Example 3 (Chit-chat):
+User Message: "Hi there"
+Your JSON Output: {{"intent": "chit_chat", "response_text": "Hello! How can I help you today?"}}
+
+Now, analyze the user's message and provide the JSON output. Do not include markdown formatting like ```json.
+"""
+
+        # 3. Get Structured Response from AI
+        ai_response_data = get_chatbot_response(prompt)
+        
+        if not ai_response_data:
+            return JsonResponse({'error': 'Failed to get a response from the AI assistant.'}, status=500)
+
+        # 4. Process the AI's intent, but first check for API errors
+        if 'error' in ai_response_data:
+            # For user-facing errors like rate limiting, it's better to return a 200 OK
+            # with the error in the JSON payload. This simplifies frontend handling,
+            # as the JavaScript is already set up to display data.error.
+            return JsonResponse(ai_response_data, status=200)
+        elif ai_response_data.get('intent') == 'search_platform' and ai_response_data.get('search_query'):
+            search_query = ai_response_data['search_query']
+            products, services = _search_platform(search_query)
+            ai_response_data['product_ids'] = [p.id for p in products] # Send back IDs
+            ai_response_data['service_ids'] = [s.id for s in services] # Send back IDs
+
+        return JsonResponse(ai_response_data)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON in request body.'}, status=400)
+    except Exception as e:
+        logger.error(f"Error in ajax_chatbot_message view: {e}", exc_info=True)
+        return JsonResponse({'error': 'An internal error occurred.'}, status=500)
+
+class ServiceProviderAdCampaignCreateView(LoginRequiredMixin, IsServiceProviderMixin, CreateView):
+    # This view is a placeholder. A full implementation would require a dedicated form.
+    model = AdCampaign
+    fields = ['name', 'promoted_product', 'placement', 'start_date', 'end_date', 'budget']
+    template_name = 'core/provider_ad_campaign_form.html'
+    success_url = reverse_lazy('core:service_provider_advertisements')
+
+class ServiceProviderBookingsListView(LoginRequiredMixin, IsServiceProviderMixin, ListView):
+    model = ServiceBooking
+    template_name = 'core/provider_bookings_list.html'
+    def get_queryset(self):
+        return ServiceBooking.objects.filter(provider=self.request.user)
+
+class ServiceProviderBookingDetailView(LoginRequiredMixin, IsServiceProviderMixin, DetailView):
+    """
+    Displays the details of a single booking for a service provider.
+    """
+    model = ServiceBooking
+    template_name = 'core/service_provider/service_provider_booking_detail.html'
+    context_object_name = 'booking'
+    pk_url_kwarg = 'booking_id' # To match the URL parameter
+
+    def get_queryset(self):
+        """
+        Ensures that providers can only see bookings for services they offer.
+        """
+        return ServiceBooking.objects.filter(provider=self.request.user.service_provider_profile.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _("Booking Details")
+        return context
+
+class ServiceProviderReviewListView(LoginRequiredMixin, IsServiceProviderMixin, ListView):
+    model = ServiceReview
+    template_name = 'core/service_provider/service_provider_review_list.html'
+    context_object_name = 'reviews'
+    paginate_by = 10
+
+    def get_queryset(self):
+        provider_user = self.request.user
+        queryset = ServiceReview.objects.filter(service__provider=provider_user).select_related(
+            'user', 'service'
+        ).order_by('-created_at')
+
+        # Get the rating from the URL query parameters
+        self.rating_filter = self.request.GET.get('rating')
+        if self.rating_filter and self.rating_filter.isdigit():
+            queryset = queryset.filter(rating=int(self.rating_filter))
+
+        # Get the search query from the URL
+        self.search_query = self.request.GET.get('q')
+        if self.search_query:
+            queryset = queryset.filter(
+                Q(user__username__icontains=self.search_query) |
+                Q(review__icontains=self.search_query) |
+                Q(service__title__icontains=self.search_query)
+            )
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        provider_user = self.request.user
+
+        # Get all reviews for the provider for accurate stats, ignoring filters
+        all_reviews_for_provider = ServiceReview.objects.filter(service__provider=provider_user)
+
+        context['page_title'] = _("Client Reviews")
+        context['total_reviews'] = all_reviews_for_provider.count()
+        context['average_rating'] = all_reviews_for_provider.aggregate(Avg('rating'))['rating__avg']
+
+        # Pass the current filter state to the template
+        context['current_rating'] = self.rating_filter
+        context['search_query'] = self.search_query
+
+        return context
+
+class ServiceProviderReviewReplyView(LoginRequiredMixin, IsServiceProviderMixin, SuccessMessageMixin, UpdateView):
+    model = ServiceReview
+    fields = ['reply']
+    template_name = 'core/service_provider/service_provider_review_reply_form.html'
+    success_url = reverse_lazy('core:service_provider_review_list')
+    success_message = _("Your reply has been posted successfully.")
+
+    def get_queryset(self):
+        # Ensure provider can only reply to reviews for their own services
+        return ServiceReview.objects.filter(service__provider=self.request.user)
+
+    def form_valid(self, form):
+        # Set the reply timestamp when the form is submitted
+        if form.instance.reply and not getattr(form.instance, 'replied_at', None):
+             form.instance.replied_at = timezone.now()
+        elif not form.instance.reply: # Clear timestamp if reply is removed
+            form.instance.replied_at = None
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['review'] = self.get_object()
+        return context
+
+class ServiceProviderNotificationListView(LoginRequiredMixin, IsServiceProviderMixin, ListView):
+    model = Notification
+    template_name = 'core/service_provider/service_provider_notification_list.html'
+    context_object_name = 'notifications'
+    paginate_by = 20
+
+    def get_queryset(self):
+        queryset = Notification.objects.filter(recipient=self.request.user)
+        self.search_query = self.request.GET.get('q', '')
+        if self.search_query:
+            queryset = queryset.filter(message__icontains=self.search_query)
+        self.current_status = self.request.GET.get('status', '')
+        if self.current_status == 'unread':
+            queryset = queryset.filter(is_read=False)
+        elif self.current_status == 'read':
+            queryset = queryset.filter(is_read=True)
+        return queryset.order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _("Your Notifications")
+        context['search_query'] = self.search_query
+        context['current_status'] = self.current_status
+        return context
+
+@login_required
+@require_POST
+def service_provider_mark_all_notifications_read(request):
+    Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+    messages.success(request, _("All notifications marked as read."))
+    return redirect('core:service_provider_notification_list')
+
+@login_required
+@require_POST
+def service_provider_delete_notification(request, pk):
+    notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
+    notification.delete()
+    messages.success(request, _("Notification deleted."))
+    return redirect('core:service_provider_notification_list')
+
+@login_required
+@require_POST
+def service_provider_delete_all_notifications(request):
+    Notification.objects.filter(recipient=request.user).delete()
+    messages.success(request, _("All notifications have been deleted."))
+    return redirect('core:service_provider_notification_list')
+
+@login_required
+@require_POST
+def service_provider_confirm_booking(request, booking_id):
+    """
+    View for a service provider to confirm a pending booking.
+    """
+    booking = get_object_or_404(ServiceBooking, id=booking_id, provider=request.user)
+
+    if booking.status == 'pending':
+        booking.status = 'confirmed'
+        booking.save(update_fields=['status'])
+        messages.success(request, _("Booking #{booking_id} has been confirmed successfully.").format(booking_id=booking.id))
+        # TODO: Send a notification to the customer
+    else:
+        messages.warning(request, _("This booking cannot be confirmed as it is not in a 'pending' state."))
+
+    return redirect('core:service_provider_booking_detail', booking_id=booking.id)
+
+class ServiceProviderVerificationView(LoginRequiredMixin, IsServiceProviderMixin, TemplateView):
+    template_name = 'core/provider_verification_placeholder.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _("Service Provider Verification")
+        messages.info(self.request, _("The detailed verification process for service providers is coming soon."))
+        return context
+
+class ServiceProviderPayoutRequestListView(LoginRequiredMixin, IsServiceProviderMixin, ListView):
+    model = PayoutRequest
+    template_name = 'core/service_provider/service_provider_payout_request_list.html' # Corrected path
+    context_object_name = 'payout_requests'
+    paginate_by = 10
+
+    def get_queryset(self):
+        provider_profile = self.request.user.service_provider_profile
+        queryset = PayoutRequest.objects.filter(service_provider_profile=provider_profile)
+
+        # Filtering logic from GET parameters
+        self.search_query = self.request.GET.get('q', '')
+        if self.search_query:
+            queryset = queryset.filter(id__icontains=self.search_query)
+
+        self.current_status = self.request.GET.get('status', '')
+        if self.current_status:
+            queryset = queryset.filter(status=self.current_status)
+
+        return queryset.order_by('-requested_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        provider_profile = self.request.user.service_provider_profile
+
+        # --- Payout Summary Calculations ---
+        completed_orders_value = OrderItem.objects.filter(
+            provider=provider_profile.user,
+            order__status__in=['COMPLETED', 'DELIVERED', 'PENDING_PAYOUT']
+        ).aggregate(
+            total=Sum(F('price') * F('quantity'))
+        )['total'] or Decimal('0.00')
+
+        # Ensure commission_rate is a Decimal to avoid TypeError
+        commission_rate = Decimal(str(getattr(settings, 'PLATFORM_SERVICE_COMMISSION_RATE', '0.10')))
+        total_commission = completed_orders_value * commission_rate
+        net_earnings = completed_orders_value - total_commission
+
+        total_paid_out = PayoutRequest.objects.filter(
+            service_provider_profile=provider_profile, status='completed'
+        ).aggregate(total=Sum('amount_requested'))['total'] or Decimal('0.00')
+
+        pending_payouts = PayoutRequest.objects.filter(
+            service_provider_profile=provider_profile, status__in=['pending', 'processing']
+        ).aggregate(total=Sum('amount_requested'))['total'] or Decimal('0.00')
+
+        context['available_for_payout'] = max(Decimal('0.00'), net_earnings - total_paid_out - pending_payouts)
+        context['pending_payouts'] = pending_payouts
+        context['total_paid_out'] = total_paid_out
+        context['can_request_payout'] = context['available_for_payout'] >= getattr(settings, 'MINIMUM_VENDOR_PAYOUT_AMOUNT', 50) # You might want a separate setting for providers
+        context['search_query'] = self.search_query
+        context['current_status'] = self.current_status
+        context['page_title'] = _("Payouts")
+        return context
+
+class ServiceProviderPayoutRequestCreateView(LoginRequiredMixin, IsServiceProviderMixin, CreateView):
+    model = PayoutRequest
+    form_class = ServiceProviderPayoutRequestForm # Use the dedicated form
+    template_name = 'core/provider_payout_request_form.html' # Corrected template path
+    success_url = reverse_lazy('core:service_provider_payout_requests')
+    success_message = _("Your payout request has been submitted.")
+
+    def get_form_kwargs(self):
+        """Passes the maximum available payout amount and provider profile to the form."""
+        kwargs = super().get_form_kwargs()
+        provider_profile = self.request.user.service_provider_profile
+
+        # --- Payout Summary Calculations ---
+        completed_orders_value = OrderItem.objects.filter(
+            provider=provider_profile.user,
+            order__status__in=['COMPLETED', 'DELIVERED', 'PENDING_PAYOUT']
+        ).aggregate(
+            total=Sum(F('price') * F('quantity'))
+        )['total'] or Decimal('0.00')
+
+        commission_rate = Decimal(str(getattr(settings, 'PLATFORM_SERVICE_COMMISSION_RATE', '0.10')))
+        total_commission = completed_orders_value * commission_rate
+        net_earnings = completed_orders_value - total_commission
+
+        total_paid_out = PayoutRequest.objects.filter(
+            service_provider_profile=provider_profile, status='completed'
+        ).aggregate(total=Sum('amount_requested'))['total'] or Decimal('0.00')
+
+        pending_payouts = PayoutRequest.objects.filter(
+            service_provider_profile=provider_profile, status__in=['pending', 'processing']
+        ).aggregate(total=Sum('amount_requested'))['total'] or Decimal('0.00')
+
+        kwargs['max_amount'] = max(Decimal('0.00'), net_earnings - total_paid_out - pending_payouts)
+        # The form expects 'vendor_profile', so we'll adapt by passing the provider profile.
+        # The form will then check for payout methods on this profile object.
+        kwargs['vendor_profile'] = provider_profile
+        return kwargs
+
+    def form_valid(self, form):
+        form.instance.service_provider_profile = self.request.user.service_provider_profile
+
+        # Get the selected payout method and construct the details string
+        payout_method_key = form.cleaned_data.get('payout_method')
+        provider_profile = self.request.user.service_provider_profile
+        details_string = "Payout method not found." # Fallback
+
+        if payout_method_key == 'mobile_money':
+            details_string = f"Mobile Money: {provider_profile.mobile_money_provider} - {provider_profile.mobile_money_number}"
+        elif payout_method_key == 'bank':
+            details_string = f"Bank Account: {provider_profile.bank_name}, Acc No: {provider_profile.bank_account_number}, Name: {provider_profile.bank_account_name}"
+        elif payout_method_key == 'paypal':
+            details_string = f"PayPal: {provider_profile.paypal_email}"
+        elif payout_method_key == 'stripe':
+            details_string = f"Stripe: {provider_profile.stripe_account_id}"
+        elif payout_method_key == 'payoneer':
+            details_string = f"Payoneer: {provider_profile.payoneer_email}"
+        elif payout_method_key == 'wise':
+            details_string = f"Wise: {provider_profile.wise_email}"
+        elif payout_method_key == 'crypto':
+            details_string = f"Crypto: {provider_profile.crypto_wallet_network} - {provider_profile.crypto_wallet_address}"
+        
+        form.instance.payment_method_details = details_string
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _("Request New Payout")
+        return context
+
+class ServiceAvailabilityListView(LoginRequiredMixin, IsServiceProviderMixin, ListView):
+    model = ServiceAvailability
+    template_name = 'core/provider_availability_list.html'
+    def get_queryset(self):
+        return ServiceAvailability.objects.filter(service__provider=self.request.user)
+
+class ServiceAvailabilityCreateView(LoginRequiredMixin, IsServiceProviderMixin, CreateView):
+    model = ServiceAvailability
+    form_class = ServiceAvailabilityForm
+    template_name = 'core/provider_availability_form.html'
+    success_url = reverse_lazy('core:service_provider_availability_list')
+
+class ServiceAvailabilityUpdateView(LoginRequiredMixin, IsServiceProviderMixin, UpdateView):
+    model = ServiceAvailability
+    form_class = ServiceAvailabilityForm
+    template_name = 'core/provider_availability_form.html'
+    success_url = reverse_lazy('core:service_provider_availability_list')
+
+class ServiceAvailabilityDeleteView(LoginRequiredMixin, IsServiceProviderMixin, DeleteView):
+    model = ServiceAvailability
+    template_name = 'core/provider_availability_confirm_delete.html'
+    success_url = reverse_lazy('core:service_provider_availability_list')
+
+class CustomerNotificationListView(LoginRequiredMixin, ListView):
+    model = Notification
+    template_name = 'core/customer_notification_list.html'
+    def get_queryset(self):
+        return Notification.objects.filter(recipient=self.request.user)

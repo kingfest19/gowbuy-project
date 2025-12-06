@@ -1,125 +1,286 @@
-{% extends "core/service_base.html" %}
-{% load static i18n %}
-{% load crispy_forms_tags %}
+{% extends "base.html" %}
+{% load i18n crispy_forms_tags static %}
 
-{% block title %}
-    {% if form.instance.pk %}
-        {% trans "Edit Service" %}: {{ service.title }}
-    {% else %}
-        {% trans "Offer a New Service" %}
-    {% endif %}
-     - {% trans "Services" %}
-{% endblock title %}
+{% block title %}{{ page_title }}{% endblock %}
 
 {% block extra_css %}
-{{ block.super }}
-<style>
-    .service-form-container {
-        background-color: #fff; /* White background for the form area */
-        padding: 2rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 0.25rem 1rem rgba(0,0,0,0.075); /* Subtle shadow */
-        margin-top: 1rem; /* Adjust if service_base container has enough margin */
-        margin-bottom: 2rem;
-    }
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        .form-container {
+            max-width: 1200px; /* Adjusted for wider service form */
+            margin: 0 auto;
+            background-color:  #ebe8e8;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+            border: 1px solid #c7c9cb;
+            font-family: "Outfit", sans-serif; /* Consistent font from theme */
+        }
 
-    .service-form-container h1 {
-        font-size: 1.8rem;
-        font-weight: 600;
-        color: #2c3e50; /* Dark blue-grey */
-        margin-bottom: 1.5rem;
-        padding-bottom: 0.75rem;
-        border-bottom: 2px solid #e9ecef;
-    }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #f0f2f5;
+        }
 
-    /* Styling for form elements, similar to vendor_campaign_form.html */
-    #serviceForm label,
-    #serviceForm .form-label { /* For Crispy Forms or manual labels */
-        color: #212529 !important;
-        margin-bottom: 0.5rem;
-        font-weight: 500;
-    }
+        .page-header h1 {
+            font-family: "Poppins", sans-serif; /* Consistent font from theme */
+            font-weight: 700;
+            color: #1a2533;
+            margin-bottom: 0;
+        }
 
-    #serviceForm .form-control,
-    #serviceForm .form-select,
-    #serviceForm textarea {
-        display: block;
-        width: 100%;
-        padding: .5rem .75rem; /* Slightly more padding */
-        font-size: 1rem;
-        font-weight: 400;
-        line-height: 1.5;
-        color: #212529;
-        background-color: #fff;
-        background-clip: padding-box;
-        border: 1px solid #ced4da;
-        appearance: none;
-        border-radius: .375rem; /* Bootstrap 5 default */
-        transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
-    }
+        fieldset {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
 
-    #serviceForm .form-control:focus,
-    #serviceForm .form-select:focus,
-    #serviceForm textarea:focus {
-        border-color: #86b7fe;
-        outline: 0;
-        box-shadow: 0 0 0 .25rem rgba(13,110,253,.25);
-    }
+        fieldset:last-of-type {
+            margin-bottom: 0;
+        }
 
-    #serviceForm textarea {
-        min-height: 120px;
-    }
+        legend {
+            font-family: "Poppins", sans-serif; /* Consistent font from theme */
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a2533;
+            padding: 0;
+            width: 100%;
+            float: left;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #e9ecef;
+        }
 
-    #serviceForm .form-text { /* Help text */
-        font-size: 0.875em;
-        color: #6c757d;
-    }
+        .form-container .form-control,
+        .form-container .form-select {
+            border: 1px solid #ced4da;
+            transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+        }
+        .form-container .form-control:focus,
+        .form-container .form-select:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
 
-    #serviceForm .invalid-feedback { /* Error messages */
-        display: block; /* Ensure they are visible */
-    }
-    .btn-submit-service {
-        padding: 0.6rem 1.5rem;
-        font-weight: 500;
-    }
-</style>
+        .form-label {
+            font-weight: 500;
+            color: #495057;
+            font-size: 0.9rem;
+        }
+
+        .form-container .btn-primary {
+            background-color: #474747;
+            border-color: #474747;
+            font-weight: 500;
+        }
+        .form-container .btn-primary:hover {
+            background-color: #383838;
+            border-color: #383838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .form-container .btn-outline-secondary {
+            background-color: #474747;
+            color: #ffffffff;
+            border-color: #474747;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #474747;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+    </style>
 {% endblock extra_css %}
 
-{% block service_content %}
-<div class="container mt-4">
-    <div class="service-form-container">
-        <h1>
-            {% if form.instance.pk %}
-                {% trans "Edit Service" %}
-            {% else %}
-                {% trans "Offer a New Service" %}
-            {% endif %}
-        </h1>
-        <form method="post" id="serviceForm" enctype="multipart/form-data">
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="form-container">
+        <div class="page-header">
+            <div>
+                <h1>{{ page_title }}</h1>
+                <p class="text-muted mb-0">{% if form.instance.pk %}{% trans "Update the details for your service." %}{% else %}{% trans "Fill out the form to create a new service." %}{% endif %}</p>
+            </div>
+            <a href="{% url 'core:service_provider_services_list' %}" class="btn btn-lg btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>{% trans "Back to Services" %}
+            </a>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
 
-            {# --- START: Manual Error Display for Debugging --- #}
-            {% if form.non_field_errors %}
-                <div class="alert alert-danger">
-                    <h4>{% trans "Please correct the errors below:" %}</h4>
-                    {{ form.non_field_errors }}
-                </div>
-            {% endif %}
+            <div class="form-body">
+                {# Main Service Details #}
+                <fieldset>
+                    <legend>{% trans "Service Details" %}</legend>
+                    {{ form|crispy }}
 
-            {% for field in form %}
-                <div class="mb-3">
-                    {{ field.label_tag }}
-                    {{ field }}
-                    {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
-                    {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors }}</div>{% endif %}
-                </div>
-            {% endfor %}
-            {# --- END: Manual Error Display --- #}
-            {# {% crispy form %} #} {# Temporarily commented out Crispy Forms #}
+                    {% if form.instance.pk %} {# Only show for update form #}
+                        <hr>
+                        <h5 class="mt-4">{% trans "Manage Existing Media" %}</h5>
+                        
+                        {# Manage Images #}
+                        <div class="mb-3">
+                            <label class="form-label">{% trans "Existing Images" %}</label>
+                            <div class="row">
+                                {% for image in existing_images %}
+                                    <div class="col-md-3 mb-2 text-center">
+                                        <img src="{{ image.image.url }}" alt="{{ image.alt_text|default:'Service Image' }}" class="img-thumbnail mb-2" style="max-height: 100px;">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="delete_images" value="{{ image.id }}" id="delete_image_{{ image.id }}">
+                                            <label class="form-check-label" for="delete_image_{{ image.id }}">
+                                                {% trans "Delete" %}
+                                            </label>
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted">{% trans "No images have been uploaded for this service yet." %}</p>
+                                {% endfor %}
+                            </div>
+                        </div>
 
-            <button type="submit" class="btn btn-primary btn-submit-service mt-3">{% trans "Save Service" %}</button>
-            <a href="{% url 'core:service_list' %}" class="btn btn-outline-secondary mt-3">{% trans "Cancel" %}</a>
+                        {# Manage Videos #}
+                        <div class="mb-3">
+                            <label class="form-label">{% trans "Existing Videos" %}</label>
+                            <div class="row">
+                                {% for video in existing_videos %}
+                                    <div class="col-md-3 mb-2 text-center">
+                                        <video width="100%" controls>
+                                            <source src="{{ video.video.url }}" type="video/mp4">
+                                            Your browser does not support the video tag.
+                                        </video>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="delete_videos" value="{{ video.id }}" id="delete_video_{{ video.id }}">
+                                            <label class="form-check-label" for="delete_video_{{ video.id }}">
+                                                {% trans "Delete" %}
+                                            </label>
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted">{% trans "No videos have been uploaded for this service yet." %}</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </fieldset>
+
+                {# Service Packages Formset #}
+                <fieldset>
+                    <legend>{% trans "Service Packages" %}</legend>
+                    <p class="text-muted">{% trans "Define the different pricing tiers for your service (e.g., Basic, Standard, Premium). You must add at least one package." %}</p>
+                    {{ package_formset.management_form }}
+                    {% if package_formset.non_form_errors %}
+                        <div class="alert alert-danger">{{ package_formset.non_form_errors }}</div>
+                    {% endif %}
+                    <div id="package-form-list">
+                        {% for form in package_formset %}
+                            <div class="row align-items-center mb-3 border-bottom pb-3 package-form">
+                                {% if form.instance.pk %}{{ form.id }}{% endif %}
+                                <div class="col-md-6">
+                                    {{ form.name|as_crispy_field }}
+                                    {{ form.price|as_crispy_field }}
+                                    {{ form.description|as_crispy_field }}
+                                </div>
+                                <div class="col-md-5">
+                                    {{ form.delivery_time|as_crispy_field }}
+                                    {{ form.revisions|as_crispy_field }}
+                                    {{ form.display_order|as_crispy_field }}
+                                </div>
+                                <div class="col-md-1">
+                                    {{ form.is_active|as_crispy_field }}
+                                    {% if form.instance.pk %}
+                                        <div class="form-check mt-2">
+                                            {{ form.DELETE }}
+                                            <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">{% trans "Delete" %}</label>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                {% if form.non_field_errors %}<div class="col-12"><div class="alert alert-danger mt-2">{{ form.non_field_errors }}</div></div>{% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div id="empty-package-form" style="display:none;">
+                        <div class="row align-items-center mb-3 border-bottom pb-3 package-form">
+                            <div class="col-md-6">{{ package_formset.empty_form.name|as_crispy_field }}{{ package_formset.empty_form.price|as_crispy_field }}{{ package_formset.empty_form.description|as_crispy_field }}</div>
+                            <div class="col-md-5">{{ package_formset.empty_form.delivery_time|as_crispy_field }}{{ package_formset.empty_form.revisions|as_crispy_field }}{{ package_formset.empty_form.display_order|as_crispy_field }}</div>
+                            <div class="col-md-1">{{ package_formset.empty_form.is_active|as_crispy_field }}</div>
+                        </div>
+                    </div>
+                    <button type="button" id="add-package-form" class="btn btn-outline-secondary btn-sm">{% trans "Add Another Package" %}</button>
+                </fieldset>
+
+                {# Availability Slots Formset #}
+                <fieldset>
+                    <legend>{% trans "Set Your Availability (Optional)" %}</legend>
+                    <p class="text-muted">{% trans "Add specific time slots when you are available to perform this service. Customers will be able to book these times directly." %}</p>
+                    {{ availability_formset.management_form }}
+                    {% if availability_formset.non_form_errors %}
+                        <div class="alert alert-danger">{{ availability_formset.non_form_errors }}</div>
+                    {% endif %}
+                    <div id="availability-form-list">
+                        {% for form in availability_formset %}
+                            <div class="row align-items-center mb-3 border-bottom pb-3 availability-form">
+                                {% if form.instance.pk %}{{ form.id }}{% endif %}
+                                <div class="col-md-5">{{ form.start_time|as_crispy_field }}</div>
+                                <div class="col-md-5">{{ form.end_time|as_crispy_field }}</div>
+                                <div class="col-md-2">
+                                    {% if form.instance.pk and not form.instance.is_booked %}
+                                        <div class="form-check mt-4">{{ form.DELETE }}<label class="form-check-label" for="{{ form.DELETE.id_for_label }}">{% trans "Delete" %}</label></div>
+                                    {% elif form.instance.is_booked %}<span class="badge bg-danger mt-4">{% trans "Booked" %}</span>{% endif %}
+                                </div>
+                                {% if form.non_field_errors %}<div class="col-12"><div class="alert alert-danger mt-2">{{ form.non_field_errors }}</div></div>{% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div id="empty-availability-form" style="display:none;">
+                        <div class="row align-items-center mb-3 border-bottom pb-3 availability-form">
+                            <div class="col-md-5">{{ availability_formset.empty_form.start_time|as_crispy_field }}</div>
+                            <div class="col-md-5">{{ availability_formset.empty_form.end_time|as_crispy_field }}</div>
+                        </div>
+                    </div>
+                    <button type="button" id="add-availability-form" class="btn btn-outline-secondary btn-sm">{% trans "Add Another Slot" %}</button>
+                </fieldset>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <a href="{% url 'core:service_provider_services_list' %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+                    <button type="submit" class="btn btn-primary">{{ submit_button_text }}</button>
+                </div>
+            </div>
         </form>
     </div>
 </div>
-{% endblock service_content %}
+{% endblock content %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function setupFormset(prefix) {
+        const addBtn = document.getElementById(`add-${prefix}-form`);
+        const formList = document.getElementById(`${prefix}-form-list`);
+        const emptyForm = document.getElementById(`empty-${prefix}-form`).innerHTML;
+        const totalForms = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+        
+        addBtn.addEventListener('click', function() {
+            let currentFormCount = formList.children.length;
+            let newForm = emptyForm.replace(/__prefix__/g, currentFormCount);
+            formList.insertAdjacentHTML('beforeend', newForm);
+            totalForms.value = currentFormCount + 1;
+        });
+    }
+    setupFormset('package');
+    setupFormset('availability');
+});
+</script>
+{% endblock extra_js %}

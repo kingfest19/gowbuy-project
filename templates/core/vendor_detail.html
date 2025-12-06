@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-4">
+            {% if vendor.logo %}
+                <img src="{{ vendor.logo.url }}" class="img-fluid rounded-circle" alt="{{ vendor.name }} logo">
+            {% else %}
+                <img src="{% static 'path/to/default-vendor-logo.png' %}" class="img-fluid rounded-circle" alt="Default vendor logo">
+            {% endif %}
+        </div>
+        <div class="col-md-8">
+            <h1>{{ vendor.name }}</h1>
+            <p>{{ vendor.description }}</p>
+            <p><strong>Contact:</strong> {{ vendor.contact_email }}</p>
+        </div>
+    </div>
+
+    <div class="mt-5">
+        <h2>Products from this Vendor</h2>
+        <div class="row">
+            {% for product in products %}
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <img src="{{ product.images.first.image.url }}" class="card-img-top" alt="{{ product.name }}">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ product.name }}</h5>
+                            <p class="card-text">{{ product.price }}</p>
+                            <a href="{{ product.get_absolute_url }}" class="btn btn-primary">View Product</a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <p>No products found for this vendor.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="mt-5">
+        <h2>Reviews for {{ vendor.name }}</h2>
+        {% if reviews %}
+            <p>Average Rating: {{ average_rating|floatformat:1 }}/5.0</p>
+            {% for review in reviews %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ review.user.username }} - {{ review.rating }} stars</h5>
+                        <p class="card-text">{{ review.comment }}</p>
+                        <small class="text-muted">{{ review.created_at|date:"F d, Y" }}</small>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No reviews yet for this vendor.</p>
+        {% endif %}
+    </div>
+
+    <div class="mt-5">
+        <h3>Leave a Review for {{ vendor.name }}</h3>
+        {% if user.is_authenticated %}
+            <form method="post" action="{% url 'core:submit_vendor_review' vendor.id %}">
+                {% csrf_token %}
+                {{ review_form.as_p }}
+                <button type="submit" class="btn btn-primary">Submit Review</button>
+            </form>
+        {% else %}
+            <p>Please <a href="{% url 'authapp:signin' %}?next={{ request.path }}">log in</a> to leave a review.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

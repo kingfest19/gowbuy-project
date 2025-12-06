@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static i18n humanize %}
+
+{% block title %}{{ page_title|default:_("My Payout Requests") }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4">
+    <div class="row">
+        {% include "core/service_provider/service_provider_dashboard_sidebar_snippet.html" %}
+
+        <main class="col-md-9 ms-sm-auto col-lg-9 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">{{ page_title }}</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{% url 'core:service_provider_payout_request_create' %}" class="btn btn-sm btn-success">
+                        <i class="fas fa-plus-circle me-1"></i> {% trans "Request New Payout" %}
+                    </a>
+                </div>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {# TODO: Display available balance for payout #}
+            {# <div class="alert alert-info">Available for Payout: GH₵ {{ available_balance_for_payout|floatformat:2|intcomma }}</div> #}
+
+            {% if payout_requests %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th scope="col">{% trans "Request ID" %}</th>
+                            <th scope="col">{% trans "Amount Requested" %}</th>
+                            <th scope="col">{% trans "Status" %}</th>
+                            <th scope="col">{% trans "Requested At" %}</th>
+                            <th scope="col">{% trans "Processed At" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in payout_requests %}
+                        <tr>
+                            <td>{{ req.id }}</td>
+                            <td>GH₵ {{ req.amount_requested|floatformat:2|intcomma }}</td>
+                            <td><span class="badge bg-secondary">{{ req.get_status_display }}</span></td>
+                            <td>{{ req.requested_at|date:"d M Y, H:i" }}</td>
+                            <td>{{ req.processed_at|date:"d M Y, H:i"|default:"N/A" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% include "core/includes/pagination.html" %}
+            {% else %}
+            <div class="alert alert-light text-center" role="alert">
+                <p class="lead">{% trans "You have no payout requests yet." %}</p>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+{% endblock content %}

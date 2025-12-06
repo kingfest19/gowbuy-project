@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Edit Vendor Profile" %} - {{ vendor.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-9"> {# Increased width slightly for more fields #}
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="card-title mb-0">{% trans "Edit Vendor Profile" %}</h2>
+                    <p class="card-subtitle">{% trans "Update details for" %} {{ vendor.name }}</p>
+                </div>
+                <div class="card-body p-4"> {# Added more padding #}
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <p class="mb-0">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {# --- Basic Information --- #}
+                        <h5 class="mb-3">{% trans "Basic Information" %}</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+                            {{ form.name }}
+                            {% if form.name.help_text %}<div class="form-text">{{ form.name.help_text|safe }}</div>{% endif %}
+                            {% if form.name.errors %}<div class="invalid-feedback d-block">{% for error in form.name.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                            {{ form.description }}
+                            {% if form.description.help_text %}<div class="form-text">{{ form.description.help_text|safe }}</div>{% endif %}
+                            {% if form.description.errors %}<div class="invalid-feedback d-block">{% for error in form.description.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                        </div>
+                         <div class="mb-3">
+                            <label for="{{ form.logo.id_for_label }}" class="form-label">{{ form.logo.label }}</label>
+                            {% if vendor.logo %}<p class="text-muted small">{% trans "Current logo:" %} <a href="{{ vendor.logo.url }}" target="_blank">{{ vendor.logo.name|cut:"vendors/"|cut:vendor.slug|cut:"/" }}</a></p>{% endif %}
+                            {{ form.logo }}
+                            {% if form.logo.help_text %}<div class="form-text">{{ form.logo.help_text|safe }}</div>{% endif %}
+                            {% if form.logo.errors %}<div class="invalid-feedback d-block">{% for error in form.logo.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3">{% trans "Private Contact Information" %}</h5>
+                        <p class="text-muted small mb-3">{% trans "This information is for administrative purposes and will not be displayed publicly unless specified otherwise." %}</p>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.contact_email.id_for_label }}" class="form-label">{{ form.contact_email.label }}</label>
+                                {{ form.contact_email }}
+                                {% if form.contact_email.help_text %}<div class="form-text">{{ form.contact_email.help_text|safe }}</div>{% endif %}
+                                {% if form.contact_email.errors %}<div class="invalid-feedback d-block">{% for error in form.contact_email.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.phone_number.id_for_label }}" class="form-label">{{ form.phone_number.label }}</label>
+                                {{ form.phone_number }}
+                                {% if form.phone_number.help_text %}<div class="form-text">{{ form.phone_number.help_text|safe }}</div>{% endif %}
+                                {% if form.phone_number.errors %}<div class="invalid-feedback d-block">{% for error in form.phone_number.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3">{% trans "Location" %}</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.location_city.id_for_label }}" class="form-label">{{ form.location_city.label }}</label>
+                                {{ form.location_city }}
+                                {% if form.location_city.help_text %}<div class="form-text">{{ form.location_city.help_text|safe }}</div>{% endif %}
+                                {% if form.location_city.errors %}<div class="invalid-feedback d-block">{% for error in form.location_city.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.location_country.id_for_label }}" class="form-label">{{ form.location_country.label }}</label>
+                                {{ form.location_country }}
+                                {% if form.location_country.help_text %}<div class="form-text">{{ form.location_country.help_text|safe }}</div>{% endif %}
+                                {% if form.location_country.errors %}<div class="invalid-feedback d-block">{% for error in form.location_country.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3">{% trans "Policies" %}</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.shipping_policy.id_for_label }}" class="form-label">{{ form.shipping_policy.label }}</label>
+                            {{ form.shipping_policy }}
+                            {% if form.shipping_policy.help_text %}<div class="form-text">{{ form.shipping_policy.help_text|safe }}</div>{% endif %}
+                            {% if form.shipping_policy.errors %}<div class="invalid-feedback d-block">{% for error in form.shipping_policy.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.return_policy.id_for_label }}" class="form-label">{{ form.return_policy.label }}</label>
+                            {{ form.return_policy }}
+                            {% if form.return_policy.help_text %}<div class="form-text">{{ form.return_policy.help_text|safe }}</div>{% endif %}
+                            {% if form.return_policy.errors %}<div class="invalid-feedback d-block">{% for error in form.return_policy.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3">{% trans "Public Contact & Social Media" %}</h5>
+                        <p class="text-muted small mb-3">{% trans "This information will be displayed on your public profile and may be used by customers to contact you." %}</p>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.public_phone_number.id_for_label }}" class="form-label">{{ form.public_phone_number.label }}</label>
+                                {{ form.public_phone_number }}
+                                {% if form.public_phone_number.help_text %}<div class="form-text">{{ form.public_phone_number.help_text|safe }}</div>{% endif %}
+                                {% if form.public_phone_number.errors %}<div class="invalid-feedback d-block">{% for error in form.public_phone_number.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.public_email.id_for_label }}" class="form-label">{{ form.public_email.label }}</label>
+                                {{ form.public_email }}
+                                {% if form.public_email.help_text %}<div class="form-text">{{ form.public_email.help_text|safe }}</div>{% endif %}
+                                {% if form.public_email.errors %}<div class="invalid-feedback d-block">{% for error in form.public_email.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.website_url.id_for_label }}" class="form-label">{{ form.website_url.label }}</label>
+                                {{ form.website_url }}
+                                {% if form.website_url.help_text %}<div class="form-text">{{ form.website_url.help_text|safe }}</div>{% endif %}
+                                {% if form.website_url.errors %}<div class="invalid-feedback d-block">{% for error in form.website_url.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.whatsapp_number.id_for_label }}" class="form-label">{{ form.whatsapp_number.label }}</label>
+                                {{ form.whatsapp_number }}
+                                {% if form.whatsapp_number.help_text %}<div class="form-text">{{ form.whatsapp_number.help_text|safe }}</div>{% endif %}
+                                {% if form.whatsapp_number.errors %}<div class="invalid-feedback d-block">{% for error in form.whatsapp_number.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.facebook_url.id_for_label }}" class="form-label">{{ form.facebook_url.label }}</label>
+                                {{ form.facebook_url }}
+                                {% if form.facebook_url.help_text %}<div class="form-text">{{ form.facebook_url.help_text|safe }}</div>{% endif %}
+                                {% if form.facebook_url.errors %}<div class="invalid-feedback d-block">{% for error in form.facebook_url.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.instagram_url.id_for_label }}" class="form-label">{{ form.instagram_url.label }}</label>
+                                {{ form.instagram_url }}
+                                {% if form.instagram_url.help_text %}<div class="form-text">{{ form.instagram_url.help_text|safe }}</div>{% endif %}
+                                {% if form.instagram_url.errors %}<div class="invalid-feedback d-block">{% for error in form.instagram_url.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.twitter_url.id_for_label }}" class="form-label">{{ form.twitter_url.label }}</label>
+                                {{ form.twitter_url }}
+                                {% if form.twitter_url.help_text %}<div class="form-text">{{ form.twitter_url.help_text|safe }}</div>{% endif %}
+                                {% if form.twitter_url.errors %}<div class="invalid-feedback d-block">{% for error in form.twitter_url.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.linkedin_url.id_for_label }}" class="form-label">{{ form.linkedin_url.label }}</label>
+                                {{ form.linkedin_url }}
+                                {% if form.linkedin_url.help_text %}<div class="form-text">{{ form.linkedin_url.help_text|safe }}</div>{% endif %}
+                                {% if form.linkedin_url.errors %}<div class="invalid-feedback d-block">{% for error in form.linkedin_url.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-grid"> {# d-grid for full-width button #}
+                            <button type="submit" class="btn btn-success btn-lg">{% trans "Save Profile Changes" %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

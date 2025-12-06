@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Payment Successful" %}{% endblock %}
+{% block content %}
+<div class="container mt-5 text-center">
+    <h1>{% trans "Thank You!" %}</h1>
+    <p class="lead">{% trans "Your payment has been successfully processed." %}</p>
+    <a href="{% url 'your_orders_list_view' %}" class="btn btn-primary">{% trans "View My Orders" %}</a>
+</div>
+{% endblock %}

@@ -9,13 +9,13 @@
     }
 
     #nexusChatbotToggleButton {
-        background-color: var(--bs-primary, #007bff);
+        background-color: var(--bs-dark, #212529); /* Match your site's dark theme */
         color: white;
         border: none;
         border-radius: 50%;
         width: 60px;
         height: 60px;
-        font-size: 24px;
+        font-size: 28px;
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         cursor: pointer;
         display: flex;
@@ -23,7 +23,7 @@
         justify-content: center;
     }
      #nexusChatbotToggleButton:hover {
-        background-color: var(--bs-primary-darker, #0056b3); /* You might need to define --bs-primary-darker or use a slightly darker hex */
+        background-color: var(--bs-primary, #0d6efd); /* Use your site's primary blue for hover */
      }
 
 
@@ -32,8 +32,8 @@
         position: fixed;
         bottom: 90px; /* Above the toggle button */
         right: 20px;
-        width: 350px;
-        max-width: 90vw;
+        width: 370px; /* Slightly wider */
+        max-width: 95vw;
         height: 450px;
         max-height: 70vh;
         background-color: white;
@@ -45,7 +45,7 @@
     }
 
     .nexus-chat-header {
-        background-color: var(--bs-light, #f8f9fa);
+        background-color: var(--bs-dark, #212529); /* Dark header */
         padding: 10px 15px;
         border-bottom: 1px solid #dee2e6;
         display: flex;
@@ -53,12 +53,14 @@
         align-items: center;
     }
     .nexus-chat-header h5 {
+        color: white;
         margin-bottom: 0;
         font-size: 1.1rem;
     }
     .nexus-chat-header .btn-close-chat {
         background: none;
         border: none;
+        color: white;
         font-size: 1.2rem;
         cursor: pointer;
     }
@@ -80,7 +82,7 @@
     }
 
     .nexus-chat-message.user {
-        background-color: var(--bs-primary, #007bff);
+        background-color: var(--bs-primary, #0d6efd); /* Primary blue for user messages */
         color: white;
         align-self: flex-end;
         border-bottom-right-radius: 5px;
@@ -98,6 +100,46 @@
         border: 1px solid var(--bs-danger-border-subtle, #f5c6cb);
         align-self: flex-start;
      }
+    .nexus-chat-item-card {
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px;
+        display: flex;
+        flex-direction: column; /* Stack content vertically */
+        gap: 10px;
+        text-decoration: none;
+        color: inherit;
+        transition: box-shadow 0.2s ease-in-out;
+        margin-top: 5px; /* Space between text and cards */
+    }
+    .nexus-chat-item-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        color: inherit;
+    }
+    .nexus-chat-item-card-header {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+    }
+    .nexus-chat-item-card-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        width: 100%;
+    }
+    .nexus-chat-item-card-actions .btn {
+        flex-grow: 1;
+    }
+    .nexus-chat-item-card img {
+        width: 60px;
+        height: 60px;
+        border-radius: 4px;
+        object-fit: cover;
+    }
+    .nexus-chat-product-card-info h6 { margin-bottom: 2px; font-size: 0.9rem; }
+    .nexus-chat-product-card-info p { margin-bottom: 0; font-size: 0.8rem; color: #6c757d; }
 
 
     .nexus-chat-input-area {
@@ -116,12 +158,12 @@
     }
     .nexus-chat-input-area input[type="text"]:focus {
         outline: none;
-        border-color: var(--bs-primary, #007bff);
+        border-color: var(--bs-primary, #0d6efd);
         box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
     }
 
     .nexus-chat-input-area button {
-        background-color: var(--bs-primary, #007bff);
+        background-color: var(--bs-primary, #0d6efd);
         color: white;
         border: none;
         border-radius: 50%;
@@ -133,7 +175,7 @@
         justify-content: center;
     }
     .nexus-chat-input-area button:hover {
-        background-color: var(--bs-primary-darker, #0056b3);
+        background-color: var(--bs-dark, #212529);
     }
     .nexus-chat-input-area button:disabled {
         background-color: #adb5bd;
@@ -189,8 +231,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const messageInput = document.getElementById('nexusChatMessageInput');
     const sendButton = document.getElementById('nexusChatSendButton');
 
-    const MAX_HISTORY_MESSAGES = 10; // e.g., send last 5 turns (user + AI = 10 messages)
-    let conversationHistory = []; // Simple array to store chat history [{role: 'user'/'model', text: '...'}, ...]
+    let conversationHistory = []; // Store conversation history
 
     // Function to toggle chat window visibility
     function toggleChatWindow() {
@@ -200,13 +241,6 @@ document.addEventListener('DOMContentLoaded', function () {
         toggleButton.innerHTML = isOpen ? '<i class="bi bi-chat-dots-fill"></i>' : '<i class="bi bi-x-lg"></i>';
         if (!isOpen) {
             messageInput.focus(); // Manage focus when opening
-            // Add initial AI greeting to history if chat is opened for the first time in session or history is empty
-            if (conversationHistory.length === 0) {
-                 const initialAiMessage = messagesContainer.querySelector('.nexus-chat-message.ai');
-                 if (initialAiMessage && initialAiMessage.textContent) {
-                    conversationHistory.push({ role: 'model', text: initialAiMessage.textContent.trim() });
-                 }
-            }
         }
     }
 
@@ -220,10 +254,55 @@ document.addEventListener('DOMContentLoaded', function () {
     function addMessageToDisplay(text, type) { // type can be 'user', 'ai', or 'error'
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('nexus-chat-message', type);
-        messageDiv.textContent = text;
+        messageDiv.innerHTML = text; // Use innerHTML to render potential links
         // For screen readers, new messages in an aria-live region are usually announced.
         messagesContainer.appendChild(messageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight; // Scroll to bottom
+    }
+
+    // Function to add item (product/service) cards to the chat display
+    function addItemCardsToDisplay(items) {
+        items.forEach(item => {
+            const itemCard = document.createElement('div');
+            itemCard.classList.add('nexus-chat-item-card');
+            
+            // Determine if it's a product or service for the "Add to Cart" URL
+            const addToCartUrl = item.type === 'product' ? `{% url 'core:add_to_cart' 0 %}`.replace('0', item.id) : '#'; // Placeholder for service
+            const addToCartDisabled = item.type !== 'product' ? 'disabled' : '';
+            const addToCartTitle = item.type !== 'product' ? `{% trans "Booking services from chat is coming soon" %}` : `{% trans "Add to Cart" %}`;
+
+            itemCard.innerHTML = `
+                <div class="nexus-chat-item-card-header">
+                    <img src="${item.image_url}" alt="${item.name}">
+                    <div class="nexus-chat-item-card-info">
+                        <h6>${item.name}</h6>
+                        <p>GH₵ ${item.price}</p>
+                    </div>
+                </div>
+                <div class="nexus-chat-item-card-actions">
+                    <a href="${item.url}" target="_blank" class="btn btn-sm btn-outline-secondary">{% trans "View Details" %}</a>
+                    <a href="${addToCartUrl}" class="btn btn-sm btn-primary" ${addToCartDisabled} title="${addToCartTitle}">
+                        <i class="bi bi-cart-plus"></i> {% trans "Add to Cart" %}
+                    </a>
+                </div>
+            `;
+
+            // Add event listener for the "Add to Cart" button if it's a product
+            if (item.type === 'product') {
+                const addToCartBtn = itemCard.querySelector('.btn-primary');
+                addToCartBtn.addEventListener('click', function(e) {
+                    e.preventDefault(); // Prevent default link behavior
+                    // You can add an AJAX call here to add to cart without a page reload
+                    // For now, we'll just show a confirmation and let the link work
+                    addMessageToDisplay(`{% trans "Adding" %} '${item.name}' {% trans "to your cart..." %}`, 'ai');
+                    // Redirect to the add_to_cart URL
+                    window.location.href = this.href;
+                });
+            }
+
+            messagesContainer.appendChild(itemCard);
+        });
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
     
     function showTypingIndicator() {
@@ -245,57 +324,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to send message to backend
     async function sendMessage() {
-        const userMessageText = messageInput.value.trim();
-        if (!userMessageText) return;
+        const userMessage = messageInput.value.trim();
+        if (!userMessage) return;
 
-        addMessageToDisplay(userMessageText, 'user');
-        conversationHistory.push({ role: 'user', text: userMessageText });
+        // Add to conversation history
+        conversationHistory.push(`User: ${userMessage}`);
+        if (conversationHistory.length > 6) conversationHistory.shift(); // Keep history short
+
+        addMessageToDisplay(userMessage, 'user');
         messageInput.value = '';
         sendButton.disabled = true;
         
         const typingIndicator = showTypingIndicator();
 
-        // --- Gather Contextual State ---
-        let pageContext = {
-            url: window.location.href,
-            page_title: document.title,
-            // Example: Try to get product ID if on a product page
-            product_id_on_page: null, 
-            // Example: Try to get category if on a category page
-            category_on_page: null 
-        };
-
-        // This is a very simplified example; you'd need more robust selectors
-        // For instance, if your product detail page has a specific container with a data attribute:
-        const productDetailElement = document.querySelector('[data-product-id]'); 
-        if (productDetailElement && productDetailElement.dataset.productId) {
-            pageContext.product_id_on_page = productDetailElement.dataset.productId;
-        }
-        // Similarly for category pages:
-        // const categoryPageElement = document.querySelector('[data-category-slug]');
-        // if (categoryPageElement && categoryPageElement.dataset.categorySlug) {
-        //     pageContext.category_on_page = categoryPageElement.dataset.categorySlug;
-        // }
-        // --- End Gather Contextual State ---
-
-        let relevantHistory = conversationHistory.slice(-MAX_HISTORY_MESSAGES);
-
         try {
+            // Step 1: Get AI response and item IDs
             const response = await fetch("{% url 'core:ajax_chatbot_message' %}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}' // Make sure CSRF token is available
                 },
-                body: JSON.stringify({
-                    user_message: userMessageText,
-                    conversation_history: relevantHistory,
-                    page_context: pageContext // <<< Send page context
+                body: JSON.stringify({ 
+                    message: userMessage,
+                    history: conversationHistory.join('\n')
                 })
             });
 
             removeTypingIndicator(typingIndicator);
-            sendButton.disabled = false;
 
             if (!response.ok) {
                 let errorMsg = `{% trans "An unexpected error occurred. Status:" %} ${response.status}`;
@@ -307,25 +363,50 @@ document.addEventListener('DOMContentLoaded', function () {
                 addMessageToDisplay(errorMsg, 'error');
                 // Log the more detailed error to the console for debugging
                 console.error('Chatbot backend error:', response.status, await response.text().catch(() => 'Could not read error response body'));
-                conversationHistory.push({ role: 'model', text: errorMsg }); // Log error as AI response
+                sendButton.disabled = false;
                 return;
             }
 
             const data = await response.json();
-            if (data.ai_response) {
-                addMessageToDisplay(data.ai_response, 'ai');
-                conversationHistory.push({ role: 'model', text: data.ai_response });
-            } else if (data.error) {
+
+            // Handle cases where the backend returns a JSON object with an error key,
+            // even with a 200 OK status. This is common for application-level errors.
+            if (data.error) {
                 addMessageToDisplay(data.error, 'error');
-                conversationHistory.push({ role: 'model', text: data.error });
+                sendButton.disabled = false;
+                return;
             }
+
+            // Display the AI's text response
+            if (data.response_text) {
+                addMessageToDisplay(data.response_text, 'ai');
+                conversationHistory.push(`AI: ${data.response_text}`);
+                if (conversationHistory.length > 6) conversationHistory.shift();
+            }
+            // If we have item IDs, fetch their details and display them
+            const hasProducts = data.product_ids && data.product_ids.length > 0;
+            const hasServices = data.service_ids && data.service_ids.length > 0;
+
+            if (hasProducts || hasServices) {
+                const itemDetailsResponse = await fetch("{% url 'core:ajax_get_item_details' %}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                    body: JSON.stringify({ product_ids: data.product_ids || [], service_ids: data.service_ids || [] })
+                });
+                const itemDetailsData = await itemDetailsResponse.json();
+                if (itemDetailsData.items && itemDetailsData.items.length > 0) {
+                    addItemCardsToDisplay(itemDetailsData.items);
+                }
+            }
+
+            sendButton.disabled = false;
+
         } catch (error) {
             removeTypingIndicator(typingIndicator);
             sendButton.disabled = false;
             console.error('Chatbot fetch/network error:', error);
             const networkErrorMsg = "{% trans 'Network error or AI assistant is unavailable. Please try again.' %}";
             addMessageToDisplay(networkErrorMsg, 'error');
-            conversationHistory.push({ role: 'model', text: networkErrorMsg });
         }
         messageInput.focus();
     }

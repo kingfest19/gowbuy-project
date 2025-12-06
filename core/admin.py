@@ -1,6 +1,6 @@
 # c:\Users\Hp\Desktop\Nexus\core\admin.py
 from django.db.models import Sum, F, Value
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.utils.html import format_html # For user_link helper
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse # For user_link helper
@@ -9,7 +9,6 @@ import requests # For Paystack API calls
 import uuid # For generating idempotency keys or unique references
 from django.db import transaction as db_transaction # For atomic transactions in admin actions
 from decimal import Decimal, ROUND_HALF_UP # For amount calculations
-
 # Import your user model (adjust path if needed)
 from authapp.models import CustomUser
 
@@ -17,11 +16,15 @@ from authapp.models import CustomUser
 # Import ProductImage as well
 from .models import (
     Category, Vendor, Product, Address, Order, OrderItem, Transaction,
-    WishlistItem, ProductReview, VendorReview, ProductImage, logger, # <<< Added logger
-    ProductVideo, ServiceCategory, Service, ServiceReview, ServiceImage, ServiceVideo, PayoutRequest, # Added PayoutRequest
-    ServicePackage, DeliveryTask, ServiceProviderProfile, RiderProfile, 
-    RiderApplication, BoostPackage, ActiveRiderBoost # <<< Import RiderApplication, BoostPackage, and ActiveRiderBoost
+    WishlistItem, ProductReview, VendorReview, ProductImage, logger, PortfolioItem, # <<< Added logger and PortfolioItem
+    ProductVideo, ServiceCategory, Service, ServiceReview, ServiceImage, ServiceVideo, PayoutRequest, PricingPlan, 
+    ServicePackage, DeliveryTask, ServiceProviderProfile, RiderProfile,
+    RiderApplication, BoostPackage, ActiveRiderBoost, FraudReport # <<< Import RiderApplication, BoostPackage, and ActiveRiderBoost
 )
+
+# Import custom forms
+from .forms import VendorProductForm
+
 
 # --- CustomUser Admin (Keep as is, or move to authapp/admin.py) ---
 class CustomUserAdmin(admin.ModelAdmin):
@@ -50,9 +53,9 @@ class CategoryAdmin(admin.ModelAdmin):
 # --- UPDATED Vendor Admin ---
 @admin.register(Vendor)
 class VendorAdmin(admin.ModelAdmin):
-    list_display = ('name', 'user_link', 'is_approved', 'is_verified', 'default_fulfillment_method', 'active_product_count', 'total_sales_display', 'view_products_link', 'view_orders_link', 'created_at')
-    list_filter = ('is_approved', 'is_verified', 'created_at', 'location_country') # Restored country filter
-    list_editable = ('is_approved', 'is_verified')
+    list_display = ('name', 'user_link', 'is_approved', 'is_verified', 'has_premium_3d_generation_access', 'default_fulfillment_method', 'active_product_count', 'total_sales_display', 'view_products_link', 'view_orders_link', 'created_at')
+    list_filter = ('is_approved', 'is_verified', 'has_premium_3d_generation_access', 'created_at', 'location_country')
+    list_editable = ('is_approved', 'is_verified', 'has_premium_3d_generation_access')
     search_fields = ('name', 'user__username', 'contact_email', 'location_city')
     prepopulated_fields = {'slug': ('name',)}
     raw_id_fields = ('user',)
@@ -64,13 +67,13 @@ class VendorAdmin(admin.ModelAdmin):
             'fields': ('user', 'name', 'slug')
         }),
         ('Status & Verification', {
-            'fields': ('is_approved', 'is_verified')
+            'fields': ('is_approved', 'is_verified', 'has_premium_3d_generation_access')
         }),
         ('Profile Information', {
             'fields': ('description', 'contact_email', 'phone_number', 'logo', 'location_city', 'location_country', 'latitude', 'longitude', 'default_fulfillment_method')
         }),
         ('Payout Information', { # Added for vendor payout
-            'fields': ('mobile_money_provider', 'mobile_money_number', 'paystack_recipient_code')
+            'fields': ('mobile_money_provider', 'mobile_money_number', 'paypal_email', 'bank_account_name', 'bank_account_number', 'bank_name', 'bank_branch', 'paystack_recipient_code', 'stripe_account_id', 'payoneer_email', 'wise_email', 'crypto_wallet_address', 'crypto_wallet_network')
         }),
         ('Verification Documents', {
             'fields': ('verification_method', 'verification_status', 'business_registration_document', 'tax_id_number', 'other_supporting_document', 'national_id_type', 'national_id_number', 'national_id_document')
@@ -160,6 +163,7 @@ class ProductVideoInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    form = VendorProductForm
     list_display = ('name', 'slug', 'vendor', 'category', 'price', 'stock', 'is_active', 'is_available', 'is_featured', 'created_at') # Restored 'is_available'
     list_filter = ('is_active', 'is_featured', 'category', 'vendor', 'created_at') # Restored
     search_fields = ('name', 'description', 'slug', 'vendor__name', 'category__name') # Restored
@@ -175,7 +179,9 @@ class ProductAdmin(admin.ModelAdmin):
         (None, {
             'fields': ('vendor', 'category', 'name', 'slug', 'product_type')
         }),
-        ('Pricing & Stock', {
+        ('Image Enhancement', {
+            'fields': ('enhance_image', 'remove_background')
+        }),('Pricing & Stock', {
             'fields': ('price', 'stock')
         }),
         ('Description & Media', {
@@ -183,6 +189,7 @@ class ProductAdmin(admin.ModelAdmin):
         }),
         ('Fulfillment', {
             'fields': ('fulfillment_method', 'vendor_delivery_fee')
+
         }),
         ('Status & Visibility', {
             'fields': ('is_active', 'is_featured')
@@ -495,7 +502,7 @@ def process_vendor_payouts(modeladmin, request, queryset):
                 total_commission_for_vendor_items = payout_details['commission_earned']
                 items_description = "; ".join(payout_details['items_info'])
 
-                if payout_amount_decimal <= 0: # Corrected HTML entity
+                if payout_amount_decimal <= 0:
                     logger.info(f"Order {order.order_id}, Vendor {vendor.name}: Payout amount is zero or less, skipping transfer.")
                     # Still log commission if earned
                     Transaction.objects.create(
@@ -503,8 +510,7 @@ def process_vendor_payouts(modeladmin, request, queryset):
                         transaction_type='platform_commission',
                         amount=total_commission_for_vendor_items,
                         status='completed',
-                        description=f"Platform commission from Order {order.order_id} (Vendor: {vendor.name}, Items: {items_description})"
-                    )
+                        description=f"Platform commission from Order {order.order_id} (Vendor: {vendor.name}, Items: {items_description})")
                     continue # Move to next vendor or mark order as processed if this was the only one
 
                 try:
@@ -561,8 +567,7 @@ def process_vendor_payouts(modeladmin, request, queryset):
                                 transaction_type='platform_commission',
                                 amount=total_commission_for_vendor_items,
                                 status='completed',
-                                description=f"Platform commission from Order {order.order_id} (Vendor: {vendor.name}, Items: {items_description})"
-                            )
+                                description=f"Platform commission from Order {order.order_id} (Vendor: {vendor.name}, Items: {items_description})")
                         else:
                             all_vendor_payouts_successful_for_this_order = False
                             error_msg = transfer_data.get("message", "Paystack transfer initiation failed for vendor.")
@@ -774,6 +779,16 @@ class DeliveryTaskAdmin(admin.ModelAdmin):
             return format_html('<a href="{}">{}</a>', link, obj.rider.user.username)
         return _("N/A")
     rider_link.short_description = 'Assigned Rider'
+
+# --- START: PricingPlan Admin ---
+@admin.register(PricingPlan)
+class PricingPlanAdmin(admin.ModelAdmin):
+    list_display = ('name', 'plan_type', 'price', 'currency', 'duration_days', 'is_active', 'display_order')
+    list_filter = ('is_active', 'plan_type', 'currency')
+    list_editable = ('price', 'is_active', 'display_order')
+    search_fields = ('name', 'description')
+    ordering = ('display_order', 'price')
+# --- END: PricingPlan Admin ---
 # --- END: DeliveryTask Admin ---
 
 @admin.register(RiderApplication)
@@ -1070,6 +1085,11 @@ class ServicePackageAdmin(admin.ModelAdmin):
 
 admin.site.register(ServicePackage, ServicePackageAdmin)
 
+class PortfolioItemInline(admin.TabularInline):
+    model = PortfolioItem
+    extra = 1
+    fields = ('title', 'description', 'image', 'link')
+
 
 @admin.register(ServiceProviderProfile)
 class ServiceProviderProfileAdmin(admin.ModelAdmin):
@@ -1081,9 +1101,17 @@ class ServiceProviderProfileAdmin(admin.ModelAdmin):
     readonly_fields = ('paystack_recipient_code', 'created_at', 'updated_at') 
     fieldsets = (
         (None, {'fields': ('user', 'business_name', 'bio', 'is_approved')}),
-        ('Payout Information', {'fields': ('payout_mobile_money_provider', 'payout_mobile_money_number', 'paystack_recipient_code')}),
+        ('Payout Information', {'fields': (
+            'mobile_money_provider', 'mobile_money_number',
+            'paypal_email',
+            'bank_account_name', 'bank_account_number', 'bank_name', 'bank_branch',
+            'paystack_recipient_code',
+            'stripe_account_id', 'payoneer_email', 'wise_email',
+            'crypto_wallet_address', 'crypto_wallet_network'
+        )}),
         ('Timestamps', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
     )
+    inlines = [PortfolioItemInline]
 
     def user_display_name(self, obj):
         return obj.user.username
@@ -1147,3 +1175,16 @@ class TransactionAdmin(admin.ModelAdmin):
             return format_html('<a href="{}">{}</a>', link, obj.user.username)
         return "N/A"
     user_link.short_description = 'User'
+@admin.register(FraudReport)
+class FraudReportAdmin(admin.ModelAdmin):
+    list_display = ('order_link', 'risk_score', 'status', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('order__order_id', 'reasons')
+    list_editable = ('status',)
+    readonly_fields = ('order_link', 'risk_score', 'reasons', 'created_at', 'updated_at')
+    ordering = ('-created_at',)
+
+    def order_link(self, obj):
+        link = reverse("admin:core_order_change", args=[obj.order.id])
+        return format_html('<a href="{}">{}</a>', link, obj.order.order_id)
+    order_link.short_description = 'Order'

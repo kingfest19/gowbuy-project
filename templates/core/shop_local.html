@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Shop Local" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .location-prompt {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: .5rem;
+        text-align: center;
+    }
+    .vendor-card {
+        transition: transform .2s, box-shadow .2s;
+    }
+    .vendor-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    }
+    .vendor-card .badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+
+            <div class="text-center mb-5">
+                <h1 class="display-5 fw-bold">{% trans "Shop Local" %}</h1>
+                <p class="lead text-muted">{% trans "Discover and support vendors in your community." %}</p>
+            </div>
+
+            <!-- Location Prompt / Loading State -->
+            <div id="location-status" class="p-4 p-md-5 mb-4 location-prompt">
+                <div id="prompt-message">
+                    <h4 class="fw-normal">{% trans "Find vendors near you" %}</h4>
+                    <p>{% trans "Allow location access to see local sellers and products." %}</p>
+                    <button id="getLocationBtn" class="btn btn-primary btn-lg">
+                        <i class="bi bi-geo-alt-fill me-2"></i>{% trans "Use My Current Location" %}
+                    </button>
+                </div>
+                <div id="loading-message" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">{% trans "Loading..." %}</span>
+                    </div>
+                    <p class="mt-2">{% trans "Finding local vendors..." %}</p>
+                </div>
+                <div id="error-message" class="alert alert-danger" style="display: none;"></div>
+            </div>
+
+            <!-- Vendor Results -->
+            {% if has_location %}
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="mb-0">{% trans "Vendors within" %} {{ search_radius }}km</h3>
+                    {# Optional: Add a radius selector here #}
+                </div>
+
+                {% if nearby_vendors %}
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                        {% for vendor in nearby_vendors %}
+                        <div class="col">
+                            <div class="card h-100 vendor-card">
+                                <a href="{{ vendor.get_absolute_url }}">
+                                    <img src="{{ vendor.logo.url|default_if_none:'https://via.placeholder.com/400x300.png?text=No+Logo' }}" class="card-img-top" alt="{{ vendor.name }} logo" style="height: 200px; object-fit: cover;">
+                                </a>
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ vendor.name }}</h5>
+                                    <p class="card-text text-muted small">{{ vendor.description|truncatewords:15 }}</p>
+                                </div>
+                                <div class="card-footer bg-transparent border-top-0 pb-3">
+                                    <a href="{{ vendor.get_absolute_url }}" class="btn btn-outline-primary w-100">{% trans "Visit Store" %}</a>
+                                </div>
+                                <span class="badge bg-dark">{{ vendor.distance }} km {% trans "away" %}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center p-5 bg-light rounded">
+                        <h4>{% trans "No Vendors Found Nearby" %}</h4>
+                        <p>{% trans "We couldn't find any vendors within" %} {{ search_radius }}km. {% trans "Try expanding your search radius or check back later!" %}</p>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const getLocationBtn = document.getElementById('getLocationBtn');
+    const promptMessage = document.getElementById('prompt-message');
+    const loadingMessage = document.getElementById('loading-message');
+    const errorMessage = document.getElementById('error-message');
+
+    // If the page already has location data, we don't need the button.
+    if ({{ has_location|yesno:"true,false" }}) {
+        document.getElementById('location-status').style.display = 'none';
+        return;
+    }
+
+    getLocationBtn.addEventListener('click', function() {
+        if (navigator.geolocation) {
+            promptMessage.style.display = 'none';
+            loadingMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                // Redirect to the same page with location parameters
+                window.location.href = `{% url 'core:shop_local' %}?lat=${lat}&lon=${lon}`;
+            }, function(error) {
+                loadingMessage.style.display = 'none';
+                errorMessage.textContent = `{% trans "Error getting location:" %} ${error.message}`;
+                errorMessage.style.display = 'block';
+            });
+        } else {
+            errorMessage.textContent = "{% trans 'Geolocation is not supported by this browser.' %}";
+            errorMessage.style.display = 'block';
+        }
+    });
+});
+</script>
+{% endblock %}

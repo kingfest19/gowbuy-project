@@ -6,34 +6,71 @@
 {% block extra_css %}
     {{ block.super }}
     <style>
-        .profile-sidebar .card {
-            border: none;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        .profile-container {
+            background-color: #fff;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+            border: 1px solid #000000ff;
         }
-        .profile-sidebar .card-title {
+        .card {
+            border: 1px solid #000000ff;
+        }
+        .profile-sidebar .profile-name {
             color: rgb(52, 73, 94); /* Primary Dark Blue-Grey */
+        }
+        .profile-sidebar .card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+
+}
+        .profile-section {
+            padding-bottom: 2rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .profile-section:last-of-type {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
         }
         .service-card-item .card {
             transition: transform .2s ease-in-out, box-shadow .2s ease-in-out;
-            border: 1px solid #e9ecef;
+        }
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #34495e;
+            margin-bottom: 1.5rem;
         }
         .service-card-item .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
         }
-        .service-card-item .card-title a {
+        .service-item-title a {
             color: rgb(52, 73, 94); /* Primary Dark Blue-Grey */
             text-decoration: none;
+            font-weight: 600;
         }
-        .service-card-item .card-title a:hover {
+        .service-item-title a:hover {
             color: rgb(26, 188, 156); /* Accent Teal */
         }
         .service-card-item .btn-primary {
             background-color: rgb(26, 188, 156); /* Accent Teal */
             border-color: rgb(26, 188, 156);
         }
-        .review-card .card-title {
+        .review-item {
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .review-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .review-item-title {
             font-size: 1.1rem;
+            font-weight: 600;
             color: rgb(52, 73, 94);
         }
         /* Styles for portfolio items */
@@ -59,109 +96,101 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4 mb-5">
-    <div class="row">
-        <div class="col-md-3 profile-sidebar">
-            <!-- Provider Info Sidebar (Optional) -->
-            <div class="card mb-3">
-                <div class="card-body text-center">
-                    {# You might want a profile picture field on your CustomUser model #}
-                    {% if profile_owner.profile_picture %}
-                        <img src="{{ profile_owner.profile_picture.url }}" alt="{{ profile_owner.username }} {% trans 'profile picture' %}" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
-                    {% else %}
-                        <i class="bi bi-person-circle display-1 text-muted mb-3"></i>
-                    {% endif %}
-                    <h4 class="card-title">{{ profile_owner.get_full_name|default:profile_owner.username }}</h4>
-                    <p class="text-muted">@{{ profile_owner.username }}</p>
+<div class="container mt-5 mb-5">
+    <div class="profile-container">
+        <div class="row">
+            <div class="col-md-3 profile-sidebar text-center">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        {% if profile_owner.userprofile.profile_picture %}
+                            <img src="{{ profile_owner.userprofile.profile_picture.url }}" alt="{{ profile_owner.username }} {% trans 'profile picture' %}" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                        {% else %}
+                             <i class="bi bi-person-circle display-1 text-muted mb-3"></i>
+                        {% endif %}
+                        <h4 class="profile-name">{{ profile_owner.get_full_name|default:profile_owner.username }}</h4>
+                        <p class="text-muted">@{{ profile_owner.username }}</p>
 
-                    {% if request.user == profile_owner %}
-                        <a href="{% url 'core:user_profile' %}" class="btn btn-outline-primary btn-sm mb-3"><i class="bi bi-pencil-square me-1"></i> {% trans "Edit My Profile" %}</a>
-                    {% endif %}
+                        {% if request.user == profile_owner %}
+                            <a href="{% url 'core:edit_service_provider_profile' %}" class="btn btn-outline-primary btn-sm mb-3"><i class="bi bi-pencil-square me-1"></i> {% trans "Edit Provider Profile" %}</a>
+                        {% endif %}
 
-                    {% if average_rating %}
-                        <div class="mb-2">
-                            <span class="badge bg-warning text-dark fs-6">
-                                <i class="bi bi-star-fill"></i> {{ average_rating|floatformat:1 }}
-                            </span>
-                            <small class="text-muted">({% blocktrans count review_count=review_count %}{{ review_count }} review{% plural %}{{ review_count }} reviews{% endblocktrans %})</small>
-                        </div>
-                    {% endif %}
-
-                    {# --- START: Public Contact Information --- #}
-                    <hr class="my-3">
-                    <div class="text-start"> {# text-start to align content left within the centered card #}
-                        <h6 class="text-muted mb-2">{% trans "Contact Details" %}</h6>
-                        <ul class="list-unstyled small">
-                            {% if profile_owner.public_phone_number %}
-                                <li class="mb-1"><i class="bi bi-telephone-fill me-2 text-primary"></i>{{ profile_owner.public_phone_number }}</li>
-                            {% endif %}
-                            {% if profile_owner.public_email_contact %}
-                                <li class="mb-1"><i class="bi bi-envelope-fill me-2 text-primary"></i><a href="mailto:{{ profile_owner.public_email_contact }}">{{ profile_owner.public_email_contact }}</a></li>
-                            {% endif %}
-                            {% if profile_owner.whatsapp_number %}
-                                <li class="mb-1">
-                                    <i class="bi bi-whatsapp me-2 text-success"></i>
-                                    <a href="https://wa.me/{{ profile_owner.whatsapp_number|slice:'1:' }}?text={% trans "Hello, I saw your profile on NEXUS." %}" target="_blank" rel="noopener noreferrer">
-                                        {{ profile_owner.whatsapp_number }}
-                                    </a>
-                                </li>
-                            {% endif %}
-                            {% if profile_owner.website_url %}
-                                <li class="mb-1"><i class="bi bi-globe me-2 text-primary"></i><a href="{{ profile_owner.website_url }}" target="_blank" rel="noopener noreferrer">{{ profile_owner.website_url }}</a></li>
-                            {% endif %}
-                        </ul>
-                        {# Social Media Links #}
-                        {% if profile_owner.facebook_url or profile_owner.instagram_url or profile_owner.twitter_url or profile_owner.linkedin_url %}
-                            <h6 class="text-muted mt-3 mb-2">{% trans "Social Media" %}</h6>
-                            <div class="d-flex flex-wrap justify-content-center"> {# justify-content-center for centered icons #}
-                                {% if profile_owner.facebook_url %}
-                                    <a href="{{ profile_owner.facebook_url }}" target="_blank" rel="noopener noreferrer" class="fs-4 me-2 text-primary"><i class="bi bi-facebook"></i></a>
-                                {% endif %}
-                                {% if profile_owner.instagram_url %}
-                                    <a href="{{ profile_owner.instagram_url }}" target="_blank" rel="noopener noreferrer" class="fs-4 me-2 text-danger"><i class="bi bi-instagram"></i></a>
-                                {% endif %}
-                                {% if profile_owner.twitter_url %}
-                                    <a href="{{ profile_owner.twitter_url }}" target="_blank" rel="noopener noreferrer" class="fs-4 me-2 text-info"><i class="bi bi-twitter-x"></i></a>
-                                {% endif %}
-                                {% if profile_owner.linkedin_url %}
-                                    <a href="{{ profile_owner.linkedin_url }}" target="_blank" rel="noopener noreferrer" class="fs-4 text-primary"><i class="bi bi-linkedin"></i></a>
-                                {% endif %}
+                        {% if average_rating %}
+                            <div class="mb-2">
+                                <span class="badge bg-warning text-dark fs-6">
+                                    <i class="bi bi-star-fill"></i> {{ average_rating|floatformat:1 }}
+                                </span>
+                                <small class="text-muted">({% blocktrans count review_count=review_count %}{{ review_count }} review{% plural %}{{ review_count }} reviews{% endblocktrans %})</small>
                             </div>
                         {% endif %}
-                    </div>
-                    {# --- END: Public Contact Information --- #}
-                    {% if profile_owner.bio %} {# This is the general user bio from CustomUser #}
+
+                        {# --- Public Contact Information --- #}
                         <hr class="my-3">
-                        <h6 class="text-muted mb-2 text-start">{% trans "About Me" %}</h6>
-                        <p class="text-muted text-start small">{{ profile_owner.bio|linebreaksbr }}</p>
-                    {% endif %}
-                    <p class="text-muted text-start small mt-3">{% trans "Member since" %} {{ profile_owner.date_joined|date:"M Y" }}</p>
+                        <div class="text-start">
+                            <h6 class="text-muted mb-2">{% trans "Contact Details" %}</h6>
+                            <ul class="list-unstyled small">
+                                {% if provider_profile.public_phone_number %}
+                                    <li class="mb-1"><i class="bi bi-telephone-fill me-2 text-primary"></i>{{ provider_profile.public_phone_number }}</li>
+                                {% endif %}
+                                {% if provider_profile.public_email %}
+                                    <li class="mb-1"><i class="bi bi-envelope-fill me-2 text-primary"></i><a href="mailto:{{ provider_profile.public_email }}">{{ provider_profile.public_email }}</a></li>
+                                {% endif %}
+                                {% if provider_profile.whatsapp_number %}
+                                    <li class="mb-1">
+                                        <i class="bi bi-whatsapp me-2 text-success"></i>
+                                        <a href="https://wa.me/{{ provider_profile.whatsapp_number|slice:'1:' }}?text={% trans "Hello, I saw your profile on NEXUS." %}" target="_blank" rel="noopener noreferrer">
+                                            {{ provider_profile.whatsapp_number }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% if provider_profile.website_url %}
+                                    <li class="mb-1"><i class="bi bi-globe me-2 text-primary"></i><a href="{{ provider_profile.website_url }}" target="_blank" rel="noopener noreferrer">{{ provider_profile.website_url }}</a></li>
+                                {% endif %}
+                            </ul>
+                            {# Social Media Links #}
+                            {% if provider_profile.facebook_url or provider_profile.instagram_url or provider_profile.twitter_url or provider_profile.linkedin_url %}
+                                <h6 class="text-muted mt-3 mb-2">{% trans "Social Media" %}</h6>
+                                <div class="d-flex flex-wrap">
+                                    {% if provider_profile.facebook_url %}
+                                        <a href="{{ provider_profile.facebook_url }}" target="_blank" rel="noopener noreferrer" class="fs-4 me-3 text-primary"><i class="bi bi-facebook"></i></a>
+                                    {% endif %}
+                                    {% if provider_profile.instagram_url %}
+                                        <a href="{{ provider_profile.instagram_url }}" target="_blank" rel="noopener noreferrer" class="fs-4 me-3 text-danger"><i class="bi bi-instagram"></i></a>
+                                    {% endif %}
+                                    {% if provider_profile.twitter_url %}
+                                        <a href="{{ provider_profile.twitter_url }}" target="_blank" rel="noopener noreferrer" class="fs-4 me-3 text-info"><i class="bi bi-twitter-x"></i></a>
+                                    {% endif %}
+                                    {% if provider_profile.linkedin_url %}
+                                        <a href="{{ provider_profile.linkedin_url }}" target="_blank" rel="noopener noreferrer" class="fs-4 text-primary"><i class="bi bi-linkedin"></i></a>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {% if profile_owner.userprofile.bio %}
+                            <hr class="my-3">
+                            <h6 class="text-muted mb-2 text-start">{% trans "About Me" %}</h6>
+                            <p class="text-muted text-start small">{{ profile_owner.userprofile.bio|linebreaksbr }}</p>
+                        {% endif %}
+                        <p class="text-muted text-start small mt-3">{% trans "Member since" %} {{ profile_owner.date_joined|date:"M Y" }}</p>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="col-md-9">
-            <!-- Service Provider Specific Bio Section -->
-            {% if profile_owner.service_provider_profile.bio %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5>{% trans "About My Services" %}</h5>
+            <div class="col-md-9">
+                <!-- Service Provider Specific Bio Section -->
+                {% if provider_profile.bio %}
+                <div class="profile-section">
+                    <h2 class="section-title">{% trans "About My Services" %}</h2>
+                    <p>{{ provider_profile.bio|linebreaksbr }}</p>
                 </div>
-                <div class="card-body">
-                    <p>{{ profile_owner.service_provider_profile.bio|linebreaksbr }}</p>
-                </div>
-            </div>
-            {% endif %}
+                {% endif %}
 
-            <!-- Portfolio Section -->
-            {% if profile_owner.service_provider_profile and profile_owner.service_provider_profile.portfolio_items.all %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5>{% trans "My Portfolio" %}</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 g-3"> {# Adjust columns as needed #}
-                        {% for item in profile_owner.service_provider_profile.portfolio_items.all %}
+                <!-- Portfolio Section -->
+                {% if portfolio_items %}
+                <div class="profile-section">
+                    <h2 class="section-title">{% trans "My Portfolio" %}</h2>
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 g-3">
+                        {% for item in portfolio_items %}
                             <div class="col">
                                 <div class="card shadow-sm portfolio-item-card h-100">
                                     {% if item.image %}
@@ -174,14 +203,14 @@
                                                 {% if embed_url %}
                                                     <iframe src="{{ embed_url }}" title="{{ item.title|default:'Portfolio video' }}" allowfullscreen></iframe>
                                                 {% else %}
-                                                <div class="no-preview-placeholder">
-                                                    <a href="{{ item.video_url }}" target="_blank" class="btn btn-outline-primary">{% trans "Watch Video" %}</a>
-                                                </div>
-                                            {% endif %}{% endwith %}
+                                                    <div class="no-preview-placeholder">
+                                                        <a href="{{ item.video_url }}" target="_blank" class="btn btn-outline-primary">{% trans "Watch Video" %}</a>
+                                                    </div>
+                                                {% endif %}
+                                            {% endwith %}
                                         </div>
                                     {% else %}
                                         <div class="no-preview-placeholder">
-
                                             <p class="text-muted m-0">{% trans "No preview available" %}</p>
                                         </div>
                                     {% endif %}
@@ -214,60 +243,60 @@
                         {% endfor %}
                     </div>
                 </div>
-            </div>
-            {% endif %}
-            <!-- End Portfolio Section -->
+                {% endif %}
+                <!-- End Portfolio Section -->
 
-            <!-- Services Offered -->
-            <h2 class="mb-3">{% trans "Services Offered" %}</h2>
-            {% if services %}
-                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
-                    {% for service in services %} {# Added class for styling #}
-                    <div class="col service-card-item">
-                        <div class="col">
-                            <div class="card h-100">
-                                {# You might want a main image for the service model #}
-                                {# <img src="..." class="card-img-top" alt="{{ service.title }}"> #}
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="card-title"><a href="{{ service.get_absolute_url }}">{{ service.title }}</a></h5>
-                                    <p class="card-text small text-muted">{{ service.category.name }}</p>
-                                    <p class="card-text flex-grow-1">{{ service.description|truncatewords:20 }}</p>
-                                    {% if service.packages.exists %}
-                                        <p class="card-text fw-bold">{% trans "Starting from" %} GH₵{{ service.packages.all.0.price|floatformat:2 }}</p>
-                                    {% elif service.price %}
-                                         <p class="card-text fw-bold">GH₵{{ service.price|floatformat:2 }}</p>
-                                    {% endif %}
-                                    <a href="{{ service.get_absolute_url }}" class="btn btn-primary mt-auto">{% trans "View Service" %}</a>
+                <!-- Services Offered -->
+                <div class="profile-section">
+                    <h2 class="section-title">{% trans "Services Offered" %}</h2>
+                    {% if services %}
+                        <div class="row row-cols-1 row-cols-md-2 g-4">
+                            {% for service in services %}
+                            <div class="col service-card-item">
+                                <div class="card h-100">
+                                    <div class="card-body d-flex flex-column">
+                                        <h5 class="service-item-title"><a href="{{ service.get_absolute_url }}">{{ service.title }}</a></h5>
+                                        <p class="card-text small text-muted">{{ service.category.name }}</p>
+                                        <p class="card-text flex-grow-1">{{ service.description|truncatewords:20 }}</p>
+                                        {% if service.packages.exists %}
+                                            <p class="card-text fw-bold">{% trans "Starting from" %} GH₵{{ service.packages.all.0.price|floatformat:2 }}</p>
+                                        {% elif service.price %}
+                                             <p class="card-text fw-bold">GH₵{{ service.price|floatformat:2 }}</p>
+                                        {% endif %}
+                                        <a href="{{ service.get_absolute_url }}" class="btn btn-primary mt-auto align-self-start">{% trans "View Service" %}</a>
+                                    </div>
                                 </div>
                             </div>
+                            {% endfor %}
                         </div>
-                    {% endfor %}
+                    {% else %}
+                        <p>{% trans "This provider has not listed any active services yet." %}</p>
+                    {% endif %}
                 </div>
-            {% else %}
-                <p>{% trans "This provider has not listed any active services yet." %}</p>
-            {% endif %}
 
-            <!-- Reviews for Provider's Services -->
-            <h2 class="mb-3">{% trans "Reviews" %}</h2>
-            {% if service_reviews %}
-                {% for review in service_reviews %}
-                    <div class="card mb-3 review-card shadow-sm"> {# Added class and shadow #}
-                        <div class="card-body">
-                            <h5 class="card-title">{% blocktrans with service_title=review.service.title %}Review for {{ service_title }}{% endblocktrans %}</h5>
-                            <p>
-                                {% for i in "12345" %}
-                                    <i class="bi {% if i|add:0 <= review.rating %}bi-star-fill text-warning{% else %}bi-star text-warning{% endif %}"></i>
-                                {% endfor %}
-                            </p>
-                            <p class="card-text">{{ review.comment }}</p>
-                            <footer class="blockquote-footer">{% trans "By" %} {{ review.user.username }} {% trans "on" %} {{ review.created_at|date:"d M Y" }}</footer>
-                        </div>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p>{% trans "No reviews yet for this provider's services." %}</p>
-            {% endif %}
+                <!-- Reviews for Provider's Services -->
+                <div class="profile-section">
+                    <h2 class="section-title">{% trans "Reviews" %}</h2>
+                    {% if service_reviews %}
+                        {% for review in service_reviews %}
+                            <div class="review-item">
+                                <h5 class="review-item-title">{% blocktrans with service_title=review.service.title %}Review for {{ service_title }}{% endblocktrans %}</h5>
+                                <div class="mb-2">
+                                    {% for i in "12345" %}
+                                        <i class="bi {% if i|add:0 <= review.rating %}bi-star-fill text-warning{% else %}bi-star text-warning{% endif %}"></i>
+                                    {% endfor %}
+                                </div>
+                                <p>{{ review.comment }}</p>
+                                <footer class="blockquote-footer small">{% trans "By" %} {{ review.user.username }} {% trans "on" %} {{ review.created_at|date:"d M Y" }}</footer>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>{% trans "No reviews yet for this provider's services." %}</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
+    </div>
     </div>
 </div>
 {% endblock %}

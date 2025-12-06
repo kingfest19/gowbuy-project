@@ -1,0 +1,34 @@
+{% extends "core/provider_dashboard_base.html" %}
+{% load i18n %}
+
+{% block dashboard_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ page_title }}</h1>
+</div>
+
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+        <h5 class="card-title mb-0">{% trans "Confirm Deletion" %}</h5>
+    </div>
+    <div class="card-body">
+        {% if object.is_booked %}
+            <div class="alert alert-danger" role="alert">
+                <p class="fw-bold">{% trans "This time slot cannot be deleted because it has already been booked by a customer." %}</p>
+            </div>
+            <a href="{% url 'core:service_provider_availability_list' %}" class="btn btn-secondary">{% trans "Go Back to Availability List" %}</a>
+        {% else %}
+            <p>{% trans "Are you sure you want to delete the following availability slot?" %}</p>
+            <ul class="list-group mb-3">
+                <li class="list-group-item"><strong>{% trans "Service:" %}</strong> {{ object.service.title }}</li>
+                <li class="list-group-item"><strong>{% trans "Start Time:" %}</strong> {{ object.start_time|date:"D, d M Y, P" }}</li>
+                <li class="list-group-item"><strong>{% trans "End Time:" %}</strong> {{ object.end_time|date:"P" }}</li>
+            </ul>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">{% trans "Yes, Delete" %}</button>
+                <a href="{% url 'core:service_provider_availability_list' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock dashboard_content %}

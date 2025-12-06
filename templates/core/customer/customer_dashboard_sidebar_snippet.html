@@ -1,0 +1,50 @@
+{% load i18n %}
+<div class="list-group">
+    <a href="{% url 'core:user_profile' %}" class="list-group-item list-group-item-action {% if active_page == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2 me-2"></i> {% trans "Dashboard" %}
+    </a>
+    <a href="{% url 'core:order_history' %}" class="list-group-item list-group-item-action {% if active_page == 'orders' %}active{% endif %}">
+        <i class="bi bi-box-seam me-2"></i> {% trans "My Orders" %}
+    </a>
+    <a href="{% url 'core:edit_user_profile' %}" class="list-group-item list-group-item-action {% if active_page == 'profile' %}active{% endif %}">
+        <i class="bi bi-person-circle me-2"></i> {% trans "Edit Profile" %}
+    </a>
+    <a href="{% url 'core:wishlist_detail' %}" class="list-group-item list-group-item-action {% if active_page == 'wishlist' %}active{% endif %}">
+        <i class="bi bi-heart me-2"></i> {% trans "Wishlist" %}
+    </a>
+    <a href="{% url 'core:customer_review_list' %}" class="list-group-item list-group-item-action {% if active_page == 'reviews' %}active{% endif %}">
+        <i class="bi bi-star me-2"></i> {% trans "My Reviews" %}
+    </a>
+    <a href="{% url 'core:customer_message_list' %}" class="list-group-item list-group-item-action {% if active_page == 'messages' %}active{% endif %}">
+        <i class="bi bi-chat-dots me-2"></i> {% trans "Messages" %}
+    </a>
+    <a href="{% url 'core:customer_notification_list' %}" class="list-group-item list-group-item-action {% if active_page == 'notifications' %}active{% endif %}">
+        <i class="bi bi-bell me-2"></i> {% trans "Notifications" %}
+    </a>
+    <a href="{% url 'core:rewards_page' %}" class="list-group-item list-group-item-action {% if active_page == 'rewards' %}active{% endif %}">
+        <i class="bi bi-gift me-2"></i> {% trans "Rewards" %}
+    </a>
+    <a href="{% url 'core:login_history' %}" class="list-group-item list-group-item-action {% if active_page == 'security' %}active{% endif %}">
+        <i class="bi bi-shield-lock me-2"></i> {% trans "Security" %}
+    </a>
+
+    {# Divider and Other Dashboards - Conditionally shown if the user has other roles #}
+    {% if is_vendor or is_service_provider or is_rider %}
+        <div class="list-group-item bg-light fw-bold mt-3">{% trans "My Roles" %}</div>
+        {% if is_vendor %}
+            <a href="{% url 'core:vendor_dashboard' %}" class="list-group-item list-group-item-action">
+                <i class="bi bi-shop me-2"></i> {% trans "Vendor Dashboard" %}
+            </a>
+        {% endif %}
+        {% if is_service_provider %}
+            <a href="{% url 'core:service_provider_dashboard' %}" class="list-group-item list-group-item-action">
+                <i class="bi bi-person-workspace me-2"></i> {% trans "Provider Dashboard" %}
+            </a>
+        {% endif %}
+        {% if is_rider %}
+            <a href="{% url 'core:rider_dashboard' %}" class="list-group-item list-group-item-action">
+                <i class="bi bi-bicycle me-2"></i> {% trans "Rider Dashboard" %}
+            </a>
+        {% endif %}
+    {% endif %}
+</div>

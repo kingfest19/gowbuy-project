@@ -8,6 +8,10 @@ from core.views import (
     add_to_cart, cart_detail, checkout, place_order, 
     TermsView, PrivacyPolicyView, HelpPageView # Changed to class-based views
 )
+# --- START: Imports for Rate Limiting ---
+from allauth.account import views as allauth_views
+from django_ratelimit.decorators import ratelimit
+# --- END: Imports for Rate Limiting ---
 # Import views from authapp if they are used directly here
 # If signin, signup, logout are handled by authapp.urls or allauth.urls, these imports might not be needed
 # For now, assuming they are used for global, non-namespaced URLs as per the urlpatterns
@@ -38,8 +42,33 @@ urlpatterns = [
     # This allows for {% url 'authapp:signin' %} if you have URLs defined in authapp.urls
     path('auth/', include('authapp.urls', namespace='authapp')),
 
+    # --- START: Rate-Limited Allauth URLs ---
+    # By placing these before the generic include, they will be matched first.
+    # Limits login attempts to 10 per minute per IP.
+    path(
+        "accounts/login/",
+        ratelimit(key="ip", rate="10/m", block=True)(allauth_views.LoginView.as_view()),
+        name="account_login",
+    ),
+    # Limits signup attempts to 10 per hour per IP.
+    path(
+        "accounts/signup/",
+        ratelimit(key="ip", rate="10/h", block=True)(allauth_views.SignupView.as_view()),
+        name="account_signup",
+    ),
+    # Limits password reset requests to 10 per hour per IP.
+    path(
+        "accounts/password/reset/",
+        ratelimit(key="ip", rate="10/h", block=True)(allauth_views.PasswordResetView.as_view()),
+        name="account_reset_password",
+    ),
     # Allauth URLs (handles /accounts/login/, /accounts/signup/, /accounts/password/reset/, etc.)
+    # The custom URLs above will be matched first.
     path('accounts/', include('allauth.urls')),
+    path('accounts/mfa/', include('allauth.mfa.urls')), # Add allauth's MFA URLs
+
+    # PayPal IPN listener
+    path('paypal/', include('paypal.standard.ipn.urls')),
 
     # Static Pages (Globally accessible)
     path('terms/', TermsView.as_view(), name='terms'),

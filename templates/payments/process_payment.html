@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Process Payment" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1>{% trans "Finalize Your Payment" %}</h1>
+            <p class="lead">{% blocktrans with order_id=order.id %}You are about to pay for Order #{{ order_id }}.{% endblocktrans %}</p>
+            <h3>Total: ${{ order.total_cost|floatformat:2 }}</h3>
+
+            <p>{% trans "Click the button below to proceed to PayPal's secure payment page." %}</p>
+
+            {# This renders the PayPal button #}
+            {{ form.render }}
+        </div>
+    </div>
+</div>
+{% endblock content %}

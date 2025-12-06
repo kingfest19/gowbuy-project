@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% load i18n static humanize %}
+{% load notification_tags %} {# Load your notification tags here #}
+
+{% block title %}{% trans "Provider Dashboard" %} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        body {
+            background-color: #ebe8e8; /* Match vendor dashboard background */
+        }
+
+        .dashboard-container {
+            display: flex;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Sidebar styling from vendor_dashboard */
+        .dashboard-sidebar {
+            flex: 0 0 280px;
+            background-color: #ffffff;
+            padding: 1.5rem 1rem;
+            border-radius: 12px;
+            position: sticky;
+            top: 2rem;
+            align-self: flex-start;
+            height: calc(100vh - 4rem);
+            overflow-y: auto;
+            border: 1px solid #c7c9cb;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+        }
+        .dashboard-sidebar .nav-link {
+            color: #495057;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.2rem;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s;
+            white-space: nowrap;
+        }
+        .dashboard-sidebar .nav-link.active {
+            background-color: #474747;
+            color: white;
+        }
+        .dashboard-sidebar .nav-link:hover:not(.active) {
+            background-color: #e9ecef;
+            color: #323232ff;
+        }
+        .dashboard-sidebar .nav {
+            flex-direction: column;
+        }
+        .sidebar-heading {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6c757d;
+            text-transform: uppercase;
+            padding: 0 1rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            letter-spacing: .05em;
+        }
+
+        .dashboard-main {
+            flex-grow: 1;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2.5rem;
+            border-radius: 8px;
+            background-color: #ffffff;
+            border-left: 5px solid #323232ff;
+            border: 1px solid #828282ff;
+        }
+        .page-header h1 {
+            font-weight: 600;
+            color: #323232ff;
+            margin-bottom: 0;
+        }
+
+        /* Stat Cards Styling from vendor_dashboard */
+        .stat-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+        .stat-card {
+            background-color: #fff;
+            border: 1px solid #828282ff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+            aspect-ratio: 1 / 1;
+            text-align: center;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .stat-card .stat-icon {
+            font-size: 2rem;
+            padding: 0.75rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        .stat-card .stat-info .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #323232ff;
+            line-height: 1.2;
+        }
+        .stat-card .stat-info .stat-title {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+        .icon-services { background-color: #17a2b8; }
+        .icon-bookings { background-color: #6f42c1; }
+        .icon-completed { background-color: #28a745; }
+        .icon-add { background-color: #fd7e14; }
+
+        /* Dashboard Section Styling from vendor_dashboard */
+        .dashboard-section {
+            background-color: #fff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid #828282ff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .dashboard-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .dashboard-section-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #323232ff;
+            margin-bottom: 0;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container dashboard-container my-5">
+        {# Sidebar Navigation #}
+    <aside class="dashboard-sidebar">
+            {% include "core/service_provider/provider_sidebar.html" %}
+    </aside>
+
+        {# Main Content Area - Cardless #}
+    <main class="dashboard-main">
+        <div class="page-header">
+            <div>
+                <h1>{{ page_title|default:_("Provider Dashboard") }}</h1>
+                <p class="text-muted mb-0">{% blocktrans %}Welcome back, {{ user.username }}!{% endblocktrans %}</p>
+            </div>
+            <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{% url 'core:service_provider_service_create' %}" class="btn btn-sm btn-success">
+                        <i class="fas fa-plus-circle me-1"></i> {% trans "Offer New Service" %}
+                    </a>
+                </div>
+            </div>
+            
+            {% include 'partials/_messages.html' %}
+
+            <!-- Quick Stats (using the card style from original provider_dashboard.html) -->
+            <div class="stat-cards-grid">
+                <div class="stat-card">
+                    <div class="stat-icon icon-services"><i class="bi bi-briefcase"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ active_services_count|default:0 }}</div>
+                        <div class="stat-title">{% trans "Active Services" %}</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon icon-bookings"><i class="bi bi-calendar-check"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ recent_bookings.count|default:0 }}</div>
+                        <div class="stat-title">{% trans "Recent Bookings" %}</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon icon-completed"><i class="bi bi-patch-check"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ total_bookings_count|default:0 }}</div>
+                        <div class="stat-title">{% trans "Total Bookings" %}</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon icon-add"><i class="bi bi-plus-lg"></i></div>
+                    <div class="stat-info">
+                        <a href="{% url 'core:service_provider_service_create' %}" class="btn btn-outline-primary">
+                            {% trans "Offer New Service" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manage Services Section -->
+            <div class="dashboard-section">
+                <div class="dashboard-section-header">
+                    <h2>{% trans "Your Services" %}</h2>
+                    <a href="{% url 'core:service_provider_services_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-tasks me-1"></i> {% trans "Manage All Services" %}
+                    </a>
+                </div>
+                {% if services %} {# Assuming 'services' is a limited list of top/recent services for the dashboard #}
+                    <ul class="list-group list-group-flush">
+                        {% for service in services|slice:":3" %} {# Displaying top 3 for dashboard overview #}
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1"><a href="{{ service.get_absolute_url }}" class="text-decoration-none">{{ service.title }}</a></h6>
+                                    <small class="d-block text-muted">
+                                        {% if service.is_active %}<span class="badge bg-success">{% trans "Active" %}</span>
+                                        {% else %}<span class="badge bg-secondary">{% trans "Inactive" %}</span>{% endif %}
+                                        - {% trans "Packages" %}: {{ service.packages.count }}
+                                    </small>
+                                </div>
+                                <div>
+                                    <a href="{% url 'core:service_provider_service_edit' service_slug=service.slug %}" class="btn btn-sm btn-outline-primary me-2"><i class="fas fa-edit"></i> {% trans "Edit" %}</a>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="alert alert-light" role="alert">
+                        {% trans "You have not listed any services yet." %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Recent Service Bookings Section -->
+            <div class="dashboard-section">
+                <div class="dashboard-section-header">
+                    <h2>{% trans "Recent Bookings" %}</h2>
+                </div>
+                {% if recent_bookings %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Service" %}</th>
+                                    <th>{% trans "Client" %}</th>
+                                    <th>{% trans "Date Booked" %}</th>
+                                    <th>{% trans "Status" %}</th>
+                                    <th>{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for booking in recent_bookings %}
+                                    <tr>
+                                        <td>{{ booking.service_package.service.title }} - {{ booking.service_package.name }}</td>
+                                        <td>{{ booking.user.username }}</td>
+                                        <td>{{ booking.booking_date|date:"d M Y, H:i" }}</td>
+                                        <td><span class="badge bg-info rounded-pill">{{ booking.get_status_display }}</span></td>
+                                        <td>
+                                            {# Ensure 'service_provider_booking_detail' URL name exists and takes 'booking_id' #}
+                                            {# <a href="{% url 'core:service_provider_booking_detail' booking_id=booking.id %}" class="btn btn-sm btn-outline-info">{% trans "View" %}</a> #}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if total_bookings_count > recent_bookings|length %} {# Assuming total_bookings_count is passed from view #}
+                         {# Placeholder for View All Bookings link - ensure 'service_provider_bookings_list' URL is defined #}
+                         <a href="#" class="btn btn-link mt-2 disabled" tabindex="-1" aria-disabled="true">{% trans "View All Bookings (Coming Soon)" %}</a>
+                         {# <a href="{% url 'core:service_provider_bookings_list' %}" class="btn btn-link mt-2">{% trans "View All Bookings" %}</a> #}
+                    {% endif %}
+                {% else %}
+                     {% if total_services_count > 0 %}
+                        <div class="alert alert-light" role="alert">
+                            {% trans "No recent bookings for your services yet." %}
+                        </div>
+                    {% else %}
+                         <div class="alert alert-light" role="alert">
+                            {% trans "Offer services to start receiving bookings." %}
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+    </main>
+</div>
+{% endblock content %}
+
+{% block extra_js %}{% endblock %}

@@ -1,0 +1,23 @@
+{% load i18n %}
+
+<h5 class="mt-4">{{ title }}</h5>
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>{% trans "Product" %}</th>
+                <th>{% trans "SKU" %}</th>
+                <th class="text-center">{% trans "Quantity" %}</th>
+                <th class="text-end">{% trans "Unit Price" %}</th>
+                <th class="text-end">{% trans "Total" %}</th>
+                <th>{% trans "Fulfillment" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+                {% include "core/vendor/_order_item_row.html" with item=item %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+

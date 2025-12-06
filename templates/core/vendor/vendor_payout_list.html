@@ -1,61 +1,241 @@
 {% extends "base.html" %}
-{% load static i18n humanize %}
+{% load static i18n humanize query_params %}
 
 {% block title %}{{ page_title }} - {% trans "Vendor Dashboard" %}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<style>
+    .list-container {
+        max-width: 1200px; /* Consistent width */
+        margin: 0 auto;
+        background-color: #ebe8e8;
+        padding: 2rem 2.5rem;
+        border-radius: 12px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+        border: 1px solid #959aa0; /* Softer border from product list */
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2.5rem;
+        border-radius: 8px;
+        background-color: #ffffff; /* White background from product list */
+        border-left: 5px solid #323232ff; /* Prominent black left border from product list */
+        border: 1px solid #c7c9cb; /* Subtle border for separation from product list */
+    }
+
+    .page-header h1 {
+        font-weight: 600;
+        color: #323232ff; /* Black text for contrast from product list */
+        margin-bottom: 0;
+    }
+
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .summary-card {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+        border: 1px solid #dee2e6; /* Softer default border */
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    
+    .summary-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+
+    .summary-card-title {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: #6c757d;
+    }
+
+    .summary-card-amount {
+        font-size: clamp(1.75rem, 4vw, 2.25rem); /* Responsive font size */
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+        color: #343a40;
+        word-wrap: break-word; /* Allow long numbers to wrap */
+        line-height: 1.2;      /* Adjust line height for wrapped text */
+    }
+    
+    .summary-card.available .summary-card-title,
+    .summary-card.available .summary-card-amount {
+        color: #198754;
+    }
+    .summary-card.available { background-color: #e8f5e9; border-color: #a5d6a7; }
+
+    .summary-card.pending .summary-card-title,
+    .summary-card.pending .summary-card-amount {
+        color: #ffc107;
+    }
+    .summary-card.pending { background-color: #fff8e1; border-color: #ffe082; }
+
+    .history-section h4 {
+        font-weight: 600;
+        color: #323232ff; /* Match header color */
+        margin-bottom: 1.5rem;
+    }
+
+    .filter-bar {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        border: 1px solid #c7c9cb; /* Softer border */
+    }
+
+    .btn-dark {
+        background-color: #474747;
+        border-color: #474747;
+    }
+    .btn-dark:hover {
+        background-color: #383838; /* A darker shade for hover */
+        border-color: #383838;
+    }
+
+    .table {
+        border-collapse: separate;
+        border-spacing: 0 0.75rem; /* from product list */
+    }
+
+    .table thead th {
+        border: none;
+        font-weight: 600;
+        color: #6c757d;
+        background-color: transparent; /* from product list */
+        padding: 0.5rem 1rem;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.5px;
+    }
+
+    .table tbody tr {
+        background-color: #fff; /* from product list */
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06); /* from product list */
+        transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+        border: 1px solid #f0f2f5; /* from product list */
+    }
+    
+    .table tbody tr:hover {
+        transform: translateY(-3px); /* from product list */
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1); /* from product list */
+    }
+
+    .table td, .table th {
+        border: none;
+        vertical-align: middle;
+        padding: 1rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-5 mb-5">
-    <div class="row">
-        {% include "core/vendor/vendor_dashboard_sidebar_snippet.html" %}
-        <div class="col-md-9">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h2 class="mb-0">{{ page_title }}</h2>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0">{% trans "Your Payout History & Requests" %}</h5>
-                        {# Add a button to request new payout if applicable #}
-                        {# <a href="{% url 'core:vendor_payout_request_create' %}" class="btn btn-success">
-                            <i class="fas fa-plus-circle me-2"></i>{% trans "Request New Payout" %}
-                        </a> #}
-                    </div>
-
-                    {% if payout_requests %}
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>{% trans "Request ID" %}</th>
-                                        <th>{% trans "Amount Requested" %}</th>
-                                        <th>{% trans "Status" %}</th>
-                                        <th>{% trans "Requested At" %}</th>
-                                        <th>{% trans "Processed At" %}</th>
-                                        <th>{% trans "Notes" %}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for pr in payout_requests %}
-                                    <tr>
-                                        <td>{{ pr.id }}</td>
-                                        <td>{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ pr.amount_requested|floatformat:2 }}</td>
-                                        <td><span class="badge bg-{% if pr.status == 'completed' %}success{% elif pr.status == 'pending' %}warning text-dark{% elif pr.status == 'rejected' or pr.status == 'failed' %}danger{% else %}secondary{% endif %}">{{ pr.get_status_display }}</span></td>
-                                        <td>{{ pr.requested_at|naturaltime }}</td>
-                                        <td>{{ pr.processed_at|naturaltime|default:"N/A" }}</td>
-                                        <td>{{ pr.admin_notes|default:"N/A" }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% include "core/snippets/pagination_snippet.html" with page_obj=payout_requests %}
-                    {% else %}
-                        <div class="alert alert-info" role="alert">
-                            {% trans "You have no payout requests yet." %}
-                        </div>
-                    {% endif %}
-                </div>
+    <div class="list-container">
+        <div class="page-header">
+            <div>
+                <h1>{{ page_title }}</h1>
+                <p class="text-muted mb-0">{% trans "Review your earnings, manage payouts, and see your transaction history." %}</p>
             </div>
+            {% if can_request_payout %}
+                <a href="{% url 'core:vendor_payout_request_create' %}" class="btn btn-lg btn-dark">
+                    <i class="fas fa-plus-circle me-2"></i>{% trans "Request New Payout" %}
+                </a>
+            {% endif %}
+        </div>
+
+        <!-- Payout Summary Cards -->
+        <div class="summary-cards">
+            <div class="summary-card available">
+                <h5 class="summary-card-title">{% trans "Available for Payout" %}</h5>
+                <p class="summary-card-amount">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ available_for_payout|floatformat:2|intcomma }}</p>
+                <small class="text-muted">{% trans "Balance ready for withdrawal." %}</small>
+            </div>
+            <div class="summary-card pending">
+                <h5 class="summary-card-title">{% trans "Pending Payouts" %}</h5>
+                <p class="summary-card-amount">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ pending_payouts|floatformat:2|intcomma }}</p>
+                <small class="text-muted">{% trans "Requests currently being processed." %}</small>
+            </div>
+            <div class="summary-card">
+                <h5 class="summary-card-title">{% trans "Total Paid Out" %}</h5>
+                <p class="summary-card-amount">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ total_paid_out|floatformat:2|intcomma }}</p>
+                <small class="text-muted">{% trans "Lifetime payouts received." %}</small>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <form method="get" action="">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md">
+                        <div class="input-group">
+                            <input type="text" name="q" class="form-control" placeholder="{% trans 'Search by Request ID...' %}" value="{{ search_query|default:'' }}">
+                            <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                    <div class="col-md-auto">
+                        <div class="btn-group" role="group" aria-label="Status filter">
+                            <a href="?{% query_transform status='' page=1 %}" class="btn {% if not current_status %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "All" %}</a>
+                            <a href="?{% query_transform status='pending' page=1 %}" class="btn {% if current_status == 'pending' %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "Pending" %}</a>
+                            <a href="?{% query_transform status='completed' page=1 %}" class="btn {% if current_status == 'completed' %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "Completed" %}</a>
+                            <a href="?{% query_transform status='rejected' page=1 %}" class="btn {% if current_status == 'rejected' %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "Rejected" %}</a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="history-section">
+            <h4 class="mb-4">{% trans "Payout History" %}</h4>
+
+            {% if payout_requests %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>{% trans "Request ID" %}</th>
+                                <th>{% trans "Amount Requested" %}</th>
+                                <th>{% trans "Status" %}</th>
+                                <th>{% trans "Requested At" %}</th>
+                                <th>{% trans "Processed At" %}</th>
+                                <th>{% trans "Notes" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pr in payout_requests %}
+                            <tr>
+                                <td>{{ pr.id }}</td>
+                                <td>{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ pr.amount_requested|floatformat:2|intcomma }}</td>
+                                <td><span class="badge bg-{% if pr.status == 'completed' %}success{% elif pr.status == 'pending' %}warning text-dark{% elif pr.status == 'rejected' or pr.status == 'failed' %}danger{% else %}secondary{% endif %}">{{ pr.get_status_display }}</span></td>
+                                <td>{{ pr.requested_at|naturaltime }}</td>
+                                <td>{{ pr.processed_at|naturaltime|default:"N/A" }}</td>
+                                <td>{{ pr.admin_notes|default:"N/A" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% include "core/snippets/pagination_snippet.html" with page_obj=payout_requests %}
+            {% else %}
+                <div class="alert alert-info mt-4" role="alert">
+                    {% trans "You have no payout requests yet." %}
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>

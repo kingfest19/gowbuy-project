@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load i18n crispy_forms_tags %}
+
+{% block title %}{% trans "Vendor Verification - Individual Details" %}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        /* Base container and header styles */
+        .form-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            background-color: #ebe8e8;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+            border: 1px solid #959aa0;
+        }
+        .page-header h1 {
+            font-family: "Poppins", sans-serif;
+            font-weight: 700;
+            color: #1a2533;
+        }
+
+        /* --- New Stepper Progress Bar --- */
+        .stepper {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            position: relative;
+            margin-bottom: 3rem;
+        }
+        .stepper-line {
+            position: absolute;
+            top: 19px; /* Center with icon */
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: #dee2e6;
+            z-index: 0;
+            margin: 0 15%; /* Don't extend to full edges */
+        }
+        .stepper-line-progress {
+            height: 100%;
+            background-color: #474747;
+            transition: width 0.4s ease;
+        }
+        .stepper-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            width: 33.33%;
+            color: #6c757d;
+        }
+        .stepper-item-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #fff;
+            border: 2px solid #adb5bd;
+            color: #adb5bd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: all 0.4s ease;
+            margin-bottom: 0.5rem;
+        }
+        .stepper-item-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.4s ease;
+        }
+        .stepper-item.completed .stepper-item-icon,
+        .stepper-item.active .stepper-item-icon {
+            border-color: #474747;
+            background-color: #474747;
+            color: #fff;
+        }
+        .stepper-item.completed .stepper-item-label {
+            color: #495057;
+        }
+        .stepper-item.active .stepper-item-label {
+            color: #1a2533;
+            font-weight: 700;
+        }
+
+        /* --- New Fieldset/Legend Styling --- */
+        fieldset {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 2.5rem 2rem 1.5rem; /* More top padding */
+            margin-bottom: 2rem;
+            position: relative;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+        legend {
+            position: absolute;
+            top: -1rem;
+            left: 1.5rem;
+            font-family: "Poppins", sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1a2533;
+            padding: 0.3rem 1rem;
+            width: auto;
+            float: none;
+            margin-bottom: 0;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* Button styles */
+        .btn-primary {
+            background-color: #474747;
+            border-color: #474747;
+        }
+        .btn-primary:hover {
+            background-color: #383838;
+            border-color: #383838;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="form-container">
+        <div class="page-header mb-4">
+            <h1>{% trans "Vendor Verification" %}</h1>
+            <p class="text-muted">{% blocktrans with step=wizard.steps.step1 count=wizard.steps.count %}Step {{ step }} of {{ count }}: Provide Personal Details{% endblocktrans %}</p>
+        </div>
+
+        <div class="stepper">
+            <div class="stepper-line"><div class="stepper-line-progress" style="width: 50%;"></div></div>
+            <div class="stepper-item completed">
+                <div class="stepper-item-icon"><i class="bi bi-check-lg"></i></div>
+                <div class="stepper-item-label">{% trans "Method" %}</div>
+            </div>
+            <div class="stepper-item active">
+                <div class="stepper-item-icon">2</div>
+                <div class="stepper-item-label">{% trans "Details" %}</div>
+            </div>
+            <div class="stepper-item">
+                <div class="stepper-item-icon">3</div>
+                <div class="stepper-item-label">{% trans "Confirmation" %}</div>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ wizard.management_form }}
+
+            <fieldset>
+                <legend>{% trans "Personal Identification" %}</legend>
+                <p class="text-muted">{% trans "Please provide a valid form of personal identification." %}</p>
+                {{ wizard.form|crispy }}
+            </fieldset>
+
+            <div class="d-flex justify-content-between mt-4">
+                <button name="wizard_goto_step" type="submit" value="{{ wizard.steps.prev }}" class="btn btn-secondary">&larr; {% trans "Previous Step" %}</button>
+                <div>
+                    <button type="submit" name="save_and_exit" value="1" class="btn btn-outline-secondary me-2">{% trans "Save and Exit" %}</button>
+                    <button type="submit" class="btn btn-primary">{% trans "Next Step" %} &rarr;</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}

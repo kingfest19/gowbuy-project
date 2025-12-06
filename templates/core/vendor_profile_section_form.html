@@ -1,45 +1,99 @@
 {% extends "base.html" %}
-{% load static i18n %}
-{% load crispy_forms_tags %} {# Ensure this is at the top after extends/other loads #}
+{% load static i18n crispy_forms_tags %}
 
 {% block title %}{{ page_title|default:_("Update Vendor Section") }} - {{ block.super }}{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        .form-container {
+            max-width: 900px; /* Adjusted for a form layout */
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+            border: 1px solid #000000ff;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2.5rem;
+            border-radius: 8px;
+            background-color: #fff3e0; /* Lighter orange background */
+            border-left: 5px solid #ff9800; /* Prominent orange left border */
+            border: 1px solid #000000ff; /* Subtle border for separation */
+        }
+
+        .page-header h1 {
+            font-weight: 600;
+            color: #e65100; /* Darker orange text for contrast */
+            margin-bottom: 0;
+        }
+
+        /* --- Form Field Styling --- */
+        .form-label {
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: 8px;
+            border: 1.5px solid #dee2e6;
+            padding: 0.75rem 1rem;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            background-color: #f8f9fa; /* A very light grey background */
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #ff9800; /* Match the orange theme */
+            box-shadow: 0 0 0 0.2rem rgba(255, 152, 0, 0.2);
+            background-color: #fff;
+        }
+
+        .form-text { /* For Crispy Forms help text */
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+
+        .form-check-input:checked {
+            background-color: #e65100; /* Darker orange for checked state */
+            border-color: #e65100;
+        }
+    </style>
+{% endblock extra_css %}
+
 {% block content %}
 <div class="container mt-5 mb-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-7">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h2 class="mb-0">{{ form_title|default:_("Update Information") }}</h2>
-                </div>
-                <div class="card-body p-4">
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        
-                        {# --- SIMPLIFIED PART --- #}
-                        {% if form %}
-                            {{ form|crispy }}
-                        {% else %}
-                            <p>{% trans "Form is not available." %}</p>
-                        {% endif %}
-                        {# --- END SIMPLIFIED PART --- #}
-                        
-                        <div class="d-grid mt-4">
-                            <button type="submit" class="btn btn-success btn-lg">{% trans "Save Changes" %}</button>
-                        </div>
-                    </form>
-                </div>
+    <div class="form-container">
+        <div class="page-header">
+            <div>
+                <h1>{{ form_title|default:_("Update Information") }}</h1>
+                <p class="text-muted mb-0">{% trans "Update your vendor profile details below." %}</p>
             </div>
+            <a href="{% url 'core:vendor_dashboard' %}" class="btn btn-lg btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>{% trans "Back to Dashboard" %}
+            </a>
         </div>
+
+        {% include 'partials/_messages.html' %}
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <div class="d-grid mt-4">
+                <button type="submit" class="btn btn-success btn-lg">{% trans "Save Changes" %}</button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
@@ -99,6 +153,5 @@
     {% if 'street_address' in form.fields and 'location_city' in form.fields and 'location_country' in form.fields and google_maps_api_key %}
         {# <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initMap" async defer></script> #}
         {# <script> // Map initialization script was here </script> #}
-    {% endif %}
-    {% block extra_js_after_verification %}{% endblock %}
+    {% endif %} {% block extra_js_after_verification %}{% endblock %}
 {% endblock extra_js %}

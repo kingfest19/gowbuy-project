@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .booking-container {
+            max-width: 800px; /* Adjusted for a form layout */
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+            border: 1px solid #000000ff;
+        }
+
+        .booking-page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2.5rem;
+            border-radius: 8px;
+            background-color: #fff3e0; /* Lighter orange background from reports */
+            border-left: 5px solid #ff9800; /* Prominent orange left border */
+            border: 1px solid #000000ff; /* Subtle border for separation */
+        }
+
+        .booking-page-header h1 {
+            font-weight: 600;
+            color: #e65100; /* Darker orange text for contrast */
+            margin-bottom: 0;
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="booking-container">
+        <div class="booking-page-header">
+            <div>
+                <h1>{{ page_title }}</h1>
+            </div>
+            <a href="{{ service.get_absolute_url }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>{% trans "Back to Service Details" %}
+            </a>
+        </div>
+
+        <h4 class="card-subtitle mb-2 text-muted">{{ service.title }}</h4>
+        <p><strong>{% trans "Package" %}:</strong> {{ package.name }}</p>
+        <p><strong>{% trans "Price" %}:</strong> GH₵{{ package.price }}</p>
+        <p class="text-muted">{{ package.description|linebreaks }}</p>
+        <hr>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if has_available_slots %}
+                <div class="mb-4">
+                    {{ form.availability_slot|as_crispy_field }}
+                </div>
+            {% else %}
+                <div class="alert alert-warning" role="alert">
+                    {% blocktrans %}The service provider has not set any available time slots for this service yet. You can proceed to book, but you will need to coordinate the time directly with the provider after booking.{% endblocktrans %}
+                </div>
+            {% endif %}
+
+            <div class="mb-3">
+                {{ form.specific_requirements|as_crispy_field }}
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 btn-lg">
+                <i class="fas fa-shopping-cart me-2"></i>
+                {% if cart_item %}{% trans "Update Booking in Cart" %}{% else %}{% trans "Add to Cart" %}{% endif %}
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

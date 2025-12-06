@@ -1,0 +1,76 @@
+{% extends "core/user_dashboard_base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{{ page_title }} - {% trans "User Dashboard" %}{% endblock %}
+
+{% block dashboard_content %}
+
+{% block page_styles %}
+<style>
+    .login-history-table-wrapper {
+        border: 1px solid var(--bs-border-color);
+        border-radius: .375rem; /* Match Bootstrap's card/component radius */
+        overflow: hidden; /* Ensures the border-radius is applied to the table corners */
+    }
+    .login-history-table thead {
+        background-color: var(--bs-tertiary-bg);
+    }
+    .login-history-table th {
+        font-weight: 600;
+        border-bottom-width: 1px;
+    }
+    .login-history-table tbody tr:hover {
+        background-color: var(--bs-secondary-bg);
+    }
+    .login-history-table td {
+        vertical-align: middle;
+    }
+    .login-history-table .user-agent-cell {
+        font-size: 0.85rem;
+        color: var(--bs-secondary-color);
+    }
+</style>
+{% endblock page_styles %}
+
+<h2 class="mb-4"><i class="fas fa-history me-2 text-muted"></i>{{ page_title }}</h2>
+
+<p>{% trans "Here is a list of recent successful logins to your account. If you see any activity you don't recognize, please change your password immediately." %}</p>
+
+<div class="table-responsive login-history-table-wrapper">
+    <table class="table table-striped mb-0 login-history-table">
+        <thead>
+            <tr>
+                <th>{% trans "Date & Time" %}</th>
+                <th>{% trans "IP Address" %}</th>
+                <th>{% trans "Device / Browser" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in login_logs %}
+            <tr>
+                <td>{{ log.timestamp|date:"F j, Y, P" }}</td>
+                <td>{{ log.ip_address|default:"N/A" }}</td>
+                <td class="user-agent-cell">{{ log.user_agent|truncatechars:80|default:"N/A" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="text-center py-4">{% trans "No login history found." %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if is_paginated %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">{% trans "Previous" %}</a></li>
+        {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}" aria-current="page"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+        {% endfor %}
+        <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}"><a class="page-link" href="?page={{ page_obj.next_page_number }}">{% trans "Next" %}</a></li>
+    </ul>
+</nav>
+{% endif %}
+{% endblock dashboard_content %}

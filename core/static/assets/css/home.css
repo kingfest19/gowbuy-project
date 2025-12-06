@@ -4,6 +4,154 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap");
 /* Added 800 weight */
 
+/* === Custom Enhancements for Home Page === */
+
+/* --- Animated Gradient Border for Section Titles --- */
+h2.section-title.animated-border {
+    background: linear-gradient(90deg, #007bff, #ff9900, #087f8c, #007bff);
+    background-size: 300% 100%;
+    border-radius: 8px;
+    padding: 0.5em 1em;
+    min-width: 400px;
+    color: #fff;
+    animation: gradientMove 4s linear infinite;
+    position: relative;
+    z-index: 1;
+}
+@keyframes gradientMove {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+
+/* --- Home Page Feature Banner --- */
+.home-feature-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(120deg, #e0f7ff 0%, #fff 100%);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-md);
+    padding: var(--spacing-xl) var(--spacing-lg);
+    margin: var(--spacing-xl) auto;
+    max-width: 1100px;
+    position: relative;
+    overflow: hidden;
+}
+.home-feature-banner .banner-content {
+    flex: 1;
+    text-align: left;
+}
+.home-feature-banner h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--color-primary);
+    margin-bottom: var(--spacing-md);
+}
+.home-feature-banner p {
+    font-size: 1.1rem;
+    color: var(--color-text-base);
+    margin-bottom: var(--spacing-lg);
+}
+.home-feature-banner .banner-action {
+    display: inline-block;
+    background: var(--color-primary);
+    color: #fff;
+    font-weight: 700;
+    padding: 0.7em 2em;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: background 0.2s;
+    text-decoration: none;
+}
+.home-feature-banner .banner-action:hover {
+    background: var(--color-primary-dark);
+}
+.home-feature-banner .banner-image {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+.home-feature-banner .banner-image img {
+    max-width: 320px;
+    width: 100%;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+/* --- Home Page Quick Links Grid --- */
+.home-quick-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--spacing-lg);
+    margin: var(--spacing-xl) auto;
+    max-width: 1100px;
+}
+.home-quick-link {
+    background: var(--color-background-medium);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: var(--spacing-lg) var(--spacing-md);
+    text-align: center;
+    transition: box-shadow 0.2s, transform 0.2s;
+    text-decoration: none;
+    color: var(--color-text-heading);
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.home-quick-link:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-3px) scale(1.03);
+    color: var(--color-primary);
+}
+.home-quick-link .icon {
+    font-size: 2.2rem;
+    margin-bottom: var(--spacing-sm);
+    color: var(--color-primary);
+}
+
+/* --- Home Page Announcement Bar --- */
+.home-announcement-bar {
+    background: var(--color-accent);
+    color: #fff;
+    text-align: center;
+    padding: var(--spacing-sm) 0;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    font-size: 1rem;
+    animation: fadeInDown 0.8s;
+}
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px);}
+    to { opacity: 1; transform: translateY(0);}
+}
+
+/* --- Responsive Tweaks for Home Enhancements --- */
+@media (max-width: 768px) {
+    .home-feature-banner {
+        flex-direction: column;
+        padding: var(--spacing-lg) var(--spacing-md);
+        text-align: center;
+    }
+    .home-feature-banner .banner-content,
+    .home-feature-banner .banner-image {
+        width: 100%;
+        justify-content: center;
+    }
+    .home-feature-banner .banner-image img {
+        max-width: 220px;
+        margin: 0 auto;
+    }
+    .home-feature-banner h1 {
+        font-size: 1.5rem;
+    }
+    .home-quick-links {
+        gap: var(--spacing-md);
+    }
+}
+
 /* --- CSS Variables (Theme Configuration) --- */
 :root {
     --font-primary: "Outfit", sans-serif;
@@ -75,13 +223,44 @@ html {
 
 body {
     font-family: var(--font-primary);
-    background-color: #dce1de; /* Changed background color */
+    background-color:  #f0f0f0;
     color: var(--color-text-base);
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
 }
 
+/* === Visual Search Image Button === */
+.visual-search-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #c6c5c5; /* Solid white background */
+    border: 1px solid black; /* Black border as requested */
+    border-radius: 12px; /* Match dashboard container style */
+    padding: 0.75rem 1.25rem; /* Increased padding for a more substantial feel */
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.2s;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07); /* Dashboard-like shadow */
+    font-weight: 500;
+    color: var(--color-text-base);
+    gap: 8px;
+}
+
+.visual-search-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+.visual-search-btn .visual-search-icon {
+    width: 22px;
+    height: 22px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 4px;
+    filter: drop-shadow(0 1px 2px rgba(0,123,255,0.12));
+}
+
+.visual-search-btn input[type="file"] {
+    display: none;
+}
+  
 a {
     text-decoration: none;
     color: var(--color-primary);
@@ -169,7 +348,7 @@ nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: var(--color-background-dark);
+    background: #ffffff;
     padding: 0.3rem var(--spacing-md); /* Further Reduced vertical padding */
     color: #333;
     box-shadow: 0 5px 2px rgba(0, 0, 0, 0.08);
@@ -235,7 +414,7 @@ nav {
     font-size: 0.65rem; /* Smaller heading */
     margin: 0;
     font-weight: 700;
-    color: #ffffff;
+    color: #000000;
 }
 
 .nav-country:hover {
@@ -257,7 +436,7 @@ nav {
     font-size: 0.8rem; /* Further reduced font size */
     margin: 0;
     font-weight: 800;
-    color:#ffffff
+    color:#000000
     /* Medium weight for nav label */
 }
 /*
@@ -374,7 +553,7 @@ nav {
     transition: background-color var(--transition-speed-fast) var(--transition-timing), color var(--transition-speed-fast) var(--transition-timing);
     cursor: pointer;
     text-decoration: none;
-    color: #555;
+    color: #000000;
     background: none;
 }
 
@@ -390,7 +569,7 @@ nav {
     gap: 5px;
     font-weight: 1000;
     font-size: 0.85rem; /* Reduced font size */
-    color:#ffffff
+    color:#000000
 }
 
 .nav-language img {
@@ -411,7 +590,7 @@ nav {
     line-height: 1.3;
     flex-direction: column;
     align-items: flex-start;
-    color: #ffffff;
+    color: #000000;
 }
 
 /* Specific alignment for the Account modal trigger */
@@ -422,7 +601,7 @@ nav {
 /* Label style */
 .nav-text p {
     font-size: 0.7rem; /* Reduced font size */
-    color: #aaa; /* Lighter for dark background */
+    color: #000000; /* Lighter for dark background */
     margin-bottom: 1px;
     font-weight: 400;
     /* Lighter weight for small label */
@@ -471,7 +650,7 @@ nav {
 /* Cart Link */
 .nav-cart {
     gap: 6px;
-    color: #333;
+    color: #000000;
 }
 
 .nav-cart img {
@@ -487,7 +666,7 @@ nav {
     /* Bold */
     margin: 0;
     line-height: 1;
-    color: #ffffff;
+    color: #000000;
 }
 
 .nav-cart .cart-item-count {
@@ -495,7 +674,7 @@ nav {
     font-size: 0.75em;
     margin-left: -2px;
     background-color: #044a53;
-    color: #fff;
+    color: #000000;
     border-radius: 50%;
     width: 18px;
     height: 18px;
@@ -525,7 +704,7 @@ nav {
     flex-wrap: wrap;
     gap: calc(var(--spacing-sm) - 2px) var(--spacing-md); /* Reduced gap */
     padding: 2px var(--spacing-md); /* Added minimal vertical padding */
-    background:  #033c43;
+    background:  #474747;
     color: #eef;
     font-size: 0.85rem; /* Reduced font size */
     border-top: 1px solid #087f8c;
@@ -603,12 +782,12 @@ nav {
 }
 
 .nav-promo-caption {
-    color: #f5b700;
+    color: #ffffff;
     font-weight: 600;
     font-size: 0.8rem; /* Reduced font size */
     padding: 4px 10px; /* Reduced padding */
     border-radius: 4px;
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: rgba(7, 7, 7, 0.08);
     margin-left: auto;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -755,14 +934,14 @@ nav {
 .box-col a.box-link {
     margin-top: auto;
     padding-top: var(--spacing-sm);
-    font-size: 0.9rem;
+    font-size: 0.9rem; 
     font-weight: 500;
-    color: var(--color-primary);
+    color: var(--color-primary-dark);
     text-decoration: none;
 }
 
 .box-col a.box-link:hover {
-    color: var(--color-primary-dark);
+    color: var(--color-secondary);
     text-decoration: underline;
 }
 
@@ -868,11 +1047,28 @@ nav {
     padding: var(--spacing-sm) var(--spacing-lg);
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    /* Custom Scrollbar for better UX on desktop */
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: #ccc #f1f1f1;
 }
 
 .products::-webkit-scrollbar {
-    display: none;
+    height: 8px;
+}
+
+.products::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.products::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+}
+
+.products::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
 }
 
 .products>img {
@@ -900,81 +1096,88 @@ nav {
     scroll-snap-align: start;
 }
 
-/* --- Detailed Product Card Styles --- */
+.slider-btn.prev {
+    left: 10px;
+}
+.slider-btn.next {
+    right: 10px;
+}
+/* --- Detailed Product Card Styles (Modern Look) --- */
 .product-card {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
     background: var(--color-background-light);
-    padding: var(--spacing-sm);
-    border-radius: var(--border-radius-md);
-    border: 1px solid var(--color-border);
-    transition: transform var(--transition-speed-normal) var(--transition-timing), box-shadow var(--transition-speed-normal) var(--transition-timing), border-color var(--transition-speed-normal) var(--transition-timing);
+    border-radius: var(--border-radius-lg); /* Softer corners */
+    border: 1px solid var(--color-border-light); /* Lighter border as requested */
+    transition: transform var(--transition-speed-normal) var(--transition-timing), box-shadow var(--transition-speed-normal) var(--transition-timing);
     cursor: pointer;
     height: 100%;
     box-sizing: border-box;
+    overflow: hidden; /* To contain the image zoom effect */
+    box-shadow: var(--shadow-sm); /* Start with a subtle shadow */
+    padding: 0; /* Padding will be on the card-body */
+}
+
+.slider-btn.disabled {
+    opacity: 0 !important; /* Use important to override hover opacity */
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .product-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-    border-color: var(--color-border-dark);
+    transform: translateY(-6px); /* A bit more lift */
+    box-shadow: var(--shadow-lg); /* A more prominent shadow on hover */
 }
 
-.product-card-container {
-    text-align: center;
-    margin-bottom: var(--spacing-sm);
-    overflow: hidden;
-    border-radius: var(--border-radius-sm);
-    background-color: var(--color-background-medium);
+/* The anchor tag wraps the whole card content in the template */
+.product-card > a {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
-.product-card img.product-card-img { /* More specific selector for product card images */
+.product-card .carousel {
+    border-bottom: 1px solid var(--color-border-light); /* Separator line */
+}
+
+.product-card img.product-card-img {
     display: block;
     width: 100%;
-    height: 160px;
+    height: 200px; /* A bit more space for the image */
     object-fit: contain;
     transition: transform 0.4s var(--transition-timing);
+    background-color: var(--color-background-light);
 }
 
 .product-card:hover img.product-card-img {
-    transform: scale(1.08);
+    transform: scale(1.05); /* Subtle zoom on hover */
 }
 
-.product-card-info {
+/* The template uses .card-body, so we style that */
+.product-card .card-body {
+    padding: var(--spacing-md);
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--spacing-xs);
-    margin-bottom: var(--spacing-xs);
-    min-height: 1.2em;
+    flex-direction: column;
+    flex-grow: 1;
 }
 
-.product-card-info p {
-    font-size: 0.8rem;
-    color: var(--color-danger);
+/* The template uses .card-title, so we style that */
+.product-card .card-title {
+    font-family: var(--font-secondary);
+    font-size: 0.9rem;
     font-weight: 600;
-    margin: 0;
-    line-height: 1.2;
-}
-
-.product-card-info span {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--color-danger);
-    background-color: lighten(var(--color-danger), 35%);
-    padding: 2px 6px;
-    border-radius: var(--border-radius-sm);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    line-height: 1.2;
+    color: var(--color-text-heading);
+    line-height: 1.4;
+    margin-bottom: var(--spacing-xs);
 }
 
 .product-price {
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1.2rem;
+    font-weight: 700;
     color: var(--color-text-base);
-    margin-bottom: var(--spacing-xs);
+    margin-top: auto; /* Pushes price to the bottom */
     line-height: 1.3;
 }
 
@@ -984,25 +1187,6 @@ nav {
     text-decoration: line-through;
     margin-left: var(--spacing-xs);
     font-weight: 400;
-}
-
-/* --- Enhanced Product Card Title --- */
-.product-card h4 {
-    font-size: 0.95rem;
-    /* Slightly larger */
-    font-weight: 600;
-    /* Bolder */
-    color: var(--color-text-heading);
-    /* Use heading color */
-    line-height: 1.4;
-    margin-top: auto;
-    padding-top: var(--spacing-xs);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-height: calc(1.4em * 2);
 }
 
 /* --- Flickity Gallery --- */
@@ -1045,7 +1229,7 @@ footer {
     display: flex;
     flex-direction: column;
     align-items: center;
-    background: var(--color-background-dark);
+    background:#464545;
     color: #ccc;
     padding: var(--spacing-xl) var(--spacing-md) var(--spacing-md) var(--spacing-md);
     margin-top: var(--spacing-xl);
@@ -1510,6 +1694,19 @@ footer .footer-logo:hover img {
         font-size: 1.15rem;
     }
 
+    .slider-btn {
+        opacity: 0.8;
+        pointer-events: auto;
+        width: 38px;
+        height: 38px;
+        font-size: 1.5rem;
+    }
+    .slider-btn.prev {
+        left: 5px;
+    }
+    .slider-btn.next {
+        right: 5px;
+    }
     .product-card h4 {
         font-size: 0.9rem;
     }
@@ -1849,35 +2046,6 @@ footer .footer-logo:hover img {
 
 
 /* Removed search-results layout styles - they belong in search_results.html or a shared layout CSS */
-
-/* Style for spotlight cards (Meet the Makers/Providers) */
-.spotlight-card {
-    border: 1px solid var(--color-border-light);
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-}
-.spotlight-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-md);
-}
-.spotlight-card-img, .spotlight-card-img-placeholder {
-    height: 150px; /* Adjust as needed */
-    object-fit: cover;
-    background-color: var(--color-background-medium);
-}
-.spotlight-card-img-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.spotlight-card .card-body {
-    padding: var(--spacing-sm);
-}
-.spotlight-card .card-title a {
-    text-decoration: none;
-}
-
-/* c:\Users\Hp\Desktop\Nexus\core\static\assets\css\home.css */
-/* ... (all your existing home.css styles) ... */
 
 /* Style for spotlight cards (Meet the Makers/Providers) */
 .spotlight-card {

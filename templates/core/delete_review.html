@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>{% trans 'Delete Review' %}</h2>
+    <hr>
+    <p>{% blocktrans %}Are you sure you want to delete your review for <strong>{{ review.product.name|default:review.vendor.name|default:review.service.title }}</strong>?{% endblocktrans %}</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">{% trans 'Confirm Delete' %}</button>
+        <a href="{% url 'core:customer_review_list' %}" class="btn btn-secondary">{% trans 'Cancel' %}</a>
+    </form>
+</div>
+{% endblock %}

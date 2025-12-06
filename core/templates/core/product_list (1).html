@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+{% load humanize %}
+
+{% block title %}{% trans "All Products" %} - NEXUS{% endblock title %}
+
+{% block content %}
+<div class="container my-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-3">
+            <li class="breadcrumb-item"><a href="{% url 'core:home' %}">{% trans "Home" %}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{% trans "Products" %}</li>
+        </ol>
+    </nav>
+
+    <h1>{% trans "All Products" %}</h1>
+
+    {# TODO: Add your product listing loop here #}
+    {# Example: #}
+    {# {% if object_list %} #}
+    {#     <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4"> #}
+    {#         {% for product in object_list %} #}
+    {#             {% include 'core/includes/product_card.html' with product=product %} #}
+    {#         {% end for %} #}
+    {#     </div> #}
+    {# {% else %} #}
+    {#     <p>{% trans "No products available yet." %}</p> #}
+    {# {% endif %} #}
+
+</div>
+{% endblock content %}

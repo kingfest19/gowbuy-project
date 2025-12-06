@@ -1,0 +1,89 @@
+{% load i18n %}
+
+{# Customer Account Section #}
+<div class="list-group list-group-flush mb-3">
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
+        <span>{% trans "My Account" %}</span>
+    </h6>
+    <a href="{% url 'core:user_profile' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'user_profile' %}active{% endif %}">
+        <i class="fas fa-tachometer-alt fa-fw me-2"></i>{% trans "Dashboard" %}
+    </a>
+    <a href="{% url 'core:order_history' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'order_history' %}active{% endif %}">
+        <i class="fas fa-receipt fa-fw me-2"></i>{% trans "My Orders" %}
+    </a>
+    <a href="{% url 'core:wishlist_detail' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'wishlist_detail' %}active{% endif %}">
+        <i class="fas fa-heart fa-fw me-2"></i>{% trans "Wishlist" %}
+    </a>
+    <a href="{% url 'core:customer_message_list' %}" class="list-group-item list-group-item-action {% if 'customer_message' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="fas fa-envelope fa-fw me-2"></i>{% trans "Messages" %}
+    </a>
+    <a href="{% url 'core:customer_review_list' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'customer_review_list' %}active{% endif %}">
+        <i class="fas fa-star fa-fw me-2"></i>{% trans "My Reviews" %}
+    </a>
+    <a href="{% url 'core:customer_notification_list' %}" class="list-group-item list-group-item-action {% if 'customer_notification' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="fas fa-bell fa-fw me-2"></i>{% trans "Notifications" %}
+    </a>
+    <a href="{% url 'core:rewards_page' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'rewards_page' %}active{% endif %}">
+        <i class="fas fa-gift fa-fw me-2"></i>{% trans "Rewards & Points" %}
+    </a>
+    <a href="{% url 'core:edit_user_profile' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'edit_user_profile' %}active{% endif %}">
+        <i class="fas fa-user-edit fa-fw me-2"></i>{% trans "Account Settings" %}
+    </a>
+    <a href="{% url 'core:login_history' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'login_history' %}active{% endif %}">
+        <i class="fas fa-shield-alt fa-fw me-2"></i>{% trans "Login & Security" %}
+    </a>
+</div>
+
+{# Other Dashboards Section - Conditionally shown #}
+{% if is_vendor %}
+<div class="list-group list-group-flush mb-3">
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
+        <span>{% trans "Vendor Dashboard" %}</span>
+    </h6>
+    <a href="{% url 'core:vendor_dashboard' %}" class="list-group-item list-group-item-action {% if active_page == 'vendor_overview' %}active{% endif %}"><i class="fas fa-store fa-fw me-2"></i>{% trans "Overview" %}</a>
+    <a href="{% url 'core:vendor_product_list' %}" class="list-group-item list-group-item-action {% if active_page == 'vendor_products' %}active{% endif %}"><i class="fas fa-box-open fa-fw me-2"></i>{% trans "Products" %}</a>
+    <a href="{% url 'core:vendor_order_list' %}" class="list-group-item list-group-item-action {% if active_page == 'vendor_orders' %}active{% endif %}"><i class="fas fa-receipt fa-fw me-2"></i>{% trans "Orders" %}</a>
+    <a href="{% url 'core:vendor_message_list' %}" class="list-group-item list-group-item-action {% if active_page == 'vendor_messages' %}active{% endif %}"><i class="fas fa-comments fa-fw me-2"></i>{% trans "Messages" %}</a>
+    <a href="{% url 'core:vendor_reports' %}" class="list-group-item list-group-item-action {% if active_page == 'vendor_reports' %}active{% endif %}"><i class="fas fa-chart-bar fa-fw me-2"></i>{% trans "Reports" %}</a>
+    <a href="{% url 'core:vendor_payout_request_list' %}" class="list-group-item list-group-item-action {% if active_page == 'vendor_payouts' %}active{% endif %}"><i class="fas fa-hand-holding-usd fa-fw me-2"></i>{% trans "Payouts" %}</a>
+    <a href="{% url 'core:vendor_review_list' %}" class="list-group-item list-group-item-action {% if active_page == 'vendor_reviews' %}active{% endif %}"><i class="fas fa-star-half-alt fa-fw me-2"></i>{% trans "Reviews" %}</a>
+    <a href="{% url 'core:vendor_promotion_list' %}" class="list-group-item list-group-item-action {% if active_page == 'vendor_promotions' %}active{% endif %}"><i class="fas fa-tags fa-fw me-2"></i>{% trans "Promotions" %}</a>
+    <a href="{% url 'core:edit_vendor_profile' %}" class="list-group-item list-group-item-action {% if active_page == 'vendor_settings' %}active{% endif %}"><i class="fas fa-cog fa-fw me-2"></i>{% trans "Store Settings" %}</a>
+    <a href="{% url 'core:vendor_payment_settings' %}" class="list-group-item list-group-item-action {% if active_page == 'vendor_payout_settings' %}active{% endif %}"><i class="fas fa-credit-card fa-fw me-2"></i>{% trans "Payout Settings" %}</a>
+    <a href="{% url 'core:vendor_upgrade' %}" class="list-group-item list-group-item-action {% if active_page == 'vendor_upgrade' %}active{% endif %}"><i class="fas fa-rocket fa-fw me-2"></i>{% trans "Upgrade Plan" %}</a>
+</div>
+{% endif %}
+
+{% if is_service_provider %}
+<div class="list-group list-group-flush mb-3">
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
+        <span>{% trans "Provider Dashboard" %}</span>
+    </h6>
+    <a href="{% url 'core:service_provider_dashboard' %}" class="list-group-item list-group-item-action {% if active_page == 'provider_overview' %}active{% endif %}"><i class="fas fa-concierge-bell fa-fw me-2"></i>{% trans "Overview" %}</a>
+    <a href="{% url 'core:service_provider_services_list' %}" class="list-group-item list-group-item-action {% if active_page == 'provider_services' %}active{% endif %}"><i class="fas fa-briefcase fa-fw me-2"></i>{% trans "My Services" %}</a>
+    <a href="{% url 'core:service_provider_bookings_list' %}" class="list-group-item list-group-item-action {% if active_page == 'provider_bookings' %}active{% endif %}"><i class="fas fa-calendar-check fa-fw me-2"></i>{% trans "Bookings" %}</a>
+    <a href="{% url 'core:service_provider_payout_requests' %}" class="list-group-item list-group-item-action {% if active_page == 'provider_payouts' %}active{% endif %}"><i class="fas fa-hand-holding-usd fa-fw me-2"></i>{% trans "Payouts" %}</a>
+    <a href="{% url 'core:service_provider_payout_settings' %}" class="list-group-item list-group-item-action {% if active_page == 'provider_payout_settings' %}active{% endif %}"><i class="fas fa-credit-card fa-fw me-2"></i>{% trans "Payout Settings" %}</a>
+    <a href="{% url 'core:edit_service_provider_profile' %}" class="list-group-item list-group-item-action {% if active_page == 'provider_profile' %}active{% endif %}"><i class="fas fa-user-cog fa-fw me-2"></i>{% trans "Profile Settings" %}</a>
+</div>
+{% endif %}
+
+{% if is_rider %}
+<div class="list-group list-group-flush mb-3">
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
+        <span>{% trans "Rider Dashboard" %}</span>
+    </h6>
+    <a href="{% url 'core:rider_dashboard' %}" class="list-group-item list-group-item-action {% if active_page == 'rider_overview' %}active{% endif %}"><i class="fas fa-motorcycle fa-fw me-2"></i>{% trans "Overview & Tasks" %}</a>
+    <a href="{% url 'core:rider_earnings' %}" class="list-group-item list-group-item-action {% if active_page == 'rider_earnings' %}active{% endif %}"><i class="fas fa-wallet fa-fw me-2"></i>{% trans "Earnings" %}</a>
+    <a href="{% url 'core:rider_boost_visibility' %}" class="list-group-item list-group-item-action {% if active_page == 'rider_boost' %}active{% endif %}"><i class="fas fa-rocket fa-fw me-2"></i>{% trans "Boost Visibility" %}</a>
+    <a href="{% url 'core:rider_notification_list' %}" class="list-group-item list-group-item-action {% if active_page == 'rider_notifications' %}active{% endif %}"><i class="fas fa-bell fa-fw me-2"></i>{% trans "Notifications" %}</a>
+    <a href="{% url 'core:rider_profile_view' %}" class="list-group-item list-group-item-action {% if active_page == 'rider_profile' %}active{% endif %}"><i class="fas fa-id-card fa-fw me-2"></i>{% trans "My Profile" %}</a>
+</div>
+{% endif %}
+
+{# Logout #}
+<div class="list-group list-group-flush">
+    <a href="{% url 'account_logout' %}" class="list-group-item list-group-item-action text-danger">
+        <i class="fas fa-sign-out-alt fa-fw me-2"></i>{% trans "Logout" %}
+    </a>
+</div>

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load static i18n humanize %}
+
+{% block title %}{{ page_title }} - {% trans "Vendor Dashboard" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rating-stars .fa-star { color: #ffc107; } /* Gold for filled stars */
+    .rating-stars .fa-star-o { color: #e4e5e9; } /* Light grey for empty stars */
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row">
+        {% include "core/vendor/vendor_dashboard_sidebar_snippet.html" %}
+        <div class="col-md-9">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">{{ page_title }}</h2>
+                    {% if average_rating %}
+                        <span class="badge bg-light text-dark fs-6">
+                            {% trans "Avg. Rating:" %} {{ average_rating|floatformat:1 }}/5 ({{ total_reviews }} {% trans "review" %}{{ total_reviews|pluralize }})
+                        </span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if reviews %}
+                        {% for review in reviews %}
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <h5 class="card-title mb-1">{% trans "Review by:" %} {{ review.user.username }}</h5>
+                                        <small class="text-muted">{{ review.created_at|naturaltime }}</small>
+                                    </div>
+                                    <div class="rating-stars mb-2">
+                                        {% for i in "12345" %}
+                                            <i class="fa {% if review.rating >= i|add:0 %}fa-star{% else %}fa-star-o{% endif %}"></i>
+                                        {% endfor %}
+                                        <span class="ms-1">({{ review.rating }}/5)</span>
+                                    </div>
+                                    <p class="card-text">{{ review.comment|linebreaksbr }}</p>
+                                    {% if not review.is_approved %}
+                                        <span class="badge bg-warning text-dark">{% trans "Pending Approval" %}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                        {% include "core/snippets/pagination_snippet.html" with page_obj=reviews %}
+                    {% else %}
+                        <div class="alert alert-info" role="alert">
+                            {% trans "You have not received any reviews yet." %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
