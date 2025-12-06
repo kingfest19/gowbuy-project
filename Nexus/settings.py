@@ -98,6 +98,7 @@ ASGI_APPLICATION = 'Nexus.asgi.application' # Corrected path to match your proje
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.locale.LocaleMiddleware', # <<< Add LocaleMiddleware
@@ -112,13 +113,9 @@ MIDDLEWARE = [
 
 # --- START: Settings for running behind a reverse proxy like ngrok ---
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-USE_X_FORWARDED_HOST = True
-SECURE_SSL_REDIRECT = False # Set to True in production if your proxy handles SSL termination
+USE_X_FORWARDED_HOST = True  # For Render/ngrok
+SECURE_SSL_REDIRECT = not DEBUG  # In production, force HTTPS
 # --- END: Settings for running behind a reverse proxy like ngrok ---
-
-ROOT_URLCONF = 'Nexus.urls'
-
-# ... (rest of your settings like TEMPLATES, DATABASES, etc.) ...
 
 
 ROOT_URLCONF = 'Nexus.urls'
@@ -171,10 +168,11 @@ if DEBUG:
     }
 else:
     # Production settings using Redis
+    REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379')
     CACHES = {
         "default": {
             "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": "redis://127.0.0.1:6379/1",  # Use a different DB number (e.g., 1) from Channels
+            "LOCATION": f"{REDIS_URL}/1",  # Use a different DB number (e.g., 1) from Channels
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
             },
@@ -236,6 +234,9 @@ STATIC_URL = 'static/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+# Add whitenoise storage
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core/static')]
 
 MEDIA_URL = '/media/'
@@ -284,8 +285,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # ... (at the end of the file) ...
 
 # django-crispy-forms settings
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-CRISPY_TEMPLATE_PACK = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5" # This is sufficient
 CRISPY_ALLOWED_TEMPLATE_PACKS = ("bootstrap5",) # Ensure this is a tuple or list
 
 # settings.py
@@ -393,7 +393,7 @@ SOCIALACCOUNT_PROVIDERS = {
 # --- Paystack Settings ---
 PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY')
 PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY')
-PAYSTACK_CALLBACK_URL = 'https://4eec-102-176-94-167.ngrok-free.app/paystack/callback/' # Use your ngrok URL
+PAYSTACK_CALLBACK_URL = os.environ.get('PAYSTACK_CALLBACK_URL')
 
 # c:\Users\Hp\Desktop\Nexus\Nexus\settings.py
 
@@ -489,11 +489,12 @@ if DEBUG:
     }
 else:
     # Production settings using Redis
+    REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379')
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [("127.0.0.1", 6379)],
+                "hosts": [REDIS_URL],
             },
         },
     }
