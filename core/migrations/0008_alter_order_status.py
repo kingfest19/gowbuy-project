@@ -10,9 +10,4 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterField(
-            model_name='order',
-            name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending Payment Choice'), ('AWAITING_ESCROW_PAYMENT', 'Awaiting Escrow Payment'), ('AWAITING_DIRECT_PAYMENT', 'Awaiting Direct Payment Confirmation'), ('PROCESSING', 'Processing'), ('PENDING_PAYOUT', 'Pending Payout to Provider'), ('IN_PROGRESS', 'Service In Progress'), ('COMPLETED', 'Completed'), ('CANCELLED', 'Cancelled'), ('DISPUTED', 'Disputed'), ('pending', 'Pending (Product Order)'), ('processing', 'Processing (Product Order)'), ('shipped', 'Shipped (Product Order)'), ('delivered', 'Delivered (Product Order)'), ('cancelled', 'Cancelled (Product Order)'), ('refunded', 'Refunded (Product Order)')], db_index=True, default='PENDING', max_length=30),
-        ),
     ]
