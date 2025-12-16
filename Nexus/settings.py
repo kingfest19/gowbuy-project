@@ -391,9 +391,11 @@ SOCIALACCOUNT_PROVIDERS = {
 # SOCIALACCOUNT_ADAPTER = 'your_app.adapter.YourSocialAccountAdapter'
 
 # --- Paystack Settings ---
-PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY')
-PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY')
-PAYSTACK_CALLBACK_URL = os.environ.get('PAYSTACK_CALLBACK_URL')
+# Commented out for now to allow deployment without credentials.
+# You can uncomment these lines when you are ready to integrate Paystack.
+# PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY')
+# PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY')
+# PAYSTACK_CALLBACK_URL = os.environ.get('PAYSTACK_CALLBACK_URL')
 
 # c:\Users\Hp\Desktop\Nexus\Nexus\settings.py
 
@@ -507,3 +509,17 @@ SILENCED_SYSTEM_CHECKS = [
     'django_ratelimit.E003', # E003: LocMemCache is not a shared cache, but acceptable for development.
 ]
 # --- END: Silenced System Checks ---
+
+# settings.py
+
+# ... all your other settings ...
+
+# CELERY SETTINGS
+# This assumes your Redis instance is available at the URL from the environment variable.
+# On Render, this will be automatically set for you if you link the Redis instance.
+CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
