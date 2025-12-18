@@ -1,23 +1,24 @@
-# Environment variables
-.env
+﻿# Virtual Environment
+venv/
+venv_py311/
+.venv/
 
-# Django / Python
+# Python cache
 __pycache__/
 *.pyc
 
-# Database
-db.sqlite3
-
-# Static and media files
-/staticfiles/
-/media/
-
-# Log files
+# Django project specific
 *.log
-
-# IDE configuration
-.vscode/
-.idea/
+db.sqlite3
+/media/
 
 # OS-specific
 .DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+
+# Environment variables
+.env
