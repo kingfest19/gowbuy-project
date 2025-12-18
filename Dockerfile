@@ -41,7 +41,9 @@ COPY --from=builder /app/wheels /wheels
 COPY --from=builder /app/requirements.txt .
 RUN pip install --no-cache /wheels/*
 
-# Copy application code
+# Copy application code. This is commented out for faster local development,
+# The docker-compose.yml file uses a volume to mount the code directly.
+# For production builds (like on Render), this line should be UNCOMMENTED.
 COPY . .
 
 # Create and set permissions for the Numba cache directory

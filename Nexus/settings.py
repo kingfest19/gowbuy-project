@@ -80,9 +80,8 @@ INSTALLED_APPS = [
 ]
 
 # PayPal settings
-PAYPAL_TEST = True  # Use True for Sandbox, False for live
-PAYPAL_RECEIVER_EMAIL = 'sb-wezmm45982851@business.example.com' # The email of your PayPal Sandbox Business account
-# You can get this from your PayPal Developer Dashboard
+PAYPAL_TEST = not (os.environ.get('PAYPAL_LIVE_MODE', 'False') == 'True') # False in production if PAYPAL_LIVE_MODE is 'True'
+PAYPAL_RECEIVER_EMAIL = os.environ.get('PAYPAL_RECEIVER_EMAIL')
 
 SITE_ID = 1
 
@@ -391,11 +390,9 @@ SOCIALACCOUNT_PROVIDERS = {
 # SOCIALACCOUNT_ADAPTER = 'your_app.adapter.YourSocialAccountAdapter'
 
 # --- Paystack Settings ---
-# Commented out for now to allow deployment without credentials.
-# You can uncomment these lines when you are ready to integrate Paystack.
-# PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY')
-# PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY')
-# PAYSTACK_CALLBACK_URL = os.environ.get('PAYSTACK_CALLBACK_URL')
+# Define Paystack settings, allowing them to be None if not set in the environment.
+PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY')
+PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY')
 
 # c:\Users\Hp\Desktop\Nexus\Nexus\settings.py
 
@@ -496,7 +493,7 @@ else:
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [REDIS_URL],
+                "hosts": [f"{REDIS_URL}/2"],
             },
         },
     }

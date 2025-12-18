@@ -1,40 +1,23 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
 # Environment variables
 .env
 
-# SQLite databases
-*.sqlite3
+# Django / Python
+__pycache__/
+*.pyc
+
+# Database
 db.sqlite3
 
-# Media files
+# Static and media files
+/staticfiles/
 /media/
 
-# Virtual environment
-/venv_py311/
-/venv/
-/.tmp.driveupload/
+# Log files
+*.log
+
+# IDE configuration
+.vscode/
+.idea/
+
+# OS-specific
+.DS_Store

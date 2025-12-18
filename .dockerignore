@@ -1,0 +1,30 @@
+# This file tells Docker which files and folders to ignore when building an image.
+# It's crucial for build speed and creating smaller, more secure images.
+
+# Git and Docker config
+.git
+.gitignore
+.dockerignore
+docker-compose.yml
+Dockerfile
+
+# Environment variables
+.env
+
+# Django / Python
+__pycache__/
+*.pyc
+
+# Database
+db.sqlite3
+
+# Static and media files (these are managed by your web server or a file storage service)
+staticfiles/
+media/
+
+# Log files
+*.log
+
+# IDE configuration
+.vscode/
+.idea/
