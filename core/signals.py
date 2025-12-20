@@ -574,7 +574,7 @@ def clear_ai_summary_cache_on_review_change(sender, instance, **kwargs):
 # --- END: AI Cache Invalidation Signal ---
 
 # --- START: Background Removal Signal ---
-from .task import process_background_removal
+from .tasks import process_background_removal
 from .models import ProductImage
 
 @receiver(post_save, sender=ProductImage)

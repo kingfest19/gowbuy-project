@@ -22,7 +22,6 @@ from django.contrib.sessions.models import Session # Added import
 from django.core.files.storage import FileSystemStorage
 from django.core.files.base import ContentFile # Added import
 from django.contrib.auth.forms import PasswordChangeForm
-from django.core.mail import EmailMessage
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden, HttpResponseRedirect, FileResponse, Http404
 from django.template.loader import render_to_string
@@ -45,7 +44,8 @@ from allauth.mfa.models import Authenticator # For checking 2FA methods with dja
 from io import BytesIO
 from django.contrib.auth import get_user_model
 from authapp.models import CustomUser # <<< Import CustomUser from authapp
-from django.core.files.uploadedfile import InMemoryUploadedFile, os
+import os
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db.models.functions import TruncDay, TruncMonth
 from .models import ( # Ensure UserProfile is imported
     Product, Category, Cart, CartItem, Order, OrderItem, Address,
@@ -55,8 +55,8 @@ from .models import ( # Ensure UserProfile is imported
     FAQ, SupportTicket, TicketResponse, UserActivity, AuditLog, APIKey, WebhookEvent,
     FeatureFlag, ABTest, UserSegment, EmailTemplate, SMSTemplate, PushNotificationTemplate, Reward,
     Affiliate, AffiliateClick, AffiliatePayout, LoyaltyProgram, LoyaltyTier, UserPoints,
-    Reward, UserCoupon, GiftCard, UserGiftCard, PricingPlan,
-    FAQ, TermsAndConditions, PrivacyPolicy, # For chatbot knowledge base
+    UserCoupon, GiftCard, UserGiftCard, PricingPlan,
+    TermsAndConditions, PrivacyPolicy, # For chatbot knowledge base
     # CustomUser, # Assuming CustomUser is your user model - THIS LINE IS NOW COMMENTED OUT
     ProductVariant, # Added for product variants
     ServiceBooking, PayoutRequest,
@@ -66,8 +66,6 @@ from .models import ( # Ensure UserProfile is imported
     SystemNotification, # Added for system-wide notifications
     UserPreferences, # Added for user preferences
     SecurityLog, # Added for security-related logs
-    TermsAndConditions, PrivacyPolicy, # Added for legal documents
-    ProductImage, # Added for multiple product images
     OrderNote, # Added for order notes
     # ... any other models you have ...
     RiderProfile, DeliveryTask, RiderApplication, ActiveRiderBoost, # Import RiderProfile, DeliveryTask, RiderApplication, ActiveRiderBoost
@@ -171,7 +169,7 @@ logger = logging.getLogger(__name__)
 # stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
-from .task import process_image_enhancement, process_background_removal
+from .tasks import process_image_enhancement, process_background_removal
 # --- Helper Functions (Consider moving to utils.py if they grow) ---
 
 def _get_ai_review_summary(product: Product, reviews: list) -> str | None:
@@ -2488,7 +2486,7 @@ def place_order(request):
         if 'promotion_id' in request.session:
             del request.session['promotion_id']
         if 'discount_amount' in request.session:
-            del request.session['booking_details']
+            del request.session['discount_amount']
         # --- END: Clean up all booking details from session ---
 
         if 'cart' in request.session:
