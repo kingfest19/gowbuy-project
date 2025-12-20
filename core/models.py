@@ -274,7 +274,6 @@ class Product(models.Model):
         Vendor,
         related_name='products',
         on_delete=models.CASCADE,
-        default=1,
         help_text="The vendor selling this product."
     )
     # --------------------------
@@ -411,22 +410,21 @@ class Address(models.Model):
 
 # --- Order Model ---
 class Order(models.Model):
-    # --- Refined Status Choices ---
-    STATUS_CHOICES = (
-        ('PENDING', _('Pending Payment Choice')),
-        ('AWAITING_ESCROW_PAYMENT', _('Awaiting Escrow Payment')),
-        ('AWAITING_DIRECT_PAYMENT', _('Awaiting Direct Payment')),
-        ('ON_HOLD_FRAUD_REVIEW', _('On Hold (Fraud Review)')),
-        ('PROCESSING', _('Processing')), # Payment received, work can begin
-        ('IN_PROGRESS', _('Service In Progress')), # Can be used alongside PROCESSING for services
-        ('SHIPPED', _('Shipped')), # For physical products
-        ('DELIVERED', _('Delivered')), # Rider/Vendor marks as delivered
-        ('PENDING_PAYOUT', _('Pending Payout')), # Customer confirms, ready for admin to pay out
-        ('COMPLETED', _('Completed & Paid Out')), # Final state after payout
-        ('CANCELLED', _('Cancelled')),
-        ('REFUNDED', _('Refunded')),
-        ('DISPUTED', _('Disputed')),
-    )
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', _('Pending Payment Choice')
+        AWAITING_ESCROW_PAYMENT = 'AWAITING_ESCROW_PAYMENT', _('Awaiting Escrow Payment')
+        AWAITING_DIRECT_PAYMENT = 'AWAITING_DIRECT_PAYMENT', _('Awaiting Direct Payment')
+        ON_HOLD_FRAUD_REVIEW = 'ON_HOLD_FRAUD_REVIEW', _('On Hold (Fraud Review)')
+        PROCESSING = 'PROCESSING', _('Processing')
+        IN_PROGRESS = 'IN_PROGRESS', _('Service In Progress')
+        SHIPPED = 'SHIPPED', _('Shipped')
+        DELIVERED = 'DELIVERED', _('Delivered')
+        PENDING_PAYOUT = 'PENDING_PAYOUT', _('Pending Payout')
+        COMPLETED = 'COMPLETED', _('Completed & Paid Out')
+        CANCELLED = 'CANCELLED', _('Cancelled')
+        REFUNDED = 'REFUNDED', _('Refunded')
+        DISPUTED = 'DISPUTED', _('Disputed')
+
     PAYMENT_METHOD_CHOICES = (
         ('escrow', _('Escrow (Paystack)')),
         ('direct', _('Direct Arrangement')),
@@ -455,7 +453,7 @@ class Order(models.Model):
     order_id = models.CharField(max_length=120, unique=True, blank=True, help_text="Unique order identifier. Auto-generated.")
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='PENDING', db_index=True) # Default to new initial status
+    status = models.CharField(max_length=30, choices=Status.choices, default=Status.PENDING, db_index=True)
     # payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending', db_index=True) # Consider removing if status covers it
     platform_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name=_("Platform (Nexus) Delivery Fee Component"))
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name=_("Order Delivery Fee"))
