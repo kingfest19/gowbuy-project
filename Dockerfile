@@ -56,6 +56,5 @@ RUN chown -R appuser:appgroup /app
 # Switch to the non-root user
 USER appuser
 
-# The command to run the application will be specified by your hosting provider (e.g., Render)
-# or in a docker-compose.yml file. It would typically be:
-# CMD ["gunicorn", "Nexus.wsgi:application"]
+# Start the application using Gunicorn. We use the shell form to allow variable expansion.
+CMD gunicorn Nexus.wsgi:application --bind 0.0.0.0:${PORT:-10000}
