@@ -11,36 +11,53 @@ logger = logging.getLogger(__name__)
 
 try:
     from django.conf import settings # Moved import here
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    logger.info("Gemini AI API key configured.")
-
-    # Attempt to list models to find a suitable one
-    available_models = []
-    for m in genai.list_models():
-      if 'generateContent' in m.supported_generation_methods:
-        available_models.append(m.name)
     
-    logger.info(f"Available models supporting 'generateContent': {available_models}")
+    api_key = getattr(settings, 'GEMINI_API_KEY', None)
 
-    # Prioritize 'gemini-1.5-flash-latest' or 'gemini-1.0-pro-latest' or 'gemini-pro' if available,
-    # otherwise, try the first available one.
-    # The newer models like "gemini-1.5-flash" are often recommended.
-    preferred_models = ['models/gemini-1.5-flash-latest', 'models/gemini-1.5-pro-latest', 'models/gemini-1.0-pro-latest', 'models/gemini-pro'] 
-    chosen_model_name = None
-    for model_name in preferred_models:
-        if model_name in available_models:
-            chosen_model_name = model_name
-            break
-    
-    if not chosen_model_name and available_models:
-        chosen_model_name = available_models[0] # Fallback to the first available model
-
-    if chosen_model_name:
-        gemini_model = genai.GenerativeModel(chosen_model_name)
-        logger.info(f"Gemini AI configured successfully with model: {chosen_model_name}")
-    else:
-        logger.error("No suitable Gemini models found supporting 'generateContent'.")
+    if not api_key:
+        logger.warning("GEMINI_API_KEY is missing in settings. AI features will be disabled.")
         gemini_model = None
+    elif str(api_key).strip() == 'your_actual_api_key_here':
+        logger.error("GEMINI_API_KEY is set to the placeholder value. Please update your .env file with a valid key from Google AI Studio.")
+        gemini_model = None
+    else:
+        genai.configure(api_key=api_key)
+        logger.info("Gemini AI API key configured.")
+
+        # Attempt to list models to find a suitable one
+        available_models = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                available_models.append(m.name)
+        
+        logger.info(f"Available models supporting 'generateContent': {available_models}")
+
+        # Prioritize 'gemini-1.5-flash-latest' or 'gemini-1.0-pro-latest' or 'gemini-pro' if available,
+        # otherwise, try the first available one.
+        # The newer models like "gemini-1.5-flash" are often recommended.
+        preferred_models = [
+            'models/gemini-2.5-flash',
+            'models/gemini-2.0-flash',
+            'models/gemini-1.5-flash',
+            'models/gemini-1.5-flash-latest',
+            'models/gemini-pro',
+            'models/gemini-1.0-pro-latest'
+        ]
+        chosen_model_name = None
+        for model_name in preferred_models:
+            if model_name in available_models:
+                chosen_model_name = model_name
+                break
+        
+        if not chosen_model_name and available_models:
+            chosen_model_name = available_models[0] # Fallback to the first available model
+
+        if chosen_model_name:
+            gemini_model = genai.GenerativeModel(chosen_model_name)
+            logger.info(f"Gemini AI configured successfully with model: {chosen_model_name}")
+        else:
+            logger.error("No suitable Gemini models found supporting 'generateContent'.")
+            gemini_model = None
 
 except Exception as e:
     logger.error(f"Failed to configure Gemini AI: {e}")
