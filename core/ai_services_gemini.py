@@ -4,7 +4,7 @@ from google.api_core import exceptions as google_exceptions # Import google exce
 import logging
 from PIL import Image,ImageEnhance # For image handling
 import io # For image handling
-from rembg import remove
+from rembg import remove, new_session
 import json # For parsing structured JSON responses
 
 logger = logging.getLogger(__name__)
@@ -166,7 +166,9 @@ def remove_image_background(image_bytes):
     """Removes the background from an image using the rembg library."""
     try:
         input_img = Image.open(io.BytesIO(image_bytes))
-        output_img = remove(input_img)  # Use the remove function from rembg
+        # Use the 'u2netp' model which is optimized for low memory usage (~40MB vs ~170MB)
+        session = new_session("u2netp")
+        output_img = remove(input_img, session=session)
         
         img_byte_arr = io.BytesIO()
         output_img.save(img_byte_arr, format='PNG') # Or JPEG, depending on needs

@@ -27,7 +27,7 @@ services:
   worker:
     build: .
     container_name: nexus-worker
-    command: celery -A Nexus worker -l info
+    command: celery -A Nexus worker -l info --concurrency 1
     volumes:
       - .:/app
     env_file:
