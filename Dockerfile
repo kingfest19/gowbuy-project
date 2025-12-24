@@ -27,6 +27,8 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+ENV NUMBA_CACHE_DIR=/var/cache/numba
+ENV HOME=/home/appuser
 
 # Create a non-root user for security
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
@@ -49,6 +51,9 @@ COPY . .
 # Create and set permissions for the Numba cache directory
 RUN mkdir -p /var/cache/numba && \
     chown -R appuser:appgroup /var/cache/numba
+
+# Create home directory and ensure permissions (for rembg/u2net cache)
+RUN mkdir -p /home/appuser && chown -R appuser:appgroup /home/appuser
 
 # Change ownership to the non-root user
 RUN chown -R appuser:appgroup /app

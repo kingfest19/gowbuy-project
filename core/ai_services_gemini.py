@@ -24,33 +24,14 @@ try:
         genai.configure(api_key=api_key)
         logger.info("Gemini AI API key configured.")
 
-        # Attempt to list models to find a suitable one
-        available_models = []
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                available_models.append(m.name)
+        # We use a hardcoded model name to avoid blocking network calls (list_models) during app startup.
+        # 'gemini-2.5-flash' is the current preferred model.
+        # If it's not available, the API call will fail later, which is better than crashing startup.
+        chosen_model_name = 'models/gemini-2.5-flash'
         
-        logger.info(f"Available models supporting 'generateContent': {available_models}")
-
-        # Prioritize 'gemini-1.5-flash-latest' or 'gemini-1.0-pro-latest' or 'gemini-pro' if available,
-        # otherwise, try the first available one.
-        # The newer models like "gemini-1.5-flash" are often recommended.
-        preferred_models = [
-            'models/gemini-2.5-flash',
-            'models/gemini-2.0-flash',
-            'models/gemini-1.5-flash',
-            'models/gemini-1.5-flash-latest',
-            'models/gemini-pro',
-            'models/gemini-1.0-pro-latest'
-        ]
-        chosen_model_name = None
-        for model_name in preferred_models:
-            if model_name in available_models:
-                chosen_model_name = model_name
-                break
-        
-        if not chosen_model_name and available_models:
-            chosen_model_name = available_models[0] # Fallback to the first available model
+        # Fallback logic can be implemented here if needed, but usually standard models are always available.
+        # If you want to be safer, you could use 'models/gemini-1.5-flash' as a fallback if the 2.5 one fails at runtime.
+        logger.info(f"Configuring Gemini AI with preferred model: {chosen_model_name}")
 
         if chosen_model_name:
             gemini_model = genai.GenerativeModel(chosen_model_name)
