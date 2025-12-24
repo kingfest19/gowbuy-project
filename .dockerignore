@@ -14,6 +14,8 @@ Dockerfile
 # Django / Python
 __pycache__/
 *.pyc
+.venv
+venv
 
 # Database
 db.sqlite3
