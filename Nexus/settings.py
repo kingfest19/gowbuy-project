@@ -31,11 +31,13 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-lmut35poxhw^lr7p=b+w!
 # Set DEBUG to False in production. The '0' == '1' pattern is a common way to handle boolean env vars.
 DEBUG = os.environ.get('DEBUG', '1') == '1'
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'gowbuy-project.onrender.com']
+CSRF_TRUSTED_ORIGINS = ['https://gowbuy-project.onrender.com']
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+    CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
 
 
 # Application definition
