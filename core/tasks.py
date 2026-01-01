@@ -13,7 +13,7 @@ def ping():
     """Simple task that just returns 'pong'."""
     return 'pong'
 
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=3)
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=3, ignore_result=True)
 def process_image_enhancement(self, image_id: int):
     """
     Background task to enhance a product image using AI.
@@ -69,7 +69,7 @@ def process_image_enhancement(self, image_id: int):
         # Re-raise the exception to let Celery handle the retry.
         raise
 
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=3)
+@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=3, ignore_result=True)
 def process_background_removal(self, image_id: int):
     """
     Background task to remove background from a product image.

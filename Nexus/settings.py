@@ -148,13 +148,20 @@ WSGI_APPLICATION = 'Nexus.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-if 'DATABASE_URL' in os.environ:
-    DATABASES = {'default': dj_database_url.config(conn_max_age=600, ssl_require=True)}
-else:
-    DATABASES = {'default': {
+DATABASES = {
+    'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-    }}
+    }
+}
+
+if os.environ.get('DATABASE_URL'):
+    try:
+        db_from_env = dj_database_url.config(conn_max_age=600, ssl_require=True)
+        if db_from_env:
+            DATABASES['default'] = db_from_env
+    except Exception:
+        pass
 
 # --- START: Caching Settings (for django-ratelimit and performance) ---
 # Using Redis as the cache backend, since it's already configured for Channels.
@@ -459,11 +466,16 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
+        'numba': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
         # Add other app-specific loggers if needed
     },
     'root': { # Catch-all for other loggers not explicitly defined
         'handlers': ['console'],
-        'level': 'DEBUG', # Set root to DEBUG to see everything
+        'level': 'INFO', # Set root to INFO to avoid verbose library logs
     }
 }
 

@@ -1,4 +1,9 @@
 # c:\Users\Hp\Desktop\Nexus\core\ai_services_gemini.py
+import os
+# Limit threads for libraries like numpy/onnxruntime to reduce memory overhead in workers
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+
 import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions # Import google exceptions
 import logging
