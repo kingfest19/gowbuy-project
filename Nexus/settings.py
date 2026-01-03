@@ -29,7 +29,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-lmut35poxhw^lr7p=b+w!
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Set DEBUG to False in production. The '0' == '1' pattern is a common way to handle boolean env vars.
-DEBUG = os.environ.get('DEBUG', '1') == '1'
+DEBUG = os.environ.get('DEBUG', '0') == '1'
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'gowbuy-project.onrender.com']
 CSRF_TRUSTED_ORIGINS = ['https://gowbuy-project.onrender.com']
@@ -160,7 +160,8 @@ if os.environ.get('DATABASE_URL'):
         db_from_env = dj_database_url.config(conn_max_age=600, ssl_require=True)
         if db_from_env:
             DATABASES['default'] = db_from_env
-    except Exception:
+    except Exception as e:
+        print(f"Error configuring database: {e}")
         pass
 
 # --- START: Caching Settings (for django-ratelimit and performance) ---
@@ -176,17 +177,25 @@ if DEBUG:
     }
 else:
     # Production settings using Redis
-    REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379')
-    CACHES = {
-        "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": f"{REDIS_URL}/1",  # Use a different DB number (e.g., 1) from Channels
-            "OPTIONS": {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            },
-            "KEY_PREFIX": "nexus" # Optional: prefix for all cache keys
+    REDIS_URL = os.environ.get('REDIS_URL')
+    if REDIS_URL:
+        CACHES = {
+            "default": {
+                "BACKEND": "django_redis.cache.RedisCache",
+                "LOCATION": f"{REDIS_URL}/1",  # Use a different DB number (e.g., 1) from Channels
+                "OPTIONS": {
+                    "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                },
+                "KEY_PREFIX": "nexus" # Optional: prefix for all cache keys
+            }
         }
-    }
+    else:
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'unique-snowflake',
+            }
+        }
 
 # Setting for django-ratelimit to use the 'default' cache defined above.
 RATELIMIT_USE_CACHE = 'default'
@@ -315,7 +324,7 @@ AUTHENTICATION_BACKENDS = [
 # These settings configure django-allauth for email-based authentication,
 # while still allowing username collection during signup (as your form does).
 
-ACCOUNT_AUTHENTICATION_METHOD = 'email'         # Users log in with their email.
+ACCOUNT_LOGIN_METHODS = {'email'}               # Users log in with their email.
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None        # Important: Set to None if 'username' is not the primary login field.
 ACCOUNT_EMAIL_REQUIRED = True                   # Email is required for signup.
 ACCOUNT_USERNAME_REQUIRED = False               # Username is not required by allauth's default forms.
@@ -428,7 +437,7 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'DEBUG', # Set to DEBUG to capture INFO and DEBUG logs
+            'level': 'DEBUG' if DEBUG else 'INFO', # Set to DEBUG to capture INFO and DEBUG logs
             'class': 'logging.StreamHandler',
             'formatter': 'console_format',
         },
@@ -453,17 +462,17 @@ LOGGING = {
         },
         'core': { # Logger for your 'core' app (e.g., core.utils, core.signals)
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False, # Prevent double logging if root also logs to console
         },
         'core.views': { # Specific logger for core.views
             'handlers': ['console'],
-            'level': 'DEBUG', # Ensure this is DEBUG
+            'level': 'DEBUG' if DEBUG else 'INFO', # Ensure this is DEBUG
             'propagate': False, # Prevent propagation to 'core' or 'root'
         },
         'authapp': { # Logger for your 'authapp' app
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
         'numba': {
@@ -502,15 +511,22 @@ if DEBUG:
     }
 else:
     # Production settings using Redis
-    REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379')
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {
-                "hosts": [f"{REDIS_URL}/2"],
+    REDIS_URL = os.environ.get('REDIS_URL')
+    if REDIS_URL:
+        CHANNEL_LAYERS = {
+            "default": {
+                "BACKEND": "channels_redis.core.RedisChannelLayer",
+                "CONFIG": {
+                    "hosts": [f"{REDIS_URL}/2"],
+                },
             },
-        },
-    }
+        }
+    else:
+        CHANNEL_LAYERS = {
+            "default": {
+                "BACKEND": "channels.layers.InMemoryChannelLayer"
+            }
+        }
 # --- END: Channels Settings ---
 
 # --- START: Silenced System Checks ---

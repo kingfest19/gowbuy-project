@@ -15,8 +15,8 @@ def get_embed_url(url):
     # YouTube regex
     youtube_regex = (
         r'(https?://)?(www\.)?'
-        '(youtube|youtu|youtube-nocookie)\.(com|be)/'
-        '(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})')
+        r'(youtube|youtu|youtube-nocookie)\.(com|be)/'
+        r'(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})')
     match = re.match(youtube_regex, url)
     if match:
         return f"https://www.youtube.com/embed/{match.group(6)}"
