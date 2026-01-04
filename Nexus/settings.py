@@ -260,7 +260,8 @@ STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Add whitenoise storage
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Use CompressedStaticFilesStorage to prevent 500 errors on missing static files
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core/static')]
 
@@ -332,7 +333,7 @@ AUTHENTICATION_BACKENDS = [
 # These settings configure django-allauth for email-based authentication,
 # while still allowing username collection during signup (as your form does).
 
-ACCOUNT_LOGIN_METHODS = {'email'}               # Users log in with their email.
+ACCOUNT_AUTHENTICATION_METHOD = 'email'         # Users log in with their email.
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None        # Important: Set to None if 'username' is not the primary login field.
 ACCOUNT_EMAIL_REQUIRED = True                   # Email is required for signup.
 ACCOUNT_USERNAME_REQUIRED = False               # Username is not required by allauth's default forms.

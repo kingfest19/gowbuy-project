@@ -9,7 +9,6 @@ from google.api_core import exceptions as google_exceptions # Import google exce
 import logging
 from PIL import Image,ImageEnhance # For image handling
 import io # For image handling
-from rembg import remove, new_session
 import json # For parsing structured JSON responses
 
 logger = logging.getLogger(__name__)
@@ -151,6 +150,7 @@ def generate_structured_text_with_gemini(prompt_text: str) -> dict | None:
 def remove_image_background(image_bytes):
     """Removes the background from an image using the rembg library."""
     try:
+        from rembg import remove, new_session
         input_img = Image.open(io.BytesIO(image_bytes))
         # Use the 'u2netp' model which is optimized for low memory usage (~40MB vs ~170MB)
         session = new_session("u2netp")
