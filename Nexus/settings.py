@@ -282,6 +282,10 @@ STORAGES = {
     },
 }
 
+# Legacy settings for compatibility with third-party apps (like django-cloudinary-storage)
+STATICFILES_STORAGE = STORAGES["staticfiles"]["BACKEND"]
+DEFAULT_FILE_STORAGE = STORAGES["default"]["BACKEND"]
+
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core/static')]
 
 MEDIA_URL = '/media/'
