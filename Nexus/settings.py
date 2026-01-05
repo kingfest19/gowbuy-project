@@ -60,8 +60,6 @@ INSTALLED_APPS = [
     'core.apps.CoreConfig',
     'authapp.apps.AuthappConfig',
     'channels',
-    'cloudinary_storage',
-    'cloudinary',
 
 
     # Django contrib apps
@@ -71,6 +69,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary_storage',
+    'cloudinary',
     'django.contrib.humanize',
     'django.contrib.sites',  # <<< Add the sites framework
 
