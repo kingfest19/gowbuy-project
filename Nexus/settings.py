@@ -15,6 +15,9 @@ import os
 from django.utils.translation import gettext_lazy as _ # <<< Import for lazy translation
 import dj_database_url
 from decimal import Decimal # For PLATFORM_COMMISSION_RATE
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -57,6 +60,8 @@ INSTALLED_APPS = [
     'core.apps.CoreConfig',
     'authapp.apps.AuthappConfig',
     'channels',
+    'cloudinary_storage',
+    'cloudinary',
 
 
     # Django contrib apps
@@ -259,9 +264,23 @@ STATIC_URL = 'static/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Add whitenoise storage
-# Use CompressedStaticFilesStorage to prevent 500 errors on missing static files
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+# Cloudinary Configuration
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
+}
+
+# Storage Configuration (Replaces STATICFILES_STORAGE and DEFAULT_FILE_STORAGE)
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+    "default": {
+        # Use Cloudinary for media in production, but local file system for development
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if not DEBUG else "django.core.files.storage.FileSystemStorage",
+    },
+}
 
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core/static')]
 
@@ -334,7 +353,7 @@ AUTHENTICATION_BACKENDS = [
 # while still allowing username collection during signup (as your form does).
 
 ACCOUNT_AUTHENTICATION_METHOD = 'email'         # Users log in with their email.
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None        # Important: Set to None if 'username' is not the primary login field.
+ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'  # Must be 'username' if the user model has a username field, even if login is by email.
 ACCOUNT_EMAIL_REQUIRED = True                   # Email is required for signup.
 ACCOUNT_USERNAME_REQUIRED = False               # Username is not required by allauth's default forms.
                                                 # Your custom form handles the username field.
