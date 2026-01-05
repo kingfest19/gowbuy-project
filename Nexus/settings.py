@@ -313,16 +313,9 @@ AUTH_USER_MODEL = 'authapp.CustomUser'  # Use the custom user model
 # ... other settings ...
 
 # Email Configuration (Development - prints to console)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# For production, you would use something like:
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.your-email-provider.com'
-# EMAIL_PORT = 587 # Or 465 for SSL
-# EMAIL_USE_TLS = True # Or EMAIL_USE_SSL = True
-# EMAIL_HOST_USER = 'your-email@example.com'
-# EMAIL_HOST_PASSWORD = 'your-email-password-or-app-password'
-# DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+# Use console backend by default to prevent crashes if SMTP is not configured in production yet.
+# You can override this with an environment variable when ready for real emails.
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 
 # ... rest of your settings ...
 # settings.py
@@ -356,7 +349,7 @@ AUTHENTICATION_BACKENDS = [
 # These settings configure django-allauth for email-based authentication,
 # while still allowing username collection during signup (as your form does).
 
-ACCOUNT_LOGIN_METHODS = {'email'}               # Users log in with their email.
+ACCOUNT_LOGIN_METHODS = {'username', 'email'}   # Allow login with username or email.
 ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'  # Must be 'username' if the user model has a username field, even if login is by email.
 ACCOUNT_SIGNUP_FIELDS = ['email', 'username']   # Explicitly define signup fields to resolve W001 warning.
 ACCOUNT_SIGNUP_FORM_CLASS = 'authapp.forms.UserRegisterForm' # Specify your custom signup form.
