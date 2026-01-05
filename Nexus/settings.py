@@ -565,6 +565,13 @@ SILENCED_SYSTEM_CHECKS = [
 ]
 # --- END: Silenced System Checks ---
 
+# --- START: Migration Overrides ---
+# Store migrations for third-party apps locally to handle schema updates/mismatches.
+MIGRATION_MODULES = {
+    'ipn': 'core.migrations_ipn',
+}
+# --- END: Migration Overrides ---
+
 # settings.py
 
 # ... all your other settings ...
