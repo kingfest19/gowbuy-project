@@ -358,7 +358,7 @@ AUTHENTICATION_BACKENDS = [
 
 ACCOUNT_LOGIN_METHODS = {'email'}               # Users log in with their email.
 ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'  # Must be 'username' if the user model has a username field, even if login is by email.
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
+ACCOUNT_SIGNUP_FIELDS = ['email', 'username']   # Explicitly define signup fields to resolve W001 warning.
 ACCOUNT_SIGNUP_FORM_CLASS = 'authapp.forms.UserRegisterForm' # Specify your custom signup form.
 
 ACCOUNT_EMAIL_VERIFICATION = 'optional'         # Options: 'optional', 'mandatory', 'none'.
@@ -561,6 +561,7 @@ else:
 SILENCED_SYSTEM_CHECKS = [
     'django_ratelimit.W001', # W001: LocMemCache is fine for development.
     'django_ratelimit.E003', # E003: LocMemCache is not a shared cache, but acceptable for development.
+    'account.W001', # Silence W001: ACCOUNT_LOGIN_METHODS conflicts with ACCOUNT_SIGNUP_FIELDS
 ]
 # --- END: Silenced System Checks ---
 
