@@ -352,20 +352,15 @@ AUTHENTICATION_BACKENDS = [
 # These settings configure django-allauth for email-based authentication,
 # while still allowing username collection during signup (as your form does).
 
-ACCOUNT_AUTHENTICATION_METHOD = 'email'         # Users log in with their email.
+ACCOUNT_LOGIN_METHODS = {'email'}               # Users log in with their email.
 ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'  # Must be 'username' if the user model has a username field, even if login is by email.
-ACCOUNT_EMAIL_REQUIRED = True                   # Email is required for signup.
-ACCOUNT_USERNAME_REQUIRED = False               # Username is not required by allauth's default forms.
-                                                # Your custom form handles the username field.
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_SIGNUP_FORM_CLASS = 'authapp.forms.UserRegisterForm' # Specify your custom signup form.
-# ACCOUNT_SIGNUP_FIELDS is not needed when using a custom form class, as the form defines the fields.
 
 ACCOUNT_EMAIL_VERIFICATION = 'optional'         # Options: 'optional', 'mandatory', 'none'.
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False     # Align with 'optional' email verification.
-# ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True    # Commenting out due to deprecation warning; UserCreationForm handles this.
 ACCOUNT_SESSION_REMEMBER = True                 # Current setting: True. Allows "Remember Me".
 ACCOUNT_UNIQUE_EMAIL = True                     # Current setting: True. Enforces unique emails.
-ACCOUNT_LOGOUT_ON_GET = True                    # Current setting: True. Allows logout via GET request.
 
 # Redirect URLs
 LOGIN_REDIRECT_URL = 'core:home'  # Name of the URL to redirect to after login
