@@ -358,6 +358,7 @@ ACCOUNT_EMAIL_VERIFICATION = 'optional'         # Options: 'optional', 'mandator
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False     # Align with 'optional' email verification.
 ACCOUNT_SESSION_REMEMBER = True                 # Current setting: True. Allows "Remember Me".
 ACCOUNT_UNIQUE_EMAIL = True                     # Current setting: True. Enforces unique emails.
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https' if not DEBUG else 'http'
 
 # Redirect URLs
 LOGIN_REDIRECT_URL = 'core:home'  # Name of the URL to redirect to after login
