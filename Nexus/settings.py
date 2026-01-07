@@ -89,8 +89,8 @@ INSTALLED_APPS = [
     'django_ratelimit',  # <-- Add this line
     
     # Specific provider apps:
-    # 'allauth.socialaccount.providers.google',
-    # 'allauth.socialaccount.providers.facebook',
+     'allauth.socialaccount.providers.google',
+     'allauth.socialaccount.providers.facebook',
     # 'allauth.socialaccount.providers.apple', # Removed Apple
 ]
 
@@ -389,40 +389,40 @@ GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
 # settings.py
 # ...
 
-# SOCIALACCOUNT_PROVIDERS = {
-#     'google': {
-#         # For each provider, you can define the scope of data you want to request.
-#         'SCOPE': [
-#             'profile',
-#             'email',
-#         ],
-#         'AUTH_PARAMS': {
-#             'access_type': 'online',
-#         }
-#     },
-#     'facebook': {
-#         'METHOD': 'oauth2', # Set to 'js_sdk' to use the Facebook connect SDK
-#         # 'SDK_URL': '//connect.facebook.net/{locale}/sdk.js',
-#         'SCOPE': ['email', 'public_profile'],
-#         'AUTH_PARAMS': {'auth_type': 'reauthenticate'},
-#         'INIT_PARAMS': {'cookie': True},
-#         'FIELDS': [
-#             'id',
-#             'first_name',
-#             'last_name',
-#             'middle_name',
-#             'name',
-#             'name_format',
-#             'picture',
-#             'short_name',
-#             'email',
-#         ],
-#         'EXCHANGE_TOKEN': True,
-#         # 'LOCALE_FUNC': 'path.to.callable',
-#         'VERIFIED_EMAIL': False, # Facebook emails aren't always verified
-#         'VERSION': 'v13.0', # Use a specific API version
-#     }
-# }
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        # For each provider, you can define the scope of data you want to request.
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        }
+    },
+    'facebook': {
+        'METHOD': 'oauth2', # Set to 'js_sdk' to use the Facebook connect SDK
+        # 'SDK_URL': '//connect.facebook.net/{locale}/sdk.js',
+        'SCOPE': ['email', 'public_profile'],
+        'AUTH_PARAMS': {'auth_type': 'reauthenticate'},
+        'INIT_PARAMS': {'cookie': True},
+        'FIELDS': [
+            'id',
+            'first_name',
+            'last_name',
+            'middle_name',
+            'name',
+            'name_format',
+            'picture',
+            'short_name',
+            'email',
+        ],
+        'EXCHANGE_TOKEN': True,
+        # 'LOCALE_FUNC': 'path.to.callable',
+        'VERIFIED_EMAIL': False, # Facebook emails aren't always verified
+        'VERSION': 'v13.0', # Use a specific API version
+    }
+}
 
 # Optional: If using custom user model and want social accounts to auto-connect
 # SOCIALACCOUNT_ADAPTER = 'your_app.adapter.YourSocialAccountAdapter'
