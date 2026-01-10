@@ -85,12 +85,12 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.mfa', # Ensure this line is present
-    'allauth.socialaccount',
+    # 'allauth.socialaccount',
     'django_ratelimit',  # <-- Add this line
     
     # Specific provider apps:
-     'allauth.socialaccount.providers.google',
-     'allauth.socialaccount.providers.facebook',
+    #  'allauth.socialaccount.providers.google',
+    #  'allauth.socialaccount.providers.facebook',
     # 'allauth.socialaccount.providers.apple', # Removed Apple
 ]
 
@@ -145,7 +145,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'core.context_processors.provider_info', # <<< Add this line for provider info
+                # 'core.context_processors.provider_info', # <<< Add this line for provider info
                 'core.context_processors.categories_processor', # <<< Add this for categories
                 'django.template.context_processors.i18n', # Removed 'core.views.menu'
                 'core.context_processors.unread_message_count', # <<< Add this for unread messages
@@ -358,7 +358,10 @@ ACCOUNT_EMAIL_VERIFICATION = 'optional'         # Options: 'optional', 'mandator
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False     # Align with 'optional' email verification.
 ACCOUNT_SESSION_REMEMBER = True                 # Current setting: True. Allows "Remember Me".
 ACCOUNT_UNIQUE_EMAIL = True                     # Current setting: True. Enforces unique emails.
-ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https' if not DEBUG else 'http'
+if RENDER_EXTERNAL_HOSTNAME:
+    ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
+else:
+    ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https' if not DEBUG else 'http'
 
 # Redirect URLs
 LOGIN_REDIRECT_URL = 'core:home'  # Name of the URL to redirect to after login
@@ -390,40 +393,41 @@ GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
 # settings.py
 # ...
 
-SOCIALACCOUNT_PROVIDERS = {
-    'google': {
-        # For each provider, you can define the scope of data you want to request.
-        'SCOPE': [
-            'profile',
-            'email',
-        ],
-        'AUTH_PARAMS': {
-            'access_type': 'online',
-        }
-    },
-    'facebook': {
-        'METHOD': 'oauth2', # Set to 'js_sdk' to use the Facebook connect SDK
-        # 'SDK_URL': '//connect.facebook.net/{locale}/sdk.js',
-        'SCOPE': ['email', 'public_profile'],
-        'AUTH_PARAMS': {'auth_type': 'reauthenticate'},
-        'INIT_PARAMS': {'cookie': True},
-        'FIELDS': [
-            'id',
-            'first_name',
-            'last_name',
-            'middle_name',
-            'name',
-            'name_format',
-            'picture',
-            'short_name',
-            'email',
-        ],
-        'EXCHANGE_TOKEN': True,
-        # 'LOCALE_FUNC': 'path.to.callable',
-        'VERIFIED_EMAIL': False, # Facebook emails aren't always verified
-        'VERSION': 'v13.0', # Use a specific API version
-    }
-}
+# SOCIALACCOUNT_PROVIDERS = {
+#     'google': {
+#         # For each provider, you can define the scope of data you want to request.
+#         'SCOPE': [
+#             'profile',
+#             'email',
+#         ],
+#         'AUTH_PARAMS': {
+#             'access_type': 'online',
+#         }
+#     },
+#     'facebook': {
+#         'METHOD': 'oauth2', # Set to 'js_sdk' to use the Facebook connect SDK
+#         # 'SDK_URL': '//connect.facebook.net/{locale}/sdk.js',
+#         'SCOPE': ['email', 'public_profile'],
+#         'AUTH_PARAMS': {'auth_type': 'reauthenticate'},
+#         'INIT_PARAMS': {'cookie': True},
+#         'FIELDS': [
+#             'id',
+#             'first_name',
+#             'last_name',
+#             'middle_name',
+#             'name',
+#             'name_format',
+#             'picture',
+#             'short_name',
+#             'email',
+#         ],
+#         'EXCHANGE_TOKEN': True,
+#         # 'LOCALE_FUNC': 'path.to.callable',
+#         'VERIFIED_EMAIL': False, # Facebook emails aren't always verified
+#         'VERSION': 'v18.0', # Use a specific API version
+#     }
+# }
+SOCIALACCOUNT_PROVIDERS = {}
 
 # Optional: If using custom user model and want social accounts to auto-connect
 # SOCIALACCOUNT_ADAPTER = 'your_app.adapter.YourSocialAccountAdapter'

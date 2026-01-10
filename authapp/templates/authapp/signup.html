@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load crispy_forms_tags %}
-{% load socialaccount i18n %} {# <-- Added i18n #}
+{% load i18n %} {# Removed socialaccount #}
 
 {% block title %}{% trans "Sign Up" %}{% endblock title %}
 
@@ -56,6 +56,7 @@
             <div class="text-center mt-4">
                 <p>{% trans "Have an account?" %} <a href="{% url 'signin' %}">{% trans "Sign In" %}</a></p>
 
+                {% comment %}
                 <p class="mt-3 mb-2 text-muted">{% trans "Or With" %}</p> {# Use text-muted for subtlety #}
 
                 {# Social Buttons - using Bootstrap classes for basic styling #}
@@ -80,6 +81,7 @@
                     </a>
                     {# --- ** END: Corrected Facebook Link ** --- #}
                 </div>
+                {% endcomment %}
 
                 {# Terms and Privacy #}
                 <p class="text-muted small"> {# Use small text for less emphasis #}

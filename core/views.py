@@ -8,6 +8,7 @@ from typing import Optional
 import stripe
 import requests # For making HTTP requests to Paystack
 import uuid # For generating unique references
+import hmac, hashlib, base64 # For Facebook data deletion signature verification
 from itertools import chain
 from operator import attrgetter
 from django.db.models.fields.files import FieldFile # Import FieldFile for type checking
@@ -4742,3 +4743,33 @@ class CustomerNotificationListView(LoginRequiredMixin, ListView):
     template_name = 'core/customer_notification_list.html'
     def get_queryset(self):
         return Notification.objects.filter(recipient=self.request.user)
+
+@csrf_exempt
+def facebook_data_deletion(request):
+    """
+    Callback for Facebook Data Deletion Request.
+    """
+    try:
+        signed_request = request.POST.get('signed_request')
+        if not signed_request:
+            return JsonResponse({'error': 'No signed request'}, status=400)
+
+        encoded_sig, payload = signed_request.split('.', 1)
+        secret = os.environ.get('FACEBOOK_CLIENT_SECRET', '')
+
+        # Decode signature
+        sig = base64.urlsafe_b64decode(encoded_sig + "=" * ((4 - len(encoded_sig) % 4) % 4))
+        data = json.loads(base64.urlsafe_b64decode(payload + "=" * ((4 - len(payload) % 4) % 4)))
+
+        if secret:
+            expected_sig = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).digest()
+            if sig != expected_sig:
+                return JsonResponse({'error': 'Bad signature'}, status=400)
+
+        return JsonResponse({
+            'url': request.build_absolute_uri(reverse('core:home')),
+            'confirmation_code': data.get('user_id', 'deleted')
+        })
+    except Exception as e:
+        logger.error(f"Facebook Data Deletion Error: {e}")
+        return JsonResponse({'error': 'Processing failed'}, status=400)

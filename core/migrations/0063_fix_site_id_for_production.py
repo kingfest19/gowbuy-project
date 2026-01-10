@@ -27,33 +27,33 @@ def create_default_site(apps, schema_editor):
     # Ensure a SocialApp exists for your provider (e.g., Google) and is linked to this Site.
     # Uncomment and adapt the lines below if you want to automate this:
     
-    SocialApp = apps.get_model('socialaccount', 'SocialApp')
-    google_app, _ = SocialApp.objects.update_or_create(
-        provider='google', 
-        defaults={
-            'name': 'Google', 
-            'client_id': os.environ.get('GOOGLE_CLIENT_ID', 'YOUR_GOOGLE_CLIENT_ID'), 
-            'secret': os.environ.get('GOOGLE_CLIENT_SECRET', 'YOUR_GOOGLE_SECRET')
-        }
-    )
-    google_app.sites.add(site)
+    # SocialApp = apps.get_model('socialaccount', 'SocialApp')
+    # google_app, _ = SocialApp.objects.update_or_create(
+    #     provider='google', 
+    #     defaults={
+    #         'name': 'Google', 
+    #         'client_id': os.environ.get('GOOGLE_CLIENT_ID', 'YOUR_GOOGLE_CLIENT_ID'), 
+    #         'secret': os.environ.get('GOOGLE_CLIENT_SECRET', 'YOUR_GOOGLE_SECRET')
+    #     }
+    # )
+    # google_app.sites.add(site)
 
-    facebook_app, _ = SocialApp.objects.update_or_create(
-        provider='facebook', 
-        defaults={
-            'name': 'Facebook', 
-            'client_id': os.environ.get('FACEBOOK_CLIENT_ID', 'YOUR_FACEBOOK_CLIENT_ID'), 
-            'secret': os.environ.get('FACEBOOK_CLIENT_SECRET', 'YOUR_FACEBOOK_SECRET')
-        }
-    )
-    facebook_app.sites.add(site)
+    # facebook_app, _ = SocialApp.objects.update_or_create(
+    #     provider='facebook', 
+    #     defaults={
+    #         'name': 'Facebook', 
+    #         'client_id': os.environ.get('FACEBOOK_CLIENT_ID', 'YOUR_FACEBOOK_CLIENT_ID'), 
+    #         'secret': os.environ.get('FACEBOOK_CLIENT_SECRET', 'YOUR_FACEBOOK_SECRET')
+    #     }
+    # )
+    # facebook_app.sites.add(site)
 
 class Migration(migrations.Migration):
 
     dependencies = [
         ('core', '0062_alter_product_vendor'),
         ('sites', '0002_alter_domain_unique'),
-        ('socialaccount', '0001_initial'),
+        # ('socialaccount', '0001_initial'),
     ]
 
     operations = [

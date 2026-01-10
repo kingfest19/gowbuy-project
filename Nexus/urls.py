@@ -6,7 +6,8 @@ from django.conf.urls.static import static
 # --- Import the specific view ---
 from core.views import (
     add_to_cart, cart_detail, checkout, place_order, 
-    TermsView, PrivacyPolicyView, HelpPageView # Changed to class-based views
+    TermsView, PrivacyPolicyView, HelpPageView, # Changed to class-based views
+    # facebook_data_deletion
 )
 # --- START: Imports for Rate Limiting ---
 from allauth.account import views as allauth_views
@@ -74,6 +75,9 @@ urlpatterns = [
     path('terms/', TermsView.as_view(), name='terms'),
     path('privacy/', PrivacyPolicyView.as_view(), name='privacy'),
     path('help/', HelpPageView.as_view(), name='help'),
+    
+    # Facebook Data Deletion Callback
+    # path('facebook-data-deletion/', facebook_data_deletion, name='facebook_data_deletion'),
 
 ]
 
