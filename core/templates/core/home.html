@@ -63,6 +63,16 @@
         .rating-display {
             color: #ffc107;
         }
+
+        /* Mobile Responsiveness Adjustments */
+        @media (max-width: 768px) {
+            .service-hero-section h1.display-4 {
+                font-size: 2rem;
+            }
+            .carousel-inner, .carousel-item img {
+                height: 220px !important;
+            }
+        }
     </style>
 {% endblock extra_css %}
 
@@ -327,6 +337,55 @@
         </div>
     </section>
 
+    <!-- Mobile Bottom Navigation Bar -->
+    <div class="mobile-bottom-nav d-md-none">
+        <a href="/" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>{% trans "Home" %}</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-bs-toggle="modal" data-bs-target="#categoryModal">
+            <i class="fas fa-th-large"></i>
+            <span>{% trans "Categories" %}</span>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="fas fa-shopping-cart"></i>
+            <span>{% trans "Cart" %}</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-bs-toggle="modal" data-bs-target="#navBottomModal">
+            <i class="fas fa-user"></i>
+            <span>{% trans "My Nexus" %}</span>
+        </a>
+    </div>
+
+    <!-- Categories Modal for Mobile -->
+    <div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="categoryModalLabel">{% trans "All Categories" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for category in top_categories %}
+                        <a href="{{ category.get_absolute_url }}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+                            {% if category.image %}
+                                <img src="{{ category.image.url }}" alt="{{ category.name }}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center rounded" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-folder text-muted"></i>
+                                </div>
+                            {% endif %}
+                            <span class="fw-medium">{{ category.name }}</span>
+                            <i class="fas fa-chevron-right ms-auto text-muted small"></i>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock content %}
 
@@ -335,7 +394,86 @@
     {{ block.super }}
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // This script is no longer needed as the slider is removed.
+            // Mobile Menu Population Script
+            const modalBody = document.querySelector('#navBottomModal .modal-body');
+            if (modalBody && !document.querySelector('#mobile-menu-injected')) {
+                const menuContainer = document.createElement('div');
+                menuContainer.id = 'mobile-menu-injected';
+                
+                // Helper for list items
+                const createLink = (text, href, icon) => `
+                    <li class="mb-3">
+                        <a href="${href}" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5">
+                            ${icon ? `<i class="${icon} text-muted" style="width: 25px; text-align: center;"></i>` : ''}
+                            <span>${text}</span>
+                        </a>
+                    </li>`;
+
+                // Helper for Logout Form (POST request for Django 5+)
+                const createLogoutLink = (text, action, icon) => `
+                    <li class="mb-3">
+                        <form method="post" action="${action}">
+                            {% csrf_token %}
+                            <button type="submit" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5 border-0 bg-transparent p-0 w-100 text-start">
+                                ${icon ? `<i class="${icon} text-muted" style="width: 25px; text-align: center;"></i>` : ''}
+                                <span>${text}</span>
+                            </button>
+                        </form>
+                    </li>`;
+
+                let authHtml = '';
+                {% if user.is_authenticated %}
+                    authHtml = `
+                        <div class="mb-4">
+                            <h5 class="fw-bold mb-3 px-2">{% trans "Hello, " %}{{ user.username }}</h5>
+                            <ul class="list-unstyled m-0 px-2">
+                                ${createLink("{% trans 'Your Account' %}", "#", "fas fa-user-circle")}
+                                ${createLink("{% trans 'Your Orders' %}", "#", "fas fa-box")}
+                                ${createLink("{% trans 'Your Lists' %}", "#", "fas fa-list-alt")}
+                                ${createLogoutLink("{% trans 'Sign Out' %}", "{% url 'logout' %}", "fas fa-sign-out-alt")}
+                            </ul>
+                        </div>
+                    `;
+                {% else %}
+                    authHtml = `
+                        <div class="mb-4">
+                            <h5 class="fw-bold mb-3 px-2">{% trans "Hello, Sign in" %}</h5>
+                            <ul class="list-unstyled m-0 px-2">
+                                ${createLink("{% trans 'Sign In' %}", "{% url 'authapp:signin' %}", "fas fa-sign-in-alt")}
+                                ${createLink("{% trans 'Sign Up' %}", "{% url 'authapp:signup' %}", "fas fa-user-plus")}
+                            </ul>
+                        </div>
+                    `;
+                {% endif %}
+
+                let programsHtml = `
+                    <div class="mb-4">
+                        <h5 class="fw-bold mb-3 px-2">{% trans "Programs & Features" %}</h5>
+                        <ul class="list-unstyled m-0 px-2">
+                            ${createLink("{% trans 'Daily Offers' %}", "#", "fas fa-tag")}
+                            ${createLink("{% trans 'Sell on NEXUS' %}", "{% url 'core:become_service_provider' %}", "fas fa-store")}
+                            ${createLink("{% trans 'Services' %}", "#", "fas fa-concierge-bell")}
+                            ${createLink("{% trans 'Become Rider' %}", "#", "fas fa-motorcycle")}
+                            ${createLink("{% trans 'Support Center' %}", "#", "fas fa-headset")}
+                        </ul>
+                    </div>
+                `;
+                
+                let settingsHtml = `
+                     <div class="mb-4">
+                        <h5 class="fw-bold mb-3 px-2">{% trans "Settings" %}</h5>
+                        <ul class="list-unstyled m-0 px-2">
+                            ${createLink("{% trans 'English' %}", "#", "fas fa-globe")}
+                            ${createLink("{% trans 'United States' %}", "#", "fas fa-flag")}
+                        </ul>
+                    </div>
+                `;
+
+                menuContainer.innerHTML = authHtml + '<hr class="my-3">' + programsHtml + '<hr class="my-3">' + settingsHtml + '<hr class="my-3"><h5 class="fw-bold mb-3 px-2">{% trans "Shop by Category" %}</h5>';
+                
+                // Prepend to modal body to keep categories separate and below
+                modalBody.insertBefore(menuContainer, modalBody.firstChild);
+            }
         });
     </script>
 {% endblock extra_js %}

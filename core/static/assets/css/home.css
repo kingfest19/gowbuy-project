@@ -1749,14 +1749,23 @@ footer .footer-logo:hover img {
 
     .nav-bottom {
         font-size: 0.85rem;
-        gap: var(--spacing-sm) var(--spacing-md);
+        gap: var(--spacing-md);
         padding: var(--spacing-sm);
-        justify-content: center;
+        justify-content: flex-start;
+        overflow-x: auto;
+        white-space: nowrap;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .nav-bottom::-webkit-scrollbar {
+        display: none;
     }
 
     .nav-bottom p,
     .nav-bottom div:not(:first-child) {
-        display: none;
+        display: inline-block;
+        flex-shrink: 0;
     }
 
     .nav-promo-caption {
@@ -2071,4 +2080,49 @@ footer .footer-logo:hover img {
 }
 .spotlight-card .card-title a {
     text-decoration: none;
+}
+
+/* --- Mobile Bottom Navigation Styles --- */
+.mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #ffffff;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0.5rem 0;
+    z-index: 1040; /* High z-index to stay on top */
+    border-top: 1px solid #dee2e6;
+}
+
+.mobile-bottom-nav .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #6c757d;
+    font-size: 0.7rem;
+    flex: 1;
+    padding: 0.25rem;
+    transition: color 0.2s ease;
+}
+
+.mobile-bottom-nav .nav-item i {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.mobile-bottom-nav .nav-item.active,
+.mobile-bottom-nav .nav-item:hover {
+    color: var(--color-primary, #007bff);
+}
+
+/* Adjust body padding on mobile to prevent content overlap */
+@media (max-width: 768px) {
+    body {
+        padding-bottom: 70px;
+    }
 }

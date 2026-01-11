@@ -3,6 +3,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.auth import views as auth_views
+
 # --- Import the specific view ---
 from core.views import (
     add_to_cart, cart_detail, checkout, place_order, 
@@ -16,10 +18,11 @@ from django_ratelimit.decorators import ratelimit
 # Import views from authapp if they are used directly here
 # If signin, signup, logout are handled by authapp.urls or allauth.urls, these imports might not be needed
 # For now, assuming they are used for global, non-namespaced URLs as per the urlpatterns
-from authapp.views import register_view, signin, signout
+from authapp.views import register_view, signin
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
 
     # Core app URLs (namespaced)
     # This will handle URLs like /profile/, /profile/edit/ etc. via core.urls
@@ -37,7 +40,6 @@ urlpatterns = [
     # This means URLs like /signin/, /signup/ will work.
     path('signin/', signin, name='signin'), 
     path('signup/', register_view, name='signup'), 
-    path('logout/', signout, name='logout'), 
     
     # Authapp namespaced URLs (e.g., for /auth/signin/, /auth/signup/ if needed)
     # This allows for {% url 'authapp:signin' %} if you have URLs defined in authapp.urls
