@@ -25,8 +25,6 @@
     {# Assuming home.css contains nav/footer styles. Consider creating a dedicated base.css #}
     <link rel="stylesheet" href="{% static 'assets/css/home.css' %}" />
 
-    {% include 'core/partials/_chatbot_ui.html' %}
-
     {# Block for page-specific CSS links #}
     {% block extra_css %}
         <link rel="stylesheet" href="{% static 'assets/css/category_modal.css' %}"> {# <<< Link the new CSS file #}
@@ -675,6 +673,8 @@
     </script>
     {# --- END: Visual Search JavaScript --- #}
     {% endblock extra_js %}
+
+    {% include 'core/partials/_chatbot_ui.html' %}
 
     
 {# Test comment to ensure file is fully parsed #}

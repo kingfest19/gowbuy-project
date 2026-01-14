@@ -18,7 +18,7 @@ from django_ratelimit.decorators import ratelimit
 # Import views from authapp if they are used directly here
 # If signin, signup, logout are handled by authapp.urls or allauth.urls, these imports might not be needed
 # For now, assuming they are used for global, non-namespaced URLs as per the urlpatterns
-from authapp.views import register_view, signin
+from authapp.views import register_view, signin, signout
 
 urlpatterns = [
     path('admin/', admin.site.urls),
