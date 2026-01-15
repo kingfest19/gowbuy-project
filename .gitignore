@@ -5,6 +5,8 @@
 
 # Virtual Environment
 venv_py311/
+venv/
+.venv/
 
 # Django / Python
 __pycache__/

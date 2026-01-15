@@ -26,6 +26,9 @@
      #nexusChatbotToggleButton:hover {
         background-color: var(--bs-primary, #3d3e3f); /* Use your site's primary blue for hover */
      }
+     #nexusChatbotToggleButton i {
+        pointer-events: none; /* Ensure clicks pass through to the button */
+     }
 
     #nexusChatBadge {
         position: absolute;
@@ -589,7 +592,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!hasMoved) {
             const dx = Math.abs(clientX - initialX);
             const dy = Math.abs(clientY - initialY);
-            const dragThreshold = 5; // 5px threshold
+            const dragThreshold = 10; // 10px threshold to prevent accidental drags
 
             if (dx > dragThreshold || dy > dragThreshold) {
                 hasMoved = true;
