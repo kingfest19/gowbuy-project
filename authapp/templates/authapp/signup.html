@@ -6,16 +6,101 @@
 {% block title %}{% trans "Sign Up" %}{% endblock title %}
 
 {% block extra_css %}
-    {# Keep signup.css if it has specific styles for social buttons etc. #}
-    <link rel="stylesheet" href="{% static 'assets/css/signup.css' %}">
+<style>
+    body {
+        background-color: var(--bg-body);
+        color: var(--text-main);
+    }
+    .auth-container {
+        min-height: 70vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .auth-card {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 2.5rem;
+        width: 100%;
+        max-width: 450px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .auth-logo {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+    .auth-logo img {
+        height: 50px;
+        filter: none;
+    }
+    [data-theme="dark"] .auth-logo img {
+        filter: brightness(0) invert(1);
+    }
+    .auth-title {
+        text-align: center;
+        margin-bottom: 2rem;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+    /* Overrides for Crispy/Bootstrap Forms in Dark Mode */
+    .form-group { margin-bottom: 1rem; }
+    .form-label, label {
+        color: var(--text-main);
+        font-weight: 500;
+    }
+    .form-control, .form-select {
+        background-color: var(--bg-input) !important;
+        border: 1px solid var(--border-color);
+        color: var(--text-main) !important;
+        padding: 0.75rem 1rem;
+    }
+    .form-control:focus, .form-select:focus {
+        background-color: var(--bg-input) !important;
+        border-color: var(--accent-color);
+        color: var(--text-main) !important;
+        box-shadow: 0 0 0 0.25rem rgba(var(--accent-color), 0.25);
+    }
+    .text-muted { color: #aab7c4 !important; }
+    
+    .btn-auth {
+        background-color: var(--accent-color);
+        border: none;
+        color: #ffffff;
+        font-weight: 700;
+        padding: 0.75rem;
+        width: 100%;
+        margin-top: 1rem;
+        transition: background-color 0.2s;
+    }
+    .btn-auth:hover {
+        filter: brightness(1.1);
+    }
+    .auth-footer {
+        text-align: center;
+        margin-top: 1.5rem;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+    }
+    .auth-footer a {
+        color: var(--accent-color);
+        text-decoration: none;
+        font-weight: 600;
+    }
+    .auth-footer a:hover {
+        text-decoration: underline;
+    }
+</style>
 {% endblock extra_css %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <h2>{% trans "Sign Up" %}</h2>
-            <hr class="mb-4">
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <img src="{% static 'assets/logo.jpg' %}" alt="NEXUS">
+        </div>
+        <h2 class="auth-title">{% trans "Sign Up" %}</h2>
 
             {# Display Non-Field Errors (e.g., password mismatch) #}
             {% if form.non_field_errors %}
@@ -26,18 +111,6 @@
                 </div>
             {% endif %}
 
-            {# Display Field Errors (though form.as_p often shows them inline) #}
-            {# This block might be redundant if using {{ form|crispy }} as it handles field errors #}
-            {# {% if form.errors %}
-                {% for field in form %}
-                    {% for error in field.errors %}
-                        <div class="alert alert-danger">
-                            <strong>{{ field.label }}:</strong> {{ error }}
-                        </div>
-                    {% endfor %}
-                {% endfor %}
-            {% endif %} #}
-
 
             {# Corrected form tag - action is usually not needed if submitting to the same URL #}
             <form method="post"> {# Removed class="form-group" #}
@@ -47,16 +120,15 @@
                 {{ form|crispy }} {# Changed to use crispy_forms for better styling #}
 
                 {# Submit Button #}
-                <div class="d-grid gap-2 mt-4"> {# Added more margin-top #}
-                    <button type="submit" class="btn btn-primary">{% trans "Sign Up" %}</button>
-                </div>
+                <button type="submit" class="btn btn-auth">{% trans "Sign Up" %}</button>
             </form>
 
             {# Separator and Links #}
-            <div class="text-center mt-4">
-                <p>{% trans "Have an account?" %} <a href="{% url 'authapp:signin' %}">{% trans "Sign In" %}</a></p>
+            <div class="auth-footer">
+                {% trans "Have an account?" %} <a href="{% url 'authapp:signin' %}">{% trans "Sign In" %}</a>
+            </div>
 
-                {% comment %}
+            {% comment %}
                 <p class="mt-3 mb-2 text-muted">{% trans "Or With" %}</p> {# Use text-muted for subtlety #}
 
                 {# Social Buttons - using Bootstrap classes for basic styling #}
@@ -81,21 +153,19 @@
                     </a>
                     {# --- ** END: Corrected Facebook Link ** --- #}
                 </div>
-                {% endcomment %}
+            {% endcomment %}
 
                 {# Terms and Privacy #}
-                <p class="text-muted small"> {# Use small text for less emphasis #}
+                <div class="mt-3 text-center small text-muted">
                     {% blocktrans %}By signing up to NEXUS, you agree to our
-                    <a href="{{ terms_url }}">Terms of Service</a> and
-                    <a href="{{ privacy_url }}">Privacy Policy</a>.{% endblocktrans %}
-                </p>
+                    <a href="{{ terms_url }}" style="color: var(--accent-color);">Terms of Service</a> and
+                    <a href="{{ privacy_url }}" style="color: var(--accent-color);">Privacy Policy</a>.{% endblocktrans %}
+                </div>
 
                 {# Help Link #}
                 <div class="mt-3">
-                    <a href="{% url 'help' %}" class="text-muted small">{% trans "Help?" %}</a>
+                    <a href="{% url 'help' %}" class="small" style="color: #aab7c4;">{% trans "Help?" %}</a>
                 </div>
-            </div>
-        </div>
     </div>
 </div>
 {% endblock content %}

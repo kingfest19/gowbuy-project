@@ -202,9 +202,26 @@ h2.section-title.animated-border {
     --spacing-xl: 2rem;
     --spacing-xxl: 3rem;
 
+    --bg-body: #f0f0f0;
     --transition-speed-fast: 0.15s;
     --transition-speed-normal: 0.3s;
     --transition-timing: ease-in-out;
+}
+
+/* --- Dark Theme Support --- */
+[data-theme="dark"] {
+    --color-secondary: #f8f9fa;
+    --color-text-base: #e0e0e0;
+    --color-text-heading: #ffffff;
+    --color-text-muted: #aab7c4;
+    --color-background-light: #232f3e;
+    --color-background-medium: #131921;
+    --color-background-dark: #000000;
+    --color-border: #3a4553;
+    --color-border-light: #495057;
+    --color-border-dark: #6c757d;
+    --color-primary-light: #102a43;
+    --bg-body: #131921;
 }
 
 /* --- General Resets and Base Styles --- */
@@ -223,8 +240,9 @@ html {
 
 body {
     font-family: var(--font-primary);
-    background-color:  #f0f0f0;
+    background-color: var(--bg-body);
     color: var(--color-text-base);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* === Visual Search Image Button === */
@@ -259,6 +277,13 @@ body {
 
 .visual-search-btn input[type="file"] {
     display: none;
+}
+
+/* --- Visual Search Container --- */
+.visual-search-container {
+    background-color: var(--color-background-light) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-base);
 }
   
 a {
@@ -1239,7 +1264,7 @@ footer {
 footer .footer-logo img {
     width: 100px;
     margin-bottom: var(--spacing-lg);
-    filter: brightness(0) invert(0.9);
+    filter: brightness(0) invert(1);
     opacity: 0.9;
     transition: opacity var(--transition-speed-normal) var(--transition-timing);
 }
@@ -2125,4 +2150,38 @@ footer .footer-logo:hover img {
     body {
         padding-bottom: 70px;
     }
+}
+
+/* --- Theme Transition & Modal Fixes --- */
+
+/* Apply smooth transition to major elements */
+.modal-content, .card, nav, footer, .nav-bottom, .search-form {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Ensure Modals adapt to Dark Mode */
+.modal-content {
+    background-color: var(--color-background-light);
+    color: var(--color-text-base);
+    border: 1px solid var(--color-border);
+}
+
+.modal-header, .modal-footer {
+    border-color: var(--color-border);
+}
+
+[data-theme="dark"] .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Fix visibility of links and buttons in modals (My Profile, My Nexus) */
+.modal-body a,
+.modal-body button {
+    color: var(--color-text-base) !important;
+}
+
+.modal-body a:hover,
+.modal-body button:hover {
+    color: var(--color-primary) !important;
+    background-color: var(--color-background-medium);
 }

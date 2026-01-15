@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Daily Offers" %} - NEXUS{% endblock title %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold">{% trans "Daily Offers" %} ⚡</h1>
+        <p class="lead text-muted">{% trans "Exclusive deals expiring soon. Don't miss out!" %}</p>
+    </div>
+
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        {% for offer in offers %}
+            <div class="col">
+                <div class="card h-100 shadow-sm" style="background-color: var(--bg-surface); border: 1px solid var(--border-color);">
+                    <div class="position-relative">
+                        <a href="{{ offer.product.get_absolute_url }}">
+                            <img src="{{ offer.product.image.url }}" class="card-img-top" alt="{{ offer.product.name }}" style="height: 200px; object-fit: cover;">
+                        </a>
+                        <div class="position-absolute top-0 end-0 p-2">
+                            <span class="badge bg-danger">
+                                -{{ offer.discount_percentage }}%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title text-truncate">
+                            <a href="{{ offer.product.get_absolute_url }}" class="text-decoration-none" style="color: var(--text-main);">{{ offer.product.name }}</a>
+                        </h5>
+                        <div class="mb-2">
+                            <span class="fs-5 fw-bold text-danger">GH₵ {{ offer.discount_price }}</span>
+                            <small class="text-decoration-line-through text-muted ms-2">GH₵ {{ offer.product.price }}</small>
+                        </div>
+                        <div class="mt-auto">
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded mb-3" style="background-color: var(--bg-body); border: 1px solid var(--border-color);">
+                                <small class="text-muted">{% trans "Ends in:" %}</small>
+                                <span class="fw-bold countdown-timer" style="color: var(--text-main);" data-expires="{{ offer.end_time|date:'c' }}">
+                                    --:--:--
+                                </span>
+                            </div>
+                            <a href="{{ offer.product.get_absolute_url }}" class="btn btn-outline-primary w-100">{% trans "View Deal" %}</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+                <h3>{% trans "No offers available right now." %}</h3>
+                <p>{% trans "Check back tomorrow for new deals!" %}</p>
+                <a href="{% url 'core:home' %}" class="btn btn-primary">{% trans "Continue Shopping" %}</a>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const timers = document.querySelectorAll('.countdown-timer');
+        
+        function updateTimers() {
+            const now = new Date().getTime();
+            
+            timers.forEach(timer => {
+                const expirationTime = new Date(timer.dataset.expires).getTime();
+                const distance = expirationTime - now;
+                
+                if (distance < 0) {
+                    timer.innerHTML = "<span class='text-danger'>{% trans 'Expired' %}</span>";
+                } else {
+                    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    
+                    let timeString = "";
+                    if (days > 0) timeString += `${days}d `;
+                    timeString += `${hours}h ${minutes}m ${seconds}s`;
+                    
+                    timer.textContent = timeString;
+                }
+            });
+        }
+        
+        setInterval(updateTimers, 1000);
+        updateTimers(); // Initial call
+    });
+</script>
+{% endblock extra_js %}

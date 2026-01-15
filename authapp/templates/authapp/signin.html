@@ -6,21 +6,101 @@
 {% block title %} {% trans "Sign In" %} {% endblock title %}
 
 {% block extra_css %}
-    {# Link the dedicated CSS file for this page #}
-    <link rel="stylesheet" href="{% static 'assets/css/signin.css' %}">
-    {# You might need styles from signup.css for the buttons if not already in signin.css #}
-    {# <link rel="stylesheet" href="{% static 'assets/css/signup.css' %}"> #}
+<style>
+    body {
+        background-color: var(--bg-body);
+        color: var(--text-main);
+    }
+    .auth-container {
+        min-height: 70vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .auth-card {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 2.5rem;
+        width: 100%;
+        max-width: 450px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .auth-logo {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+    .auth-logo img {
+        height: 50px;
+        filter: none;
+    }
+    [data-theme="dark"] .auth-logo img {
+        filter: brightness(0) invert(1); /* Make logo white */
+    }
+    .auth-title {
+        text-align: center;
+        margin-bottom: 2rem;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+    /* Overrides for Crispy/Bootstrap Forms in Dark Mode */
+    .form-group { margin-bottom: 1rem; }
+    .form-label, label {
+        color: var(--text-main);
+        font-weight: 500;
+    }
+    .form-control, .form-select {
+        background-color: var(--bg-input) !important;
+        border: 1px solid var(--border-color);
+        color: var(--text-main) !important;
+        padding: 0.75rem 1rem;
+    }
+    .form-control:focus, .form-select:focus {
+        background-color: var(--bg-input) !important;
+        border-color: var(--accent-color);
+        color: var(--text-main) !important;
+        box-shadow: 0 0 0 0.25rem rgba(var(--accent-color), 0.25);
+    }
+    .text-muted { color: #aab7c4 !important; }
+    
+    .btn-auth {
+        background-color: var(--accent-color);
+        border: none;
+        color: #ffffff;
+        font-weight: 700;
+        padding: 0.75rem;
+        width: 100%;
+        margin-top: 1rem;
+        transition: background-color 0.2s;
+    }
+    .btn-auth:hover {
+        filter: brightness(1.1);
+    }
+    .auth-footer {
+        text-align: center;
+        margin-top: 1.5rem;
+        color: var(--text-muted);
+        font-size: 0.95rem;
+    }
+    .auth-footer a {
+        color: var(--accent-color);
+        text-decoration: none;
+        font-weight: 600;
+    }
+    .auth-footer a:hover {
+        text-decoration: underline;
+    }
+</style>
 {% endblock extra_css %}
 
 {% block content %}
-  {# The message display block from base.html will appear *before* this content block #}
-
-  {# Added wrapper div with a specific class for easier CSS targeting #}
-  <div class="signin-page-container container mt-5">
-    <div class="row justify-content-center">
-      <div class="col-md-6">
-        <h2>{% trans "Sign In" %}</h2>
-        <hr class="mb-4">
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <img src="{% static 'assets/logo.jpg' %}" alt="NEXUS">
+        </div>
+        <h2 class="auth-title">{% trans "Sign In" %}</h2>
 
         {# --- ADDED BLOCK FOR NON-FIELD ERRORS --- #}
         {% if form.non_field_errors %}
@@ -48,9 +128,7 @@
 
           {# The submit button is often included by crispy, but we can keep it separate #}
           {# Or you can configure crispy to add it via a FormHelper #}
-          <div class="d-grid gap-2 mt-3">
-            <button type="submit" class="btn btn-primary">{% trans "Sign In" %}</button>
-          </div>
+          <button type="submit" class="btn btn-auth">{% trans "Sign In" %}</button>
         </form>
 
         {# --- START: Added Social Login Section --- #}
@@ -81,12 +159,11 @@
         {% endcomment %}
         {# --- END: Added Social Login Section --- #}
 
-        <div class="text-center mt-3"> {# Kept original links below social buttons #}
-          <p>{% trans "Don't have an account?" %} <a href="{% url 'authapp:signup' %}">{% trans "Sign Up" %}</a></p>
+        <div class="auth-footer">
+          {% trans "Don't have an account?" %} <a href="{% url 'authapp:signup' %}">{% trans "Sign Up" %}</a>
           {# Link to password reset (uses django-allauth URL name) #}
-          <p><a href="{% url 'account_reset_password' %}" class="forgot-password-link">{% trans "Forgot Password?" %}</a></p>
+          <p class="mt-2"><a href="{% url 'account_reset_password' %}" class="small" style="color: var(--accent-color);">{% trans "Forgot Password?" %}</a></p>
         </div>
-      </div>
     </div>
-  </div>
+</div>
 {% endblock content %}

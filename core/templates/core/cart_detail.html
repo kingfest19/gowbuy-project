@@ -25,7 +25,7 @@
       .cart-left {
         flex: 3; /* Takes up more space */
         min-width: 300px; /* Minimum width */
-        background-color: var(--color-background-light, #fff);
+        background-color: var(--bg-surface, #fff);
         padding: var(--spacing-lg, 1.5rem);
         border-radius: var(--border-radius-lg, 0.5rem);
         box-shadow: var(--shadow-sm);
@@ -34,7 +34,7 @@
       .cart-left h1 {
         font-size: 1.5rem;
         margin-bottom: var(--spacing-md, 1rem);
-        border-bottom: 1px solid var(--color-border, #dee2e6);
+        border-bottom: 1px solid var(--border-color, #dee2e6);
         padding-bottom: var(--spacing-sm, 0.5rem);
       }
 
@@ -47,7 +47,7 @@
       .cart-item {
         display: flex;
         gap: var(--spacing-md, 1rem);
-        border-bottom: 1px solid var(--color-border, #dee2e6);
+        border-bottom: 1px solid var(--border-color, #dee2e6);
         padding-bottom: var(--spacing-lg, 1.5rem);
         flex-wrap: wrap; /* Allow wrapping within item */
       }
@@ -62,7 +62,7 @@
         height: 100%;
         object-fit: contain; /* Or cover */
         border-radius: var(--border-radius-md, 0.375rem);
-        border: 1px solid var(--color-border, #dee2e6);
+        border: 1px solid var(--border-color, #dee2e6);
       }
 
       .cart-item-details {
@@ -76,7 +76,7 @@
       }
       .cart-item-details .item-specs {
         font-size: 0.85rem;
-        color: var(--color-text-muted, #6c757d);
+        color: var(--text-muted, #6c757d);
         margin-bottom: var(--spacing-sm, 0.5rem);
       }
       .cart-item-details .item-stock {
@@ -93,8 +93,8 @@
       }
       .cart-item-quantity button {
         background-color: var(--color-background-medium, #f8f9fa);
-        border: 1px solid var(--color-border, #dee2e6);
-        color: var(--color-text-base, #212529);
+        border: 1px solid var(--border-color, #dee2e6);
+        color: var(--text-main, #212529);
         border-radius: 50%; /* Circular buttons */
         width: 28px;
         height: 28px;
@@ -108,12 +108,14 @@
         transition: background-color 0.2s ease;
       }
       .cart-item-quantity button:hover {
-        background-color: var(--color-border, #dee2e6);
+        background-color: var(--border-color, #dee2e6);
       }
       .cart-item-quantity input[type="number"] {
         width: 40px;
         text-align: center;
-        border: 1px solid var(--color-border, #dee2e6);
+        border: 1px solid var(--border-color, #dee2e6);
+        background-color: var(--bg-input, #fff);
+        color: var(--text-main, #212529);
         border-radius: var(--border-radius-sm, 0.2rem);
         padding: var(--spacing-xs, 0.25rem);
         font-size: 0.9rem;
@@ -170,12 +172,12 @@
       }
       .cart-item-price-section .unit-price {
         font-size: 0.85rem;
-        color: var(--color-text-muted, #6c757d);
+        color: var(--text-muted, #6c757d);
       }
       .cart-item-price-section .item-subtotal {
         font-size: 1rem;
         font-weight: 600;
-        color: var(--color-text-base, #212529);
+        color: var(--text-main, #212529);
       }
 
       .cart-subtotal-row {
@@ -188,7 +190,7 @@
       .empty-cart-message {
         text-align: center;
         padding: var(--spacing-xl, 2rem);
-        color: var(--color-text-muted, #6c757d);
+        color: var(--text-muted, #6c757d);
       }
       .empty-cart-message h2 {
         font-size: 1.2rem;
@@ -209,7 +211,7 @@
       }
 
       .cart-summary {
-        background-color: var(--color-background-light, #fff);
+        background-color: var(--bg-surface, #fff);
         padding: var(--spacing-lg, 1.5rem);
         border-radius: var(--border-radius-lg, 0.5rem);
         box-shadow: var(--shadow-sm);
@@ -217,7 +219,7 @@
       .cart-summary h2 {
         font-size: 1.2rem;
         margin-bottom: var(--spacing-md, 1rem);
-        border-bottom: 1px solid var(--color-border, #dee2e6);
+        border-bottom: 1px solid var(--border-color, #dee2e6);
         padding-bottom: var(--spacing-sm, 0.5rem);
       }
       .summary-item {
@@ -227,14 +229,14 @@
         font-size: 0.95rem;
       }
       .summary-item span:first-child {
-        color: var(--color-text-muted, #6c757d);
+        color: var(--text-muted, #6c757d);
       }
       .summary-item span:last-child {
         font-weight: 500;
       }
       .cart-summary hr {
         border: none;
-        border-top: 1px solid var(--color-border, #dee2e6);
+        border-top: 1px solid var(--border-color, #dee2e6);
         margin: var(--spacing-md, 1rem) 0;
       }
       .summary-total {
@@ -282,6 +284,44 @@
           width: 100%; /* Take full width */
         }
       }
+
+      /* --- Explicit Dark Mode Overrides (Safety Net) --- */
+      [data-theme="dark"] .cart-left,
+      [data-theme="dark"] .cart-summary {
+          background-color: #232f3e !important; /* Force dark background */
+          background-color: var(--bg-surface, #232f3e) !important;
+          color: #ffffff;
+          border-color: #3a4553;
+      }
+      [data-theme="dark"] .cart-left h1,
+      [data-theme="dark"] .cart-summary h2,
+      [data-theme="dark"] .cart-item,
+      [data-theme="dark"] .cart-summary hr {
+          border-color: #3a4553 !important;
+          border-color: var(--border-color, #3a4553) !important;
+      }
+      [data-theme="dark"] .summary-item span:first-child,
+      [data-theme="dark"] .cart-item-details .item-specs,
+      [data-theme="dark"] .cart-item-price-section .unit-price {
+          color: #aab7c4 !important;
+          color: var(--text-muted, #aab7c4) !important;
+      }
+      [data-theme="dark"] .summary-item span:last-child,
+      [data-theme="dark"] .cart-item-price-section .item-subtotal {
+          color: #ffffff !important;
+          color: var(--text-main, #ffffff) !important;
+      }
+
+      /* Target specific Order Summary labels for dark mode */
+      [data-theme="dark"] .cart-summary h2,
+      [data-theme="dark"] .cart-summary .summary-item span {
+          color: #ffffff !important; /* Ensure white text */
+      }
+      [data-theme="dark"] .summary-total,
+      [data-theme="dark"] .summary-total span {
+          color: #ffffff !important;
+      }
+
     </style>
 {% endblock extra_css %}
 
@@ -788,9 +828,29 @@
               }
           });
 
+          // --- Debounce Function ---
+          function debounce(func, wait) {
+              let timeout;
+              return function(...args) {
+                  clearTimeout(timeout);
+                  timeout = setTimeout(() => func.apply(this, args), wait);
+              };
+          }
+
           // --- Function to send the AJAX quantity update ---
           function sendQuantityUpdate(itemId, quantity, inputElement) {
               const url = updateUrlTemplate.replace('/0/', `/${itemId}/`);
+
+              // UI Feedback: Disable controls and show spinner
+              const wrapper = inputElement.closest('.cart-item-quantity');
+              const buttons = wrapper.querySelectorAll('button');
+
+              inputElement.disabled = true;
+              buttons.forEach(btn => btn.disabled = true);
+
+              const spinner = document.createElement('div');
+              spinner.className = 'spinner-border spinner-border-sm text-primary ms-2';
+              wrapper.appendChild(spinner);
 
               fetch(url, {
                   method: 'POST',
@@ -817,8 +877,30 @@
               .catch(error => {
                   console.error('Error updating quantity:', error);
                   alert('An error occurred. Please try again.');
+              })
+              .finally(() => {
+                  inputElement.disabled = false;
+                  buttons.forEach(btn => btn.disabled = false);
+                  spinner.remove();
               });
           }
+
+          // --- Debounced version of sendQuantityUpdate for input changes ---
+          const debouncedSendQuantityUpdate = debounce(sendQuantityUpdate, 500); // 500ms delay
+
+          // --- Event Listener for direct input changes ---
+          cartLeftContainer.addEventListener('input', function(event) {
+              if (event.target.classList.contains('item-quantity-input')) {
+                  const input = event.target;
+                  const itemId = input.dataset.itemId;
+                  let newQuantity = parseInt(input.value, 10);
+
+                  if (newQuantity >= 1) {
+                       // Pass the input element itself so we can disable it/show spinner near it
+                      debouncedSendQuantityUpdate(itemId, newQuantity, input);
+                  }
+              }
+          });
       });
     </script>
 {% endblock extra_js %}
