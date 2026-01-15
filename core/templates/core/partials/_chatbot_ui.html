@@ -10,7 +10,7 @@
     }
 
     #nexusChatbotToggleButton {
-        background-color: var(--bs-dark, #212529); /* Match your site's dark theme */
+        background-color: #232f3e; /* Dark Grey (Nav Bottom color) */
         color: white;
         border: none;
         border-radius: 50%;
@@ -27,9 +27,21 @@
         background-color: var(--bs-primary, #3d3e3f); /* Use your site's primary blue for hover */
      }
 
+    #nexusChatBadge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 14px;
+        height: 14px;
+        background-color: #dc3545; /* Bootstrap Danger Red */
+        border-radius: 50%;
+        border: 2px solid #232f3e; /* Match button background to create a gap look */
+        display: none; /* Hidden by default */
+        z-index: 1052;
+    }
 
     #nexusChatWindow {
-        display: none; /* Hidden by default */
+        display: flex; /* Always flex, visibility controlled by class */
         position: absolute; /* Relative to container */
         bottom: 80px; /* Above the toggle button */
         right: 0; /* Default alignment */
@@ -37,13 +49,23 @@
         max-width: 95vw;
         height: 450px;
         max-height: 70vh;
-        background-color: rgba(255, 255, 255, 0.85);
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
+        background-color: #232f3e; /* Dark Grey Background */
+        color: #ffffff;
         border-radius: 8px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         flex-direction: column;
         overflow: hidden;
+        /* Animation Properties */
+        touch-action: auto;
+        visibility: hidden;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+    }
+    #nexusChatWindow.active {
+        visibility: visible;
+        opacity: 1;
+        transform: translateY(0);
     }
     
     /* Alignment classes for the chat window */
@@ -57,9 +79,9 @@
     }
 
     .nexus-chat-header {
-        background-color: var(--bs-dark, #212529); /* Dark header */
+        background-color: #131921; /* Darker Grey (Nav Top color) */
         padding: 10px 15px;
-        border-bottom: 1px solid #dee2e6;
+        border-bottom: 1px solid #3a4553;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -96,7 +118,7 @@
     .nexus-chat-avatar {
         width: 32px; height: 32px;
         background-color: var(--bs-primary);
-        border-radius: 50%;
+        border-radius: 50%; border: 1px solid #fff;
         display: flex; align-items: center; justify-content: center;
         margin-right: 8px; color: white; flex-shrink: 0;
     }
@@ -127,7 +149,7 @@
     
     .btn-feedback {
         background: none; border: none; padding: 0;
-        color: #adb5bd; font-size: 0.85rem; cursor: pointer;
+        color: #aab7c4; font-size: 0.85rem; cursor: pointer;
     }
     .btn-feedback:hover { color: var(--bs-primary); }
     .btn-feedback.active { color: var(--bs-primary); }
@@ -143,7 +165,7 @@
     .nexus-chat-message.ai p { margin-bottom: 0.5rem; }
     .nexus-chat-message.ai p:last-child { margin-bottom: 0; }
     .nexus-chat-message.ai a {
-        color: var(--bs-primary);
+        color: #66b3ff; /* Lighter blue for dark background */
         text-decoration: underline;
     }
 
@@ -156,15 +178,15 @@
     }
 
     .nexus-chat-message.user {
-        background-color: var(--bs-primary, #0d6efd); /* Primary blue for user messages */
-        color: white;
+        background-color: #ffffff; /* White for user */
+        color: #131921; /* Dark text */
         align-self: flex-end;
         border-bottom-right-radius: 5px;
     }
 
     .nexus-chat-message.ai {
-        background-color: #e9ecef;
-        color: #333;
+        background-color: #37475a; /* Lighter Dark Grey for AI */
+        color: #ffffff;
         align-self: flex-start; /* Fallback if not in row */
         border-bottom-left-radius: 5px;
     }
@@ -189,7 +211,7 @@
 
     .nexus-chat-item-card {
         background-color: #fff;
-        border: 1px solid #dee2e6;
+        border: 1px solid #ced4da;
         border-radius: 8px;
         padding: 10px;
         display: flex;
@@ -197,7 +219,7 @@
         gap: 10px;
         text-decoration: none;
         color: inherit;
-        transition: box-shadow 0.2s ease-in-out;
+        color: #212529; /* Force dark text on white card */
         min-width: 240px; /* Fixed width for carousel */
         width: 240px;
         flex-shrink: 0;
@@ -231,26 +253,48 @@
     .nexus-chat-product-card-info h6 { margin-bottom: 2px; font-size: 0.9rem; }
     .nexus-chat-product-card-info p { margin-bottom: 0; font-size: 0.8rem; color: #6c757d; }
 
-    /* Quick Reply Chips */
-    .nexus-chat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 5px 0 10px 0; }
-    .nexus-chat-chip {
-        background-color: #f8f9fa; border: 1px solid #dee2e6;
-        border-radius: 15px; padding: 4px 12px; font-size: 0.8rem;
-        cursor: pointer; transition: all 0.2s; color: var(--bs-dark);
+    /* Suggested Questions Styles */
+    .nexus-chat-suggestions-container { margin: 10px 5px; }
+    .nexus-chat-suggestions-header {
+        font-size: 0.85rem; color: #aab7c4; margin-bottom: 8px; font-weight: 600;
     }
-    .nexus-chat-chip:hover {
-        background-color: var(--bs-primary); color: white; border-color: var(--bs-primary);
+    .nexus-chat-suggestion-btn {
+        display: block; width: 100%; text-align: left;
+        background-color: #37475a; border: 1px solid #4a5b6e;
+        color: #fff; padding: 8px 12px; margin-bottom: 6px;
+        border-radius: 6px; font-size: 0.9rem; cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .nexus-chat-suggestion-btn:hover {
+        background-color: #4a5b6e; border-color: #66b3ff;
+    }
+
+    /* Modal Styles */
+    .nexus-chat-modal-overlay {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.7); display: flex;
+        align-items: center; justify-content: center; z-index: 2000;
+        backdrop-filter: blur(2px);
+    }
+    .nexus-chat-modal-content {
+        background-color: #232f3e; border: 1px solid #3a4553;
+        padding: 20px; border-radius: 8px; text-align: center;
+        width: 80%; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .nexus-chat-modal-actions {
+        display: flex; justify-content: center; gap: 10px; margin-top: 15px;
     }
 
     .nexus-chat-input-area {
         padding: 10px;
-        border-top: 1px solid #dee2e6;
+        border-top: 1px solid #3a4553;
         display: flex;
+        background-color: #232f3e;
     }
 
     .nexus-chat-input-area input[type="text"] {
         flex-grow: 1;
-        border: 1px solid #ced4da;
+        border: none;
         border-radius: 20px;
         padding: 8px 15px;
         margin-right: 8px;
@@ -263,7 +307,7 @@
     }
 
     .nexus-chat-input-area .btn-mic {
-        background-color: transparent; color: #6c757d;
+        background-color: transparent; color: #aab7c4;
         width: 35px; height: 35px; margin-right: 5px; font-size: 1.1rem;
     }
     .nexus-chat-input-area .btn-mic:hover { background-color: #f8f9fa; color: var(--bs-primary); }
@@ -305,12 +349,43 @@
     }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
+    /* Mobile Responsiveness: Center the chat window */
+    @media (max-width: 768px) {
+        #nexusChatWindow {
+            position: fixed;
+            top: 50% !important;
+            left: 50% !important;
+            bottom: auto !important;
+            right: auto !important;
+            width: 90vw;
+            height: 70vh;
+            z-index: 1060;
+            /* Start animation from bottom for slide-up effect */
+            transform: translate(-50%, 100%);
+        }
+        #nexusChatWindow.active {
+            transform: translate(-50%, -50%);
+        }
+        /* Prevent auto-zoom on mobile devices */
+        .nexus-chat-input-area input[type="text"] {
+            font-size: 16px;
+        }
+    }
+
+    /* Adjust for landscape mobile */
+    @media (max-width: 768px) and (orientation: landscape) {
+        #nexusChatWindow {
+            height: 85vh;
+            width: 60vw;
+        }
+    }
 </style>
 
 <div id="nexusChatbotContainer" class="chat-align-right">
     <button id="nexusChatbotToggleButton" aria-label="{% trans 'Open Chat' %}" aria-expanded="false">
         <i class="bi bi-chat-dots-fill"></i> <!-- Bootstrap Icon -->
     </button>
+    <span id="nexusChatBadge"></span>
 
     <!-- Audio element for notification sound -->
     <audio id="nexusChatNotificationSound" src="{% static 'assets/sounds/notification.mp3' %}" preload="auto"></audio>
@@ -322,12 +397,27 @@
                 <button class="btn-icon" id="nexusChatClearButton" title="{% trans 'Clear Chat' %}">
                     <i class="bi bi-trash"></i>
                 </button>
+                <button class="btn-icon" id="nexusChatMinimizeButton" title="{% trans 'Minimize Chat' %}">
+                    <i class="bi bi-dash-lg"></i>
+                </button>
                 <button class="btn-icon" id="nexusChatCloseButton" aria-label="{% trans 'Close Chat' %}">&times;</button>
             </div>
         </div>
         <div class="nexus-chat-messages" id="nexusChatMessages" role="log" aria-live="polite" aria-atomic="false">
             <!-- Chat messages will appear here, aria-live will announce new messages -->
         </div>
+        
+        <!-- Clear Chat Confirmation Modal -->
+        <div id="nexusChatClearModal" class="nexus-chat-modal-overlay" style="display: none;">
+            <div class="nexus-chat-modal-content">
+                <p class="mb-3">{% trans "Are you sure you want to clear the chat history?" %}</p>
+                <div class="nexus-chat-modal-actions">
+                    <button id="nexusChatCancelClear" class="btn btn-sm btn-secondary">{% trans "Cancel" %}</button>
+                    <button id="nexusChatConfirmClear" class="btn btn-sm btn-danger">{% trans "Clear" %}</button>
+                </div>
+            </div>
+        </div>
+
         <div class="nexus-chat-input-area">
             <button class="btn-mic" id="nexusChatMicButton" title="{% trans 'Voice Input' %}"><i class="bi bi-mic-fill"></i></button>
             <input type="text" id="nexusChatMessageInput" placeholder="{% trans 'Type your message...' %}" aria-label="{% trans 'Chat message input' %}">
@@ -340,18 +430,25 @@
 
 <!-- Markdown Parser Library -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- DOMPurify for sanitizing HTML -->
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const container = document.getElementById('nexusChatbotContainer');
     const toggleButton = document.getElementById('nexusChatbotToggleButton');
     const chatWindow = document.getElementById('nexusChatWindow');
+    const chatBadge = document.getElementById('nexusChatBadge');
+    const minimizeButton = document.getElementById('nexusChatMinimizeButton');
     const closeButton = document.getElementById('nexusChatCloseButton');
     const clearButton = document.getElementById('nexusChatClearButton');
     const messagesContainer = document.getElementById('nexusChatMessages');
     const messageInput = document.getElementById('nexusChatMessageInput');
     const sendButton = document.getElementById('nexusChatSendButton');
     const micButton = document.getElementById('nexusChatMicButton');
+    const clearModal = document.getElementById('nexusChatClearModal');
+    const confirmClearBtn = document.getElementById('nexusChatConfirmClear');
+    const cancelClearBtn = document.getElementById('nexusChatCancelClear');
 
     let conversationHistory = []; // Store conversation history
 
@@ -366,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // If no history, show initial state
     if (!savedHistoryHTML) {
-        addInitialState();
+        addInitialState(); 
     }
 
     if (savedContext) {
@@ -380,53 +477,75 @@ document.addEventListener('DOMContentLoaded', function () {
     const helpUrl = "{% url 'help' %}";
     if (currentPath === helpUrl) {
         // Open automatically if on the help page
-        if (chatWindow.style.display !== 'flex') toggleChatWindow();
+        if (!chatWindow.classList.contains('active')) toggleChatWindow();
     }
 
     // --- Clear Chat Functionality ---
     clearButton.addEventListener('click', () => {
-        if (confirm("{% trans 'Are you sure you want to clear the chat history?' %}")) {
-            conversationHistory = [];
-            messagesContainer.innerHTML = '';
-            sessionStorage.removeItem('nexusChatHistoryHTML');
-            sessionStorage.removeItem('nexusChatContext');
-            addInitialState();
-        }
+        clearModal.style.display = 'flex';
+    });
+
+    cancelClearBtn.addEventListener('click', () => {
+        clearModal.style.display = 'none';
+    });
+
+    confirmClearBtn.addEventListener('click', () => {
+        conversationHistory = [];
+        messagesContainer.innerHTML = '';
+        sessionStorage.removeItem('nexusChatHistoryHTML');
+        sessionStorage.removeItem('nexusChatContext');
+        addInitialState();
+        clearModal.style.display = 'none';
     });
 
     function addInitialState() {
-        addMessageToDisplay("{% trans 'Hello! How can I help you shop today?' %}", 'ai');
-        addQuickReplyChips();
+        // Pass false to suppress sound on initial load (prevents browser autoplay blocks)
+        addMessageToDisplay("{% trans 'Hello! How can I help you shop today?' %}", 'ai', false);
+        addSuggestedQuestions();
     }
 
-    function addQuickReplyChips() {
-        const chips = [
+    function addSuggestedQuestions() {
+        const questions = [
             "{% trans 'Track my Order' %}",
             "{% trans 'Return Policy' %}",
-            "{% trans 'Speak to Human' %}"
+            "{% trans 'Speak to Human' %}",
+            "{% trans 'Best selling electronics' %}"
         ];
-        const chipsContainer = document.createElement('div');
-        chipsContainer.classList.add('nexus-chat-chips');
         
-        chips.forEach(text => {
-            const chip = document.createElement('div');
-            chip.classList.add('nexus-chat-chip');
-            chip.textContent = text;
-            chip.addEventListener('click', () => {
+        const container = document.createElement('div');
+        container.classList.add('nexus-chat-suggestions-container');
+        
+        const header = document.createElement('p');
+        header.classList.add('nexus-chat-suggestions-header');
+        header.textContent = "{% trans 'Suggested Questions' %}";
+        container.appendChild(header);
+        
+        questions.forEach(text => {
+            const btn = document.createElement('button');
+            btn.classList.add('nexus-chat-suggestion-btn');
+            btn.textContent = text;
+            btn.addEventListener('click', () => {
                 messageInput.value = text;
                 sendMessage();
             });
-            chipsContainer.appendChild(chip);
+            container.appendChild(btn);
         });
-        messagesContainer.appendChild(chipsContainer);
+        messagesContainer.appendChild(container);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         saveChatState();
     }
 
     // Function to toggle chat window visibility
     function toggleChatWindow() {
-        const isOpen = chatWindow.style.display === 'flex';
-        chatWindow.style.display = isOpen ? 'none' : 'flex';
+        const isOpen = chatWindow.classList.contains('active');
+        
+        if (isOpen) {
+            chatWindow.classList.remove('active');
+        } else {
+            chatWindow.classList.add('active');
+            if (chatBadge) chatBadge.style.display = 'none'; // Hide badge when opening
+        }
+        
         toggleButton.setAttribute('aria-expanded', String(!isOpen)); // Update aria-expanded
         toggleButton.innerHTML = isOpen ? '<i class="bi bi-chat-dots-fill"></i>' : '<i class="bi bi-x-lg"></i>';
         if (!isOpen) {
@@ -437,58 +556,77 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- Draggable Logic ---
     let isDragging = false;
     let hasMoved = false;
-    let startX, startY;
+    let startX, startY, initialX, initialY; // Added for threshold check
 
     function onDragStart(e) {
         // Only drag if touching the button or container (but not inside the window)
         if (e.target.closest('#nexusChatWindow')) return;
         
         isDragging = true;
-        hasMoved = false;
+        hasMoved = false; // Reset on new interaction
         
         const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
         const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+
+        // Store initial coordinates for threshold check
+        initialX = clientX;
+        initialY = clientY;
 
         const rect = container.getBoundingClientRect();
         startX = clientX - rect.left;
         startY = clientY - rect.top;
 
-        // Switch to fixed positioning with top/left to allow movement
-        container.style.bottom = 'auto';
-        container.style.right = 'auto';
-        container.style.left = rect.left + 'px';
-        container.style.top = rect.top + 'px';
+        // DO NOT switch positioning here. Defer until a real drag is detected.
     }
 
     function onDragMove(e) {
         if (!isDragging) return;
-        e.preventDefault(); // Prevent scrolling
-        hasMoved = true;
 
         const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
         const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
 
-        let newLeft = clientX - startX;
-        let newTop = clientY - startY;
+        // Only set hasMoved and start dragging if movement exceeds a threshold
+        if (!hasMoved) {
+            const dx = Math.abs(clientX - initialX);
+            const dy = Math.abs(clientY - initialY);
+            const dragThreshold = 5; // 5px threshold
 
-        // Boundary checks
-        const winWidth = window.innerWidth;
-        const winHeight = window.innerHeight;
-        const rect = container.getBoundingClientRect();
+            if (dx > dragThreshold || dy > dragThreshold) {
+                hasMoved = true;
+                // First time moving past threshold: switch to top/left positioning
+                const rect = container.getBoundingClientRect();
+                container.style.bottom = 'auto';
+                container.style.right = 'auto';
+                container.style.left = rect.left + 'px';
+                container.style.top = rect.top + 'px';
+            }
+        }
 
-        newLeft = Math.max(0, Math.min(newLeft, winWidth - rect.width));
-        newTop = Math.max(0, Math.min(newTop, winHeight - rect.height));
+        if (hasMoved) {
+            e.preventDefault(); // Prevent scrolling while dragging
 
-        container.style.left = newLeft + 'px';
-        container.style.top = newTop + 'px';
+            let newLeft = clientX - startX;
+            let newTop = clientY - startY;
 
-        // Update alignment class based on position
-        if (newLeft < winWidth / 2) {
-            container.classList.remove('chat-align-right');
-            container.classList.add('chat-align-left');
-        } else {
-            container.classList.remove('chat-align-left');
-            container.classList.add('chat-align-right');
+            // Boundary checks
+            const winWidth = window.innerWidth;
+            const winHeight = window.innerHeight;
+            const rect = container.getBoundingClientRect();
+
+            newLeft = Math.max(0, Math.min(newLeft, winWidth - rect.width));
+            newTop = Math.max(0, Math.min(newTop, winHeight - rect.height));
+
+            container.style.left = newLeft + 'px';
+            container.style.top = newTop + 'px';
+
+            // Update alignment class based on position
+            if (newLeft < winWidth / 2) {
+                container.classList.remove('chat-align-right');
+                container.classList.add('chat-align-left');
+            } else {
+                container.classList.remove('chat-align-left');
+                container.classList.add('chat-align-right');
+            }
         }
     }
 
@@ -513,6 +651,17 @@ document.addEventListener('DOMContentLoaded', function () {
         toggleChatWindow();
     });
     closeButton.addEventListener('click', toggleChatWindow);
+    minimizeButton.addEventListener('click', toggleChatWindow);
+
+    // Close chat if clicking outside on mobile
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 768 && chatWindow.classList.contains('active')) {
+            // If click is not inside chat window and not on the toggle button
+            if (!chatWindow.contains(e.target) && !toggleButton.contains(e.target)) {
+                toggleChatWindow();
+            }
+        }
+    });
 
     function saveChatState() {
         sessionStorage.setItem('nexusChatHistoryHTML', messagesContainer.innerHTML);
@@ -520,12 +669,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Function to add a message to the chat display
-    function addMessageToDisplay(text, type) { // type can be 'user', 'ai', or 'error'
+    function addMessageToDisplay(text, type, playSound = true) { // type can be 'user', 'ai', or 'error'
         if (type === 'ai') {
             // Play sound notification for new AI messages
             const notificationSound = document.getElementById('nexusChatNotificationSound');
-            if (notificationSound) {
+            if (notificationSound && playSound) {
                 notificationSound.play().catch(e => console.warn("Chat notification sound could not be played.", e));
+            }
+
+            // Show badge if chat is closed
+            if (!chatWindow.classList.contains('active') && chatBadge) {
+                chatBadge.style.display = 'block';
             }
 
             const row = document.createElement('div');
@@ -533,7 +687,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             // Parse markdown for AI responses if marked.js is loaded
-            const messageContent = window.marked ? marked.parse(text) : text;
+            const rawMarkup = window.marked ? marked.parse(text) : text;
+            // Sanitize the HTML to prevent XSS
+            const messageContent = window.DOMPurify ? DOMPurify.sanitize(rawMarkup) : rawMarkup;
 
             row.innerHTML = `
                 <div class="nexus-chat-avatar"><i class="bi bi-robot"></i></div>
@@ -676,6 +832,11 @@ document.addEventListener('DOMContentLoaded', function () {
     async function sendMessage() {
         const userMessage = messageInput.value.trim();
         if (!userMessage) return;
+        // Remove suggested questions if they exist
+        const suggestionsContainer = messagesContainer.querySelector('.nexus-chat-suggestions-container');
+        if (suggestionsContainer) {
+            suggestionsContainer.remove();
+        }
 
         // Add to conversation history
         conversationHistory.push(`User: ${userMessage}`);
