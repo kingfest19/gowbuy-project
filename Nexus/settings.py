@@ -172,13 +172,9 @@ if os.environ.get('DATABASE_URL'):
     # Handle cases where the URL might be quoted in the environment variable
     os.environ['DATABASE_URL'] = os.environ['DATABASE_URL'].strip().strip("'").strip('"')
 
-    try:
-        db_from_env = dj_database_url.config(conn_max_age=600, ssl_require=True)
-        if db_from_env:
-            DATABASES['default'] = db_from_env
-    except Exception as e:
-        print(f"Error configuring database: {e}")
-        pass
+    db_from_env = dj_database_url.config(conn_max_age=600, ssl_require=True)
+    if db_from_env:
+        DATABASES['default'] = db_from_env
 
 # --- START: Caching Settings (for django-ratelimit and performance) ---
 # Using Redis as the cache backend, since it's already configured for Channels.
