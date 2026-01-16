@@ -170,8 +170,7 @@ DATABASES = {
 
 if os.environ.get('DATABASE_URL'):
     # Handle cases where the URL might be quoted in the environment variable
-    if os.environ['DATABASE_URL'].startswith("'") or os.environ['DATABASE_URL'].startswith('"'):
-        os.environ['DATABASE_URL'] = os.environ['DATABASE_URL'].strip("'").strip('"')
+    os.environ['DATABASE_URL'] = os.environ['DATABASE_URL'].strip().strip("'").strip('"')
 
     try:
         db_from_env = dj_database_url.config(conn_max_age=600, ssl_require=True)
@@ -586,10 +585,16 @@ CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", os.environ.get("
 
 # Ensure URLs have the correct scheme (fixes issue if only hostname is provided)
 if CELERY_BROKER_URL and not CELERY_BROKER_URL.startswith(('redis://', 'rediss://', 'amqp://')):
-    CELERY_BROKER_URL = f"redis://{CELERY_BROKER_URL}:6379/0"
+    if ":" in CELERY_BROKER_URL:
+        CELERY_BROKER_URL = f"redis://{CELERY_BROKER_URL}/0"
+    else:
+        CELERY_BROKER_URL = f"redis://{CELERY_BROKER_URL}:6379/0"
 
 if CELERY_RESULT_BACKEND and not CELERY_RESULT_BACKEND.startswith(('redis://', 'rediss://', 'db+', 'rpc://')):
-    CELERY_RESULT_BACKEND = f"redis://{CELERY_RESULT_BACKEND}:6379/0"
+    if ":" in CELERY_RESULT_BACKEND:
+        CELERY_RESULT_BACKEND = f"redis://{CELERY_RESULT_BACKEND}/0"
+    else:
+        CELERY_RESULT_BACKEND = f"redis://{CELERY_RESULT_BACKEND}:6379/0"
 
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
