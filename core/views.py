@@ -1,10 +1,13 @@
 # c:\Users\Hp\Desktop\Nexus\core\views.py
 import logging
 import json, datetime
+from kombu.exceptions import OperationalError # Import OperationalError to handle broker connection issues
 import random # For selecting random spotlights
 from decimal import Decimal
 from django.core.mail import EmailMessage
 from typing import Optional
+from django.contrib.syndication.views import Feed
+from django.template.defaultfilters import truncatewords
 import stripe
 import requests # For making HTTP requests to Paystack
 import uuid # For generating unique references
@@ -937,10 +940,14 @@ class VendorProductCreateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageM
         images = self.request.FILES.getlist('images')
         for image_file in images:
             product_image = ProductImage.objects.create(product=self.object, image=image_file, alt_text=f"Image for {self.object.name}")
-            if enhance_image:
-                process_image_enhancement.delay(product_image.id)
-            if remove_background:
-                process_background_removal.delay(product_image.id)
+            try:
+                if enhance_image:
+                    process_image_enhancement.delay(product_image.id)
+                if remove_background:
+                    process_background_removal.delay(product_image.id)
+            except OperationalError as e:
+                logger.error(f"Celery broker connection failed for product {self.object.id}: {e}")
+                messages.warning(self.request, _("Product saved, but background image processing is temporarily unavailable."))
 
         messages.success(self.request, self.get_success_message(form.cleaned_data))
         return HttpResponseRedirect(self.get_success_url())
@@ -4773,3 +4780,31 @@ def facebook_data_deletion(request):
     except Exception as e:
         logger.error(f"Facebook Data Deletion Error: {e}")
         return JsonResponse({'error': 'Processing failed'}, status=400)
+
+class BlogPostListView(ListView):
+    model = BlogPost
+    template_name = 'core/blog_post_list.html'
+    context_object_name = 'posts'
+    paginate_by = 5
+
+    def get_queryset(self):
+        return BlogPost.objects.filter(status='published').order_by('-publish_date')
+
+class BlogPostDetailView(DetailView):
+    model = BlogPost
+    template_name = 'core/blog_post_detail.html'
+    context_object_name = 'post'
+
+class LatestPostsFeed(Feed):
+    title = "NEXUS Marketplace Blog"
+    link = reverse_lazy('core:blog_post_list')
+    description = "New updates and articles from NEXUS Marketplace."
+
+    def items(self):
+        return BlogPost.objects.filter(status='published').order_by('-publish_date')[:5]
+
+    def item_title(self, item):
+        return item.title
+
+    def item_description(self, item):
+        return truncatewords(item.content, 30)

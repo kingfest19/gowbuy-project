@@ -13,6 +13,7 @@ from paypal.standard.ipn.signals import valid_ipn_received
 from django.contrib.auth import get_user_model # For notifying staff
 from django.core.cache import cache # Import cache for invalidation
 import logging, uuid
+from kombu.exceptions import OperationalError # Import for handling broker connection errors
 
 logger = logging.getLogger(__name__) # This is already present, just for context
 
@@ -571,22 +572,3 @@ def clear_ai_summary_cache_on_review_change(sender, instance, **kwargs):
     cache_key = f"ai_summary_prod_{product.id}"
     cache.delete(cache_key)
     logger.info(f"Cleared AI review summary cache for product {product.id} due to review update.")
-# --- END: AI Cache Invalidation Signal ---
-
-# --- START: Background Removal Signal ---
-from .tasks import process_background_removal
-from .models import ProductImage
-
-@receiver(post_save, sender=ProductImage)
-def schedule_background_removal(sender, instance, created, **kwargs):
-    """
-    When a new ProductImage is created, schedule a Celery task
-    to remove its background.
-    """
-    # We only want to trigger this for newly created images,
-    # and we check that it's not an image that was already processed by this task.
-    if created and not instance.image.name.startswith('no_bg_'):
-        logger.info(f"New ProductImage (ID: {instance.id}) created. Scheduling background removal.")
-        # Use .delay() to call the task asynchronously
-        process_background_removal.delay(instance.id)
-# --- END: Background Removal Signal ---

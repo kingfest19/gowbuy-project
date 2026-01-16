@@ -5,6 +5,25 @@
 
 {% block title %} {% trans "Sign In" %} {% endblock title %}
 
+{% block extra_head %}
+    <meta name="description" content="Sign in to your Nexus account. Access your orders, manage your store, or book services.">
+    <link rel="canonical" href="https://gowbuy.co.uk{{ request.path }}" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://gowbuy.co.uk{{ request.path }}">
+    <meta property="og:title" content="{% trans 'Sign In' %} - Nexus">
+    <meta property="og:description" content="Sign in to your Nexus account. Access your orders, manage your store, or book services.">
+    <meta property="og:image" content="https://gowbuy.co.uk{% static 'assets/logo.jpg' %}">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary">
+    <meta property="twitter:url" content="https://gowbuy.co.uk{{ request.path }}">
+    <meta property="twitter:title" content="{% trans 'Sign In' %} - Nexus">
+    <meta property="twitter:description" content="Sign in to your Nexus account. Access your orders, manage your store, or book services.">
+    <meta property="twitter:image" content="https://gowbuy.co.uk{% static 'assets/logo.jpg' %}">
+{% endblock extra_head %}
+
 {% block extra_css %}
 <style>
     body {

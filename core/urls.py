@@ -14,6 +14,11 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('menu/', views.menu, name='menu'),
 
+    # --- Blog URLs ---
+    path('blog/', views.BlogPostListView.as_view(), name='blog_post_list'),
+    path('blog/<int:year>/<int:month>/<int:day>/<slug:slug>/', views.BlogPostDetailView.as_view(), name='blog_post_detail'),
+    path('feed/rss/', views.LatestPostsFeed(), name='blog_rss'),
+
     # --- Help/Static Pages ---
     path('help/creating-3d-models/', views.Creating3DModelsHelpView.as_view(), name='help_creating_3d_models'),
     path('terms/', views.TermsView.as_view(), name='terms_and_conditions'),

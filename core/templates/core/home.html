@@ -3,6 +3,31 @@
 
 {% block title %}NEXUS - Your Online Marketplace{% endblock title %}
 
+{% block extra_head %}
+    {{ block.super }}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "url": "https://gowbuy.co.uk/",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://gowbuy.co.uk{% url 'core:product_list' %}?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "NEXUS",
+      "url": "https://gowbuy.co.uk/",
+      "logo": "https://gowbuy.co.uk{% static 'assets/logo.jpg' %}"
+    }
+    </script>
+{% endblock extra_head %}
+
 {% block extra_css %}
     {{ block.super }}
     <link rel="stylesheet" href="{% static 'assets/css/service_marketplace.css' %}">
