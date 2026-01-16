@@ -169,6 +169,10 @@ DATABASES = {
 }
 
 if os.environ.get('DATABASE_URL'):
+    # Handle cases where the URL might be quoted in the environment variable
+    if os.environ['DATABASE_URL'].startswith("'") or os.environ['DATABASE_URL'].startswith('"'):
+        os.environ['DATABASE_URL'] = os.environ['DATABASE_URL'].strip("'").strip('"')
+
     try:
         db_from_env = dj_database_url.config(conn_max_age=600, ssl_require=True)
         if db_from_env:
@@ -577,9 +581,18 @@ MIGRATION_MODULES = {
 # CELERY SETTINGS
 # This assumes your Redis instance is available at the URL from the environment variable.
 # On Render, this will be automatically set for you if you link the Redis instance.
-CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
+
+# Ensure URLs have the correct scheme (fixes issue if only hostname is provided)
+if CELERY_BROKER_URL and not CELERY_BROKER_URL.startswith(('redis://', 'rediss://', 'amqp://')):
+    CELERY_BROKER_URL = f"redis://{CELERY_BROKER_URL}:6379/0"
+
+if CELERY_RESULT_BACKEND and not CELERY_RESULT_BACKEND.startswith(('redis://', 'rediss://', 'db+', 'rpc://')):
+    CELERY_RESULT_BACKEND = f"redis://{CELERY_RESULT_BACKEND}:6379/0"
+
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
