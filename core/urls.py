@@ -1,6 +1,9 @@
 # c:\Users\Hp\Desktop\Nexus\core\urls.py
 # core/urls.py
-from django.urls import path
+from django.urls import path, re_path
+from django.conf import settings
+from django.conf.urls.static import static
+from django.views.static import serve
 # Import all necessary views from core.views that are handled by this file
 from . import views, payment_views # <<< Import the views module itself
 from .views import VendorUpgradeView # Make sure to import the new view
@@ -315,3 +318,7 @@ urlpatterns += [
 # --- START: Customer Notification URL ---
 urlpatterns += [path('notifications/', views.CustomerNotificationListView.as_view(), name='customer_notification_list'),]
 # END: Customer Notification URL
+
+# --- Media Files Serving (Fix for Production) ---
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
