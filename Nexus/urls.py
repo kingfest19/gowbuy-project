@@ -4,6 +4,8 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django.contrib.sitemaps.views import sitemap
+from django.views.generic import TemplateView
 
 # --- Import the specific view ---
 from core.views import (
@@ -19,6 +21,20 @@ from django_ratelimit.decorators import ratelimit
 # If signin, signup, logout are handled by authapp.urls or allauth.urls, these imports might not be needed
 # For now, assuming they are used for global, non-namespaced URLs as per the urlpatterns
 from authapp.views import register_view, signin, signout
+from core.sitemaps import (
+    StaticViewSitemap, ProductSitemap, CategorySitemap,
+    ServiceSitemap, ServiceCategorySitemap, VendorSitemap, BlogSitemap
+)
+
+sitemaps = {
+    'static': StaticViewSitemap,
+    'products': ProductSitemap,
+    'categories': CategorySitemap,
+    'services': ServiceSitemap,
+    'service_categories': ServiceCategorySitemap,
+    'vendors': VendorSitemap,
+    'blog': BlogSitemap,
+}
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -80,6 +96,12 @@ urlpatterns = [
     
     # Facebook Data Deletion Callback
     # path('facebook-data-deletion/', facebook_data_deletion, name='facebook_data_deletion'),
+    
+    # Robots.txt
+    path('robots.txt', TemplateView.as_view(template_name="robots.txt", content_type="text/plain")),
+
+    # Sitemap
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
 
 ]
 

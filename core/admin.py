@@ -26,18 +26,6 @@ from .models import (
 from .forms import VendorProductForm
 
 
-# --- CustomUser Admin (Keep as is, or move to authapp/admin.py) ---
-class CustomUserAdmin(admin.ModelAdmin):
-    list_display = ('username', 'email', 'bio', 'is_staff', 'is_active')
-    search_fields = ('username', 'email')
-    list_filter = ('is_staff', 'is_active')
-    ordering = ('username',)
-# Ensure CustomUser is only registered once (here or in authapp/admin.py)
-# Avoid registering it in both places. Assuming it's okay here for now.
-# Check if CustomUser is already registered before registering again
-# This avoids potential conflicts if it's also registered in authapp/admin.py
-if not admin.site.is_registered(CustomUser):
-    admin.site.register(CustomUser, CustomUserAdmin)
 
 
 # --- Register Core Models ---

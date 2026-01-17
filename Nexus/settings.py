@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'cloudinary',
     'django.contrib.humanize',
     'django.contrib.sites',  # <<< Add the sites framework
+    'django.contrib.sitemaps', # Add sitemaps app
 
     # Third-party apps
     'crispy_forms',
@@ -273,7 +274,7 @@ CLOUDINARY_STORAGE = {
 # Storage Configuration (Replaces STATICFILES_STORAGE and DEFAULT_FILE_STORAGE)
 STORAGES = {
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
     "default": {
         # Use Cloudinary for media in production, but local file system for development
@@ -281,11 +282,16 @@ STORAGES = {
     },
 }
 
+# Prevent crashes if a referenced static file is missing during collection
+WHITENOISE_MANIFEST_STRICT = False
+
 # Legacy settings for compatibility with third-party apps (like django-cloudinary-storage)
 STATICFILES_STORAGE = STORAGES["staticfiles"]["BACKEND"]
 DEFAULT_FILE_STORAGE = STORAGES["default"]["BACKEND"]
 
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core/static')]
+# core/static is automatically found because 'core' is in INSTALLED_APPS.
+# Adding it here causes duplicate file warnings.
+STATICFILES_DIRS = []
 
 MEDIA_URL = '/media/'
 
