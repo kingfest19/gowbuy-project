@@ -55,11 +55,13 @@
             box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
         }
         .service-item-flat img, .vendor-item-flat img {
-            height: 180px;
+            aspect-ratio: 1 / 1;
             width: 100%;
-            object-fit: cover;
+            object-fit: contain;
             border-radius: 0.25rem;
             margin-bottom: 1rem;
+            background-color: #fff;
+            padding: 1rem;
         }
         .service-item-flat h5 a, .vendor-item-flat h5 a {
             color: var(--text-main);
@@ -89,6 +91,31 @@
         .rating-display {
             color: #ffc107;
         }
+        
+        /* Quick View Button Styles */
+        .image-container {
+            position: relative;
+        }
+        .quick-view-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            z-index: 2;
+            white-space: nowrap;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .service-item-flat:hover .quick-view-btn {
+            opacity: 1;
+        }
+        
+        /* Dark Mode Footer Logo Fix */
+        [data-theme="dark"] .footer-logo-area img {
+            filter: brightness(0) invert(1);
+            opacity: 0.9;
+        }
 
         /* Mobile Responsiveness Adjustments */
         @media (max-width: 768px) {
@@ -97,6 +124,34 @@
             }
             .carousel-inner, .carousel-item img {
                 height: 220px !important;
+            }
+            /* Mobile Navbar Optimization */
+            nav {
+                padding: 0.4rem 0.5rem !important;
+                transition: padding 0.3s ease;
+            }
+            /* Smooth Search Bar Transition */
+            .search-form {
+                transition: width 0.3s ease-in-out, margin 0.3s ease-in-out;
+            }
+            .nav-logo img, nav > a > img {
+                max-height: 35px;
+            }
+            nav.scrolled {
+                padding: 0.2rem 0.5rem !important;
+            }
+            nav.scrolled .nav-logo,
+            nav.scrolled > a,
+            nav.scrolled img,
+            nav.scrolled .nav-cart,
+            nav.scrolled .nav-text,
+            nav.scrolled .nav-country,
+            nav.scrolled .nav-language {
+                display: none !important;
+            }
+            nav.scrolled .search-form {
+                width: 100% !important;
+                margin: 0 !important;
             }
         }
     </style>
@@ -170,15 +225,18 @@
             {% for product in featured_products %}
             <div class="col">
                 <div class="service-item-flat">
-                    <a href="{{ product.get_absolute_url }}">
-                        {% with first_image=product.images.first %}
-                            {% if first_image.image.url %}
-                                <img src="{{ first_image.image.url }}" alt="{{ product.name }}">
-                            {% else %}
-                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
-                            {% endif %}
-                        {% endwith %}
-                    </a>
+                    <div class="image-container">
+                        <a href="{{ product.get_absolute_url }}">
+                            {% with first_image=product.images.first %}
+                                {% if first_image.image.url %}
+                                    <img src="{{ first_image.image.url }}" alt="{{ product.name }}">
+                                {% else %}
+                                    <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                                {% endif %}
+                            {% endwith %}
+                        </a>
+                        <button class="btn btn-light btn-sm rounded-pill quick-view-btn" title="{% trans 'Quick View' %}"><i class="bi bi-eye"></i> {% trans "Quick View" %}</button>
+                    </div>
                     <h5 class="mb-1">
                         <a href="{{ product.get_absolute_url }}" class="stretched-link">{{ product.name|truncatechars:50 }}</a>
                     </h5>
@@ -228,15 +286,18 @@
             {% for product in new_arrivals %}
             <div class="col">
                 <div class="service-item-flat">
-                    <a href="{{ product.get_absolute_url }}">
-                        {% with first_image=product.images.first %}
-                            {% if first_image.image.url %}
-                                <img src="{{ first_image.image.url }}" alt="{{ product.name }}">
-                            {% else %}
-                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
-                            {% endif %}
-                        {% endwith %}
-                    </a>
+                    <div class="image-container">
+                        <a href="{{ product.get_absolute_url }}">
+                            {% with first_image=product.images.first %}
+                                {% if first_image.image.url %}
+                                    <img src="{{ first_image.image.url }}" alt="{{ product.name }}">
+                                {% else %}
+                                    <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                                {% endif %}
+                            {% endwith %}
+                        </a>
+                        <button class="btn btn-light btn-sm rounded-pill quick-view-btn" title="{% trans 'Quick View' %}"><i class="bi bi-eye"></i> {% trans "Quick View" %}</button>
+                    </div>
                     <h5 class="mb-1">
                         <a href="{{ product.get_absolute_url }}" class="stretched-link">{{ product.name|truncatechars:50 }}</a>
                     </h5>
@@ -263,15 +324,18 @@
             {% for product in recently_viewed %}
             <div class="col">
                 <div class="service-item-flat">
-                    <a href="{{ product.get_absolute_url }}">
-                        {% with first_image=product.images.first %}
-                            {% if first_image.image.url %}
-                                <img src="{{ first_image.image.url }}" alt="{{ product.name }}">
-                            {% else %}
-                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
-                            {% endif %}
-                        {% endwith %}
-                    </a>
+                    <div class="image-container">
+                        <a href="{{ product.get_absolute_url }}">
+                            {% with first_image=product.images.first %}
+                                {% if first_image.image.url %}
+                                    <img src="{{ first_image.image.url }}" alt="{{ product.name }}">
+                                {% else %}
+                                    <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                                {% endif %}
+                            {% endwith %}
+                        </a>
+                        <button class="btn btn-light btn-sm rounded-pill quick-view-btn" title="{% trans 'Quick View' %}"><i class="bi bi-eye"></i> {% trans "Quick View" %}</button>
+                    </div>
                     <h5 class="mb-1">
                         <a href="{{ product.get_absolute_url }}" class="stretched-link">{{ product.name|truncatechars:50 }}</a>
                     </h5>
@@ -403,4 +467,16 @@
 
 {% block extra_js %}
     {{ block.super }}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const navbar = document.querySelector('nav');
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 20) {
+                    navbar.classList.add('scrolled');
+                } else {
+                    navbar.classList.remove('scrolled');
+                }
+            });
+        });
+    </script>
 {% endblock extra_js %}
