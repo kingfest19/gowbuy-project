@@ -57,6 +57,7 @@ if RENDER_EXTERNAL_HOSTNAME:
 
 INSTALLED_APPS = [
     # ... your apps first (optional, but common)
+    'jazzmin', # Moved to top as per documentation
     'core.apps.CoreConfig',
     'authapp.apps.AuthappConfig',
     'channels',
@@ -78,7 +79,6 @@ INSTALLED_APPS = [
     # Third-party apps
     'crispy_forms',
     'crispy_bootstrap5',
-    'jazzmin',
     'django_filters',
     'paypal.standard.ipn',
 
@@ -274,7 +274,7 @@ CLOUDINARY_STORAGE = {
 # Storage Configuration (Replaces STATICFILES_STORAGE and DEFAULT_FILE_STORAGE)
 STORAGES = {
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "core.storage_backends.WhiteNoiseStaticFilesStorage",
     },
     "default": {
         # Use Cloudinary for media in production, but local file system for development
