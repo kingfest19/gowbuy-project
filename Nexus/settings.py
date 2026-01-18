@@ -285,6 +285,9 @@ STORAGES = {
 # Prevent crashes if a referenced static file is missing during collection
 WHITENOISE_MANIFEST_STRICT = False
 
+# Add this to help debug or potentially fix path issues
+WHITENOISE_KEEP_ONLY_HASHED_FILES = True
+
 # Legacy settings for compatibility with third-party apps (like django-cloudinary-storage)
 STATICFILES_STORAGE = STORAGES["staticfiles"]["BACKEND"]
 DEFAULT_FILE_STORAGE = STORAGES["default"]["BACKEND"]
