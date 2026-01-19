@@ -17,4 +17,8 @@ class WhiteNoiseStaticFilesStorage(CompressedManifestStaticFilesStorage):
     def _compress_path(self, path):
         if not os.path.exists(path):
             return []
-        return super()._compress_path(path)
+        try:
+            # Force list conversion to execute the generator and catch errors immediately
+            return list(super()._compress_path(path))
+        except FileNotFoundError:
+            return []
