@@ -260,7 +260,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
@@ -286,7 +286,7 @@ STORAGES = {
 WHITENOISE_MANIFEST_STRICT = False
 
 # Add this to help debug or potentially fix path issues
-WHITENOISE_KEEP_ONLY_HASHED_FILES = True
+WHITENOISE_KEEP_ONLY_HASHED_FILES = False
 
 # Legacy settings for compatibility with third-party apps (like django-cloudinary-storage)
 STATICFILES_STORAGE = STORAGES["staticfiles"]["BACKEND"]
