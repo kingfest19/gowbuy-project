@@ -17,17 +17,18 @@
   .media-display-container {
     position: relative;
     display: block;
-    /* border: 1px solid #eee; */ /* Removed border as requested */
-    /* background-color: #f8f9fa; */ /* Removed background color as requested */
     min-height: 400px; /* Ensure container has a height */
     display: flex;
     align-items: center;
     justify-content: center;
+    background-color: var(--bg-body);
+    border-radius: 12px;
   }
 
   /* Styling for the zoom pane that appears on hover */
   .drift-zoom-pane {
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-surface);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
     z-index: 1050; /* Ensure it's above other content */
   }
@@ -53,7 +54,7 @@
   }
   .thumbnail-item:hover,
   .thumbnail-item.active {
-    border-color: #007bff; /* Primary color for active thumbnail */
+    border-color: var(--accent-color); /* Primary color for active thumbnail */
   }
   .video-play-icon {
     position: absolute;
@@ -75,7 +76,7 @@
     display: none;
   }
   .rating-stars label {
-    color: #ddd;
+    color: var(--border-color);
     cursor: pointer;
     font-size: 1.5rem;
     padding: 0 0.1em;
@@ -113,118 +114,135 @@
   .main-image-wrapper {
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1.5px 4px rgba(0,0,0,0.04);
     border-radius: 12px;
-    background: #fff;
+    background: var(--bg-surface);
     margin-bottom: 1.5rem;
-    border: 1px solid #040404ff;
+    border: 1px solid var(--border-color);
   }
   /* Page Background and Container */
-  body {
-    background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 100%);
-    min-height: 100vh;
-  }
 
   /* Enhanced Product Description Styles */
   #product-description {
-    border: 1.5px solid #e3e6ea;
+    border: 1px solid var(--border-color);
     border-radius: 10px;
-    background: #f8f9fa;
+    background: var(--bg-body);
     padding: 18px 16px;
     font-size: 1.08rem;
-    color: #333;
+    color: var(--text-main);
     box-shadow: 0 1px 8px rgba(0,0,0,0.04);
     transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
     margin-bottom: 1.5rem;
   }
   #product-description:hover {
-    border-color: #007bff;
-    background: #e3f2fd;
-    box-shadow: 0 4px 16px rgba(0,123,255,0.09);
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
   }
-  .container {
-    background: rgba(255,255,255,0.97);
+  
+  /* Custom class for the main content container to avoid conflict with Bootstrap .container */
+  .product-detail-card {
+    background: var(--bg-surface);
     border-radius: 18px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.09);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.05);
     padding: 32px 24px;
     margin-bottom: 32px;
     transition: box-shadow 0.3s;
-    border: 1px solid #000000ff;
+    border: 1px solid var(--border-color);
   }
-  .container:hover {
-    box-shadow: 0 16px 48px rgba(0,123,255,0.12);
+  .product-detail-card:hover {
+    box-shadow: 0 16px 48px rgba(0,0,0,0.1);
   }
 
   /* Card Hover Effect */
   .card {
+    background-color: var(--bg-surface);
+    color: var(--text-main);
     transition: transform 0.18s, box-shadow 0.18s;
-    border: 1px solid #000000ff;
+    border: 1px solid var(--border-color);
   }
   .card:hover {
     transform: translateY(-4px) scale(1.03);
-    box-shadow: 0 12px 32px rgba(0,123,255,0.13);
-    border: 1.5px solid #00bfff;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+    border-color: var(--accent-color);
   }
 
   /* Button Hover Effects */
   .btn-primary, .btn-outline-primary {
     transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-    border: 1px solid #040034ff;  
+    /* border: 1px solid #040034ff; Removed hardcoded border */ 
   }
   .btn-primary:hover {
-    background: linear-gradient(90deg, #007bff 60%, #00bfff 100%);
+    /* background: linear-gradient(90deg, #007bff 60%, #00bfff 100%); */
+    filter: brightness(1.1);
     color: #fff;
-    box-shadow: 0 2px 12px rgba(0,123,255,0.18);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
   }
   .btn-outline-primary:hover {
-    background: #e3f2fd;
-    color: #007bff;
-    box-shadow: 0 2px 12px rgba(0,123,255,0.12);
+    background: var(--bg-body);
+    color: var(--accent-color);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
   }
 
   /* Tab Hover */
   .nav-tabs .nav-link:hover {
-    background: #e3f2fd;
-    color: #007bff;
+    background: var(--bg-body);
+    color: var(--accent-color);
+    border-color: var(--border-color);
   }
 
   /* Table Row Hover */
   .table-striped > tbody > tr:hover {
-    background-color: #e3f2fd;
+    background-color: var(--bg-body);
+    filter: brightness(0.95);
     transition: background 0.2s;
+  }
+  
+  /* Table Colors for Dark Mode */
+  .table {
+      color: var(--text-main);
+      border-color: var(--border-color);
+  }
+  .table-striped > tbody > tr:nth-of-type(odd) > * {
+      color: var(--text-main);
+      box-shadow: inset 0 0 0 9999px rgba(0, 0, 0, 0.05);
+  }
+  [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+      box-shadow: inset 0 0 0 9999px rgba(255, 255, 255, 0.05);
   }
 
   /* Review Section Hover */
   .d-flex.mb-3.pb-3.border-bottom:hover {
-    background: #e3f2fd;
+    background: var(--bg-body);
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,123,255,0.07);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     transition: background 0.2s, box-shadow 0.2s;
   }
 
   /* Thumbnail Hover Enhancement */
   .thumbnail-item-wrapper:hover .thumbnail-item {
-    border-color: #00bfff;
-    box-shadow: 0 4px 16px rgba(0,123,255,0.18);
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
     transform: scale(1.08);
     transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
   }
 
   /* Main Image Hover */
   .main-image-wrapper:hover {
-    box-shadow: 0 8px 32px rgba(0,123,255,0.13), 0 2px 8px rgba(0,0,0,0.06);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06);
     transition: box-shadow 0.2s;
   }
 
   /* 3D Viewer Hover */
   .product-3d-viewer:hover {
-    box-shadow: 0 8px 32px rgba(0,123,255,0.11);
-    background: linear-gradient(135deg, #e3f2fd 80%, #e3e6ea 100%);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    /* background: linear-gradient(135deg, #e3f2fd 80%, #e3e6ea 100%); */
     transition: box-shadow 0.2s, background 0.2s;
   }
   /* Modern Card Shadow for 3D Viewer */
   .product-3d-viewer {
-    background: linear-gradient(135deg, #f8f9fa 80%, #e3e6ea 100%);
+    background: var(--bg-surface);
+    color: var(--text-main);
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
     border-radius: 12px;
+    border: 1px solid var(--border-color);
   }
 
   /* Modern Card for Related Products */
@@ -242,41 +260,46 @@
     border-radius: 8px;
     font-weight: 500;
     letter-spacing: 0.02em;
-    box-shadow: 0 1px 4px rgba(0,123,255,0.08);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
   }
   .btn-primary:focus, .btn-outline-primary:focus {
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.15);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
   }
 
   /* Modern Tabs */
   .nav-tabs .nav-link {
     border-radius: 8px 8px 0 0;
     font-weight: 500;
-    background: #f8f9fa;
+    background: var(--bg-body);
+    color: var(--text-muted);
     margin-right: 2px;
     transition: background 0.2s;
+    border: 1px solid transparent;
   }
   .nav-tabs .nav-link.active {
-    background: #fff;
+    background: var(--bg-surface);
+    color: var(--text-main);
+    border-color: var(--border-color) var(--border-color) var(--bg-surface);
     box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+  }
+  .nav-tabs {
+      border-bottom-color: var(--border-color);
   }
 
   /* Modern Table */
-  .table-striped > tbody > tr:nth-of-type(odd) {
-    background-color: #f4f6fa;
-  }
   .table {
     border-radius: 8px;
     overflow: hidden;
+    color: var(--text-main);
   }
 
   /* Modern Review Section */
   .border-bottom {
-    border-bottom: 1.5px solid #e3e6ea !important;
+    border-bottom: 1px solid var(--border-color) !important;
   }
   .review-user {
     font-weight: 600;
-    color: #007bff;
+    color: var(--accent-color);
   }
   .rating-stars label {
     font-size: 1.7rem;
@@ -285,7 +308,7 @@
 
   /* Modern Thumbnail Gallery */
   .thumbnail-gallery {
-    background: #f8f9fa;
+    background: var(--bg-body);
     border-radius: 8px;
     padding: 10px 8px;
     box-shadow: 0 1px 6px rgba(0,0,0,0.04);
@@ -297,23 +320,27 @@
   }
   .thumbnail-item:hover,
   .thumbnail-item.active {
-    box-shadow: 0 2px 12px rgba(0,123,255,0.12);
-    border-color: #00bfff;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    border-color: var(--accent-color);
   }
 
   /* Modern Form Inputs */
   .form-label {
     font-weight: 500;
-    color: #495057;
+    color: var(--text-main);
   }
   .form-control, .form-select {
     border-radius: 8px;
-    border: 1.5px solid #e3e6ea;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-input);
+    color: var(--text-main);
     transition: border-color 0.2s;
   }
   .form-control:focus, .form-select:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.15rem rgba(0,123,255,0.08);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.25);
+    background-color: var(--bg-input);
+    color: var(--text-main);
   }
 
   /* Modern Alert */
@@ -324,12 +351,12 @@
 
   /* Modern Progress Bar for 3D Viewer */
   .product-3d-viewer .progress-bar {
-    background: #e3e6ea;
+    background: var(--border-color);
     border-radius: 8px;
     height: 8px;
   }
   .product-3d-viewer .update-bar {
-    background: linear-gradient(90deg, #007bff 0%, #00bfff 100%);
+    background: var(--accent-color);
     border-radius: 8px;
     height: 8px;
   }
@@ -345,18 +372,42 @@
     gap: 3px;
   }
   .ai-tool-btn:hover {
-    color: #00bfff; /* Deep sky blue for hover */
+    color: var(--accent-color); /* Deep sky blue for hover */
   }
   .ai-tool-btn .spinner-border {
       width: 0.8rem;
       height: 0.8rem;
   }
   /* --- END: AI Tool Button Styles --- */
+
+  /* Mobile Responsiveness */
+  @media (max-width: 768px) {
+      .product-detail-card {
+          padding: 16px;
+      }
+      .media-display-container {
+          min-height: 300px;
+      }
+      .thumbnail-item {
+          width: 60px;
+          height: 60px;
+      }
+      h1 {
+          font-size: 1.5rem;
+      }
+      h2 {
+          font-size: 1.25rem;
+      }
+      .btn-lg {
+          padding: 0.5rem 1rem;
+          font-size: 1rem;
+      }
+  }
 </style>
 {% endblock extra_css %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="container mt-5 product-detail-card">
   <div class="row">
     <div class="col-lg-6">
       {% if request.user.is_authenticated and product.vendor == request.user.vendor_profile %}
@@ -410,6 +461,16 @@
         {% endfor %}
       </div>
       {% endif %}
+      <div class="mt-4">
+        <form action="{% url 'core:add_to_cart' product.id %}" method="post">
+          {% csrf_token %}
+          <div class="d-grid">
+            <button type="submit" class="btn btn-success btn-lg">
+              <i class="bi bi-cart-check"></i> {% trans "Buy Now" %}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
     <div class="col-lg-6">
       <h1>{{ product.name }}</h1>
@@ -467,6 +528,7 @@
       </ul>
       <div class="tab-content" id="myTabContent">
         <div class="tab-pane fade show active" id="specification" role="tabpanel" aria-labelledby="specification-tab">
+          <div class="table-responsive">
           <table class="table table-striped mt-3">
             <tbody>
               {% for spec_name, spec_value in product.get_specifications.items %}
@@ -477,7 +539,9 @@
               {% endfor %}
             </tbody>
           </table>
+          </div>
           <h3 class="mt-4">{% trans "Additional Specifications" %}</h3>
+          <div class="table-responsive">
           <table class="table table-striped mt-3">
             <tbody>
               {% for spec_name, spec_value in product.get_additional_specifications.items %}
@@ -488,6 +552,7 @@
               {% endfor %}
             </tbody>
           </table>
+          </div>
         </div>
         <div class="tab-pane fade" id="reviews" role="tabpanel" aria-labelledby="reviews-tab">
           <div class="row mt-4">
@@ -643,7 +708,7 @@
         alt="A 3D model of {{ product.name }}" 
         auto-rotate camera-controls ar ar-modes="webxr scene-viewer quick-look" 
         shadow-intensity="1" environment-image="neutral" exposure="1" 
-        style="width: 100%; height: 450px; background-color: #f8f9fa; border-radius: 8px;">
+        style="width: 100%; height: 450px; background-color: var(--bg-body); border-radius: 8px;">
       <div class="progress-bar hide" slot="progress-bar">
         <div class="update-bar"></div>
       </div>
@@ -672,10 +737,16 @@
               <img src="{% static 'assets/img/placeholder.png' %}" class="card-img-top" alt="{{ related_product.name }}">
               {% endif %}
             {% endwith %}
-            <div class="card-body">
+            <div class="card-body d-flex flex-column">
               <h5 class="card-title">{{ related_product.name }}</h5>
               <p class="card-text">GH₵{{ related_product.price }}</p>
-              <a href="{{ related_product.get_absolute_url }}" class="btn btn-primary">{% trans "View Details" %}</a>
+              <div class="d-flex gap-2 mt-auto">
+                  <a href="{{ related_product.get_absolute_url }}" class="btn btn-primary flex-grow-1">{% trans "View" %}</a>
+                  <form action="{% url 'core:add_to_cart' related_product.id %}" method="post" class="flex-grow-1">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-success w-100">{% trans "Buy" %}</button>
+                  </form>
+              </div>
             </div>
           </div>
         </div>

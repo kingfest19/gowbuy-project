@@ -1,72 +1,336 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static i18n %}
+
+{% block title %}{{ vendor.name }} - NEXUS{% endblock title %}
+
+{% block extra_css %}
+<style>
+    .vendor-header-card {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2.5rem;
+        margin-bottom: 2.5rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        position: relative;
+        overflow: hidden;
+    }
+    .vendor-header-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 6px;
+        background: linear-gradient(90deg, var(--accent-color), #00d2ff);
+    }
+    .vendor-logo-large {
+        width: 140px;
+        height: 140px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 5px solid var(--bg-surface);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        background-color: #fff;
+    }
+    .vendor-stat-box {
+        background-color: var(--bg-body);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        text-align: center;
+        border: 1px solid var(--border-color);
+        transition: transform 0.2s;
+        min-width: 100px;
+    }
+    .vendor-stat-box:hover {
+        transform: translateY(-3px);
+        border-color: var(--accent-color);
+    }
+    .vendor-stat-box h5 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin-bottom: 0;
+        color: var(--text-main);
+    }
+    .vendor-stat-box small {
+        color: var(--text-muted);
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Product Card Styles (matching home.html/product_detail.html) */
+    .product-card {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        border-color: var(--accent-color);
+    }
+    .product-card img {
+        height: 220px;
+        object-fit: contain;
+        padding: 1.5rem;
+        background-color: #fff; /* Keep white for product images */
+        border-bottom: 1px solid var(--border-color);
+        transition: transform 0.3s ease;
+    }
+    .product-card:hover img {
+        transform: scale(1.05);
+    }
+    .product-card .card-body {
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+    .product-card .card-title {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 0.5rem;
+        line-height: 1.4;
+    }
+    .product-card .card-text {
+        color: var(--accent-color);
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* Social Buttons */
+    .social-btn {
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background-color: var(--bg-body);
+        color: var(--text-muted);
+        transition: all 0.2s;
+        border: 1px solid var(--border-color);
+        text-decoration: none;
+    }
+    .social-btn:hover {
+        background-color: var(--accent-color);
+        color: #fff;
+        border-color: var(--accent-color);
+        transform: translateY(-2px);
+    }
+
+    /* Tabs */
+    .nav-tabs {
+        border-bottom: 2px solid var(--border-color);
+        margin-bottom: 2rem;
+        gap: 1rem;
+    }
+    .nav-tabs .nav-link {
+        border: none;
+        color: var(--text-muted);
+        font-weight: 600;
+        padding: 0.75rem 0;
+        background: transparent;
+        position: relative;
+        transition: color 0.3s;
+    }
+    .nav-tabs .nav-link:hover {
+        color: var(--text-main);
+    }
+    .nav-tabs .nav-link.active {
+        color: var(--accent-color);
+        background: transparent;
+    }
+    .nav-tabs .nav-link.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background-color: var(--accent-color);
+        border-radius: 2px;
+    }
+    .tab-content {
+        padding: 2rem 0;
+    }
+
+    /* Mobile Grid Adjustments */
+    @media (max-width: 576px) {
+        .product-card img {
+            height: 150px;
+            padding: 0.5rem;
+        }
+        .product-card .card-body {
+            padding: 0.75rem;
+        }
+        .product-card .card-title {
+            font-size: 0.9rem;
+        }
+        .product-card .card-text {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+    }
+</style>
+{% endblock extra_css %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row">
-        <div class="col-md-4">
-            {% if vendor.logo %}
-                <img src="{{ vendor.logo.url }}" class="img-fluid rounded-circle" alt="{{ vendor.name }} logo">
-            {% else %}
-                <img src="{% static 'path/to/default-vendor-logo.png' %}" class="img-fluid rounded-circle" alt="Default vendor logo">
-            {% endif %}
-        </div>
-        <div class="col-md-8">
-            <h1>{{ vendor.name }}</h1>
-            <p>{{ vendor.description }}</p>
-            <p><strong>Contact:</strong> {{ vendor.contact_email }}</p>
+<div class="container my-5">
+    <!-- Vendor Header -->
+    <div class="vendor-header-card">
+        <div class="row align-items-center">
+            <div class="col-md-auto text-center text-md-start mb-3 mb-md-0">
+                {% if vendor.logo %}
+                    <img src="{{ vendor.logo.url }}" alt="{{ vendor.name }}" class="vendor-logo-large">
+                {% else %}
+                    <img src="{% static 'assets/img/placeholder.png' %}" alt="{{ vendor.name }}" class="vendor-logo-large">
+                {% endif %}
+            </div>
+            <div class="col-md">
+                <div class="text-center text-md-start">
+                    <h1 class="fw-bold mb-1">{{ vendor.name }}</h1>
+                    <p class="text-muted mb-2">
+                        <i class="bi bi-geo-alt-fill"></i> {{ vendor.location_city }}, {{ vendor.location_country }}
+                        {% if vendor.is_verified %}
+                            <span class="badge bg-success ms-2"><i class="bi bi-check-circle-fill"></i> {% trans "Verified" %}</span>
+                        {% endif %}
+                    </p>
+                    <div class="d-flex justify-content-center justify-content-md-start gap-2">
+                        {% if request.user.is_authenticated and request.user != vendor.user %}
+                            <a href="{% url 'core:start_conversation' product_id=0 %}?vendor_id={{ vendor.id }}" class="btn btn-primary btn-sm rounded-pill px-4">
+                                <i class="bi bi-chat-dots-fill me-2"></i>{% trans "Contact" %}
+                            </a>
+                        {% endif %}
+                        <!-- Social Links -->
+                        {% if vendor.website_url %}
+                            <a href="{{ vendor.website_url }}" target="_blank" class="social-btn"><i class="bi bi-globe"></i></a>
+                        {% endif %}
+                        {% if vendor.facebook_url %}
+                            <a href="{{ vendor.facebook_url }}" target="_blank" class="social-btn"><i class="bi bi-facebook"></i></a>
+                        {% endif %}
+                        {% if vendor.instagram_url %}
+                            <a href="{{ vendor.instagram_url }}" target="_blank" class="social-btn"><i class="bi bi-instagram"></i></a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-auto mt-4 mt-md-0">
+                <div class="d-flex justify-content-center gap-3">
+                    <div class="vendor-stat-box">
+                        <h5>{{ vendor.products.count }}</h5>
+                        <small>{% trans "Products" %}</small>
+                    </div>
+                    <div class="vendor-stat-box">
+                        <h5>{{ vendor.average_rating|default:"0.0" }}</h5>
+                        <small>{% trans "Rating" %}</small>
+                    </div>
+                    <div class="vendor-stat-box">
+                        <h5>{{ vendor.created_at|timesince }}</h5>
+                        <small>{% trans "On Nexus" %}</small>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="mt-5">
-        <h2>Products from this Vendor</h2>
-        <div class="row">
-            {% for product in products %}
-                <div class="col-md-4 mb-4">
-                    <div class="card">
-                        <img src="{{ product.images.first.image.url }}" class="card-img-top" alt="{{ product.name }}">
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs" id="vendorTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button" role="tab">{% trans "Products" %}</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="about-tab" data-bs-toggle="tab" data-bs-target="#about" type="button" role="tab">{% trans "About" %}</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="policies-tab" data-bs-toggle="tab" data-bs-target="#policies" type="button" role="tab">{% trans "Policies" %}</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="vendorTabsContent">
+        <!-- Products Tab -->
+        <div class="tab-pane fade show active" id="products" role="tabpanel">
+            <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 g-md-4">
+                {% for product in products %}
+                <div class="col">
+                    <div class="product-card h-100">
+                        <a href="{{ product.get_absolute_url }}">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" loading="lazy">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" class="card-img-top" alt="{{ product.name }}" loading="lazy">
+                            {% endif %}
+                        </a>
                         <div class="card-body">
-                            <h5 class="card-title">{{ product.name }}</h5>
-                            <p class="card-text">{{ product.price }}</p>
-                            <a href="{{ product.get_absolute_url }}" class="btn btn-primary">View Product</a>
+                            <h5 class="card-title">
+                                <a href="{{ product.get_absolute_url }}" class="text-decoration-none text-reset">{{ product.name|truncatechars:40 }}</a>
+                            </h5>
+                            <p class="card-text">GH₵ {{ product.price }}</p>
+                            <div class="mt-auto d-flex gap-2">
+                                <a href="{{ product.get_absolute_url }}" class="btn btn-outline-primary btn-sm flex-grow-1">{% trans "View" %}</a>
+                                <form action="{% url 'core:add_to_cart' product.id %}" method="post" class="flex-grow-1">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success btn-sm w-100">{% trans "Buy" %}</button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
-            {% empty %}
-                <p>No products found for this vendor.</p>
-            {% endfor %}
+                {% empty %}
+                <div class="col-12 text-center py-5">
+                    <p class="text-muted">{% trans "No products found for this vendor." %}</p>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination (if applicable) -->
+            {% if is_paginated %}
+            <div class="mt-4">
+                <!-- Pagination controls here -->
+            </div>
+            {% endif %}
         </div>
-    </div>
 
-    <div class="mt-5">
-        <h2>Reviews for {{ vendor.name }}</h2>
-        {% if reviews %}
-            <p>Average Rating: {{ average_rating|floatformat:1 }}/5.0</p>
-            {% for review in reviews %}
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ review.user.username }} - {{ review.rating }} stars</h5>
-                        <p class="card-text">{{ review.comment }}</p>
-                        <small class="text-muted">{{ review.created_at|date:"F d, Y" }}</small>
+        <!-- About Tab -->
+        <div class="tab-pane fade" id="about" role="tabpanel">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h4 class="mb-3">{% trans "About" %} {{ vendor.name }}</h4>
+                    <p>{{ vendor.description|linebreaks }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Policies Tab -->
+        <div class="tab-pane fade" id="policies" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="bi bi-truck me-2"></i>{% trans "Shipping Policy" %}</h5>
+                            <p class="card-text">{{ vendor.shipping_policy|default:"No specific shipping policy provided."|linebreaks }}</p>
+                        </div>
                     </div>
                 </div>
-            {% endfor %}
-        {% else %}
-            <p>No reviews yet for this vendor.</p>
-        {% endif %}
-    </div>
-
-    <div class="mt-5">
-        <h3>Leave a Review for {{ vendor.name }}</h3>
-        {% if user.is_authenticated %}
-            <form method="post" action="{% url 'core:submit_vendor_review' vendor.id %}">
-                {% csrf_token %}
-                {{ review_form.as_p }}
-                <button type="submit" class="btn btn-primary">Submit Review</button>
-            </form>
-        {% else %}
-            <p>Please <a href="{% url 'authapp:signin' %}?next={{ request.path }}">log in</a> to leave a review.</p>
-        {% endif %}
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="bi bi-arrow-counterclockwise me-2"></i>{% trans "Return Policy" %}</h5>
+                            <p class="card-text">{{ vendor.return_policy|default:"No specific return policy provided."|linebreaks }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

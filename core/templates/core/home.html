@@ -374,7 +374,13 @@
                     <p class="service-price-flat mb-2">
                         GH₵ {{ product.price|floatformat:2 }}
                     </p>
-                    <a href="{{ product.get_absolute_url }}" class="btn btn-sm btn-outline-primary w-100 btn-details-flat">{% trans "View Details" %}</a>
+                    <div class="d-flex gap-2 btn-details-flat w-100">
+                        <a href="{{ product.get_absolute_url }}" class="btn btn-sm btn-outline-primary flex-grow-1">{% trans "View" %}</a>
+                        <form action="{% url 'core:add_to_cart' product.id %}" method="post" class="flex-grow-1">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success w-100">{% trans "Buy" %}</button>
+                        </form>
+                    </div>
                 </div>
             </div>
             {% endfor %}
@@ -589,7 +595,13 @@
                     <p class="service-price-flat mb-2">
                         GH₵ {{ product.price|floatformat:2 }}
                     </p>
-                    <a href="{{ product.get_absolute_url }}" class="btn btn-sm btn-outline-primary w-100 btn-details-flat">{% trans "View Details" %}</a>
+                    <div class="d-flex gap-2 btn-details-flat w-100">
+                        <a href="{{ product.get_absolute_url }}" class="btn btn-sm btn-outline-primary flex-grow-1">{% trans "View" %}</a>
+                        <form action="{% url 'core:add_to_cart' product.id %}" method="post" class="flex-grow-1">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success w-100">{% trans "Buy" %}</button>
+                        </form>
+                    </div>
                 </div>
             </div>
             {% endfor %}
@@ -643,7 +655,13 @@
                     <p class="service-price-flat mb-2">
                         GH₵ {{ product.price|floatformat:2 }}
                     </p>
-                    <a href="{{ product.get_absolute_url }}" class="btn btn-sm btn-outline-primary w-100 btn-details-flat">{% trans "View Again" %}</a>
+                    <div class="d-flex gap-2 btn-details-flat w-100">
+                        <a href="{{ product.get_absolute_url }}" class="btn btn-sm btn-outline-primary flex-grow-1">{% trans "View" %}</a>
+                        <form action="{% url 'core:add_to_cart' product.id %}" method="post" class="flex-grow-1">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-success w-100">{% trans "Buy" %}</button>
+                        </form>
+                    </div>
                 </div>
             </div>
             {% endfor %}
