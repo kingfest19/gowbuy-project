@@ -269,6 +269,9 @@ CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
     'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
     'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
+    # Add this line for automatic optimization:
+    'EXCLUDE_DELETE_ORPHANED_MEDIA_PATHS': (), # Optional: prevents accidental deletion of folders
+    'MAGIC_FILE_PATH': 'magic', # Required for content-type detection in some setups
 }
 
 
