@@ -62,9 +62,7 @@
             border-radius: 0.25rem;
             margin-bottom: 1rem;
             background-color: #fff;
-            padding: 1rem;
             padding: 10px;
-
         }
         .service-item-flat h5 a, .vendor-item-flat h5 a {
             color: var(--text-main);
@@ -98,26 +96,67 @@
         /* Quick View Button Styles */
         .image-container {
             position: relative;
+            overflow: visible;
         }
-        .quick-view-btn {
+        .image-container a {
+            display: block;
+        }
+        .hover-btns {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            display: flex;
+            gap: 0.5rem;
             opacity: 0;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            z-index: 2;
-            white-space: nowrap;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 100;
         }
-        .service-item-flat:hover .quick-view-btn {
+        .service-item-flat:hover .hover-btns {
             opacity: 1;
+            visibility: visible;
+        }
+        .hover-btn {
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
         }
         
         /* Dark Mode Footer Logo Fix */
         [data-theme="dark"] .footer-logo-area img {
-            filter: brightness(0) invert(1);
+            filter: invert(1);
+            mix-blend-mode: screen;
             opacity: 0.9;
+        }
+
+        /* --- NEW: Horizontal Scroll / Carousel Styles --- */
+        .horizontal-scroll-wrapper {
+            display: flex;
+            overflow-x: auto;
+            gap: 1rem;
+            padding-bottom: 1rem; /* Space for scrollbar/shadow */
+            margin-bottom: 1rem;
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            scroll-snap-type: x mandatory;
+            scrollbar-width: thin;
+        }
+        
+        .horizontal-scroll-wrapper::-webkit-scrollbar {
+            height: 6px;
+        }
+        .horizontal-scroll-wrapper::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .horizontal-scroll-wrapper::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 10px;
+        }
+
+        .horizontal-scroll-item {
+            flex: 0 0 auto;
+            width: 260px; /* Default Desktop Width */
+            scroll-snap-align: start;
         }
 
         /* Mobile Responsiveness Adjustments */
@@ -128,33 +167,76 @@
             .carousel-inner, .carousel-item img {
                 height: 220px !important;
             }
-            /* Mobile Navbar Optimization */
-            nav {
-                padding: 0.4rem 0.5rem !important;
-                transition: padding 0.3s ease;
+
+            /* Mobile Carousel Adjustments */
+            .horizontal-scroll-wrapper {
+                gap: 0.75rem;
+                padding-left: 0.5rem; /* Slight padding on left */
+                padding-right: 0.5rem;
             }
-            /* Smooth Search Bar Transition */
-            .search-form {
-                transition: width 0.3s ease-in-out, margin 0.3s ease-in-out;
+
+            .horizontal-scroll-item {
+                width: 130px; /* Fits ~3 items on typical mobile screens */
             }
-            .nav-logo img, nav > a > img {
-                max-height: 35px;
+
+            /* Compact Card Styles for Mobile */
+            .service-item-flat, .vendor-item-flat {
+                padding: 0.5rem !important;
+                min-height: 100%;
             }
-            nav.scrolled {
-                padding: 0.2rem 0.5rem !important;
+            
+            .service-item-flat img, .vendor-item-flat img {
+                height: 100px !important; /* Smaller image */
+                padding: 5px !important;
+                margin-bottom: 0.5rem !important;
             }
-            nav.scrolled .nav-logo,
-            nav.scrolled > a,
-            nav.scrolled img,
-            nav.scrolled .nav-cart,
-            nav.scrolled .nav-text,
-            nav.scrolled .nav-country,
-            nav.scrolled .nav-language {
-                display: none !important;
+
+            .service-item-flat h5, .vendor-item-flat h5 {
+                font-size: 0.85rem;
+                line-height: 1.2;
+                margin-bottom: 0.25rem !important;
+                height: 2.4em; /* Limit to 2 lines */
+                overflow: hidden;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
             }
-            nav.scrolled .search-form {
-                width: 100% !important;
-                margin: 0 !important;
+
+            .provider-info {
+                font-size: 0.7rem;
+                margin-bottom: 0.25rem !important;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .service-description-flat {
+                display: none; /* Hide description on mobile to save space */
+            }
+
+            .service-price-flat {
+                font-size: 0.9rem;
+                margin-bottom: 0.5rem !important;
+            }
+
+            .btn-details-flat {
+                padding: 0.2rem 0.5rem;
+                font-size: 0.75rem;
+            }
+
+            /* Show hover buttons on mobile (on touch/active) */
+            .hover-btns {
+                display: flex !important;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            
+            /* Adjust Category Cards for Mobile Carousel */
+            .category-card img {
+                height: 60px; /* Smaller category images */
+                width: 60px;
+            }
+            .category-card h5 {
+                font-size: 0.8rem;
             }
         }
     </style>
@@ -220,13 +302,38 @@
 
 <div class="container my-4">
 
+    <!-- Shop by Category Section -->
+    {% if top_categories %} 
+    <section class="category-section mb-5">
+        <h2 class="section-title">{% trans "Shop by Category" %}</h2>
+        <!-- Also using horizontal scroll for categories on mobile -->
+        <div class="horizontal-scroll-wrapper">
+            {% for category in top_categories %}
+            <div class="horizontal-scroll-item" style="width: 140px;"> <!-- Slightly wider for categories -->
+                <div class="category-card h-100">
+                    <a href="{{ category.get_absolute_url }}">
+                        {% if category.image %}
+                            <img src="{{ category.image.url }}" alt="{{ category.name }}">
+                        {% else %}
+                            <img src="{% static 'assets/img/placeholder_category.png' %}" alt="{{ category.name }}">
+                        {% endif %}
+                        <h5>{{ category.name }}</h5>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
     <!-- Featured Products Section -->
     {% if featured_products %}
     <section class="mb-5">
         <h2 class="section-title">{% trans "Featured Products" %}</h2>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        <!-- Changed to horizontal-scroll-wrapper -->
+        <div class="horizontal-scroll-wrapper">
             {% for product in featured_products %}
-            <div class="col">
+            <div class="horizontal-scroll-item">
                 <div class="service-item-flat">
                     <div class="image-container">
                         <a href="{{ product.get_absolute_url }}">
@@ -238,7 +345,24 @@
                                 {% endif %}
                             {% endwith %}
                         </a>
-                        <button class="btn btn-light btn-sm rounded-pill quick-view-btn" title="{% trans 'Quick View' %}"><i class="bi bi-eye"></i> {% trans "Quick View" %}</button>
+                        <div class="hover-btns">
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn" 
+                                    title="{% trans 'Quick View' %}"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#quickViewModal"
+                                    data-name="{{ product.name }}"
+                                    data-price="{{ product.price }}"
+                                    data-category="{{ product.category.name }}"
+                                    data-description="{{ product.description|striptags|truncatewords:20 }}"
+                                    data-url="{{ product.get_absolute_url }}"
+                                    data-image="{% if product.images.first.image %}{{ product.images.first.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                                    data-product-id="{{ product.id }}">
+                                <i class="bi bi-eye"></i> {% trans "Quick View" %}
+                            </button>
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </button>
+                        </div>
                     </div>
                     <h5 class="mb-1">
                         <a href="{{ product.get_absolute_url }}" class="stretched-link">{{ product.name|truncatechars:50 }}</a>
@@ -258,36 +382,173 @@
     </section>
     {% endif %}
 
-    <!-- Shop by Category Section -->
-    {% if top_categories %} 
-    <section class="category-section mb-5">
-        <h2 class="section-title">{% trans "Shop by Category" %}</h2>
-        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3 justify-content-center">
-            {% for category in top_categories %}
-            <div class="col">
-                <div class="category-card">
-                    <a href="{{ category.get_absolute_url }}">
-                        {% if category.image %}
-                            <img src="{{ category.image.url }}" alt="{{ category.name }}">
-                        {% else %}
-                            <img src="{% static 'assets/img/placeholder_category.png' %}" alt="{{ category.name }}">
-                        {% endif %}
-                        <h5>{{ category.name }}</h5>
-                    </a>
+    <!-- Deal of the Day Section -->
+    <section class="mb-5">
+        <div class="deal-of-day-card">
+            <div class="row g-0 align-items-center">
+                <div class="col-md-6">
+                    <div class="deal-image-container">
+                        <!-- Placeholder image - replace with dynamic deal image later -->
+                        <img src="{% static 'assets/img/placeholder.png' %}" alt="Deal of the Day" class="img-fluid">
+                        <div class="deal-badge">{% trans "DEAL OF THE DAY" %}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="deal-content p-4 p-lg-5">
+                        <h2 class="deal-title mb-3">{% trans "Premium Wireless Headphones" %}</h2>
+                        <p class="deal-description mb-4">{% trans "Immerse yourself in high-fidelity sound with active noise cancelling technology. Limited stock available at this exclusive price." %}</p>
+                        
+                        <div class="deal-price-box mb-4">
+                            <span class="current-price">GH₵ 250.00</span>
+                            <span class="original-price">GH₵ 450.00</span>
+                            <span class="discount-badge">-45%</span>
+                        </div>
+
+                        <div class="countdown-timer mb-4" id="dealCountdown">
+                            <div class="timer-block">
+                                <span class="time" id="days">00</span>
+                                <span class="label">{% trans "Days" %}</span>
+                            </div>
+                            <div class="timer-block">
+                                <span class="time" id="hours">00</span>
+                                <span class="label">{% trans "Hrs" %}</span>
+                            </div>
+                            <div class="timer-block">
+                                <span class="time" id="minutes">00</span>
+                                <span class="label">{% trans "Mins" %}</span>
+                            </div>
+                            <div class="timer-block">
+                                <span class="time" id="seconds">00</span>
+                                <span class="label">{% trans "Secs" %}</span>
+                            </div>
+                        </div>
+
+                        <a href="#" class="btn btn-primary btn-lg w-100 rounded-pill">{% trans "Shop Now" %}</a>
+                    </div>
                 </div>
             </div>
-            {% endfor %}
         </div>
     </section>
-    {% endif %}
+
+    <!-- Discovery Quadrant Section (New) -->
+    <section class="mb-5">
+        <h2 class="section-title">{% trans "Explore More" %}</h2>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+            
+            <!-- Card 1: Video Games -->
+            <div class="col">
+                <div class="quadrant-card">
+                    <h3>{% trans "Video games & accessories" %}</h3>
+                    <div class="quadrant-grid">
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="PC">
+                            <span>PC</span>
+                        </a>
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Nintendo Switch">
+                            <span>Nintendo Switch</span>
+                        </a>
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="PS5">
+                            <span>PS5</span>
+                        </a>
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Xbox">
+                            <span>Xbox</span>
+                        </a>
+                    </div>
+                    <a href="#" class="quadrant-footer-link">{% trans "Explore now" %}</a>
+                </div>
+            </div>
+
+            <!-- Card 2: Electronics -->
+            <div class="col">
+                <div class="quadrant-card">
+                    <h3>{% trans "Discounted Electronics" %}</h3>
+                    <div class="quadrant-grid">
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Laptops">
+                            <span>Laptops</span>
+                        </a>
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Components">
+                            <span>Components</span>
+                        </a>
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Tablets">
+                            <span>Tablets</span>
+                        </a>
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="All Electronics">
+                            <span>All Electronics</span>
+                        </a>
+                    </div>
+                    <a href="#" class="quadrant-footer-link">{% trans "Shop now" %}</a>
+                </div>
+            </div>
+
+            <!-- Card 3: Fashion -->
+            <div class="col">
+                <div class="quadrant-card">
+                    <h3>{% trans "End-of-season savings" %}</h3>
+                    <div class="quadrant-grid">
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Men">
+                            <span>Men</span>
+                        </a>
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Women">
+                            <span>Women</span>
+                        </a>
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Girls">
+                            <span>Girls</span>
+                        </a>
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Boys">
+                            <span>Boys</span>
+                        </a>
+                    </div>
+                    <a href="#" class="quadrant-footer-link">{% trans "Discover more" %}</a>
+                </div>
+            </div>
+
+            <!-- Card 4: Refurbished -->
+            <div class="col">
+                <div class="quadrant-card">
+                    <h3>{% trans "Refurbished computers" %}</h3>
+                    <div class="quadrant-grid">
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Laptops">
+                            <span>Laptops</span>
+                        </a>
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Desktops">
+                            <span>Desktops</span>
+                        </a>
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Monitors">
+                            <span>Monitors</span>
+                        </a>
+                        <a href="#" class="quadrant-item">
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Accessories">
+                            <span>Accessories</span>
+                        </a>
+                    </div>
+                    <a href="#" class="quadrant-footer-link">{% trans "See more" %}</a>
+                </div>
+            </div>
+
+        </div>
+    </section>
 
     <!-- New Arrivals Section -->
     {% if new_arrivals %}
     <section class="mb-5">
         <h2 class="section-title">{% trans "New Arrivals" %}</h2>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        <div class="horizontal-scroll-wrapper">
             {% for product in new_arrivals %}
-            <div class="col">
+            <div class="horizontal-scroll-item">
                 <div class="service-item-flat">
                     <div class="image-container">
                         <a href="{{ product.get_absolute_url }}">
@@ -299,7 +560,24 @@
                                 {% endif %}
                             {% endwith %}
                         </a>
-                        <button class="btn btn-light btn-sm rounded-pill quick-view-btn" title="{% trans 'Quick View' %}"><i class="bi bi-eye"></i> {% trans "Quick View" %}</button>
+                        <div class="hover-btns">
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn" 
+                                    title="{% trans 'Quick View' %}"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#quickViewModal"
+                                    data-name="{{ product.name }}"
+                                    data-price="{{ product.price }}"
+                                    data-category="{{ product.category.name }}"
+                                    data-description="{{ product.description|striptags|truncatewords:20 }}"
+                                    data-url="{{ product.get_absolute_url }}"
+                                    data-image="{% if product.images.first.image %}{{ product.images.first.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                                    data-product-id="{{ product.id }}">
+                                <i class="bi bi-eye"></i> {% trans "Quick View" %}
+                            </button>
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </button>
+                        </div>
                     </div>
                     <h5 class="mb-1">
                         <a href="{{ product.get_absolute_url }}" class="stretched-link">{{ product.name|truncatechars:50 }}</a>
@@ -323,9 +601,9 @@
     {% if user.is_authenticated and recently_viewed %}
     <section class="mb-5">
         <h2 class="section-title">{% trans "Recently Viewed" %}</h2>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        <div class="horizontal-scroll-wrapper">
             {% for product in recently_viewed %}
-            <div class="col">
+            <div class="horizontal-scroll-item">
                 <div class="service-item-flat">
                     <div class="image-container">
                         <a href="{{ product.get_absolute_url }}">
@@ -337,7 +615,24 @@
                                 {% endif %}
                             {% endwith %}
                         </a>
-                        <button class="btn btn-light btn-sm rounded-pill quick-view-btn" title="{% trans 'Quick View' %}"><i class="bi bi-eye"></i> {% trans "Quick View" %}</button>
+                        <div class="hover-btns">
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn" 
+                                    title="{% trans 'Quick View' %}"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#quickViewModal"
+                                    data-name="{{ product.name }}"
+                                    data-price="{{ product.price }}"
+                                    data-category="{{ product.category.name }}"
+                                    data-description="{{ product.description|striptags|truncatewords:20 }}"
+                                    data-url="{{ product.get_absolute_url }}"
+                                    data-image="{% if product.images.first.image %}{{ product.images.first.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                                    data-product-id="{{ product.id }}">
+                                <i class="bi bi-eye"></i> {% trans "Quick View" %}
+                            </button>
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </button>
+                        </div>
                     </div>
                     <h5 class="mb-1">
                         <a href="{{ product.get_absolute_url }}" class="stretched-link">{{ product.name|truncatechars:50 }}</a>
@@ -360,9 +655,9 @@
     {% if featured_services %}
     <section class="mb-5">
         <h2 class="section-title">{% trans "Featured Services" %}</h2>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        <div class="horizontal-scroll-wrapper">
             {% for service in featured_services %}
-            <div class="col">
+            <div class="horizontal-scroll-item">
                 <div class="service-item-flat">
                     <a href="{{ service.get_absolute_url }}">
                         {% with first_image=service.images.first %}
@@ -397,9 +692,9 @@
     {% if top_vendors %}
     <section class="mb-5">
         <h2 class="section-title">{% trans "Top Rated Vendors" %}</h2>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        <div class="horizontal-scroll-wrapper">
             {% for vendor in top_vendors %}
-            <div class="col">
+            <div class="horizontal-scroll-item">
                 <div class="vendor-item-flat text-center">
                     <a href="{{ vendor.get_absolute_url }}">
                         {% if vendor.logo %}
@@ -424,6 +719,23 @@
         </div>
     </section>
     {% endif %}
+
+    <!-- Brand Spotlight Section -->
+    <section class="mb-5">
+        <h2 class="section-title">{% trans "Brand Spotlight" %}</h2>
+        <div class="slider" style="--width: 150px; --height: 100px; --quantity: 8; background-color: transparent;">
+            <div class="list">
+                <div class="item" style="--position: 1"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-apple fa-3x text-dark"></i></div></div>
+                <div class="item" style="--position: 2"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-google fa-3x text-primary"></i></div></div>
+                <div class="item" style="--position: 3"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-microsoft fa-3x text-info"></i></div></div>
+                <div class="item" style="--position: 4"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-amazon fa-3x text-warning"></i></div></div>
+                <div class="item" style="--position: 5"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-samsung fa-3x text-primary"></i></div></div>
+                <div class="item" style="--position: 6"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-sony fa-3x text-dark"></i></div></div>
+                <div class="item" style="--position: 7"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-lg fa-3x text-danger"></i></div></div>
+                <div class="item" style="--position: 8"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fas fa-laptop fa-3x text-secondary"></i></div></div>
+            </div>
+        </div>
+    </section>
 
     <!-- "How It Works" Section -->
     <section class="mb-5 py-4 rounded" style="background-color: var(--bg-surface); border: 1px solid var(--border-color);">
@@ -454,6 +766,7 @@
     </section>
 
     <!-- Become a Provider/Vendor CTA Section -->
+    {% if not user.is_authenticated or not user.vendor_profile %}
     <section class="my-5">
         <div class="cta-provider-section">
             <h2 class="display-5 fw-bold">{% trans "Sell Your Products or Skills on NEXUS?" %}</h2>
@@ -463,6 +776,56 @@
             </a>
         </div>
     </section>
+    {% endif %}
+
+    <!-- Floating Compare Button -->
+    <a href="#" id="compareFloatingBtn" class="compare-floating-btn" title="{% trans 'Compare Selected Items' %}">
+        <i class="bi bi-arrow-left-right"></i>
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="compareFloatingBadge">
+            0
+        </span>
+    </a>
+
+    <!-- Quick View Modal -->
+    <div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pb-5">
+                    <div class="row">
+                        <div class="col-md-6 text-center">
+                            <div class="position-relative" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
+                                <div id="quickViewSpinner" class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <img id="quickViewImage" src="" class="img-fluid rounded" alt="Product Image" style="max-height: 400px; object-fit: contain; display: none;" onload="this.style.display='block'; document.getElementById('quickViewSpinner').style.display='none';">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h3 id="quickViewTitle" class="fw-bold"></h3>
+                            <p class="text-muted mb-2"><i class="bi bi-tag-fill"></i> <span id="quickViewCategory"></span></p>
+                            <h4 class="text-primary fw-bold mb-3" id="quickViewPrice"></h4>
+                            <p class="mb-4" id="quickViewDescription"></p>
+                            <form id="quickViewAddToCartForm" method="post" action="">
+                                {% csrf_token %}
+                                <div class="d-flex align-items-center mb-3">
+                                    <label for="quickViewQuantity" class="me-2 fw-bold">{% trans "Qty:" %}</label>
+                                    <input type="number" class="form-control" id="quickViewQuantity" name="quantity" value="1" min="1" style="width: 80px;">
+                                </div>
+                                <div class="d-flex gap-2 mb-3">
+                                    <button type="submit" class="btn btn-success flex-grow-1"><i class="bi bi-cart-plus"></i> {% trans "Add to Cart" %}</button>
+                                    <a id="quickViewWishlistBtn" href="#" class="btn btn-outline-danger" title="{% trans 'Add to Wishlist' %}"><i class="bi bi-heart"></i></a>
+                                </div>
+                            </form>
+                            <a id="quickViewLink" href="#" class="btn btn-outline-primary w-100">{% trans "View Full Details" %}</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </div>
 {% endblock content %}
@@ -472,14 +835,147 @@
     {{ block.super }}
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            const navbar = document.querySelector('nav');
-            window.addEventListener('scroll', function() {
-                if (window.scrollY > 20) {
-                    navbar.classList.add('scrolled');
+            // Quick View Modal Logic
+            const quickViewModal = document.getElementById('quickViewModal');
+            if (quickViewModal) {
+                quickViewModal.addEventListener('show.bs.modal', function (event) {
+                    const button = event.relatedTarget;
+                    
+                    const name = button.getAttribute('data-name');
+                    const price = button.getAttribute('data-price');
+                    const image = button.getAttribute('data-image');
+                    const url = button.getAttribute('data-url');
+                    const category = button.getAttribute('data-category');
+                    const description = button.getAttribute('data-description');
+                    const productId = button.getAttribute('data-product-id');
+
+                    document.getElementById('quickViewTitle').textContent = name;
+                    document.getElementById('quickViewPrice').textContent = 'GH₵ ' + parseFloat(price).toFixed(2);
+                    document.getElementById('quickViewImage').src = image;
+                    document.getElementById('quickViewLink').href = url;
+                    document.getElementById('quickViewCategory').textContent = category;
+                    document.getElementById('quickViewDescription').textContent = description;
+                    
+                    // Reset Spinner and Image
+                    document.getElementById('quickViewSpinner').style.display = 'block';
+                    document.getElementById('quickViewImage').style.display = 'none';
+                    document.getElementById('quickViewImage').src = image;
+
+                    // Update Add to Cart Form Action
+                    // Note: Replace '/cart/add/' with your actual URL pattern if different
+                    const addToCartForm = document.getElementById('quickViewAddToCartForm');
+                    if (addToCartForm) {
+                        addToCartForm.action = `/add-to-cart/${productId}/`; 
+                    }
+
+                    // Update Wishlist Button URL
+                    const wishlistBtn = document.getElementById('quickViewWishlistBtn');
+                    if (wishlistBtn) {
+                        wishlistBtn.href = `/wishlist/add/${productId}/`;
+                    }
+                });
+            }
+
+            // --- Compare Logic ---
+            const compareKey = 'nexus_compare_list';
+            
+            function getCompareList() {
+                return JSON.parse(localStorage.getItem(compareKey)) || [];
+            }
+
+            function saveCompareList(list) {
+                localStorage.setItem(compareKey, JSON.stringify(list));
+            }
+
+            function updateCompareUI() {
+                const list = getCompareList();
+                const floatBtn = document.getElementById('compareFloatingBtn');
+                const badge = document.getElementById('compareFloatingBadge');
+
+                // Update Floating Button
+                if (list.length > 0) {
+                    floatBtn.style.display = 'flex';
+                    badge.textContent = list.length;
+                    floatBtn.href = `/compare/?ids=${list.join(',')}`; 
                 } else {
-                    navbar.classList.remove('scrolled');
+                    floatBtn.style.display = 'none';
+                }
+
+                // Update Individual Buttons
+                document.querySelectorAll('.compare-btn').forEach(btn => {
+                    const pid = btn.getAttribute('data-product-id');
+                    if (list.includes(pid)) {
+                        btn.classList.remove('btn-light');
+                        btn.classList.add('btn-primary'); // Active state color
+                    } else {
+                        btn.classList.add('btn-light');
+                        btn.classList.remove('btn-primary');
+                    }
+                });
+            }
+
+            // Event Delegation for Compare Buttons
+            document.body.addEventListener('click', function(e) {
+                const btn = e.target.closest('.compare-btn');
+                if (btn) {
+                    e.preventDefault();
+                    const pid = btn.getAttribute('data-product-id');
+                    let list = getCompareList();
+
+                    if (list.includes(pid)) {
+                        list = list.filter(id => id !== pid); // Remove
+                    } else {
+                        if (list.length >= 4) {
+                            alert("{% trans 'You can compare up to 4 products.' %}");
+                            return;
+                        }
+                        list.push(pid); // Add
+
+                        // Trigger Animation
+                        const floatBtn = document.getElementById('compareFloatingBtn');
+                        floatBtn.classList.remove('animate-bounce');
+                        void floatBtn.offsetWidth; // Trigger reflow
+                        floatBtn.classList.add('animate-bounce');
+                    }
+                    saveCompareList(list);
+                    updateCompareUI();
                 }
             });
+
+            // --- Deal of the Day Countdown Logic ---
+            function initDealCountdown(endDate) {
+                const daysEl = document.getElementById('days');
+                const hoursEl = document.getElementById('hours');
+                const minutesEl = document.getElementById('minutes');
+                const secondsEl = document.getElementById('seconds');
+                
+                if (!daysEl) return;
+
+                function updateTimer() {
+                    const now = new Date().getTime();
+                    const distance = endDate - now;
+
+                    if (distance < 0) {
+                        clearInterval(timerInterval);
+                        return;
+                    }
+
+                    daysEl.innerText = Math.floor(distance / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+                    hoursEl.innerText = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+                    minutesEl.innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+                    secondsEl.innerText = Math.floor((distance % (1000 * 60)) / 1000).toString().padStart(2, '0');
+                }
+
+                updateTimer();
+                const timerInterval = setInterval(updateTimer, 1000);
+            }
+            // Set deal end date to 24 hours from now for demonstration
+            const dealEndDate = new Date();
+            dealEndDate.setHours(dealEndDate.getHours() + 24);
+            initDealCountdown(dealEndDate.getTime());
+
+            // Initialize UI on load
+            updateCompareUI();
         });
     </script>
 {% endblock extra_js %}
