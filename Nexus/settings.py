@@ -271,26 +271,6 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
 }
 
-# Storage Configuration (Replaces STATICFILES_STORAGE and DEFAULT_FILE_STORAGE)
-STORAGES = {
-    "staticfiles": {
-        "BACKEND": "core.storage_backends.WhiteNoiseStaticFilesStorage",
-    },
-    "default": {
-        # Use Cloudinary for media in production, but local file system for development
-        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if not DEBUG else "django.core.files.storage.FileSystemStorage",
-    },
-}
-
-# Prevent crashes if a referenced static file is missing during collection
-WHITENOISE_MANIFEST_STRICT = False
-
-# Add this to help debug or potentially fix path issues
-WHITENOISE_KEEP_ONLY_HASHED_FILES = False
-
-# Legacy settings for compatibility with third-party apps (like django-cloudinary-storage)
-STATICFILES_STORAGE = STORAGES["staticfiles"]["BACKEND"]
-DEFAULT_FILE_STORAGE = STORAGES["default"]["BACKEND"]
 
 # core/static is automatically found because 'core' is in INSTALLED_APPS.
 # Adding it here causes duplicate file warnings.
@@ -606,3 +586,21 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# --- Storage Configuration ---
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "core.storage_backends.WhiteNoiseStaticFilesStorage",
+    },
+    "default": {
+        # Use Cloudinary for media in production, but local file system for development
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if not DEBUG else "django.core.files.storage.FileSystemStorage",
+    },
+}
+
+# Legacy settings for compatibility with third-party apps
+STATICFILES_STORAGE = STORAGES["staticfiles"]["BACKEND"]
+DEFAULT_FILE_STORAGE = STORAGES["default"]["BACKEND"]
+
+WHITENOISE_MANIFEST_STRICT = False
+WHITENOISE_KEEP_ONLY_HASHED_FILES = False
