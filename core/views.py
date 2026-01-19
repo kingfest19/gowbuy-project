@@ -23,7 +23,7 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.messages.views import SuccessMessageMixin
 from django import forms
 from django.contrib.sessions.models import Session # Added import
-from django.core.files.storage import FileSystemStorage
+from django.core.files.storage import FileSystemStorage, DefaultStorage
 from django.core.files.base import ContentFile # Added import
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib import messages
@@ -75,7 +75,7 @@ from .models import ( # Ensure UserProfile is imported
     RiderProfile, DeliveryTask, RiderApplication, ActiveRiderBoost, # Import RiderProfile, DeliveryTask, RiderApplication, ActiveRiderBoost
     BoostPackage,
     Service, ServiceCategory, ServicePackage, ServiceReview, ServiceProviderProfile, PortfolioItem, ProductQuestion, ProductAnswer, Coupon,
-    FraudReport,
+    FraudReport, NewsletterSubscriber,
 )
 from .forms import ( # Ensure RiderApplication is imported if needed by forms, but it's a model
     AddressForm, ProductReviewForm, VendorReviewForm,
@@ -461,7 +461,7 @@ class VendorDashboardView(LoginRequiredMixin, IsVendorMixin, TemplateView):
 
 # --- Multi-Step Vendor Verification ---
 class MultiStepVendorVerificationView(LoginRequiredMixin, IsVendorMixin, SessionWizardView):
-    file_storage = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'vendor_verification_temp'))
+    file_storage = DefaultStorage()
 
     form_list = [
         ("method", VerificationMethodSelectionForm),
@@ -2923,6 +2923,37 @@ def search_results(request):
     context = {'products': product_results, 'query': query}
     return render(request, 'core/search_results.html', context)
 
+def compare_products(request):
+    """
+    View to compare products.
+    Retrieves product IDs from URL query parameters (e.g., ?ids=1,2,3).
+    """
+    ids_str = request.GET.get('ids', '')
+    product_list = []
+
+    if ids_str:
+        try:
+            # Parse IDs, ensuring they are integers
+            ids = [int(i) for i in ids_str.split(',') if i.strip().isdigit()]
+            
+            if ids:
+                # Fetch products corresponding to the IDs
+                products = Product.objects.filter(id__in=ids, is_active=True)
+                
+                # Preserve the order of IDs as passed in the URL
+                products_dict = {p.id: p for p in products}
+                for pid in ids:
+                    if pid in products_dict:
+                        product_list.append(products_dict[pid])
+        except Exception as e:
+            logger.error(f"Error parsing product IDs for comparison: {e}")
+
+    context = {
+        'products': product_list,
+        'page_title': _("Compare Products"),
+    }
+    return render(request, 'core/compare_products.html', context)
+
 @csrf_exempt
 def paystack_callback(request):
     reference = request.GET.get('reference')
@@ -3589,6 +3620,15 @@ def edit_review(request, review_type, review_id):
 def delete_review(request, review_type, review_id):
     messages.info(request, _("Deleting reviews is not yet implemented."))
     return redirect('core:customer_review_list')
+
+class RecentComparisonsView(LoginRequiredMixin, TemplateView):
+    template_name = 'core/recent_comparisons.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _("Recent Comparisons")
+        context['active_page'] = 'recent_comparisons'
+        return context
 
 @login_required
 def render_rewards_page(request):
@@ -4808,3 +4848,18 @@ class LatestPostsFeed(Feed):
 
     def item_description(self, item):
         return truncatewords(item.content, 30)
+
+@require_POST
+def subscribe_newsletter(request):
+    email = request.POST.get('email')
+    if not email:
+        return JsonResponse({'status': 'error', 'message': 'Email is required.'}, status=400)
+    
+    try:
+        obj, created = NewsletterSubscriber.objects.get_or_create(email=email)
+        if created:
+            return JsonResponse({'status': 'success', 'message': 'Thanks for subscribing!'})
+        else:
+            return JsonResponse({'status': 'info', 'message': 'You are already subscribed.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': 'An error occurred. Please try again.'}, status=500)

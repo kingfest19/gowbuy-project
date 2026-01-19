@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Compare Products" %} - NEXUS{% endblock title %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="section-title mb-0">{% trans "Product Comparison" %}</h2>
+        {% if products|length > 1 %}
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="highlightDiffToggle">
+            <label class="form-check-label" for="highlightDiffToggle">{% trans "Highlight Differences" %}</label>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% if products %}
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-bordered text-center align-middle mb-0 bg-white">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 20%; vertical-align: middle;">{% trans "Features" %}</th>
+                    {% for product in products %}
+                    <th style="width: calc(80% / {{ products|length }});">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <a href="{{ product.get_absolute_url }}" class="text-decoration-none text-dark fw-bold mx-auto">
+                                {{ product.name|truncatechars:40 }}
+                            </a>
+                            <button class="btn btn-sm btn-link text-danger remove-compare-item p-0 ms-1" data-product-id="{{ product.id }}" title="{% trans 'Remove' %}">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </button>
+                        </div>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th scope="row" class="bg-light">{% trans "Image" %}</th>
+                    {% for product in products %}
+                    <td class="p-3">
+                        <a href="{{ product.get_absolute_url }}">
+                            {% if product.images.first %}
+                            <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="img-fluid rounded" style="max-height: 150px; object-fit: contain;">
+                            {% else %}
+                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Placeholder" class="img-fluid rounded" style="max-height: 150px; object-fit: contain;">
+                            {% endif %}
+                        </a>
+                    </td>
+                    {% endfor %}
+                </tr>
+                <tr class="compare-row">
+                    <th scope="row" class="bg-light">{% trans "Price" %}</th>
+                    {% for product in products %}
+                    <td class="fw-bold text-primary fs-5">GH₵ {{ product.price|floatformat:2 }}</td>
+                    {% endfor %}
+                </tr>
+                <tr class="compare-row">
+                    <th scope="row" class="bg-light">{% trans "Category" %}</th>
+                    {% for product in products %}
+                    <td><span class="badge bg-secondary">{{ product.category.name }}</span></td>
+                    {% endfor %}
+                </tr>
+                <tr class="compare-row">
+                    <th scope="row" class="bg-light">{% trans "Description" %}</th>
+                    {% for product in products %}
+                    <td class="text-start text-muted"><small>{{ product.description|striptags|truncatewords:25 }}</small></td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <th scope="row" class="bg-light">{% trans "Action" %}</th>
+                    {% for product in products %}
+                    <td>
+                        <form action="{% url 'cart:cart_add' product.id %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                <i class="bi bi-cart-plus"></i> {% trans "Add to Cart" %}
+                            </button>
+                        </form>
+                    </td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center py-5">
+        <i class="bi bi-info-circle fs-1 d-block mb-3"></i>
+        <h4>{% trans "No products selected for comparison." %}</h4>
+        <p>{% trans "Browse products and click the compare icon to add them here." %}</p>
+        <a href="{% url 'core:home' %}" class="btn btn-primary mt-2">{% trans "Go back to shop" %}</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Simple script to handle removal from the comparison page itself
+    document.querySelectorAll('.remove-compare-item').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Logic to remove ID from localStorage and reload page with new query params
+            const pid = this.getAttribute('data-product-id');
+            const compareKey = 'nexus_compare_list';
+            let list = JSON.parse(localStorage.getItem(compareKey)) || [];
+            list = list.filter(id => id !== pid);
+            localStorage.setItem(compareKey, JSON.stringify(list));
+            
+            // Reload with updated IDs
+            if (list.length > 0) {
+                window.location.href = `/compare/?ids=${list.join(',')}`;
+            } else {
+                window.location.href = `/compare/`; // Or redirect home
+            }
+        });
+    });
+
+    // Highlight Differences Logic
+    const highlightToggle = document.getElementById('highlightDiffToggle');
+    if (highlightToggle) {
+        highlightToggle.addEventListener('change', function() {
+            const isChecked = this.checked;
+            const rows = document.querySelectorAll('tr.compare-row');
+            
+            rows.forEach(row => {
+                if (!isChecked) {
+                    row.classList.remove('table-warning');
+                    return;
+                }
+
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 2) return;
+
+                const firstVal = cells[0].innerText.trim();
+                let diff = false;
+                for (let i = 1; i < cells.length; i++) {
+                    if (cells[i].innerText.trim() !== firstVal) {
+                        diff = true;
+                        break;
+                    }
+                }
+
+                if (diff) {
+                    row.classList.add('table-warning');
+                } else {
+                    row.classList.remove('table-warning');
+                }
+            });
+        });
+    }
+</script>
+{% endblock content %}

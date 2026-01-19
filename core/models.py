@@ -2399,3 +2399,10 @@ class FraudReport(models.Model):
     def __str__(self):
         return f"Fraud Report for Order {self.order.order_id}"
 # --- END: FraudReport Model ---
+
+class NewsletterSubscriber(models.Model):
+    email = models.EmailField(unique=True)
+    subscribed_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.email

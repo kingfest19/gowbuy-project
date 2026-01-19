@@ -1,4 +1,5 @@
 from whitenoise.storage import CompressedManifestStaticFilesStorage, MissingFileError
+import os
 
 class WhiteNoiseStaticFilesStorage(CompressedManifestStaticFilesStorage):
     manifest_strict = False
@@ -12,3 +13,8 @@ class WhiteNoiseStaticFilesStorage(CompressedManifestStaticFilesStorage):
             return super().hashed_name(name, content, filename)
         except (MissingFileError, ValueError):
             return name
+
+    def _compress_path(self, path):
+        if not os.path.exists(path):
+            return []
+        return super()._compress_path(path)

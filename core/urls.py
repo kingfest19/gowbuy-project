@@ -34,6 +34,7 @@ urlpatterns = [
 
     # Search page
     path('search/', views.search_results, name='search_results'),
+    path('compare/', views.compare_products, name='compare_products'),
 
     path('product_list/', views.ProductListView.as_view(), name='product_list'), # For ProductListView
     # Offers page
@@ -175,6 +176,7 @@ urlpatterns = [
     path('profile/reviews/edit/<str:review_type>/<int:review_id>/', views.edit_review, name='edit_review'),
     path('profile/messages/', views.ConversationListView.as_view(), name='customer_message_list'), # List for customers
     path('profile/messages/<int:pk>/', views.ConversationDetailView.as_view(), name='customer_message_detail'), # Detail for customers
+    path('profile/recent-comparisons/', views.RecentComparisonsView.as_view(), name='recent_comparisons'),
     path('profile/reviews/delete/<str:review_type>/<int:review_id>/', views.delete_review, name='delete_review'),
     path('profile/rewards/', views.render_rewards_page, name='rewards_page'),
     path('profile/security/login-history/', views.LoginHistoryView.as_view(), name='login_history'),
@@ -221,6 +223,7 @@ urlpatterns = [
     path('ajax/product-image/enhance/', views.ajax_enhance_product_image, name='ajax_enhance_product_image'),
     path('ajax/product-image/remove-background/', views.ajax_remove_image_background, name='ajax_remove_image_background'),
     # --- END: New AJAX Image Tool URLs ---
+    path('subscribe-newsletter/', views.subscribe_newsletter, name='subscribe_newsletter'),
   # --- API Endpoints for Mobile App ---
     path('api/v1/product/<int:product_id>/upload-3d-model/', views.api_upload_3d_model, name='api_upload_3d_model'),
 ]

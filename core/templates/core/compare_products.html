@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Dark mode adjustments */
+    [data-theme="dark"] .table {
+        color: #e0e0e0;
+        border-color: #444;
+        --bs-table-striped-bg: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Fix visibility for table headers in dark mode */
+    [data-theme="dark"] .table-light th {
+        background-color: #2c2c2c;
+        color: #fff;
+        border-color: #444;
+    }
+    [data-theme="dark"] tbody th {
+        background-color: #2c2c2c;
+        color: #fff;
+        border-color: #444;
+    }
+
+    /* Override text-dark utility class within the table for dark mode */
+    [data-theme="dark"] .table .text-dark {
+        color: #e0e0e0 !important;
+    }
+
+    /* Improve link visibility in dark mode */
+    [data-theme="dark"] .table a:not(.btn):not(.text-dark) {
+        color: #6ea8fe;
+    }
+    
+    /* Highlight style */
+    .diff-highlight {
+        background-color: #fff3cd !important; /* Light yellow */
+    }
+    [data-theme="dark"] .diff-highlight {
+        background-color: #5c4500 !important; /* Darker yellow/brown */
+        color: #fff !important;
+    }
+
+    [data-theme="dark"] .form-check-label {
+        color: #e0e0e0;
+    }
+
+    @media print {
+        header, footer, nav, .btn, .form-check, .breadcrumb, #clearCompareList, #shareCompareList, #printCompareList {
+            display: none !important;
+        }
+        .container { margin-top: 0 !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">{% trans "Compare Products" %}</h2>
+        <div class="d-flex align-items-center gap-3">
+            {% if products|length > 1 %}
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="highlightDiffToggle">
+                <label class="form-check-label" for="highlightDiffToggle">{% trans "Highlight Differences" %}</label>
+            </div>
+            {% endif %}
+            <button id="shareCompareList" class="btn btn-outline-primary btn-sm" title="{% trans 'Share Comparison' %}">
+                <i class="bi bi-share"></i> {% trans "Share" %}
+            </button>
+            <button id="downloadPdfBtn" class="btn btn-outline-success btn-sm" title="{% trans 'Download PDF' %}">
+                <i class="bi bi-file-earmark-pdf"></i> {% trans "Download PDF" %}
+            </button>
+            <button id="printCompareList" class="btn btn-outline-secondary btn-sm" title="{% trans 'Print Comparison' %}">
+                <i class="bi bi-printer"></i> {% trans "Print" %}
+            </button>
+            <button id="clearCompareList" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-trash"></i> {% trans "Clear All" %}
+            </button>
+        </div>
+    </div>
+
+    {% if products %}
+        <div class="table-responsive" id="comparisonTable">
+            <table class="table table-bordered table-striped text-center align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 20%;">{% trans "Features" %}</th>
+                        {% for product in products %}
+                            <th>
+                                <div class="d-flex justify-content-between align-items-center flex-column">
+                                    <a href="{{ product.get_absolute_url }}" class="text-decoration-none text-dark fw-bold">
+                                        {{ product.name }}
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger mt-2 remove-compare-item no-pdf" data-product-id="{{ product.id }}" title="{% trans 'Remove' %}">
+                                        <i class="bi bi-trash"></i> {% trans "Remove" %}
+                                    </button>
+                                </div>
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Image -->
+                    <tr>
+                        <th scope="row">{% trans "Image" %}</th>
+                        {% for product in products %}
+                            <td>
+                                <a href="{{ product.get_absolute_url }}">
+                                    {% with first_image=product.images.first %}
+                                        {% if first_image %}
+                                            <img src="{{ first_image.image.url }}" alt="{{ product.name }}" class="img-fluid rounded" style="max-height: 150px; object-fit: contain;">
+                                        {% else %}
+                                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Placeholder" class="img-fluid rounded" style="max-height: 150px; object-fit: contain;">
+                                        {% endif %}
+                                    {% endwith %}
+                                </a>
+                            </td>
+                        {% endfor %}
+                    </tr>
+
+                    <!-- Price -->
+                    <tr class="compare-row">
+                        <th scope="row">{% trans "Price" %}</th>
+                        {% for product in products %}
+                            <td class="fw-bold text-success">GH₵ {{ product.price|floatformat:2|intcomma }}</td>
+                        {% endfor %}
+                    </tr>
+
+                    <!-- Category -->
+                    <tr class="compare-row">
+                        <th scope="row">{% trans "Category" %}</th>
+                        {% for product in products %}
+                            <td>{{ product.category.name }}</td>
+                        {% endfor %}
+                    </tr>
+
+                    <!-- Description -->
+                    <tr class="compare-row">
+                        <th scope="row">{% trans "Description" %}</th>
+                        {% for product in products %}
+                            <td>{{ product.description|striptags|truncatewords:20 }}</td>
+                        {% endfor %}
+                    </tr>
+
+                    <!-- Availability -->
+                    <tr class="compare-row">
+                        <th scope="row">{% trans "Availability" %}</th>
+                        {% for product in products %}
+                            <td>
+                                {% if product.stock > 0 %}
+                                    <span class="badge bg-success">{% trans "In Stock" %}</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{% trans "Out of Stock" %}</span>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+
+                    <!-- Action -->
+                    <tr class="no-pdf">
+                        <th scope="row">{% trans "Action" %}</th>
+                        {% for product in products %}
+                            <td>
+                                <a href="{% url 'core:add_to_cart' product.id %}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-cart-plus"></i> {% trans "Add to Cart" %}
+                                </a>
+                            </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center py-5">
+            <i class="bi bi-info-circle display-4 mb-3 d-block"></i>
+            <p class="lead mb-3">{% trans "No products selected for comparison." %}</p>
+            <a href="{% url 'core:product_list' %}" class="btn btn-primary">{% trans "Browse Products" %}</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle removal of items from comparison page
+        document.querySelectorAll('.remove-compare-item').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const pid = this.getAttribute('data-product-id');
+                const compareKey = 'nexus_compare_list';
+                let list = JSON.parse(localStorage.getItem(compareKey)) || [];
+                
+                // Remove id (ensure type consistency)
+                list = list.filter(id => String(id) !== String(pid));
+                localStorage.setItem(compareKey, JSON.stringify(list));
+                
+                // Reload page with new IDs
+                if (list.length > 0) {
+                    window.location.href = `/compare/?ids=${list.join(',')}`;
+                } else {
+                    window.location.href = `/compare/`;
+                }
+            });
+        });
+
+        // Share Comparison Logic
+        const shareBtn = document.getElementById('shareCompareList');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', function() {
+                const url = window.location.href;
+                navigator.clipboard.writeText(url).then(() => {
+                    const originalHtml = this.innerHTML;
+                    this.innerHTML = '<i class="bi bi-check-lg"></i> {% trans "Copied!" %}';
+                    setTimeout(() => {
+                        this.innerHTML = originalHtml;
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    alert('{% trans "Failed to copy URL to clipboard." %}');
+                });
+            });
+        }
+
+        // Download PDF Logic
+        const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+        if (downloadPdfBtn) {
+            downloadPdfBtn.addEventListener('click', function() {
+                const element = document.getElementById('comparisonTable');
+                const opt = {
+                    margin: 5,
+                    filename: 'nexus_comparison.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, ignoreElements: (el) => el.classList.contains('no-pdf') },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                };
+                html2pdf().set(opt).from(element).save();
+            });
+        }
+
+        // Print Comparison Logic
+        const printBtn = document.getElementById('printCompareList');
+        if (printBtn) {
+            printBtn.addEventListener('click', function() {
+                window.print();
+            });
+        }
+
+        // Clear All Logic
+        const clearBtn = document.getElementById('clearCompareList');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function() {
+                localStorage.removeItem('nexus_compare_list');
+                window.location.href = '/compare/';
+            });
+        }
+
+        // Highlight Differences Logic
+        const highlightToggle = document.getElementById('highlightDiffToggle');
+        if (highlightToggle) {
+            highlightToggle.addEventListener('change', function() {
+                const isChecked = this.checked;
+                const rows = document.querySelectorAll('tr.compare-row');
+                
+                rows.forEach(row => {
+                    if (!isChecked) {
+                        row.classList.remove('diff-highlight');
+                        return;
+                    }
+
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length < 2) return;
+
+                    const firstVal = cells[0].innerText.trim();
+                    let diff = false;
+                    for (let i = 1; i < cells.length; i++) {
+                        if (cells[i].innerText.trim() !== firstVal) {
+                            diff = true;
+                            break;
+                        }
+                    }
+
+                    if (diff) {
+                        row.classList.add('diff-highlight');
+                    } else {
+                        row.classList.remove('diff-highlight');
+                    }
+                });
+            });
+        }
+
+        // Save Recent Comparison Logic
+        const saveRecentComparison = () => {
+            const params = new URLSearchParams(window.location.search);
+            const ids = params.get('ids');
+            
+            if (ids) {
+                const key = 'nexus_recent_comparisons';
+                let recent = JSON.parse(localStorage.getItem(key)) || [];
+                
+                // Create entry
+                const entry = {
+                    ids: ids,
+                    url: window.location.href,
+                    date: new Date().toLocaleDateString(),
+                    count: ids.split(',').length
+                };
+                
+                // Remove duplicates (by IDs) and add new entry to top
+                recent = recent.filter(item => item.ids !== ids);
+                recent.unshift(entry);
+                
+                // Limit to 3 items
+                localStorage.setItem(key, JSON.stringify(recent.slice(0, 3)));
+            }
+        };
+        saveRecentComparison();
+    });
+</script>
+{% endblock %}

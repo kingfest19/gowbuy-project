@@ -6,6 +6,63 @@
 
 {% block title %}{% trans "Explore Products" %}{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Quick View Button Styles */
+    .image-container {
+        position: relative;
+        overflow: visible;
+    }
+    .image-container a {
+        display: block;
+    }
+    .hover-btns {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        gap: 0.5rem;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 100;
+    }
+    .product-card:hover .hover-btns {
+        opacity: 1;
+        visibility: visible;
+    }
+    .hover-btn {
+        white-space: nowrap;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    
+    /* Floating Compare Button */
+    .compare-floating-btn {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 60px;
+        height: 60px;
+        background-color: var(--bs-primary, #0d6efd);
+        color: white;
+        border-radius: 50%;
+        display: none; /* Hidden by default */
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        z-index: 1050;
+        font-size: 1.5rem;
+        transition: transform 0.3s ease;
+        text-decoration: none;
+    }
+    .compare-floating-btn:hover {
+        transform: scale(1.1);
+        color: white;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4 mb-5">
     <nav aria-label="breadcrumb">
@@ -40,15 +97,35 @@
                 {% for product in products %}
                     <div class="col">
                         <div class="card h-100 product-card">
-                            <a href="{{ product.get_absolute_url }}">
-                                {% with first_image=product.images.first %}
-                                    {% if first_image %}
-                                        <img src="{{ first_image.image.url }}" class="card-img-top" alt="{{ product.name }}">
-                                    {% else %}
-                                        <img src="{% static 'assets/img/placeholder.png' %}" class="card-img-top" alt="Placeholder Image">
-                                    {% endif %}
-                                {% endwith %}
-                            </a>
+                            <div class="image-container">
+                                <a href="{{ product.get_absolute_url }}">
+                                    {% with first_image=product.images.first %}
+                                        {% if first_image %}
+                                            <img src="{{ first_image.image.url }}" class="card-img-top" alt="{{ product.name }}">
+                                        {% else %}
+                                            <img src="{% static 'assets/img/placeholder.png' %}" class="card-img-top" alt="Placeholder Image">
+                                        {% endif %}
+                                    {% endwith %}
+                                </a>
+                                <div class="hover-btns">
+                                    <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn" 
+                                            title="{% trans 'Quick View' %}"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#quickViewModal"
+                                            data-name="{{ product.name }}"
+                                            data-price="{{ product.price }}"
+                                            data-category="{{ product.category.name }}"
+                                            data-description="{{ product.description|striptags|truncatewords:20 }}"
+                                            data-url="{{ product.get_absolute_url }}"
+                                            data-image="{% if product.images.first %}{{ product.images.first.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                                            data-product-id="{{ product.id }}">
+                                        <i class="bi bi-eye"></i> {% trans "Quick View" %}
+                                    </button>
+                                    <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
+                                        <i class="bi bi-arrow-left-right"></i>
+                                    </button>
+                                </div>
+                            </div>
                             <div class="card-body d-flex flex-column">
                                 <h5 class="card-title"><a href="{{ product.get_absolute_url }}" class="text-decoration-none text-dark stretched-link">{{ product.name }}</a></h5>
                                 <p class="card-text text-muted small">{{ product.category.name }}</p>
@@ -77,5 +154,143 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- Quick View Modal -->
+    <div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pb-5">
+                    <div class="row">
+                        <div class="col-md-6 text-center">
+                            <div class="position-relative" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
+                                <div id="quickViewSpinner" class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <img id="quickViewImage" src="" class="img-fluid rounded" alt="Product Image" style="max-height: 400px; object-fit: contain; display: none;" onload="this.style.display='block'; document.getElementById('quickViewSpinner').style.display='none';">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h3 id="quickViewTitle" class="fw-bold"></h3>
+                            <p class="text-muted mb-2"><i class="bi bi-tag-fill"></i> <span id="quickViewCategory"></span></p>
+                            <h4 class="text-primary fw-bold mb-3" id="quickViewPrice"></h4>
+                            <p class="mb-4" id="quickViewDescription"></p>
+                            <form id="quickViewAddToCartForm" method="post" action="">
+                                {% csrf_token %}
+                                <div class="d-flex align-items-center mb-3">
+                                    <label for="quickViewQuantity" class="me-2 fw-bold">{% trans "Qty:" %}</label>
+                                    <input type="number" class="form-control" id="quickViewQuantity" name="quantity" value="1" min="1" style="width: 80px;">
+                                </div>
+                                <button type="submit" class="btn btn-success w-100"><i class="bi bi-cart-plus"></i> {% trans "Add to Cart" %}</button>
+                            </form>
+                            <a id="quickViewLink" href="#" class="btn btn-outline-primary w-100 mt-2">{% trans "View Full Details" %}</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Compare Button -->
+    <a href="#" id="compareFloatingBtn" class="compare-floating-btn" title="{% trans 'Compare Selected Items' %}">
+        <i class="bi bi-arrow-left-right"></i>
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="compareFloatingBadge">
+            0
+        </span>
+    </a>
 </div>
 {% endblock content %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const quickViewModal = document.getElementById('quickViewModal');
+        if (quickViewModal) {
+            quickViewModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const name = button.getAttribute('data-name');
+                const price = button.getAttribute('data-price');
+                const image = button.getAttribute('data-image');
+                const url = button.getAttribute('data-url');
+                const category = button.getAttribute('data-category');
+                const description = button.getAttribute('data-description');
+                const productId = button.getAttribute('data-product-id');
+
+                document.getElementById('quickViewTitle').textContent = name;
+                document.getElementById('quickViewPrice').textContent = 'GH₵ ' + parseFloat(price).toFixed(2);
+                document.getElementById('quickViewImage').src = image;
+                document.getElementById('quickViewLink').href = url;
+                document.getElementById('quickViewCategory').textContent = category;
+                document.getElementById('quickViewDescription').textContent = description;
+                
+                const addToCartForm = document.getElementById('quickViewAddToCartForm');
+                if (addToCartForm) {
+                    addToCartForm.action = `/add-to-cart/${productId}/`;
+                }
+            });
+        }
+
+        // --- Compare Logic ---
+        const compareKey = 'nexus_compare_list';
+        
+        function getCompareList() {
+            return JSON.parse(localStorage.getItem(compareKey)) || [];
+        }
+
+        function saveCompareList(list) {
+            localStorage.setItem(compareKey, JSON.stringify(list));
+        }
+
+        function updateCompareUI() {
+            const list = getCompareList();
+            const floatBtn = document.getElementById('compareFloatingBtn');
+            const badge = document.getElementById('compareFloatingBadge');
+
+            if (list.length > 0) {
+                floatBtn.style.display = 'flex';
+                badge.textContent = list.length;
+                floatBtn.href = `/compare/?ids=${list.join(',')}`; 
+            } else {
+                floatBtn.style.display = 'none';
+            }
+            
+            // Update buttons state
+            document.querySelectorAll('.compare-btn').forEach(btn => {
+                const pid = btn.getAttribute('data-product-id');
+                if (list.includes(pid)) {
+                    btn.classList.remove('btn-light');
+                    btn.classList.add('btn-primary', 'text-white');
+                } else {
+                    btn.classList.add('btn-light');
+                    btn.classList.remove('btn-primary', 'text-white');
+                }
+            });
+        }
+
+        document.body.addEventListener('click', function(e) {
+            const btn = e.target.closest('.compare-btn');
+            if (btn) {
+                e.preventDefault();
+                const pid = btn.getAttribute('data-product-id');
+                let list = getCompareList();
+
+                if (list.includes(pid)) {
+                    list = list.filter(id => id !== pid);
+                } else {
+                    if (list.length >= 4) {
+                        alert("{% trans 'You can compare up to 4 products.' %}");
+                        return;
+                    }
+                    list.push(pid);
+                }
+                saveCompareList(list);
+                updateCompareUI();
+            }
+        });
+
+        updateCompareUI();
+    });
+</script>
+{% endblock %}
