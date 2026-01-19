@@ -590,7 +590,8 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 # --- Storage Configuration ---
 STORAGES = {
     "staticfiles": {
-        "BACKEND": "core.storage_backends.WhiteNoiseStaticFilesStorage",
+        # Use ManifestStaticFilesStorage to skip compression (fixes FileNotFoundError) but keep hashing
+        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
     },
     "default": {
         # Use Cloudinary for media in production, but local file system for development
@@ -599,7 +600,7 @@ STORAGES = {
 }
 
 # Legacy settings for compatibility with third-party apps
-STATICFILES_STORAGE = STORAGES["staticfiles"]["BACKEND"]
+STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 DEFAULT_FILE_STORAGE = STORAGES["default"]["BACKEND"]
 
 WHITENOISE_MANIFEST_STRICT = False
