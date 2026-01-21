@@ -376,6 +376,28 @@
                     {% endif %}
                 </section>
 
+                {# --- NEW: Service Booking Details Section --- #}
+                {% if order_has_services %}
+                <section id="service-bookings" class="mb-4">
+                    <h2 class="section-title">{% trans "Service Appointments" %}</h2>
+                    {% for booking in order.servicebooking_set.all %}
+                        <div class="card mb-3 border-0 shadow-sm" style="background-color: var(--bg-body);">
+                            <div class="card-body">
+                                <h5 class="card-title h6"><i class="bi bi-calendar-event me-2"></i>{{ booking.service_package.service.title }}</h5>
+                                <p class="card-text mb-1">
+                                    <strong>{% trans "Provider:" %}</strong> {{ booking.provider.username }}<br>
+                                    <strong>{% trans "Scheduled Date:" %}</strong> {{ booking.preferred_start_date|default:"Not scheduled yet" }}<br>
+                                    <strong>{% trans "Status:" %}</strong> <span class="badge bg-secondary">{{ booking.get_status_display }}</span>
+                                </p>
+                                {% if booking.specific_requirements %}
+                                    <p class="card-text small text-muted mt-2"><strong>{% trans "Your Requirements:" %}</strong> {{ booking.specific_requirements }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </section>
+                {% endif %}
+
                 <section id="items-ordered">
                     <h2 class="section-title">{% trans "Items Ordered" %}</h2>
                     <div>
@@ -460,12 +482,11 @@
                     </div>
 
                     {# Logic to determine if we show the Actions section #}
-                    {% if order.status != 'CANCELLED' %}
                     <div class="order-sidebar-section">
                         <h3>{% trans "Actions" %}</h3>
                         <div class="d-grid gap-2">
                             {# Invoice: Hide if pending payment #}
-                            {% if order.status != 'AWAITING_ESCROW_PAYMENT' and order.status != 'PENDING' %}
+                            {% if order.status != 'AWAITING_ESCROW_PAYMENT' and order.status != 'PENDING' and order.status != 'CANCELLED' %}
                             <a href="{% url 'core:download_invoice' order_id=order.order_id %}" class="btn btn-outline-primary" target="_blank">
                                 <i class="bi bi-file-earmark-pdf me-2"></i> {% trans "Download Invoice" %}
                             </a>
@@ -483,7 +504,7 @@
                             {% endif %}
 
                             {# Reorder: Show only if delivered/completed #}
-                            {% if order.status == 'DELIVERED' or order.status == 'COMPLETED' or order.status == 'PENDING_PAYOUT' %}
+                            {% if order.status == 'DELIVERED' or order.status == 'COMPLETED' or order.status == 'PENDING_PAYOUT' or order.status == 'CANCELLED' %}
                             <form action="{% url 'core:reorder' order_id=order.order_id %}" method="post">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-outline-secondary w-100">
@@ -503,7 +524,6 @@
                             {% endif %}
                         </div>
                     </div>
-                    {% endif %}
 
                     {% if can_confirm_completion or can_confirm_product_delivery %}
                     <div class="order-sidebar-section">

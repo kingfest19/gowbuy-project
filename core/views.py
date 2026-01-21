@@ -2119,78 +2119,11 @@ def reorder(request, order_id):
             continue
 
         # Check if the product/service is still available for purchase.
-        # This assumes an 'is_active' boolean field and/or 'stock' count on your models.
-        # You can customize this availability check.
-        is_available = getattr(target_item, 'is_active', True)
-        if isinstance(target_item, Product):
-            is_available = is_available and getattr(target_item, 'stock', 1) > 0
-        
-        if is_available:
-            # 4. Add or update the item in the current cart.
-            cart_item, created = CartItem.objects.get_or_create(
-                user=request.user, # Note: CartItem model in context does not have a 'user' field.
-                                   # Assuming it should be linked to cart.user implicitly or directly.
-                                   # For now, I'll remove `user=request.user` from CartItem.objects.get_or_create
-                                   # as CartItem is linked to Cart, which has the user.
-                cart=current_cart,
-                product=item.product,
-                service_package=item.service_package,
-                defaults={'quantity': item.quantity}
-            )
+        # We use getattr to safely get the value without calling it if it's a bool,
+        # but handle it if it happens to be a method.
+        is_active_attr = getattr(target_item, 'is_active', True)
+        is_available = is_active_attr() if callable(is_active_attr) else is_active_attr
 
-            if not created:
-                # If the item was already in the cart, just add the quantity from the old order.
-                cart_item.quantity += item.quantity
-                cart_item.save()
-            
-            added_count += 1
-        else:
-            # Item is no longer available (e.g., out of stock, inactive).
-            name_attr = 'name' if hasattr(target_item, 'name') else 'title'
-            unavailable_items.append(getattr(target_item, name_attr, _("Unknown Item")))
-
-    # 5. Provide clear feedback to the user using Django's messages framework.
-    if added_count > 0:
-        messages.success(request, _(f"{added_count} items from order #{original_order.order_id} have been added to your cart."))
-    
-    if unavailable_items:
-        unavailable_list = ", ".join(unavailable_items)
-        messages.warning(request, _(f"Some items could not be added as they are no longer available: {unavailable_list}"))
-    
-    if added_count == 0 and not unavailable_items:
-        messages.info(request, _("There were no items in the original order to add."))
-
-    # 6. Redirect the user to their shopping cart to review the items.
-    return redirect('core:cart_detail')
-
-@login_required
-@require_POST
-def reorder(request, order_id):
-    """
-    Adds all available items from a previous order to the user's current cart.
-    """
-    # 1. Find the original order, ensuring it belongs to the current user for security.
-    original_order = get_object_or_404(Order, order_id=order_id, user=request.user)
-
-    # 2. Get the user's current active cart.
-    current_cart, _ = Cart.objects.get_or_create(user=request.user, ordered=False)
-
-    added_count = 0
-    unavailable_items = []
-
-    # 3. Iterate through items in the original order.
-    for item in original_order.items.all():
-        # Determine if the item is a product or a service package
-        target_item = item.product or item.service_package
-        
-        if not target_item:
-            # This handles cases where the linked product/service has been deleted from the database.
-            name = item.product_name or item.service_package_name or _("An item")
-            unavailable_items.append(str(name))
-            continue
-
-        # Check if the product/service is still available for purchase.
-        is_available = getattr(target_item, 'is_active', True)
         if isinstance(target_item, Product):
             is_available = is_available and getattr(target_item, 'stock', 1) > 0
         
@@ -2855,7 +2788,7 @@ def initiate_stripe_payment(request, order_id):
         # Create a checkout session
         # We use a single line item for the total to avoid rounding discrepancies with discounts/taxes
         checkout_session = stripe.checkout.Session.create(
-            automatic_payment_methods={'enabled': True},
+            payment_method_types=['card'],
             line_items=[{
                 'price_data': {
                     'currency': order.currency.lower(),
@@ -2880,7 +2813,6 @@ def initiate_stripe_payment(request, order_id):
         return redirect(checkout_session.url, code=303)
     except Exception as e:
         logger.error(f"Stripe initialization error: {e}")
-        print(f"STRIPE ERROR: {e}") # Debug print for Render logs
         messages.error(request, _("Could not connect to payment gateway. Please try again later."))
         return redirect('core:order_detail', order_id=order.order_id)
 
@@ -3130,6 +3062,27 @@ def cancel_order(request, order_id):
     cancellable_statuses = ['PENDING', 'AWAITING_ESCROW_PAYMENT', 'AWAITING_BANK_TRANSFER', 'AWAITING_DIRECT_PAYMENT', 'PROCESSING']
     
     if order.status in cancellable_statuses:
+        # --- Refund Logic for Stripe Payments ---
+        # Only attempt refund if payment was confirmed (PROCESSING) and we have a transaction ID
+        if order.status == 'PROCESSING' and order.transaction_id:
+            if order.payment_method in ['card', 'digital_wallet', 'escrow']:
+                try:
+                    refund = stripe.Refund.create(payment_intent=order.transaction_id)
+                    Transaction.objects.create(
+                        user=request.user,
+                        order=order,
+                        transaction_type='refund',
+                        amount=order.total_amount,
+                        currency=order.currency,
+                        status='completed',
+                        gateway_transaction_id=refund.id,
+                        description=f"Refund for cancelled order {order.order_id}"
+                    )
+                    messages.info(request, _("A refund has been initiated to your original payment method."))
+                except stripe.error.StripeError as e:
+                    logger.error(f"Stripe refund failed for order {order.order_id}: {e}")
+                    messages.warning(request, _("Order cancelled, but automatic refund failed. Please contact support."))
+
         order.status = 'CANCELLED'
         order.save(update_fields=['status'])
         
@@ -3221,7 +3174,6 @@ def initiate_paystack_payment(request, order_id):
             messages.error(request, _("Could not initialize payment with Paystack: {error}").format(error=response_data.get("message", "Unknown error")))
     except requests.exceptions.RequestException as e:
         logger.error(f"Paystack API request failed: {e}")
-        print(f"PAYSTACK ERROR: {e}") # Debug print for Render logs
         messages.error(request, _("Could not connect to payment gateway. Please try again later."))
 
     return redirect('core:order_detail', order_id=order.order_id)
@@ -3284,7 +3236,6 @@ def initiate_plan_payment(request, plan_id):
             messages.error(request, _("Could not initialize payment: {error}").format(error=response_data.get("message", "Unknown error")))
     except requests.exceptions.RequestException as e:
         logger.error(f"Paystack API request failed for plan payment: {e}")
-        print(f"PAYSTACK PLAN ERROR: {e}") # Debug print for Render logs
         messages.error(request, _("Could not connect to payment gateway. Please try again later."))
 
     return redirect('core:vendor_upgrade')

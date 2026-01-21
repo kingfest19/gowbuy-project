@@ -393,12 +393,28 @@
                             </label>
                         </div>
 
+                        <!-- Manual Bank Transfer -->
+                        <div class="payment-method-item">
+                            <input class="form-check-input" type="radio" name="payment_method" id="payment_method_bank" value="bank_transfer" required>
+                            <label class="form-check-label w-100" for="payment_method_bank">
+                                <div class="payment-method-content">
+                                    <span class="payment-method-title">{% trans "Direct Bank Transfer" %}</span>
+                                    <div class="payment-method-icons">
+                                        <i class="fas fa-university fa-lg me-1" title="Bank"></i>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">
+                                        {% trans "You will receive our bank details after placing the order to complete the payment manually." %}
+                                    </small>
+                                </div>
+                            </label>
+                        </div>
+
                         <p class="mt-3 small text-muted">{% trans "Clicking 'Place Order' below will finalize your cart, address, and payment method selection." %}</p>
                     </div>
                 </div>
 
                 <div class="d-grid mt-4">
-                    <button type="button" class="btn btn-primary btn-lg" id="placeOrderButton">{% trans "Place Order & Proceed to Payment Choice" %}</button>
+                    <button type="submit" class="btn btn-primary btn-lg" id="placeOrderButton">{% trans "Place Order" %}</button>
                 </div>
             </form> <!-- End of main placeOrderForm -->
 
@@ -621,45 +637,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // This is already handled by the template context, but we can ensure consistency
     // by calling updateDeliveryFeeDisplay with initial values if needed.
     // For now, the template renders initial values, and JS updates on change.
-
-    // --- End AJAX for Delivery Fee Calculation ---
-
-    const placeOrderForm = document.getElementById('placeOrderForm');
-    console.log("Attempting to find placeOrderForm element:", placeOrderForm); // Log 2
-
-    const placeOrderButton = document.getElementById('placeOrderButton');
-    console.log("Attempting to find placeOrderButton element:", placeOrderButton); // Log 3
-
-    if (placeOrderButton) {
-        console.log("placeOrderButton element FOUND. Attaching JS click event listener."); // Log 4
-        placeOrderButton.addEventListener('click', function(event) {
-            console.log("Place Order Button JS CLICK LISTENER fired."); // Log 5
-            console.log("Attempting to programmatically submit the form via requestSubmit().");
-            if (placeOrderForm) {
-                if (typeof placeOrderForm.requestSubmit === 'function') {
-                    placeOrderForm.requestSubmit(); // Modern way, triggers HTML5 validation
-                } else {
-                    placeOrderForm.submit(); // Older fallback, might bypass some validation
-                }
-            } else {
-                console.error("placeOrderForm is not defined, cannot submit.");
-            }
-        });
-    } else {
-        console.error("CRITICAL: placeOrderButton element with ID 'placeOrderButton' was NOT FOUND. JS Click listener cannot be attached.");
-    }
-
-    if (placeOrderForm) {
-        console.log("placeOrderForm element FOUND. Attaching JS submit event listener."); // Log 6
-        placeOrderForm.addEventListener('submit', function(event) {
-            console.log("Place order form JS SUBMIT LISTENER fired."); // Log 7
-            // AT THIS POINT, WE ARE DOING NO CUSTOM VALIDATION AND NOT PREVENTING DEFAULT.
-            // The browser should attempt to submit the form if all HTML5 'required' fields are met.
-            console.log("Letting the browser attempt to submit the form or handle native validation.");
-        });
-    } else {
-        console.error("CRITICAL: placeOrderForm element with ID 'placeOrderForm' was NOT FOUND in the DOM. JS Submit listener cannot be attached.");
-    }
 
     document.querySelectorAll('input[type="radio"][name="billing_address_id"], input[type="radio"][name="shipping_address_id"], input[type="radio"][name="payment_method"]').forEach(radio => {
         radio.addEventListener('change', function() {
