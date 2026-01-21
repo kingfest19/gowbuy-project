@@ -2729,6 +2729,14 @@ def initiate_stripe_payment(request, order_id):
         messages.error(request, _("This order is not eligible for payment at this time."))
         return redirect('core:order_detail', order_id=order.order_id)
 
+    # Ensure Stripe API key is set
+    if not settings.STRIPE_SECRET_KEY:
+        logger.critical("STRIPE_SECRET_KEY is missing in settings.")
+        messages.error(request, _("Payment gateway configuration error. Please contact support."))
+        return redirect('core:order_detail', order_id=order.order_id)
+    
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+
     try:
         # Create a checkout session
         # We use a single line item for the total to avoid rounding discrepancies with discounts/taxes
@@ -3004,6 +3012,13 @@ def initiate_paystack_payment(request, order_id):
         messages.error(request, _("This order is not eligible for Paystack payment at this time."))
         return redirect('core:order_detail', order_id=order.order_id)
 
+    # --- START: Add check for Paystack secret key ---
+    if not settings.PAYSTACK_SECRET_KEY:
+        logger.critical("PAYSTACK_SECRET_KEY is not configured in settings. Payment cannot proceed.")
+        messages.error(request, _("The payment gateway is not configured correctly. Please contact support."))
+        return redirect('core:order_detail', order_id=order.order_id)
+    # --- END: Add check for Paystack secret key ---
+
     url = "https://api.paystack.co/transaction/initialize"
     amount_in_kobo = int(order.total_amount * 100)
 
@@ -3050,6 +3065,13 @@ def initiate_plan_payment(request, plan_id):
     """
     plan = get_object_or_404(PricingPlan, id=plan_id, is_active=True)
     vendor = get_object_or_404(Vendor, user=request.user)
+
+    # --- START: Add check for Paystack secret key ---
+    if not settings.PAYSTACK_SECRET_KEY:
+        logger.critical("PAYSTACK_SECRET_KEY is not configured in settings. Payment cannot proceed.")
+        messages.error(request, _("The payment gateway is not configured correctly. Please contact support."))
+        return redirect('core:vendor_upgrade')
+    # --- END: Add check for Paystack secret key ---
 
     url = "https://api.paystack.co/transaction/initialize"
     amount_in_kobo = int(plan.price * 100)
