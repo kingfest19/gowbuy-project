@@ -427,7 +427,7 @@ class Order(models.Model):
         DISPUTED = 'DISPUTED', _('Disputed')
 
     PAYMENT_METHOD_CHOICES = (
-        ('escrow', _('Escrow (Paystack)')),
+        ('escrow', _('Escrow (Secure Payment)')),
         ('direct', _('Direct Arrangement')),
         ('paypal', _('PayPal')),
         ('card', _('Credit/Debit Card')), # <<< Added
@@ -486,6 +486,8 @@ class Order(models.Model):
         help_text=_("Amount tipped to the rider by the customer.")
     )
     customer_confirmed_delivery_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Customer Confirmed Delivery/Completion"))
+    tracking_number = models.CharField(max_length=100, blank=True, null=True, help_text=_("Tracking number for the shipment."))
+    tracking_url = models.URLField(blank=True, null=True, help_text=_("URL to track the shipment."))
 
     class Meta:
         ordering = ('-created_at',)

@@ -136,8 +136,16 @@
                     {# Check if there are any vendor-fulfilled physical items #}
                     {% with shippable_items=vendor_items|filtered_by_fulfillment:'vendor'|filtered_by_type:'physical' %}
                     {% if shippable_items %} {# Corrected to use order.pk to match the URL pattern #}
-                        <form action="{% url 'core:vendor_mark_order_shipped' order.pk %}" method="post" class="d-inline">
+                        <form action="{% url 'core:vendor_mark_order_shipped' order.pk %}" method="post" class="mb-4 p-3 bg-light rounded border">
                             {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="trackingNumber" class="form-label">{% trans "Tracking Number (Optional)" %}</label>
+                                <input type="text" class="form-control" id="trackingNumber" name="tracking_number" placeholder="e.g. TRK123456789">
+                            </div>
+                            <div class="mb-3">
+                                <label for="trackingUrl" class="form-label">{% trans "Tracking URL (Optional)" %}</label>
+                                <input type="url" class="form-control" id="trackingUrl" name="tracking_url" placeholder="https://example.com/track/...">
+                            </div>
                             <button type="submit" class="btn btn-info">
                                 <i class="bi bi-truck me-2"></i>{% trans "Mark as Shipped" %}
                             </button>

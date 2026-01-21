@@ -683,7 +683,16 @@ def vendor_mark_order_shipped(request, order_id):
 
     if order.status == 'PROCESSING':
         order.status = 'SHIPPED'
-        order.save(update_fields=['status'])
+        
+        # Capture tracking info from the form submission
+        tracking_number = request.POST.get('tracking_number')
+        tracking_url = request.POST.get('tracking_url')
+        if tracking_number:
+            order.tracking_number = tracking_number
+        if tracking_url:
+            order.tracking_url = tracking_url
+            
+        order.save(update_fields=['status', 'tracking_number', 'tracking_url'])
         messages.success(request, _("Order #{order_id} has been marked as shipped.").format(order_id=order.order_id))
     else:
         messages.warning(request, _("This order cannot be marked as shipped at its current status."))
@@ -2792,8 +2801,8 @@ def process_checkout_choice(request, order_id):
     if payment_method_choice == 'escrow':
         order.status = 'AWAITING_ESCROW_PAYMENT'
         order.save()
-        messages.info(request, _("Please proceed to make your payment via Paystack."))
-        return redirect('core:initiate_paystack_payment', order_id=order.id)
+        messages.info(request, _("Please proceed to our secure payment page."))
+        return redirect('core:initiate_stripe_payment', order_id=order.id)
 
     elif payment_method_choice == 'direct':
         order.status = 'AWAITING_DIRECT_PAYMENT'
@@ -2871,6 +2880,7 @@ def initiate_stripe_payment(request, order_id):
         return redirect(checkout_session.url, code=303)
     except Exception as e:
         logger.error(f"Stripe initialization error: {e}")
+        print(f"STRIPE ERROR: {e}") # Debug print for Render logs
         messages.error(request, _("Could not connect to payment gateway. Please try again later."))
         return redirect('core:order_detail', order_id=order.order_id)
 
@@ -3211,6 +3221,7 @@ def initiate_paystack_payment(request, order_id):
             messages.error(request, _("Could not initialize payment with Paystack: {error}").format(error=response_data.get("message", "Unknown error")))
     except requests.exceptions.RequestException as e:
         logger.error(f"Paystack API request failed: {e}")
+        print(f"PAYSTACK ERROR: {e}") # Debug print for Render logs
         messages.error(request, _("Could not connect to payment gateway. Please try again later."))
 
     return redirect('core:order_detail', order_id=order.order_id)
@@ -3273,6 +3284,7 @@ def initiate_plan_payment(request, plan_id):
             messages.error(request, _("Could not initialize payment: {error}").format(error=response_data.get("message", "Unknown error")))
     except requests.exceptions.RequestException as e:
         logger.error(f"Paystack API request failed for plan payment: {e}")
+        print(f"PAYSTACK PLAN ERROR: {e}") # Debug print for Render logs
         messages.error(request, _("Could not connect to payment gateway. Please try again later."))
 
     return redirect('core:vendor_upgrade')

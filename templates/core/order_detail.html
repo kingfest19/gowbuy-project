@@ -471,6 +471,17 @@
                             </a>
                             {% endif %}
 
+                            {# Track Package Button #}
+                            {% if order.tracking_url %}
+                            <a href="{{ order.tracking_url }}" target="_blank" class="btn btn-outline-info">
+                                <i class="bi bi-truck me-2"></i> {% trans "Track Package" %}
+                            </a>
+                            {% elif order.tracking_number %}
+                            <button type="button" class="btn btn-outline-info" onclick="alert('{% trans "Tracking Number:" %} {{ order.tracking_number }}')">
+                                <i class="bi bi-truck me-2"></i> {% trans "View Tracking Number" %}
+                            </button>
+                            {% endif %}
+
                             {# Reorder: Show only if delivered/completed #}
                             {% if order.status == 'DELIVERED' or order.status == 'COMPLETED' or order.status == 'PENDING_PAYOUT' %}
                             <form action="{% url 'core:reorder' order_id=order.order_id %}" method="post">
