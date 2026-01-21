@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice #{{ order.order_id }}</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', 'Helvetica', Arial, sans-serif;
+            font-size: 10px;
+            line-height: 1.4;
+            color: #333;
+            -webkit-print-color-adjust: exact; /* For printing background colors */
+        }
+        .invoice-box {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #eee;
+            box-shadow: 0 0 10px rgba(0, 0, 0, .15);
+            font-size: 12px;
+            line-height: 18px;
+            color: #555;
+        }
+        .invoice-box table {
+            width: 100%;
+            line-height: inherit;
+            text-align: left;
+            border-collapse: collapse;
+        }
+        .invoice-box table td {
+            padding: 5px;
+            vertical-align: top;
+        }
+        .invoice-box table tr td:nth-child(2) {
+            text-align: right;
+        }
+        .invoice-box table tr.top table td {
+            padding-bottom: 20px;
+        }
+        .invoice-box table tr.top table td.title {
+            font-size: 30px;
+            line-height: 30px;
+            color: #333;
+        }
+        .invoice-box table tr.information table td {
+            padding-bottom: 20px;
+        }
+        .invoice-box table tr.heading td {
+            background: #eee;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+            padding: 8px 5px;
+        }
+        .invoice-box table tr.details td {
+            padding-bottom: 20px;
+        }
+        .invoice-box table tr.item td {
+            border-bottom: 1px solid #eee;
+            padding: 8px 5px;
+        }
+        .invoice-box table tr.item.last td {
+            border-bottom: none;
+        }
+        .invoice-box table tr.total td:nth-child(2) {
+            border-top: 2px solid #eee;
+            font-weight: bold;
+        }
+        .text-right { text-align: right; }
+        .text-left { text-align: left; }
+        .text-center { text-align: center; }
+        .mt-10 { margin-top: 10px; }
+        .mb-10 { margin-bottom: 10px; }
+        .logo { max-width: 100px; } /* Adjust as needed */
+    </style>
+</head>
+<body>
+    <div class="invoice-box">
+        <table>
+            <tr class="top">
+                <td colspan="2">
+                    <table>
+                        <tr>
+                            <td class="title">
+                                {% comment %} Replace with your actual logo path {% endcomment %}
+                                <img src="{% static 'assets/img/logo.png' %}" class="logo" alt="NEXUS Logo">
+                            </td>
+                            <td>
+                                Invoice #: {{ order.order_id }}<br>
+                                Created: {{ order.created_at|date:"F j, Y" }}<br>
+                                {% if order.updated_at != order.created_at %}
+                                Last Updated: {{ order.updated_at|date:"F j, Y" }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr class="information">
+                <td colspan="2">
+                    <table>
+                        <tr>
+                            <td>
+                                NEXUS Marketplace<br>
+                                123 Marketplace Street<br>
+                                City, Country
+                            </td>
+                            <td>
+                                {{ order.user.get_full_name|default:order.user.username }}<br>
+                                {{ order.user.email }}
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr class="heading">
+                <td>Payment Method</td>
+                <td>Status</td>
+            </tr>
+            <tr class="details">
+                <td>{{ order.get_payment_method_display }}</td>
+                <td>{{ order.get_status_display }}</td>
+            </tr>
+            <tr class="heading">
+                <td>Item</td>
+                <td class="text-right">Price</td>
+            </tr>
+            {% for item in order.items.all %}
+            <tr class="item {% if forloop.last %}last{% endif %}">
+                <td>
+                    {{ item.name }} (x{{ item.quantity }})
+                </td>
+                <td class="text-right">{{ order.currency|currency_symbol }}{{ item.get_total_item_price|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total">
+                <td></td>
+                <td class="text-right">
+                   Subtotal: {{ order.currency|currency_symbol }}{{ order.get_total_cost|floatformat:2 }}
+                   {% if order.delivery_fee > 0 %}<br>Delivery: {{ order.currency|currency_symbol }}{{ order.delivery_fee|floatformat:2 }}{% endif %}
+                   {% if order.discount_amount > 0 %}<br>Discount: -{{ order.currency|currency_symbol }}{{ order.discount_amount|floatformat:2 }}{% endif %}
+                   <br><strong>Total: {{ order.currency|currency_symbol }}{{ order.total_amount|floatformat:2 }}</strong>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

@@ -14,15 +14,16 @@
         .header-container { overflow: auto; /* Clearfix */ }
         .logo { float: left; width: 150px; }
         .company-details { float: right; text-align: right; }
-        h1 { text-align: right; color: #555; }
+        h1 { text-align: right; color: #2c3e50; margin-bottom: 5px; } /* Brand Color for Title */
         .address-section { margin-top: 40px; margin-bottom: 30px; overflow: auto; }
         .address-box { width: 45%; border: 1px solid #ccc; padding: 10px; min-height: 100px; }
         .from-address { float: left; }
         .to-address { float: right; }
         .order-summary { margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
+        th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
+        th { background-color: #3498db; color: #fff; font-weight: bold; } /* Brand Color Header */
+        tr:nth-child(even) { background-color: #f9f9f9; } /* Zebra striping */
         .totals-section { margin-top: 20px; float: right; width: 40%; }
         .totals-table { width: 100%; }
         .totals-table td { border: none; padding: 4px 8px; }
@@ -36,7 +37,7 @@
         <div class="header-container">
             <div class="logo">
                 {# You can replace this with your actual logo image #}
-                <h2 style="color: #e65100;">NEXUS</h2>
+                <img src="{% static 'assets/img/logo.png' %}" alt="NEXUS Logo" style="width: 100%; max-width: 150px;">
             </div>
             <div class="company-details">
                 <h1>INVOICE</h1>

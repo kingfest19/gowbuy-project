@@ -127,9 +127,11 @@ urlpatterns = [
     # Order pages (These require login via decorators in views)
     path('orders/', views.OrderHistoryView.as_view(), name='order_history'),
     path('order/<str:order_id>/', views.OrderDetailView.as_view(), name='order_detail'),
-    path('order/<str:order_id>/invoice/print/', views.customer_generate_invoice, name='customer_generate_invoice'),
+    path('order/<str:order_id>/invoice/download/', views.download_invoice, name='download_invoice'), # Updated
     path('order/<str:order_id>/invoice/email/', views.customer_email_invoice, name='customer_email_invoice'),
     # path('order/<str:order_id>/download/<int:product_id>/', views.download_digital_product, name='download_digital_product'), # Keep if function-based
+    path('reorder/<str:order_id>/', views.reorder, name='reorder'), # Added
+    path('order/<str:order_id>/cancel/', views.cancel_order, name='cancel_order'), # Added Cancel Order URL
 
     # Checkout & Order Placement
     path('checkout/', views.checkout, name='checkout'),

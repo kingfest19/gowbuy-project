@@ -12,118 +12,125 @@
             background-color: var(--bg-surface);
             color: var(--text-main);
             padding: 2rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 0.25rem 1rem rgba(0,0,0,0.075);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
             border: 1px solid var(--border-color);
             margin-top: 2rem;
             margin-bottom: 2rem;
         }
+        [data-theme="dark"] .order-detail-container {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
 
         .order-page-header h1 {
-            font-size: 2.25rem;
-            font-weight: 600;
-            color: var(--text-main);
+            font-weight: 700;
+            letter-spacing: -0.02em;
         }
         .order-page-header .text-muted {
             font-size: 0.9rem;
             color: var(--text-muted) !important;
         }
         .order-page-header .status-badge {
-            font-size: 1rem;
-            padding: 0.5em 1em;
+            font-size: 0.9rem;
+            font-weight: 600;
         }
 
         .section-title {
-            font-size: 1.5rem;
-            font-weight: 500;
+            font-size: 1.25rem;
+            font-weight: 600;
             color: var(--text-main);
             margin-bottom: 1.25rem;
-            padding-bottom: 0.6rem;
-            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
         }
 
         /* Items Ordered Section */
-        .order-items-list .order-item-row {
+        .order-item-row {
             display: flex;
             align-items: center;
             padding: 1rem 0;
             border-bottom: 1px solid var(--border-color);
         }
-        .order-items-list .order-item-row:last-child {
+        .order-item-row:last-child {
             border-bottom: none;
-            padding-bottom: 0;
         }
         .order-item-image img {
-            width: 80px; /* Slightly larger image */
+            width: 80px;
             height: 80px;
             object-fit: cover;
-            border-radius: 0.375rem; /* More rounded */
-            border: 1px solid var(--border-color);
+            border-radius: 8px;
         }
         .order-item-info h6 {
-            font-weight: 500;
             margin-bottom: 0.25rem;
-            color: var(--text-main);
         }
         .order-item-info a {
             color: var(--text-main);
             text-decoration: none;
+            font-weight: 600;
         }
         .order-item-info a:hover {
-            color: var(--bs-primary);
+            color: var(--accent-color);
         }
         .order-item-info .text-muted {
             font-size: 0.85rem;
             color: var(--text-muted) !important;
         }
         .order-item-price {
-            font-weight: 500;
+            font-weight: 600;
         }
 
         /* Order Summary / Sidebar Section */
+        .order-sidebar {
+            position: sticky;
+            top: 2rem;
+        }
         .order-sidebar-section {
             background-color: var(--bg-body);
             padding: 1.5rem;
-            border-radius: 0.375rem;
+            border-radius: 8px;
             margin-bottom: 1.5rem;
             border: 1px solid var(--border-color);
         }
         .order-sidebar-section h3 { /* Titles within sidebar */
-            font-size: 1.25rem;
-            font-weight: 500;
+            font-size: 1.1rem;
+            font-weight: 600;
             color: var(--text-main);
             margin-bottom: 1rem;
         }
-        .order-sidebar-section p, .order-sidebar-section li {
-            font-size: 0.95rem;
-            margin-bottom: 0.5rem;
-        }
-        .order-sidebar-section strong {
-            color: var(--text-main);
-        }
-        .order-sidebar-section .list-group-item {
+
+        /* Totals List */
+        .totals-list .list-group-item {
             background-color: transparent;
-            border-color: var(--border-color);
-            color: var(--text-main);
-            padding-left: 0;
-            padding-right: 0;
+            border: none;
+            padding: 0.5rem 0;
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
         }
-        .order-sidebar-section .totals-summary strong {
-            font-size: 1.1rem;
-        }
-        .order-sidebar-section .btn {
+        .totals-list .list-group-item span:last-child {
             font-weight: 500;
+            color: var(--text-main);
+        }
+        .totals-list .total-row {
+            font-size: 1.25rem;
+            font-weight: 700;
+            padding-top: 1rem;
+            margin-top: 0.5rem;
+            border-top: 2px dashed var(--border-color);
+            color: var(--text-main);
         }
 
         /* Address Block */
         .address-block p {
             margin-bottom: 0.2rem;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: var(--text-muted);
         }
         .address-block strong {
             display: block;
             margin-bottom: 0.3rem;
-            font-size: 1rem;
+            font-size: 1.05rem;
             color: var(--text-main);
         }
         
@@ -131,13 +138,39 @@
         #orderDeliveryMap {
             height: 300px; /* Adjust height as needed */
             width: 100%;
-            border-radius: 0.375rem;
+            border-radius: 8px;
             border: 1px solid var(--border-color);
         }
         .map-container-wrapper { /* Wrapper for the map if it's in its own section */
              background-color: var(--bg-body);
              padding: 1.5rem;
-             border-radius: 0.375rem;
+             border-radius: 8px;
+        }
+
+        /* Custom Alerts for Status */
+        .alert-nexus {
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid;
+        }
+        .alert-nexus h4 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .alert-nexus-info {
+            color: #055160; background-color: #cff4fc; border-color: #b6effb;
+        }
+        .alert-nexus-warning {
+            color: #664d03; background-color: #fff3cd; border-color: #ffecb5;
+        }
+        .alert-nexus-success {
+            color: #0f5132; background-color: #d1e7dd; border-color: #badbcc;
+        }
+        [data-theme="dark"] .alert-nexus-info {
+            color: #6edff6; background-color: #032830; border-color: #032830;
+        }
+        [data-theme="dark"] .alert-nexus-warning {
+            color: #ffda6a; background-color: #332701; border-color: #332701;
+        }
+        [data-theme="dark"] .alert-nexus-success {
+            color: #75b798; background-color: #052b19; border-color: #052b19;
         }
 
         /* Action Buttons */
@@ -147,6 +180,82 @@
         .btn-primary:hover, .btn-success:hover {
             transform: translateY(-1px);
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        /* --- Timeline Styles --- */
+        .steps {
+            margin-top: 1rem;
+            margin-bottom: 3rem;
+        }
+        .steps .step {
+            display: block;
+            width: 100%;
+            margin-bottom: 1rem;
+            text-align: center;
+            position: relative;
+        }
+        .steps .step .step-icon-wrap {
+            display: block;
+            position: relative;
+            width: 100%;
+            height: 60px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .steps .step .step-icon-wrap::before,
+        .steps .step .step-icon-wrap::after {
+            display: block;
+            position: absolute;
+            top: 50%;
+            width: 50%;
+            height: 3px;
+            margin-top: -1px;
+            background-color: var(--border-color);
+            content: '';
+            z-index: 1;
+        }
+        .steps .step .step-icon-wrap::before { left: 0; }
+        .steps .step .step-icon-wrap::after { right: 0; }
+        .steps .step:first-child .step-icon-wrap::before { display: none; }
+        .steps .step:last-child .step-icon-wrap::after { display: none; }
+        
+        .steps .step.completed .step-icon-wrap::before,
+        .steps .step.completed .step-icon-wrap::after {
+            background-color: var(--accent-color);
+        }
+        
+        .steps .step .step-icon {
+            display: inline-block;
+            position: relative;
+            width: 60px;
+            height: 60px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-surface);
+            border-radius: 50%;
+            color: var(--text-muted);
+            font-size: 24px;
+            line-height: 58px;
+            z-index: 5;
+        }
+        .steps .step.completed .step-icon {
+            border-color: var(--accent-color);
+            background-color: var(--accent-color);
+            color: #fff;
+        }
+        .steps .step .step-title {
+            margin-top: 0;
+            margin-bottom: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .steps .step.completed .step-title {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+        
+        @media (max-width: 576px) {
+            .steps .step .step-icon-wrap::before, .steps .step .step-icon-wrap::after { display: none; }
         }
 
     </style>
@@ -170,9 +279,41 @@
                 <p class="text-muted mb-0">{% trans "Placed on" %} {{ order.created_at|date:"F j, Y, P" }}</p>
             </div>
             <div>
-                <span class="badge fs-6 status-badge rounded-pill {% if order.status == 'COMPLETED' %}bg-success{% elif order.status == 'CANCELLED' or order.status == 'DISPUTED' %}bg-danger{% elif order.status == 'PROCESSING' or order.status == 'IN_PROGRESS' or order.status == 'SHIPPED' %}bg-info{% else %}bg-warning text-dark{% endif %}">{{ order.get_status_display }}</span>
+                <span class="badge status-badge rounded-pill {% if order.status == 'COMPLETED' %}bg-success{% elif order.status == 'CANCELLED' or order.status == 'DISPUTED' %}bg-danger{% elif order.status == 'PROCESSING' or order.status == 'IN_PROGRESS' or order.status == 'SHIPPED' %}bg-info{% else %}bg-warning text-dark{% endif %}">{{ order.get_status_display }}</span>
             </div>
         </div>
+
+        {# --- Track Order Timeline --- #}
+        {% if order.status != 'CANCELLED' and order.status != 'DISPUTED' %}
+        <div class="mb-5 d-none d-sm-block">
+            <div class="steps d-flex flex-wrap flex-sm-nowrap justify-content-between">
+                <div class="step completed">
+                    <div class="step-icon-wrap">
+                        <div class="step-icon"><i class="bi bi-cart-check"></i></div>
+                    </div>
+                    <h4 class="step-title">{% trans "Order Placed" %}</h4>
+                </div>
+                <div class="step {% if order.status in 'PROCESSING,IN_PROGRESS,SHIPPED,DELIVERED,COMPLETED,PENDING_PAYOUT' %}completed{% endif %}">
+                    <div class="step-icon-wrap">
+                        <div class="step-icon"><i class="bi bi-credit-card"></i></div>
+                    </div>
+                    <h4 class="step-title">{% trans "Processing" %}</h4>
+                </div>
+                <div class="step {% if order.status in 'SHIPPED,IN_PROGRESS,DELIVERED,COMPLETED,PENDING_PAYOUT' %}completed{% endif %}">
+                    <div class="step-icon-wrap">
+                        <div class="step-icon"><i class="bi bi-truck"></i></div>
+                    </div>
+                    <h4 class="step-title">{% if order_has_services %}{% trans "In Progress" %}{% else %}{% trans "Shipped" %}{% endif %}</h4>
+                </div>
+                <div class="step {% if order.status in 'DELIVERED,COMPLETED,PENDING_PAYOUT' %}completed{% endif %}">
+                    <div class="step-icon-wrap">
+                        <div class="step-icon"><i class="bi bi-check-lg"></i></div>
+                    </div>
+                    <h4 class="step-title">{% trans "Delivered" %}</h4>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         {# Map Section - Full width above the two columns #}
         {% if show_map and order.has_physical_products %}
@@ -184,13 +325,12 @@
 
         {# --- Bank Transfer Instructions --- #}
         {% if order.status == 'AWAITING_BANK_TRANSFER' and bank_transfer_info %}
-        <div class="card mb-4 border-warning">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="bi bi-bank me-2"></i> {% trans "Bank Transfer Instructions" %}</h5>
-            </div>
-            <div class="card-body">
+        <div class="alert-nexus alert-nexus-warning mb-4">
+            <h4><i class="bi bi-bank me-2"></i> {% trans "Bank Transfer Instructions" %}</h4>
+            <div>
                 <p>{% trans "Please transfer the total amount to the following bank account:" %}</p>
-                <ul class="list-unstyled bg-light p-3 rounded">
+                <ul class="list-unstyled p-3 rounded" style="background-color: rgba(0,0,0,0.03);">
+                    [data-theme="dark"] & { background-color: rgba(255,255,255,0.05); }
                     <li><strong>{% trans "Bank Name:" %}</strong> {{ bank_transfer_info.bank_name }}</li>
                     <li><strong>{% trans "Account Name:" %}</strong> {{ bank_transfer_info.account_name }}</li>
                     <li><strong>{% trans "Account Number:" %}</strong> {{ bank_transfer_info.account_number }}</li>
@@ -202,12 +342,43 @@
         </div>
         {% endif %}
 
-        <div class="row g-4">
-            {# Left Column: Items Ordered #}
-            <div class="col-lg-7 col-xl-8">
-                <section class="order-items-section">
+        <div class="row g-lg-5">
+            {# Left Column: Items & Payment Status #}
+            <div class="col-lg-7">
+                <section id="payment-status" class="mb-4">
+                    <h2 class="section-title">{% trans "Payment Status" %}</h2>
+                    {% if order.status == 'AWAITING_ESCROW_PAYMENT' %}
+                        <div class="alert-nexus alert-nexus-info">
+                            <h4><i class="bi bi-credit-card-2-front-fill me-2"></i> {% trans "Complete Your Payment" %}</h4>
+                            <p>{% trans "Your order is ready. Please proceed to our secure payment page to complete your purchase." %}</p>
+                            <a href="{% url 'core:initiate_stripe_payment' order.id %}" class="btn btn-success w-100 mt-2">
+                                <i class="bi bi-lock-fill me-1"></i> {% trans "Proceed to Secure Payment" %}
+                            </a>
+                        </div>
+                    {% elif order.status == 'AWAITING_DIRECT_PAYMENT' %}
+                        <div class="alert-nexus alert-nexus-info">
+                            <h4><i class="bi bi-people-fill me-2"></i> {% trans "Arrange Direct Payment" %}</h4>
+                            <p>{% blocktrans %}Please contact the service provider(s) directly to arrange payment and delivery for items in this order.{% endblocktrans %}</p>
+                        </div>
+                    {% elif order.status == 'PROCESSING' or order.status == 'IN_PROGRESS' %}
+                        <div class="alert-nexus alert-nexus-success">
+                            <h4><i class="bi bi-check-circle-fill me-2"></i> {% trans "Payment Confirmed" %}</h4>
+                            <p class="mb-0">{% trans "Your payment was successful. The order is now being processed by the vendor(s)." %}</p>
+                        </div>
+                    {% else %}
+                        <div class="order-sidebar-section">
+                            <h3>{% trans "Payment Details" %}</h3>
+                            <p class="mb-1"><strong>{% trans "Payment Method" %}:</strong> {{ order.get_payment_method_display }}</p>
+                            {% if order.transaction_id %}
+                                <p class="mb-0"><small><strong>{% trans "Transaction ID" %}:</strong> {{ order.transaction_id }}</small></p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </section>
+
+                <section id="items-ordered">
                     <h2 class="section-title">{% trans "Items Ordered" %}</h2>
-                    <div class="order-items-list">
+                    <div>
                         {% for item in order.items.all %}
                         <div class="order-item-row">
                             <div class="order-item-image me-3">
@@ -219,22 +390,38 @@
                             <div class="order-item-info flex-grow-1">
                                 {% if item.service_package %}
                                     <h6><a href="{{ item.service_package.service.get_absolute_url }}">{{ item.service_package.service.title }}</a></h6>
-                                    <p class="text-muted mb-1">{{ item.service_package_name }}</p>
+                                    <p class="text-muted mb-1 small">{{ item.service_package_name }}</p>
                                     <p class="text-muted mb-0">{% trans "Provider" %}: <a href="{% url 'core:provider_profile_detail' username=item.provider.username %}">{{ item.provider.username }}</a></p>
+                                    
+                                    {% if order.status == 'DELIVERED' or order.status == 'COMPLETED' or order.status == 'PENDING_PAYOUT' %}
+                                    <div class="mt-2">
+                                        <a href="{{ item.service_package.service.get_absolute_url }}#reviews" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-star me-1"></i> {% trans "Write a Review" %}
+                                        </a>
+                                    </div>
+                                    {% endif %}
                                 {% elif item.product %}
                                     <h6><a href="{{ item.product.get_absolute_url }}">{{ item.product_name|default:"[Product Unavailable]" }}</a></h6>
                                     <p class="text-muted mb-0">{% trans "Vendor" %}: <a href="{{ item.product.vendor.get_absolute_url }}">{{ item.product.vendor.name }}</a></p>
-                                    {% if item.product.is_digital and order.status == 'COMPLETED' %}
+                                    {% if item.product.product_type == 'digital' and order.status in 'COMPLETED,DELIVERED,PENDING_PAYOUT' %}
                                         <div class="mt-2">
-                                            <a href="{% url 'core:download_digital_product' order_id=order.order_id product_id=item.product.id %}" class="btn btn-sm btn-success"><i class="bi bi-download me-1"></i>{% trans "Download" %}</a>
+                                            <a href="{% url 'core:download_digital_product' product_id=item.product.id %}" class="btn btn-sm btn-success"><i class="bi bi-download me-1"></i>{% trans "Download" %}</a>
                                         </div>
+                                    {% endif %}
+
+                                    {% if order.status == 'DELIVERED' or order.status == 'COMPLETED' or order.status == 'PENDING_PAYOUT' %}
+                                    <div class="mt-2">
+                                        <a href="{{ item.product.get_absolute_url }}#reviews" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-star me-1"></i> {% trans "Write a Review" %}
+                                        </a>
+                                    </div>
                                     {% endif %}
                                 {% else %}
                                     <h6>{% trans "[Item Unavailable]" %}</h6>
                                 {% endif %}
                             </div>
                             <div class="order-item-price text-end ms-3">
-                                <p class="mb-1">{{ order.currency|currency_symbol }}{{ item.get_total_item_price|floatformat:2 }}</p>
+                                <p class="mb-1">{{ order.currency|currency_symbol }}{{ item.get_total_item_price|floatformat:2|intcomma }}</p>
                                 <small class="text-muted">({{ item.quantity }} x {{ order.currency|currency_symbol }}{{ item.price|floatformat:2 }})</small>
                             </div>
                         </div>
@@ -245,143 +432,124 @@
                 </section>
             </div>
 
-            {# Right Column: Summary, Addresses, Actions #}
-            <div class="col-lg-5 col-xl-4">
-                <div class="order-sidebar-section totals-summary">
-                    <h3>{% trans "Order Totals" %}</h3>
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {% trans "Subtotal" %}
-                            <span>{{ order.currency|currency_symbol }}{{ order.get_subtotal_cost|floatformat:2 }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {% trans "Delivery Fee" %}
-                            <span>{{ order.currency|currency_symbol }}{{ order.delivery_fee|floatformat:2 }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center fw-bold fs-5 border-top pt-3">
-                            {% trans "Order Total" %}
-                            <span>{{ order.currency|currency_symbol }}{{ order.get_total_cost|floatformat:2 }}</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="order-sidebar-section">
-                    <h3>{% trans "Payment & Status" %}</h3>
-                    <p><strong>{% trans "Payment Method" %}:</strong> {{ order.get_payment_method_display|default:"Not Chosen Yet" }}</p>
-                    {% if order.payment_method == 'escrow' %}
-                        <p><small><strong>{% trans "Paystack Reference" %}:</strong> {{ order.paystack_ref|default:"N/A" }}</small></p>
-                        <p><small><strong>{% trans "Transaction ID" %}:</strong> {{ order.transaction_id|default:"N/A" }}</small></p>
-                    {% endif %}
-                    
-                    {# Next Steps / Information based on status #}
-                    <div class="mt-3">
-                        {% if order.status == 'PENDING' %}
-                        <div class="alert alert-primary p-3">
-                            <h5 class="alert-heading">{% trans "Choose Payment Method" %}</h5>
-                            <p class="mb-2">{% trans "This order is pending your payment method selection." %}</p>
-                            <form method="post" action="{% url 'core:process_checkout_choice' order_id=order.order_id %}">
-                                {% csrf_token %}
-                                <div class="mb-3">
-                                    {% for value, name in order.PAYMENT_METHOD_CHOICES %}
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_method_{{ value }}" value="{{ value }}" {% if forloop.first %}checked{% endif %}>
-                                            <label class="form-check-label" for="payment_method_{{ value }}">
-                                                {{ name }}
-                                            </label>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100">{% trans "Confirm Payment Method" %}</button>
-                            </form>
-                        </div>
-                        {% elif order.status == 'AWAITING_ESCROW_PAYMENT' %}
-                        <div class="alert alert-info p-3">
-                            <h5 class="alert-heading">
-                                {% if order.payment_method == 'card' or order.payment_method == 'digital_wallet' %}
-                                    {% trans "Complete Your Payment" %}
-                                {% else %}
-                                    {% trans "Awaiting Escrow Payment" %}
-                                {% endif %}
-                            </h5>
-                            {% if order.payment_method == 'card' or order.payment_method == 'digital_wallet' %}
-                                <p class="mb-2">{% trans "Your order is awaiting secure payment processing." %}</p>
-                            {% else %}
-                                <p class="mb-2">{% trans "Your order is awaiting payment via Paystack." %}</p>
+            {# Right Column: Sidebar with Totals, Addresses, Actions #}
+            <div class="col-lg-5">
+                <div class="order-sidebar">
+                    <div class="order-sidebar-section">
+                        <h3>{% trans "Order Totals" %}</h3>
+                        <ul class="list-group list-group-flush totals-list">
+                            <li class="list-group-item">
+                                {% trans "Subtotal" %}
+                                <span>{{ order.currency|currency_symbol }}{{ order.get_subtotal_cost|floatformat:2|intcomma }}</span>
+                            </li>
+                            <li class="list-group-item">
+                                {% trans "Delivery Fee" %}
+                                <span>{{ order.currency|currency_symbol }}{{ order.delivery_fee|floatformat:2|intcomma }}</span>
+                            </li>
+                            {% if order.discount_amount > 0 %}
+                            <li class="list-group-item text-success">
+                                {% trans "Discount" %}
+                                <span>-{{ order.currency|currency_symbol }}{{ order.discount_amount|floatformat:2|intcomma }}</span>
+                            </li>
                             {% endif %}
-                            <a href="{% url 'core:initiate_paystack_payment' order.id %}" class="btn btn-success w-100"><i class="bi bi-credit-card me-1"></i> {% trans "Complete Payment" %}</a>
+                            <li class="list-group-item total-row">
+                                {% trans "Order Total" %}
+                                <span>{{ order.currency|currency_symbol }}{{ order.total_amount|floatformat:2|intcomma }}</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {# Logic to determine if we show the Actions section #}
+                    {% if order.status != 'CANCELLED' %}
+                    <div class="order-sidebar-section">
+                        <h3>{% trans "Actions" %}</h3>
+                        <div class="d-grid gap-2">
+                            {# Invoice: Hide if pending payment #}
+                            {% if order.status != 'AWAITING_ESCROW_PAYMENT' and order.status != 'PENDING' %}
+                            <a href="{% url 'core:download_invoice' order_id=order.order_id %}" class="btn btn-outline-primary" target="_blank">
+                                <i class="bi bi-file-earmark-pdf me-2"></i> {% trans "Download Invoice" %}
+                            </a>
+                            {% endif %}
+
+                            {# Reorder: Show only if delivered/completed #}
+                            {% if order.status == 'DELIVERED' or order.status == 'COMPLETED' or order.status == 'PENDING_PAYOUT' %}
+                            <form action="{% url 'core:reorder' order_id=order.order_id %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-secondary w-100">
+                                    <i class="bi bi-arrow-repeat me-2"></i> {% trans "Reorder Items" %}
+                                </button>
+                            </form>
+                            {% endif %}
+
+                            {# Cancel Button: Show if Pending or Processing #}
+                            {% if order.status == 'PENDING' or order.status == 'AWAITING_ESCROW_PAYMENT' or order.status == 'AWAITING_BANK_TRANSFER' or order.status == 'AWAITING_DIRECT_PAYMENT' or order.status == 'PROCESSING' %}
+                            <form action="{% url 'core:cancel_order' order_id=order.order_id %}" method="post" onsubmit="return confirm('{% trans "Are you sure you want to cancel this order?" %}');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger w-100">
+                                    <i class="bi bi-x-circle me-2"></i> {% trans "Cancel Order" %}
+                                </button>
+                            </form>
+                            {% endif %}
                         </div>
-                        {% elif order.status == 'AWAITING_BANK_TRANSFER' %}
-                        <div class="alert alert-warning p-3">
-                            <h5 class="alert-heading">{% trans "Awaiting Bank Transfer" %}</h5>
-                            <p class="mb-0">{% trans "Please complete the bank transfer using the details provided." %}</p>
-                        </div>
-                        {% elif order.payment_method == 'direct' and order.status == 'AWAITING_DIRECT_PAYMENT' %}
-                        <div class="alert alert-info p-3">
-                            <h5 class="alert-heading">{% trans "Arrange Direct Payment" %}</h5>
-                            <p>{% blocktrans %}Please contact the service provider(s) directly to arrange payment.{% endblocktrans %}</p>
-                            {# ... provider contact info ... #}
-                        </div>
-                        {% elif order.status == 'PROCESSING' %}
-                            <div class="alert alert-info p-3">{% trans "Your payment is confirmed. Your order is being processed." %}</div>
-                        {% elif order.status == 'IN_PROGRESS' %}
-                             <div class="alert alert-info p-3">{% trans "The service is currently in progress." %}</div>
-                        {% elif order.status == 'COMPLETED' %}
-                             <div class="alert alert-success p-3">{% trans "This order has been marked as completed." %}</div>
-                        {% elif order.status == 'SHIPPED' %}
-                            <div class="alert alert-info p-3">{% trans "Your order has been shipped!" %}</div>
-                        {% elif order.status == 'CANCELLED' %}
-                             <div class="alert alert-danger p-3">{% trans "This order has been cancelled." %}</div>
-                        {% elif order.status == 'DISPUTED' %}
-                             <div class="alert alert-danger p-3">{% trans "This order is under dispute." %}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if can_confirm_completion or can_confirm_product_delivery %}
+                    <div class="order-sidebar-section">
+                        <h3>{% trans "Confirm Receipt" %}</h3>
+                        {% if can_confirm_completion %}
+                            <div class="text-center mb-3">
+                                <p class="small">{% trans "Is this service completed to your satisfaction?" %}</p>
+                                <form action="{% url 'core:customer_confirm_service_completion' order_id=order.order_id %}" method="post" onsubmit="return confirm('{% trans "Are you sure you want to mark this service as completed? This action cannot be undone and will typically lead to payment release to the provider." %}');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success w-100">
+                                        <i class="bi bi-check-circle-fill me-2"></i> {% trans "Confirm Service Completion" %}
+                                    </button>
+                                </form>
+                            </div>
+                        {% endif %}
+                        {% if can_confirm_product_delivery %}
+                            <div class="text-center mb-3">
+                                <p class="small">{% trans "Have you received your product(s)?" %}</p>
+                                <form action="{% url 'core:customer_confirm_product_delivery' order_id=order.order_id %}" method="post" onsubmit="return confirm('{% trans "Are you sure you want to confirm delivery? This action cannot be undone and will typically lead to payment release to the vendor." %}');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success w-100">
+                                        <i class="bi bi-box-seam-fill me-2"></i> {% trans "Confirm Product Delivery" %}
+                                    </button>
+                                </form>
+                            </div>
                         {% endif %}
                     </div>
-                </div>
-                
-                {% if can_confirm_completion or can_confirm_product_delivery %}
-                <div class="order-sidebar-section order-actions">
-                    <h3>{% trans "Confirm Receipt" %}</h3>
-                    {% if can_confirm_completion %}
-                        <div class="text-center mb-3">
-                            <p class="small">{% trans "Is this service completed to your satisfaction?" %}</p>
-                            <form action="{% url 'core:customer_confirm_service_completion' order_id=order.order_id %}" method="post" onsubmit="return confirm('{% trans "Are you sure you want to mark this service as completed? This action cannot be undone and will typically lead to payment release to the provider." %}');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-success w-100">
-                                    <i class="bi bi-check-circle-fill me-2"></i> {% trans "Confirm Service Completion" %}
-                                </button>
-                            </form>
-                        </div>
                     {% endif %}
-                    {% if can_confirm_product_delivery %}
-                        <div class="text-center mb-3">
-                            <p class="small">{% trans "Have you received your product(s)?" %}</p>
-                            <form action="{% url 'core:customer_confirm_product_delivery' order_id=order.order_id %}" method="post" onsubmit="return confirm('{% trans "Are you sure you want to confirm delivery? This action cannot be undone and will typically lead to payment release to the vendor." %}');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-success w-100">
-                                    <i class="bi bi-box-seam-fill me-2"></i> {% trans "Confirm Product Delivery" %}
-                                </button>
-                            </form>
+
+                    {% if order.shipping_address %}
+                    <div class="order-sidebar-section">
+                        <h3>{% trans "Shipping Address" %}</h3>
+                        <div class="address-block">
+                            <strong>{{ order.shipping_address.full_name }}</strong>
+                            <p>{{ order.shipping_address.street_address }}<br>
+                                {% if order.shipping_address.apartment_address %}{{ order.shipping_address.apartment_address }}<br>{% endif %}
+                                {{ order.shipping_address.city }}, {{ order.shipping_address.state }} {{ order.shipping_address.zip_code }}<br>
+                                {{ order.shipping_address.get_country_display }}
+                            </p>
                         </div>
+                    </div>
+                    {% endif %}
+
+                    {% if order.billing_address %}
+                     <div class="order-sidebar-section">
+                        <h3>{% trans "Billing Address" %}</h3>
+                        <div class="address-block">
+                            <strong>{{ order.billing_address.full_name }}</strong>
+                            <p>{{ order.billing_address.street_address }}<br>
+                                {% if order.billing_address.apartment_address %}{{ order.billing_address.apartment_address }}<br>{% endif %}
+                                {{ order.billing_address.city }}, {{ order.billing_address.state }} {{ order.billing_address.zip_code }}<br>
+                                {{ order.billing_address.get_country_display }}
+                            </p>
+                        </div>
+                    </div>
                     {% endif %}
                 </div>
-                {% endif %}
-
-                {% if order.shipping_address_text %}
-                <div class="order-sidebar-section">
-                    <div class="address-block">
-                        <strong>{% trans "Shipping Address" %}</strong>
-                        <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ order.shipping_address_text }}</pre>
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if order.billing_address_text %}
-                 <div class="order-sidebar-section">
-                    <div class="address-block">
-                        <strong>{% trans "Billing Address" %}</strong>
-                        <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ order.billing_address_text }}</pre>
-                    </div>
-                </div>
-                {% endif %}
             </div>
         </div>
 

@@ -261,24 +261,74 @@
                 {% endfor %}
             {% endif %}
 
-            <form method="post" action="{% url 'core:place_order' %}" id="placeOrderForm">
-                {% csrf_token %} <!-- CSRF for the main place_order form -->
+            <!-- Billing Address Section -->
+            <div class="checkout-section" id="billingAddressSection">
+                <div class="checkout-section-header">
+                    <h4>1. {% trans "Billing Address" %}</h4>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-new-address" data-bs-toggle="collapse" data-bs-target="#addNewBillingAddressForm" aria-expanded="false" aria-controls="addNewBillingAddressForm">
+                        <i class="bi bi-plus-circle"></i> {% trans "Add New" %}
+                    </button>
+                </div>
+                <div class="checkout-section-body">
+                    {% if billing_addresses %}
+                        <div class="address-selection-grid">
+                        {% for address in billing_addresses %}
+                            <div class="address-card {% if address.is_default or billing_addresses|length == 1 %}selected{% endif %}">
+                                <input class="form-check-input" type="radio" name="billing_address_id" id="billing_address_{{ address.id }}" value="{{ address.id }}" {% if address.is_default or billing_addresses|length == 1 %}checked{% endif %} {% if billing_addresses %}required{% endif %} form="placeOrderForm">
+                                <label class="form-check-label" for="billing_address_{{ address.id }}">
+                                    <div class="address-details">
+                                            <strong>{{ address.full_name }}</strong> {% if address.is_default %}<span class="badge bg-info">{% trans "Default" %}</span>{% endif %}<br>
+                                            {{ address.street_address }}{% if address.apartment_address %}, {{ address.apartment_address }}{% endif %}<br>
+                                            {{ address.city }}, {{ address.state }} {{ address.zip_code }}<br>
+                                            {{ address.country }}
+                                            {% if address.phone_number %}<br><i class="bi bi-telephone"></i> {{ address.phone_number }}{% endif %}
+                                    </div>
+                                </label>
+                            </div>
+                        {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="mb-3">{% trans "You have no billing addresses saved. Please add an address." %}</p>
+                    {% endif %}
+                </div>
+            </div>
 
-                <!-- Billing Address Section -->
-                <div class="checkout-section" id="billingAddressSection">
-                    <div class="checkout-section-header">
-                        <h4>1. {% trans "Billing Address" %}</h4>
-                        <button type="button" class="btn btn-sm btn-outline-primary btn-add-new-address" data-bs-toggle="collapse" data-bs-target="#addNewBillingAddressForm" aria-expanded="false" aria-controls="addNewBillingAddressForm">
-                            <i class="bi bi-plus-circle"></i> {% trans "Add New" %}
-                        </button>
+            <!-- "Add New Billing Address" Form (Positioned here for layout, submits independently) -->
+            <div class="collapse add-address-form-container mt-3" id="addNewBillingAddressForm">
+                <h5>{% trans "Add New Billing Address" %}</h5>
+                <form method="post" action="{% url 'core:add_checkout_address' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="address_type" value="billing">
+                    <input type="hidden" name="next" value="{% url 'core:checkout' %}">
+                    {{ address_form|crispy }}
+                    <button type="submit" class="btn btn-primary mt-2">{% trans "Save Billing Address" %}</button>
+                </form>
+            </div>
+
+            <!-- Shipping Address -->
+            {% if requires_shipping %}
+            <div class="checkout-section" id="shippingAddressSection">
+                <div class="checkout-section-header">
+                    <h4>2. {% trans "Shipping Address" %}</h4>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-new-address" data-bs-toggle="collapse" data-bs-target="#addNewShippingAddressForm" aria-expanded="false" aria-controls="addNewShippingAddressForm">
+                         <i class="bi bi-plus-circle"></i> {% trans "Add New" %}
+                    </button>
+                </div>
+                <div class="checkout-section-body">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="use_billing_for_shipping" id="use_billing_for_shipping" form="placeOrderForm">
+                        <label class="form-check-label" for="use_billing_for_shipping">
+                            {% trans "Use billing address for shipping" %}
+                        </label>
                     </div>
-                    <div class="checkout-section-body">
-                        {% if billing_addresses %}
+
+                    <div id="shippingAddressOptions">
+                        {% if shipping_addresses %}
                             <div class="address-selection-grid">
-                            {% for address in billing_addresses %}
-                                <div class="address-card {% if address.is_default or billing_addresses|length == 1 %}selected{% endif %}">
-                                    <input class="form-check-input" type="radio" name="billing_address_id" id="billing_address_{{ address.id }}" value="{{ address.id }}" {% if address.is_default or billing_addresses|length == 1 %}checked{% endif %} {% if billing_addresses %}required{% endif %}>
-                                    <label class="form-check-label" for="billing_address_{{ address.id }}">
+                            {% for address in shipping_addresses %}
+                                <div class="address-card {% if address.is_default and not billing_addresses|length == 1 and not shipping_addresses|length == 1 %}selected{% endif %}">
+                                    <input class="form-check-input" type="radio" name="shipping_address_id" id="shipping_address_{{ address.id }}" value="{{ address.id }}" {% if address.is_default and not billing_addresses|length == 1 and not shipping_addresses|length == 1 %}checked{% endif %} form="placeOrderForm"> {# JS handles required for this based on checkbox #}
+                                    <label class="form-check-label" for="shipping_address_{{ address.id }}">
                                         <div class="address-details">
                                                 <strong>{{ address.full_name }}</strong> {% if address.is_default %}<span class="badge bg-info">{% trans "Default" %}</span>{% endif %}<br>
                                                 {{ address.street_address }}{% if address.apartment_address %}, {{ address.apartment_address }}{% endif %}<br>
@@ -291,75 +341,27 @@
                             {% endfor %}
                             </div>
                         {% else %}
-                            <p class="mb-3">{% trans "You have no billing addresses saved. Please add an address." %}</p>
+                            <p class="mb-3">{% trans "You have no shipping addresses saved. Please add an address or use your billing address." %}</p>
                         {% endif %}
-                        <!-- MOVED "Add New Billing Address" Form -->
-                        <div class="collapse add-address-form-container mt-3" id="addNewBillingAddressForm">
-                            <h5>{% trans "Add New Billing Address" %}</h5>
-                            <form method="post" action="{% url 'core:add_checkout_address' %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="address_type" value="billing">
-                                <input type="hidden" name="next" value="{% url 'core:checkout' %}"> {# Ensure redirect back to checkout #}
-                                {{ address_form|crispy }}
-                                <button type="submit" class="btn btn-primary mt-2">{% trans "Save Billing Address" %}</button>
-                            </form>
-                        </div>
                     </div>
                 </div>
-                
-                <!-- Shipping Address -->
-                {% if requires_shipping %}
-                <div class="checkout-section" id="shippingAddressSection">
-                    <div class="checkout-section-header">
-                        <h4>2. {% trans "Shipping Address" %}</h4>
-                        <button type="button" class="btn btn-sm btn-outline-primary btn-add-new-address" data-bs-toggle="collapse" data-bs-target="#addNewShippingAddressForm" aria-expanded="false" aria-controls="addNewShippingAddressForm">
-                             <i class="bi bi-plus-circle"></i> {% trans "Add New" %}
-                        </button>
-                    </div>
-                    <div class="checkout-section-body">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="use_billing_for_shipping" id="use_billing_for_shipping">
-                            <label class="form-check-label" for="use_billing_for_shipping">
-                                {% trans "Use billing address for shipping" %}
-                            </label>
-                        </div>
+            </div>
 
-                        <div id="shippingAddressOptions">
-                            {% if shipping_addresses %}
-                                <div class="address-selection-grid">
-                                {% for address in shipping_addresses %}
-                                    <div class="address-card {% if address.is_default and not billing_addresses|length == 1 and not shipping_addresses|length == 1 %}selected{% endif %}">
-                                        <input class="form-check-input" type="radio" name="shipping_address_id" id="shipping_address_{{ address.id }}" value="{{ address.id }}" {% if address.is_default and not billing_addresses|length == 1 and not shipping_addresses|length == 1 %}checked{% endif %}> {# JS handles required for this based on checkbox #}
-                                        <label class="form-check-label" for="shipping_address_{{ address.id }}">
-                                            <div class="address-details">
-                                                    <strong>{{ address.full_name }}</strong> {% if address.is_default %}<span class="badge bg-info">{% trans "Default" %}</span>{% endif %}<br>
-                                                    {{ address.street_address }}{% if address.apartment_address %}, {{ address.apartment_address }}{% endif %}<br>
-                                                    {{ address.city }}, {{ address.state }} {{ address.zip_code }}<br>
-                                                    {{ address.country }}
-                                                    {% if address.phone_number %}<br><i class="bi bi-telephone"></i> {{ address.phone_number }}{% endif %}
-                                            </div>
-                                        </label>
-                                    </div>
-                                {% endfor %}
-                                </div>
-                            {% else %}
-                                <p class="mb-3">{% trans "You have no shipping addresses saved. Please add an address or use your billing address." %}</p>
-                            {% endif %}
-                        </div>
-                        <!-- MOVED "Add New Shipping Address" Form -->
-                        <div class="collapse add-address-form-container mt-3" id="addNewShippingAddressForm">
-                            <h5>{% trans "Add New Shipping Address" %}</h5>
-                            <form method="post" action="{% url 'core:add_checkout_address' %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="address_type" value="shipping">
-                                <input type="hidden" name="next" value="{% url 'core:checkout' %}"> {# Ensure redirect back to checkout #}
-                                {{ address_form|crispy }}
-                                <button type="submit" class="btn btn-primary mt-2">{% trans "Save Shipping Address" %}</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
+            <!-- "Add New Shipping Address" Form (Positioned here for layout, submits independently) -->
+            <div class="collapse add-address-form-container mt-3" id="addNewShippingAddressForm">
+                <h5>{% trans "Add New Shipping Address" %}</h5>
+                <form method="post" action="{% url 'core:add_checkout_address' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="address_type" value="shipping">
+                    <input type="hidden" name="next" value="{% url 'core:checkout' %}">
+                    {{ address_form|crispy }}
+                    <button type="submit" class="btn btn-primary mt-2">{% trans "Save Shipping Address" %}</button>
+                </form>
+            </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'core:place_order' %}" id="placeOrderForm">
+                {% csrf_token %} <!-- CSRF for the main place_order form -->
 
                 <!-- Payment Method Section -->
                 <div class="checkout-section" id="paymentMethodSection"> {# ID ADDED HERE #}

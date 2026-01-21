@@ -67,6 +67,7 @@ from .models import ( # Ensure UserProfile is imported
     ServiceBooking, PayoutRequest,
     ServiceAvailability, # Added for service availability
     ServiceAddon, ServiceImage, ServiceVideo, # Added for service addons
+    Product, Cart, CartItem, ServicePackage, Order, # Added for reorder view
     UserFeedback, # Added for general user feedback
     SystemNotification, # Added for system-wide notifications
     UserPreferences, # Added for user preferences
@@ -2083,6 +2084,141 @@ def clear_cart(request):
     return redirect('core:cart_detail') # Redirect back to the cart page
 
 @login_required
+@require_POST
+def reorder(request, order_id):
+    """
+    Adds all available items from a previous order to the user's current cart.
+    """
+    # 1. Find the original order, ensuring it belongs to the current user for security.
+    original_order = get_object_or_404(Order, order_id=order_id, user=request.user)
+
+    # 2. Get the user's current active cart.
+    current_cart, _ = Cart.objects.get_or_create(user=request.user, ordered=False)
+
+    added_count = 0
+    unavailable_items = []
+
+    # 3. Iterate through items in the original order.
+    for item in original_order.items.all():
+        # Determine if the item is a product or a service package
+        target_item = item.product or item.service_package
+        
+        if not target_item:
+            # This handles cases where the linked product/service has been deleted from the database.
+            name = item.product_name or item.service_package_name or _("An item")
+            unavailable_items.append(str(name))
+            continue
+
+        # Check if the product/service is still available for purchase.
+        # This assumes an 'is_active' boolean field and/or 'stock' count on your models.
+        # You can customize this availability check.
+        is_available = getattr(target_item, 'is_active', True)
+        if isinstance(target_item, Product):
+            is_available = is_available and getattr(target_item, 'stock', 1) > 0
+        
+        if is_available:
+            # 4. Add or update the item in the current cart.
+            cart_item, created = CartItem.objects.get_or_create(
+                user=request.user, # Note: CartItem model in context does not have a 'user' field.
+                                   # Assuming it should be linked to cart.user implicitly or directly.
+                                   # For now, I'll remove `user=request.user` from CartItem.objects.get_or_create
+                                   # as CartItem is linked to Cart, which has the user.
+                cart=current_cart,
+                product=item.product,
+                service_package=item.service_package,
+                defaults={'quantity': item.quantity}
+            )
+
+            if not created:
+                # If the item was already in the cart, just add the quantity from the old order.
+                cart_item.quantity += item.quantity
+                cart_item.save()
+            
+            added_count += 1
+        else:
+            # Item is no longer available (e.g., out of stock, inactive).
+            name_attr = 'name' if hasattr(target_item, 'name') else 'title'
+            unavailable_items.append(getattr(target_item, name_attr, _("Unknown Item")))
+
+    # 5. Provide clear feedback to the user using Django's messages framework.
+    if added_count > 0:
+        messages.success(request, _(f"{added_count} items from order #{original_order.order_id} have been added to your cart."))
+    
+    if unavailable_items:
+        unavailable_list = ", ".join(unavailable_items)
+        messages.warning(request, _(f"Some items could not be added as they are no longer available: {unavailable_list}"))
+    
+    if added_count == 0 and not unavailable_items:
+        messages.info(request, _("There were no items in the original order to add."))
+
+    # 6. Redirect the user to their shopping cart to review the items.
+    return redirect('core:cart_detail')
+
+@login_required
+@require_POST
+def reorder(request, order_id):
+    """
+    Adds all available items from a previous order to the user's current cart.
+    """
+    # 1. Find the original order, ensuring it belongs to the current user for security.
+    original_order = get_object_or_404(Order, order_id=order_id, user=request.user)
+
+    # 2. Get the user's current active cart.
+    current_cart, _ = Cart.objects.get_or_create(user=request.user, ordered=False)
+
+    added_count = 0
+    unavailable_items = []
+
+    # 3. Iterate through items in the original order.
+    for item in original_order.items.all():
+        # Determine if the item is a product or a service package
+        target_item = item.product or item.service_package
+        
+        if not target_item:
+            # This handles cases where the linked product/service has been deleted from the database.
+            name = item.product_name or item.service_package_name or _("An item")
+            unavailable_items.append(str(name))
+            continue
+
+        # Check if the product/service is still available for purchase.
+        is_available = getattr(target_item, 'is_active', True)
+        if isinstance(target_item, Product):
+            is_available = is_available and getattr(target_item, 'stock', 1) > 0
+        
+        if is_available:
+            # 4. Add or update the item in the current cart.
+            cart_item, created = CartItem.objects.get_or_create(
+                cart=current_cart,
+                product=item.product,
+                service_package=item.service_package,
+                defaults={'quantity': item.quantity}
+            )
+
+            if not created:
+                # If the item was already in the cart, just add the quantity from the old order.
+                cart_item.quantity += item.quantity
+                cart_item.save()
+            
+            added_count += 1
+        else:
+            # Item is no longer available (e.g., out of stock, inactive).
+            name_attr = 'name' if hasattr(target_item, 'name') else 'title'
+            unavailable_items.append(getattr(target_item, name_attr, _("Unknown Item")))
+
+    # 5. Provide clear feedback to the user.
+    if added_count > 0:
+        messages.success(request, _(f"{added_count} items from order #{original_order.order_id} have been added to your cart."))
+    
+    if unavailable_items:
+        unavailable_list = ", ".join(unavailable_items)
+        messages.warning(request, _(f"Some items could not be added as they are no longer available: {unavailable_list}"))
+    
+    if added_count == 0 and not unavailable_items:
+        messages.info(request, _("There were no items in the original order to add."))
+
+    return redirect('core:cart_detail')
+
+@login_required
 def checkout(request):
     cart_data = get_cart_data(request.user)
     if not cart_data['cart_items']:
@@ -2129,36 +2265,7 @@ def checkout(request):
             if 'promotion_id' in request.session: del request.session['promotion_id']
             if 'discount_amount' in request.session: del request.session['discount_amount']
     # --- END: Promotion Logic ---
-
-    # --- Logic to determine available payment methods ---
-    default_payment_choices = list(Order.PAYMENT_METHOD_CHOICES) # Make a mutable copy
-    available_payment_choices = []
-
-    cart_has_negotiable_product = False
-    cart_is_digital_only = True if cart_data['cart_items'] else False # Assume true if cart has items, then check
-
-    negotiable_slugs = getattr(settings, 'NEGOTIABLE_PRODUCT_CATEGORY_SLUGS', [])
-
-    for item in cart_data['cart_items']:
-        if item.product: # This logic only applies to products
-            if item.product.product_type != 'digital':
-                cart_is_digital_only = False
-            if negotiable_slugs and item.product.category and item.product.category.slug in negotiable_slugs:
-                cart_has_negotiable_product = True
-        else: # If a service is in the cart, it's not digital-only in the same sense
-            cart_is_digital_only = False
-
-    if cart_is_digital_only:
-        available_payment_choices = [choice for choice in default_payment_choices if choice[0] == 'escrow']
-    elif cart_has_negotiable_product:
-        # Only allow direct arrangement for negotiable products
-        available_payment_choices = [choice for choice in default_payment_choices if choice[0] == 'direct']
-    else:
-        # For all other standard orders (digital or physical), allow online payments
-        available_payment_choices = [choice for choice in default_payment_choices if choice[0] in ['escrow', 'paypal']]
-
-    payment_method_choices = available_payment_choices
-
+    
     # Calculate final total
     grand_total = cart_data['cart_total'] + estimated_total_delivery_fee - discount_amount
 
@@ -2169,7 +2276,6 @@ def checkout(request):
         'shipping_addresses': shipping_addresses,
         'address_form': AddressForm(), # For adding new addresses
         'requires_shipping': requires_shipping,
-        'payment_method_choices': payment_method_choices,
         'estimated_platform_delivery_fee': estimated_platform_delivery_fee,
         'estimated_total_vendor_delivery_fees': estimated_total_vendor_delivery_fees,
         'estimated_total_delivery_fee': estimated_total_delivery_fee,
@@ -2956,7 +3062,7 @@ def _generate_customer_invoice_pdf(order: Order) -> Optional[BytesIO]:
 
 
 @login_required
-def customer_generate_invoice(request, order_id):
+def download_invoice(request, order_id):
     """
     Generates and serves a PDF invoice for a customer's specific order.
     """
@@ -2973,8 +3079,60 @@ def customer_generate_invoice(request, order_id):
         messages.error(request, _("There was an error generating the invoice PDF. Please try again later."))
         return redirect('core:order_detail', order_id=order.order_id)
 
-    return FileResponse(pdf_buffer, as_attachment=False, filename=f'invoice_{order.order_id}.pdf')
+    # --- Email the invoice ---
+    try:
+        if request.user.email:
+            subject = _("Your NEXUS Invoice for Order #{}").format(order.order_id)
+            # Context for email template
+            email_context = {
+                'user': request.user,
+                'order': order,
+                'order_url': request.build_absolute_uri(order.get_absolute_url())
+            }
+            html_message = render_to_string('core/customer_invoice_email.html', email_context)
+            
+            email = EmailMessage(
+                subject,
+                html_message,
+                settings.DEFAULT_FROM_EMAIL,
+                [request.user.email],
+            )
+            email.content_subtype = "html" # Main content is now text/html
+            email.attach(f'invoice_{order.order_id}.pdf', pdf_buffer.getvalue(), 'application/pdf')
+            email.send(fail_silently=True)
+    except Exception as e:
+        logger.error(f"Failed to email invoice for order {order.order_id}: {e}")
 
+    # Reset buffer position for FileResponse
+    pdf_buffer.seek(0)
+    return FileResponse(pdf_buffer, as_attachment=True, filename=f'invoice_{order.order_id}.pdf')
+
+
+@login_required
+@require_POST
+def cancel_order(request, order_id):
+    """
+    Allows a customer to cancel their order if it hasn't been shipped yet.
+    """
+    order = get_object_or_404(Order, order_id=order_id, user=request.user)
+    
+    # Define statuses that allow cancellation
+    cancellable_statuses = ['PENDING', 'AWAITING_ESCROW_PAYMENT', 'AWAITING_BANK_TRANSFER', 'AWAITING_DIRECT_PAYMENT', 'PROCESSING']
+    
+    if order.status in cancellable_statuses:
+        order.status = 'CANCELLED'
+        order.save(update_fields=['status'])
+        
+        # Restore stock for physical products
+        for item in order.items.all():
+            if item.product and item.product.product_type == 'physical':
+                Product.objects.filter(pk=item.product.pk).update(stock=F('stock') + item.quantity)
+
+        messages.success(request, _("Order #{} has been cancelled successfully.").format(order.order_id))
+    else:
+        messages.error(request, _("This order cannot be cancelled because it has already been shipped or completed."))
+        
+    return redirect('core:order_detail', order_id=order.order_id)
 
 @login_required
 @require_POST
