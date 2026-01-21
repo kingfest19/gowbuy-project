@@ -280,6 +280,8 @@ STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 # You will also need to add the webhook secret later
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
+STRIPE_WEBHOOK_SECRET_ASYNC_FAILED = os.environ.get('STRIPE_WEBHOOK_SECRET_ASYNC_FAILED')
+STRIPE_WEBHOOK_SECRET_ASYNC_SUCCEEDED = os.environ.get('STRIPE_WEBHOOK_SECRET_ASYNC_SUCCEEDED')
 
 # core/static is automatically found because 'core' is in INSTALLED_APPS.
 # Adding it here causes duplicate file warnings.

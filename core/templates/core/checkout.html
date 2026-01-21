@@ -196,6 +196,14 @@
         margin-bottom: 0;
     }
 
+    /* Coupon Section */
+    .coupon-section {
+        border-top: 1px dashed var(--border-color);
+        border-bottom: 1px dashed var(--border-color);
+        padding: 1rem 0;
+        margin: 1rem 0;
+    }
+
     /* Add Address Form */
     .add-address-form-container {
         background-color: var(--bg-surface);
@@ -335,44 +343,23 @@
                     <div class="checkout-section-body">
                         <p class="mb-3">{% trans "Please select your preferred payment method:" %}</p>
                         
-                        <!-- Credit/Debit Card -->
+                        <!-- Unified Online Payment (Stripe) -->
                         <div class="payment-method-item selected">
-                            <input class="form-check-input" type="radio" name="payment_method" id="payment_method_card" value="card" checked required>
-                            <label class="form-check-label w-100" for="payment_method_card">
+                            <input class="form-check-input" type="radio" name="payment_method" id="payment_method_stripe" value="card" checked required>
+                            <label class="form-check-label w-100" for="payment_method_stripe">
                                 <div class="payment-method-content">
-                                    <span class="payment-method-title">{% trans "Credit or Debit Card" %}</span>
+                                    <span class="payment-method-title">{% trans "Secure Online Payment" %}</span>
                                     <div class="payment-method-icons">
-                                    <i class="fab fa-cc-visa fa-lg me-1" title="Visa"></i>
-                                    <i class="fab fa-cc-mastercard fa-lg me-1" title="Mastercard"></i>
-                                    <i class="fab fa-cc-amex fa-lg me-1" title="American Express"></i>
-                                    <i class="fab fa-cc-discover fa-lg" title="Discover"></i>
+                                        <i class="fab fa-cc-visa fa-lg me-1" title="Visa"></i>
+                                        <i class="fab fa-cc-mastercard fa-lg me-1" title="Mastercard"></i>
+                                        <i class="fab fa-google-pay fa-lg me-1" title="Google Pay"></i>
+                                        <span class="badge bg-secondary ms-1" style="font-weight: normal;">Klarna</span>
                                     </div>
-                                </div>
-                            </label>
-                        </div>
-
-                        <!-- Apple Pay & Google Pay -->
-                        <div class="payment-method-item">
-                            <input class="form-check-input" type="radio" name="payment_method" id="payment_method_wallet" value="digital_wallet">
-                            <label class="form-check-label w-100" for="payment_method_wallet">
-                                <div class="payment-method-content">
-                                    <span class="payment-method-title">{% trans "Digital Wallets" %}</span>
-                                    <div class="payment-method-icons">
-                                    <i class="fab fa-apple-pay fa-2x me-2 align-middle" title="Apple Pay"></i>
-                                    <i class="fab fa-google-pay fa-2x align-middle" title="Google Pay"></i>
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-
-                        <!-- Bank Transfer -->
-                        <div class="payment-method-item">
-                            <input class="form-check-input" type="radio" name="payment_method" id="payment_method_bank" value="bank_transfer">
-                            <label class="form-check-label w-100" for="payment_method_bank">
-                                <div class="payment-method-content">
-                                    <span class="payment-method-title">{% trans "Bank Transfer" %}</span>
-                                    <div class="payment-method-icons">
-                                    <i class="fas fa-university me-1"></i> {% trans "Local & International Bank Transfers" %}
+                                    <small class="text-muted d-block mt-2">
+                                        {% trans "You will be redirected to a secure page to complete your payment." %}
+                                    </small>
+                                    <div class="mt-2 text-success small">
+                                        <i class="fas fa-lock me-1"></i> {% trans "Payments are securely processed by Stripe." %}
                                     </div>
                                 </div>
                             </label>
@@ -432,6 +419,26 @@
                         {% empty %}
                             <p>{% trans "Your cart is empty." %}</p>
                         {% endfor %}
+
+                        {# --- Coupon Section --- #}
+                        <div class="coupon-section">
+                            <a class="text-decoration-none fw-bold" data-bs-toggle="collapse" href="#couponCollapse" role="button" aria-expanded="false" aria-controls="couponCollapse">
+                                <i class="bi bi-tag-fill me-1"></i> {% trans "Have a coupon?" %}
+                            </a>
+                            <div class="collapse mt-2" id="couponCollapse">
+                                <form method="post" action="{% url 'core:apply_coupon' %}" class="d-flex gap-2">
+                                    {% csrf_token %}
+                                    <input type="text" name="code" class="form-control form-control-sm" placeholder="{% trans 'Enter code' %}" required>
+                                    <button class="btn btn-sm btn-dark" type="submit">{% trans "Apply" %}</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% if discount_amount > 0 %}
+                            <div class="summary-row text-success">
+                                <span>{% trans "Discount" %}</span>
+                                <span>-{{ currency_symbol|default:"£" }}{{ discount_amount|floatformat:2 }}</span>
+                            </div>
+                        {% endif %}
                         
                         {# --- Order Summary Totals (Dynamic) --- #}
                         <div class="summary-row mt-4">

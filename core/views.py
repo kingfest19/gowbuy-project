@@ -2532,7 +2532,7 @@ def place_order(request):
             return redirect('core:initiate_paystack_payment', order_id=order.id)
         
         elif order.payment_method in ['card', 'digital_wallet']:
-            # Map Card and Digital Wallet to Paystack flow for now
+            # Map Card and Digital Wallet to Stripe flow 
             order.status = 'AWAITING_ESCROW_PAYMENT'
             order.save(update_fields=['status'])
             return redirect('core:initiate_stripe_payment', order_id=order.id)
@@ -2733,7 +2733,7 @@ def initiate_stripe_payment(request, order_id):
         # Create a checkout session
         # We use a single line item for the total to avoid rounding discrepancies with discounts/taxes
         checkout_session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
+            automatic_payment_methods={'enabled': True},
             line_items=[{
                 'price_data': {
                     'currency': order.currency.lower(),
@@ -2778,59 +2778,89 @@ def stripe_payment_cancel(request):
     messages.warning(request, _("Payment process was cancelled."))
     return redirect('core:order_history')
 
+def _fulfill_stripe_order(session):
+    """Helper to fulfill order upon successful Stripe payment."""
+    client_reference_id = session.get('client_reference_id')
+    if client_reference_id:
+        try:
+            order = Order.objects.get(order_id=client_reference_id)
+            
+            # Only update if not already processed
+            if order.status == 'AWAITING_ESCROW_PAYMENT':
+                order.status = 'PROCESSING'
+                order.transaction_id = session.get('payment_intent')
+                order.save(update_fields=['status', 'transaction_id'])
+                
+                # Record the transaction
+                Transaction.objects.create(
+                    user=order.user, order=order, transaction_type='payment',
+                    amount=Decimal(session.get('amount_total', 0)) / 100, # Convert cents to main currency unit
+                    currency=session.get('currency', 'usd').upper(), status='completed',
+                    gateway_transaction_id=session.get('payment_intent'),
+                    description=f"Stripe Payment for Order {order.order_id}"
+                )
+                logger.info(f"Order {order.order_id} updated via Stripe Webhook.")
+        except Order.DoesNotExist:
+            logger.error(f"Order {client_reference_id} not found during Stripe webhook.")
+
 @csrf_exempt
 @require_POST
 def stripe_webhook(request):
     """
     Handles Stripe webhooks to securely update order status.
+    Supports multiple signing secrets for different events.
     """
     payload = request.body
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
-    endpoint_secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', None)
+    
+    # Collect all configured secrets
+    secrets = []
+    if getattr(settings, 'STRIPE_WEBHOOK_SECRET', None):
+        secrets.append(settings.STRIPE_WEBHOOK_SECRET)
+    if getattr(settings, 'STRIPE_WEBHOOK_SECRET_ASYNC_FAILED', None):
+        secrets.append(settings.STRIPE_WEBHOOK_SECRET_ASYNC_FAILED)
+    if getattr(settings, 'STRIPE_WEBHOOK_SECRET_ASYNC_SUCCEEDED', None):
+        secrets.append(settings.STRIPE_WEBHOOK_SECRET_ASYNC_SUCCEEDED)
 
-    if not endpoint_secret:
-        logger.error("STRIPE_WEBHOOK_SECRET is not set in settings.")
-        return HttpResponse("Webhook secret not configured", status=400)
+    if not secrets:
+        logger.error("No STRIPE_WEBHOOK_SECRETS configured in settings.")
+        return HttpResponse("Webhook secrets not configured", status=400)
 
     event = None
 
-    try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, endpoint_secret
-        )
-    except ValueError as e:
-        # Invalid payload
-        return HttpResponse(status=400)
-    except stripe.error.SignatureVerificationError as e:
-        # Invalid signature
+    # Try to verify signature with each secret until one works
+    for secret in secrets:
+        try:
+            event = stripe.Webhook.construct_event(payload, sig_header, secret)
+            break # Verification successful
+        except stripe.error.SignatureVerificationError:
+            continue # Try next secret
+        except ValueError:
+            return HttpResponse(status=400) # Invalid payload
+            
+    if event is None:
+        logger.warning("Stripe webhook signature verification failed for all configured secrets.")
         return HttpResponse(status=400)
 
-    # Handle the checkout.session.completed event
+    # 1. Handle Immediate Success (e.g., Cards)
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
-        client_reference_id = session.get('client_reference_id')
-        
-        if client_reference_id:
-            try:
-                order = Order.objects.get(order_id=client_reference_id)
-                
-                # Only update if not already processed
-                if order.status == 'AWAITING_ESCROW_PAYMENT':
-                    order.status = 'PROCESSING'
-                    order.transaction_id = session.get('payment_intent')
-                    order.save(update_fields=['status', 'transaction_id'])
-                    
-                    # Record the transaction
-                    Transaction.objects.create(
-                        user=order.user, order=order, transaction_type='payment',
-                        amount=Decimal(session.get('amount_total', 0)) / 100, # Convert cents to main currency unit
-                        currency=session.get('currency', 'usd').upper(), status='completed',
-                        gateway_transaction_id=session.get('payment_intent'),
-                        description=f"Stripe Payment for Order {order.order_id}"
-                    )
-                    logger.info(f"Order {order.order_id} updated via Stripe Webhook.")
-            except Order.DoesNotExist:
-                logger.error(f"Order {client_reference_id} not found during Stripe webhook.")
+        # Only fulfill if payment is actually 'paid'. 
+        # If it's 'unpaid', it means it's a delayed method (handled below).
+        if session.get('payment_status') == 'paid':
+            _fulfill_stripe_order(session)
+
+    # 2. Handle Delayed Success (e.g., Bank Transfers clearing days later)
+    elif event['type'] == 'checkout.session.async_payment_succeeded':
+        session = event['data']['object']
+        _fulfill_stripe_order(session)
+
+    # 3. Handle Delayed Failure (e.g., Insufficient funds days later)
+    elif event['type'] == 'checkout.session.async_payment_failed':
+        session = event['data']['object']
+        # Log the failure
+        logger.warning(f"Async payment failed for session {session.get('id')}")
+        # Optional: You could add logic here to email the user asking them to retry
 
     return HttpResponse(status=200)
 
