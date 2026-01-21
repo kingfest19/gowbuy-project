@@ -214,6 +214,12 @@
         color: var(--text-main);
     }
 
+    /* Dark Mode Specifics for Address Form */
+    [data-theme="dark"] .add-address-form-container label,
+    [data-theme="dark"] .add-address-form-container h5 {
+        color: var(--text-main) !important;
+    }
+
     /* Dark Mode Specifics */
     [data-theme="dark"] .text-muted {
         color: #aab7c4 !important;
@@ -287,7 +293,17 @@
                         {% else %}
                             <p class="mb-3">{% trans "You have no billing addresses saved. Please add an address." %}</p>
                         {% endif %}
-                        <!-- Add New Billing Address form will be moved outside the main form -->
+                        <!-- MOVED "Add New Billing Address" Form -->
+                        <div class="collapse add-address-form-container mt-3" id="addNewBillingAddressForm">
+                            <h5>{% trans "Add New Billing Address" %}</h5>
+                            <form method="post" action="{% url 'core:add_checkout_address' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="address_type" value="billing">
+                                <input type="hidden" name="next" value="{% url 'core:checkout' %}"> {# Ensure redirect back to checkout #}
+                                {{ address_form|crispy }}
+                                <button type="submit" class="btn btn-primary mt-2">{% trans "Save Billing Address" %}</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
                 
@@ -330,7 +346,17 @@
                                 <p class="mb-3">{% trans "You have no shipping addresses saved. Please add an address or use your billing address." %}</p>
                             {% endif %}
                         </div>
-                        <!-- Add New Shipping Address form will be moved outside the main form -->
+                        <!-- MOVED "Add New Shipping Address" Form -->
+                        <div class="collapse add-address-form-container mt-3" id="addNewShippingAddressForm">
+                            <h5>{% trans "Add New Shipping Address" %}</h5>
+                            <form method="post" action="{% url 'core:add_checkout_address' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="address_type" value="shipping">
+                                <input type="hidden" name="next" value="{% url 'core:checkout' %}"> {# Ensure redirect back to checkout #}
+                                {{ address_form|crispy }}
+                                <button type="submit" class="btn btn-primary mt-2">{% trans "Save Shipping Address" %}</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
                 {% endif %}
@@ -373,32 +399,6 @@
                     <button type="button" class="btn btn-primary btn-lg" id="placeOrderButton">{% trans "Place Order & Proceed to Payment Choice" %}</button>
                 </div>
             </form> <!-- End of main placeOrderForm -->
-
-            <!-- MOVED "Add New Billing Address" Form -->
-            <div class="collapse add-address-form-container mt-3" id="addNewBillingAddressForm">
-                <h5>{% trans "Add New Billing Address" %}</h5>
-                <form method="post" action="{% url 'core:add_checkout_address' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="address_type" value="billing">
-                    <input type="hidden" name="next" value="{% url 'core:checkout' %}"> {# Ensure redirect back to checkout #}
-                    {{ address_form|crispy }}
-                    <button type="submit" class="btn btn-primary mt-2">{% trans "Save Billing Address" %}</button>
-                </form>
-            </div>
-
-            <!-- MOVED "Add New Shipping Address" Form -->
-            {% if requires_shipping %}
-            <div class="collapse add-address-form-container mt-3" id="addNewShippingAddressForm">
-                <h5>{% trans "Add New Shipping Address" %}</h5>
-                <form method="post" action="{% url 'core:add_checkout_address' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="address_type" value="shipping">
-                    <input type="hidden" name="next" value="{% url 'core:checkout' %}"> {# Ensure redirect back to checkout #}
-                    {{ address_form|crispy }}
-                    <button type="submit" class="btn btn-primary mt-2">{% trans "Save Shipping Address" %}</button>
-                </form>
-            </div>
-            {% endif %}
 
         </div>
 

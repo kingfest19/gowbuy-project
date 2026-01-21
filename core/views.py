@@ -2519,28 +2519,27 @@ def place_order(request):
                 messages.info(request, _("Your order for negotiable items has been placed. Please arrange payment and delivery directly with the vendor(s)."))
                 return redirect(order.get_absolute_url())
             else:
-                messages.warning(request, _("This order requires escrow payment. You will be redirected to Paystack."))
-                order.payment_method = 'escrow'
+                # If 'direct' is chosen for a non-negotiable order, route it to the standard online payment.
+                messages.warning(request, _("This order requires online payment. You will be redirected to our secure payment page."))
+                order.payment_method = 'card' # Change to a valid online method
                 order.status = 'AWAITING_ESCROW_PAYMENT'
                 order.save(update_fields=['payment_method', 'status'])
-                return redirect('core:initiate_paystack_payment', order_id=order.id)
+                return redirect('core:initiate_stripe_payment', order_id=order.id)
 
-        elif order.payment_method == 'escrow':
+        # This now handles 'escrow' (legacy), 'card', and 'digital_wallet'
+        elif order.payment_method in ['escrow', 'card', 'digital_wallet']:
             order.status = 'AWAITING_ESCROW_PAYMENT'
             order.save(update_fields=['status'])
-            messages.info(request, _("Please proceed to make your payment via Paystack for order {order_id}.").format(order_id=order.order_id))
-            return redirect('core:initiate_paystack_payment', order_id=order.id)
-        
-        elif order.payment_method in ['card', 'digital_wallet']:
-            # Map Card and Digital Wallet to Stripe flow 
-            order.status = 'AWAITING_ESCROW_PAYMENT'
-            order.save(update_fields=['status'])
+            # The message is now generic as Stripe handles the specific method display
+            messages.info(request, _("Please proceed to our secure payment page for order {order_id}.").format(order_id=order.order_id))
             return redirect('core:initiate_stripe_payment', order_id=order.id)
 
         elif order.payment_method == 'bank_transfer':
             order.status = 'AWAITING_BANK_TRANSFER'
             order.save(update_fields=['status'])
-            messages.success(request, _("Order placed! Please see below for bank transfer details. These have also been sent to your email."))
+            # This message is now handled by Stripe's hosted page for bank transfers.
+            # A generic success message is better here.
+            # messages.success(request, _("Order placed! Please see below for bank transfer details. These have also been sent to your email."))
             # The order detail page will show the bank info based on the status
             return redirect(order.get_absolute_url())
         else:
