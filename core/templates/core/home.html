@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static i18n %}
+{% load currency_filters %} {# <<< Load the new filters #}
 
 {% block title %}NEXUS - Your Online Marketplace{% endblock title %}
 
@@ -372,7 +373,7 @@
                     </p>
                     <p class="service-description-flat mb-2">{{ product.description|truncatewords_html:12 }}</p>
                     <p class="service-price-flat mb-2">
-                        GH₵ {{ product.price|floatformat:2 }}
+                        {% convert_price product.price %}
                     </p>
                     <div class="d-flex gap-2 btn-details-flat w-100">
                         <a href="{{ product.get_absolute_url }}" class="btn btn-sm btn-outline-primary flex-grow-1">{% trans "View" %}</a>
@@ -405,8 +406,8 @@
                         <p class="deal-description mb-4">{% trans "Immerse yourself in high-fidelity sound with active noise cancelling technology. Limited stock available at this exclusive price." %}</p>
                         
                         <div class="deal-price-box mb-4">
-                            <span class="current-price">GH₵ 250.00</span>
-                            <span class="original-price">GH₵ 450.00</span>
+                            <span class="current-price">£250.00</span>
+                            <span class="original-price">£450.00</span>
                             <span class="discount-badge">-45%</span>
                         </div>
 
@@ -593,7 +594,8 @@
                     </p>
                     <p class="service-description-flat mb-2">{{ product.description|truncatewords_html:12 }}</p>
                     <p class="service-price-flat mb-2">
-                        GH₵ {{ product.price|floatformat:2 }}
+                        £{{ product.price|floatformat:2 }}
+                        £{{ product.price|floatformat:2 }}
                     </p>
                     <div class="d-flex gap-2 btn-details-flat w-100">
                         <a href="{{ product.get_absolute_url }}" class="btn btn-sm btn-outline-primary flex-grow-1">{% trans "View" %}</a>
@@ -695,7 +697,7 @@
                     <p class="service-description-flat mb-2">{{ service.description|truncatewords_html:12 }}</p>
                     {% if service.price %}
                     <p class="service-price-flat mb-2">
-                        GH₵ {{ service.price|floatformat:2 }}
+                        £{{ service.price|floatformat:2 }}
                     </p>
                     {% endif %}
                     <a href="{{ service.get_absolute_url }}" class="btn btn-sm btn-outline-primary w-100 btn-details-flat">{% trans "View Details" %}</a>
@@ -868,7 +870,7 @@
                     const productId = button.getAttribute('data-product-id');
 
                     document.getElementById('quickViewTitle').textContent = name;
-                    document.getElementById('quickViewPrice').textContent = 'GH₵ ' + parseFloat(price).toFixed(2);
+                    document.getElementById('quickViewPrice').textContent = '£' + parseFloat(price).toFixed(2);
                     document.getElementById('quickViewImage').src = image;
                     document.getElementById('quickViewLink').href = url;
                     document.getElementById('quickViewCategory').textContent = category;

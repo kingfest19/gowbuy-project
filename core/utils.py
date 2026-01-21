@@ -5,7 +5,8 @@ from math import radians, sin, cos, sqrt, atan2
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import Exists, OuterRef, Q, Count
-from .models import RiderProfile, ActiveRiderBoost, DeliveryTask, Cart, Address # Ensure all are imported
+from .models import RiderProfile, ActiveRiderBoost, DeliveryTask, Cart, Address
+from django.core.cache import cache # Ensure cache is imported
 
 logger = logging.getLogger(__name__)
 
@@ -185,3 +186,46 @@ def haversine(lat1, lon1, lat2, lon2):
     return distance
 
 # Add other utility functions below if needed
+
+def get_exchange_rate(target_currency, base_currency='GBP'):
+    """
+    Fetches the exchange rate from base_currency to target_currency using Fixer.io.
+    Caches the result for 1 hour.
+    """
+    from decimal import Decimal
+    
+    if target_currency == base_currency:
+        return Decimal('1.0')
+    
+    cache_key = f"exchange_rate_{base_currency}_{target_currency}"
+    rate = cache.get(cache_key)
+    
+    if rate:
+        return Decimal(str(rate))
+        
+    api_key = getattr(settings, 'FIXER_API_KEY', None)
+    if not api_key:
+        logger.warning("Fixer API key not set in settings.")
+        return Decimal('1.0') # Fallback
+        
+    try:
+        # Fixer.io free plan often restricts base currency to EUR. 
+        # We fetch rates for both base and target relative to EUR (default) and calculate cross rate.
+        url = f"http://data.fixer.io/api/latest?access_key={api_key}&symbols={base_currency},{target_currency}"
+        response = requests.get(url, timeout=5)
+        data = response.json()
+        
+        if data.get('success'):
+            rates = data.get('rates', {})
+            base_rate = rates.get(base_currency) # Rate of GBP relative to EUR
+            target_rate = rates.get(target_currency) # Rate of Target relative to EUR
+            
+            if base_rate and target_rate:
+                # Cross rate: (EUR->Target) / (EUR->Base) = Base->Target
+                final_rate = Decimal(str(target_rate)) / Decimal(str(base_rate))
+                cache.set(cache_key, str(final_rate), timeout=3600) # Cache for 1 hour
+                return final_rate
+    except Exception as e:
+        logger.error(f"Error fetching exchange rate from Fixer.io: {e}")
+        
+    return Decimal('1.0') # Fallback on error

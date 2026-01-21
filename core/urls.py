@@ -139,6 +139,10 @@ urlpatterns = [
     path('order/<str:order_id>/process-choice/', views.process_checkout_choice, name='process_checkout_choice'), # Handle checkout choice
     path('order/<int:order_id>/initiate-payment/', views.initiate_paystack_payment, name='initiate_paystack_payment'),
     path('paystack/callback/', views.paystack_callback, name='paystack_callback'), # Keep if function-based
+    path('order/<int:order_id>/initiate-stripe-payment/', views.initiate_stripe_payment, name='initiate_stripe_payment'),
+    path('stripe/success/', views.stripe_payment_success, name='stripe_payment_success'),
+    path('stripe/cancel/', views.stripe_payment_cancel, name='stripe_payment_cancel'),
+    path('stripe/webhook/', views.stripe_webhook, name='stripe_webhook'),
     path('order/<str:order_id>/confirm-delivery/', views.customer_confirm_product_delivery, name='customer_confirm_product_delivery'), # Order ID
     path('order/<str:order_id>/confirm-completion/', views.customer_confirm_service_completion, name='customer_confirm_service_completion'),  # Order ID
     
@@ -164,6 +168,7 @@ urlpatterns = [
 
     # Location Update URL
     path('update-location/', views.update_location, name='update_location'),
+    path('update-currency/', views.update_currency, name='update_currency'), # <<< Added
 
     # Language Update URL
     path('update-language/', views.update_language, name='update_language'),

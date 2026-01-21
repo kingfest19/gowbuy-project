@@ -445,9 +445,9 @@
 
                   {# --- PRICE SECTION --- #}
                   <div class="cart-item-price-section">
-                    <div class="unit-price">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}{{ item.price|floatformat:2 }}</div>
+                    <div class="unit-price">{{ currency_symbol|default:'£' }}{{ item.price|floatformat:2 }}</div>
                     <div class="item-subtotal" data-unit-price="{{ item.price }}">
-                      {{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}{{ item.total_item_price|floatformat:2|intcomma }} {# Use calculated total #}
+                      {{ currency_symbol|default:'£' }}{{ item.total_item_price|floatformat:2|intcomma }} {# Use calculated total #}
                     </div>
                   </div>
                 </div>
@@ -465,7 +465,7 @@
           {% if cart_items %} {# Only show if cart is not empty #}
           <div class="cart-subtotal-row">
             Subtotal (<span id="cart-item-count-display">{{ cart_items|length }}</span> items): {# Dynamic count #}
-            <span id="cart-subtotal-display-left">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}{{ cart_total|floatformat:2|intcomma }}</span> {# Dynamic total #}
+            <span id="cart-subtotal-display-left">{{ currency_symbol|default:'£' }}{{ cart_total|floatformat:2|intcomma }}</span> {# Dynamic total #}
           </div>
           {% endif %}
 
@@ -516,7 +516,7 @@
                             </div>
                             <!-- Price -->
                             <div class="cart-item-price-section">
-                                <div class="item-subtotal">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}{{ saved_item.price|floatformat:2|intcomma }}</div>
+                                <div class="item-subtotal">{{ currency_symbol|default:'£' }}{{ saved_item.price|floatformat:2|intcomma }}</div>
                             </div>
                         </div>
                     {% endfor %}
@@ -537,7 +537,7 @@
                 >Subtotal (<span id="cart-item-count-summary">{{ cart_items|length }}</span>
                 items)</span
               >
-              <span id="summary-subtotal">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}{{ cart_total|floatformat:2|intcomma }}</span> {# Dynamic total #}
+              <span id="summary-subtotal">{{ currency_symbol|default:'£' }}{{ cart_total|floatformat:2|intcomma }}</span> {# Dynamic total #}
             </div>
             <div class="summary-item">
               <span>Shipping</span>
@@ -545,12 +545,12 @@
             </div>
             <div class="summary-item">
               <span>Estimated Tax</span>
-              <span id="summary-tax">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}0.00</span> {# TODO: Calculate tax later #}
+              <span id="summary-tax">{{ currency_symbol|default:'£' }}0.00</span> {# TODO: Calculate tax later #}
             </div>
             <hr />
             <div class="summary-total">
               <span>Order total</span>
-              <span id="summary-total">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}{{ cart_total|floatformat:2|intcomma }}</span> {# TODO: Add tax/shipping later #}
+              <span id="summary-total">{{ currency_symbol|default:'£' }}{{ cart_total|floatformat:2|intcomma }}</span> {# TODO: Add tax/shipping later #}
             </div>
             {# --- Link to checkout (defined in main urls.py) --- #}
             <form action="{% url 'core:checkout' %}" method="GET">
@@ -583,7 +583,7 @@
           const moveUrlTemplate = cartItemsList.dataset.moveUrlTemplate;
           const deleteSavedUrlTemplate = cartItemsList.dataset.deleteSavedUrlTemplate;
           const cartLeftContainer = document.querySelector('.cart-left');
-          const currencySymbol = "{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'$' }}";
+          const currencySymbol = "{{ currency_symbol|default:'£' }}";
 
           // --- Helper function to update cart summary ---
           function updateCartSummary(data) {

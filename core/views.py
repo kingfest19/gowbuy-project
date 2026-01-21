@@ -37,6 +37,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.db import transaction
 from django.db.models import Q, Avg, Count, Sum, F, ExpressionWrapper, fields, Prefetch, Max, OuterRef, Subquery, Exists
 from django.utils import timezone
+from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from channels.layers import get_channel_layer
@@ -92,7 +93,7 @@ from .forms import ( # Ensure RiderApplication is imported if needed by forms, b
     # ... any other forms you have ...
     RiderProfileApplicationForm,RiderProfileUpdateForm, UserProfileForm, UserPreferencesForm,
 )
-from authapp.forms import UserProfileUpdateForm as AuthUserProfileUpdateForm # Renamed to avoid clash
+from authapp.forms import UserProfileUpdateForm as AuthUserProfileUpdateForm
 
 from .utils import (
     send_order_confirmation_email, generate_invoice_pdf,
@@ -170,7 +171,7 @@ def vendor_email_packing_slip(request, pk):
 logger = logging.getLogger(__name__)
 
 # Initialize Stripe (if you're using it)
-# stripe.api_key = settings.STRIPE_SECRET_KEY
+stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', None)
 
 
 from .tasks import process_image_enhancement, process_background_removal
@@ -2324,6 +2325,10 @@ def place_order(request):
         else:
             ip = request.META.get('REMOTE_ADDR')
 
+        # Determine currency from session or default
+        currency_code = request.session.get('currency_code', getattr(settings, 'DEFAULT_CURRENCY_CODE', 'GBP'))
+
+
         order = Order.objects.create(
             user=request.user,
             billing_address=billing_address,
@@ -2333,7 +2338,7 @@ def place_order(request):
             platform_delivery_fee=platform_calculated_delivery_fee, # Store the Nexus part
             promotion=promotion, # Link the promotion
             discount_amount=discount_amount, # Store the discount
-            currency='USD' if payment_method_choice == 'paypal' else 'GHS', # Set currency based on payment
+            currency=currency_code, # Set currency based on session
             payment_method=payment_method_choice,
             status='PENDING',
             ip_address=ip
@@ -2525,6 +2530,19 @@ def place_order(request):
             order.save(update_fields=['status'])
             messages.info(request, _("Please proceed to make your payment via Paystack for order {order_id}.").format(order_id=order.order_id))
             return redirect('core:initiate_paystack_payment', order_id=order.id)
+        
+        elif order.payment_method in ['card', 'digital_wallet']:
+            # Map Card and Digital Wallet to Paystack flow for now
+            order.status = 'AWAITING_ESCROW_PAYMENT'
+            order.save(update_fields=['status'])
+            return redirect('core:initiate_stripe_payment', order_id=order.id)
+
+        elif order.payment_method == 'bank_transfer':
+            order.status = 'AWAITING_BANK_TRANSFER'
+            order.save(update_fields=['status'])
+            messages.success(request, _("Order placed! Please see below for bank transfer details. These have also been sent to your email."))
+            # The order detail page will show the bank info based on the status
+            return redirect(order.get_absolute_url())
         else:
             messages.error(request, _("There was an issue with your order's payment method. Please contact support."))
             return redirect(order.get_absolute_url())
@@ -2621,6 +2639,16 @@ class OrderDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
             can_confirm_delivery = True
         context['can_confirm_product_delivery'] = can_confirm_delivery
 
+        # --- Bank Transfer Info ---
+        if order.status == 'AWAITING_BANK_TRANSFER':
+            context['bank_transfer_info'] = {
+                'bank_name': 'NEXUS Corporate Bank',
+                'account_name': 'Nexus Marketplace Ltd.',
+                'account_number': '1234567890',
+                'sort_code': '00-11-22',
+                'reference': order.order_id
+            }
+
         # --- Add Map Data for Customer ---
         # Find a relevant delivery task for this order (e.g., the first Nexus-fulfilled one)
         delivery_task = order.delivery_tasks.filter(
@@ -2674,9 +2702,137 @@ def process_checkout_choice(request, order_id):
         messages.info(request, _("Please proceed to make your payment via PayPal."))
         return redirect('core:process_payment', order_id=order.id)
 
+    elif payment_method_choice in ['card', 'digital_wallet']:
+        order.status = 'AWAITING_ESCROW_PAYMENT' # Using Stripe for cards
+        order.save()
+        return redirect('core:initiate_stripe_payment', order_id=order.id)
+
+    elif payment_method_choice == 'bank_transfer':
+        order.status = 'AWAITING_BANK_TRANSFER'
+        order.save()
+        messages.success(request, _("Order placed! Please transfer the total amount to our bank account. Details have been sent to your email."))
+        # You might want to redirect to a page showing bank details here
+        return redirect('core:order_detail', order_id=order.order_id)
+
     else:
         messages.error(request, _("An unexpected error occurred. Please try again."))
         return redirect('core:order_detail', order_id=order.order_id)
+
+@login_required
+def initiate_stripe_payment(request, order_id):
+    """
+    Initiates a Stripe Checkout Session for the order.
+    """
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    if order.status != 'AWAITING_ESCROW_PAYMENT':
+        messages.error(request, _("This order is not eligible for payment at this time."))
+        return redirect('core:order_detail', order_id=order.order_id)
+
+    try:
+        # Create a checkout session
+        # We use a single line item for the total to avoid rounding discrepancies with discounts/taxes
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': order.currency.lower(),
+                    'product_data': {
+                        'name': f'Order #{order.order_id}',
+                        'description': _('Payment for order on NEXUS Marketplace'),
+                    },
+                    'unit_amount': int(order.total_amount * 100), # Stripe expects amount in cents/pence
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=request.build_absolute_uri(reverse('core:stripe_payment_success')) + '?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=request.build_absolute_uri(reverse('core:stripe_payment_cancel')),
+            client_reference_id=order.order_id,
+            customer_email=request.user.email,
+            metadata={
+                'order_id': order.id,
+                'user_id': request.user.id
+            }
+        )
+        return redirect(checkout_session.url, code=303)
+    except Exception as e:
+        logger.error(f"Stripe initialization error: {e}")
+        messages.error(request, _("Could not connect to payment gateway. Please try again later."))
+        return redirect('core:order_detail', order_id=order.order_id)
+
+@login_required
+def stripe_payment_success(request):
+    session_id = request.GET.get('session_id')
+    if session_id:
+        # In a production app, you might verify the session via API here or rely on Webhooks
+        # For immediate UI feedback, we assume success if redirected here with an ID
+        messages.success(request, _("Payment successful! Your order is being processed."))
+        # You might want to retrieve the order based on session client_reference_id if not in session
+        # For now, redirecting to order history is safe
+        return redirect('core:order_history')
+    return redirect('core:home')
+
+@login_required
+def stripe_payment_cancel(request):
+    messages.warning(request, _("Payment process was cancelled."))
+    return redirect('core:order_history')
+
+@csrf_exempt
+@require_POST
+def stripe_webhook(request):
+    """
+    Handles Stripe webhooks to securely update order status.
+    """
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+    endpoint_secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', None)
+
+    if not endpoint_secret:
+        logger.error("STRIPE_WEBHOOK_SECRET is not set in settings.")
+        return HttpResponse("Webhook secret not configured", status=400)
+
+    event = None
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, endpoint_secret
+        )
+    except ValueError as e:
+        # Invalid payload
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        return HttpResponse(status=400)
+
+    # Handle the checkout.session.completed event
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        client_reference_id = session.get('client_reference_id')
+        
+        if client_reference_id:
+            try:
+                order = Order.objects.get(order_id=client_reference_id)
+                
+                # Only update if not already processed
+                if order.status == 'AWAITING_ESCROW_PAYMENT':
+                    order.status = 'PROCESSING'
+                    order.transaction_id = session.get('payment_intent')
+                    order.save(update_fields=['status', 'transaction_id'])
+                    
+                    # Record the transaction
+                    Transaction.objects.create(
+                        user=order.user, order=order, transaction_type='payment',
+                        amount=Decimal(session.get('amount_total', 0)) / 100, # Convert cents to main currency unit
+                        currency=session.get('currency', 'usd').upper(), status='completed',
+                        gateway_transaction_id=session.get('payment_intent'),
+                        description=f"Stripe Payment for Order {order.order_id}"
+                    )
+                    logger.info(f"Order {order.order_id} updated via Stripe Webhook.")
+            except Order.DoesNotExist:
+                logger.error(f"Order {client_reference_id} not found during Stripe webhook.")
+
+    return HttpResponse(status=200)
 
 @login_required
 @require_POST
@@ -2814,7 +2970,7 @@ def customer_email_invoice(request, order_id):
 def initiate_paystack_payment(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    if order.payment_method != 'escrow' or order.status != 'AWAITING_ESCROW_PAYMENT':
+    if order.payment_method not in ['escrow', 'card', 'digital_wallet'] or order.status != 'AWAITING_ESCROW_PAYMENT':
         messages.error(request, _("This order is not eligible for Paystack payment at this time."))
         return redirect('core:order_detail', order_id=order.order_id)
 
@@ -2829,7 +2985,7 @@ def initiate_paystack_payment(request, order_id):
     payload = {
         "email": request.user.email,
         "amount": amount_in_kobo,
-        "currency": "GHS",
+        "currency": order.currency,
         "reference": order.paystack_ref or f"NEXUS_ORD_{order.order_id}_{uuid.uuid4().hex[:6]}",
         "callback_url": request.build_absolute_uri(reverse('core:paystack_callback')),
         "metadata": {
@@ -3587,11 +3743,34 @@ def update_location(request):
     return redirect('core:home')
 
 @require_POST
+def update_currency(request):
+    currency_code = request.POST.get('currency_code')
+    # Basic validation list
+    if currency_code and currency_code in ['GBP', 'USD', 'EUR', 'GHS', 'NGN']:
+        request.session['currency_code'] = currency_code
+        messages.success(request, _(f"Currency updated to {currency_code}."))
+    return redirect(request.META.get('HTTP_REFERER', 'core:home'))
+
+@require_POST
 def update_language(request):
     lang_code = request.POST.get('language_input')
     if lang_code and lang_code in [code for code, name in settings.LANGUAGES]:
-        request.session[translation.LANGUAGE_SESSION_KEY] = lang_code
+        translation.activate(lang_code)
+        request.session['_language'] = lang_code
         messages.success(request, _("Language updated successfully."))
+        
+        response = redirect(request.META.get('HTTP_REFERER', 'core:home'))
+        response.set_cookie(
+            settings.LANGUAGE_COOKIE_NAME,
+            lang_code,
+            max_age=getattr(settings, 'LANGUAGE_COOKIE_AGE', 31536000), # Default to 1 year
+            path=getattr(settings, 'LANGUAGE_COOKIE_PATH', '/'),
+            domain=getattr(settings, 'LANGUAGE_COOKIE_DOMAIN', None),
+            secure=getattr(settings, 'LANGUAGE_COOKIE_SECURE', False),
+            httponly=getattr(settings, 'LANGUAGE_COOKIE_HTTPONLY', False),
+            samesite=getattr(settings, 'LANGUAGE_COOKIE_SAMESITE', 'Lax'),
+        )
+        return response
     return redirect(request.META.get('HTTP_REFERER', 'core:home'))
 
 @login_required

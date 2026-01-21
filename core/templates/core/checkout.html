@@ -8,78 +8,227 @@
 {% block extra_css %}
 {{ block.super }}
 <style>
-    /* Styling for the main checkout sections (which no longer have .card) */
+    /* --- Checkout Page Styling --- */
     .checkout-section {
-        margin-bottom: 1.5rem; /* Replicates .mb-4 from .card */
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
-    .checkout-section .card-header { /* This still applies to the header divs */
-        background-color: #f8f9fa; 
-        border-bottom: 1px solid #dee2e6;
-        padding: 0.75rem 1.25rem; /* Default Bootstrap card-header padding */
-        border-top-left-radius: 0.375rem; /* Add back some rounding if desired */
-        border-top-right-radius: 0.375rem;
+    
+    .checkout-section-header {
+        background-color: var(--bg-body);
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
-    .checkout-section .card-header h4 {
-        margin-bottom: 0;
-        font-size: 1.25rem;
+    
+    .checkout-section-header h4 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-main);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
-    /* Content area within checkout sections, if needed for consistent padding */
-    .checkout-section-content {
-        padding: 1.25rem; /* Mimic card-body padding */
-        border: 1px solid #dee2e6;
-        border-top: none; /* Header has bottom border */
-        border-bottom-left-radius: 0.375rem;
-        border-bottom-right-radius: 0.375rem;
+    
+    .checkout-section-body {
+        padding: 1.5rem;
+        color: var(--text-main);
     }
 
-    .address-list-item-wrapper { /* Wrapper for consistent styling */
+    /* Address Cards Grid */
+    .address-selection-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+    }
+
+    .address-card {
+        position: relative;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
         padding: 1rem;
-        border: 1px solid #dee2e6;
-        border-radius: 0.375rem; /* Bootstrap's default border-radius */
-        margin-bottom: 0.75rem;
-        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    }
-    .address-list-item-wrapper:hover {
-        border-color: #0d6efd; /* Bootstrap primary blue */
-    }
-    .address-list-item-wrapper input[type="radio"] {
-        margin-top: 0.35rem; /* Align radio button better with text */
-        margin-right: 0.5rem;
-    }
-    .address-list-item-wrapper label {
-        width: 100%;
         cursor: pointer;
-        margin-bottom: 0; /* Remove default label margin */
+        transition: all 0.2s ease;
+        background-color: var(--bg-surface);
     }
-    .address-list-item-wrapper.selected { /* Style for selected address */
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    
+    .address-card:hover {
+        border-color: var(--accent-color);
+        background-color: var(--bg-body);
     }
-    .add-address-form-container { /* Styles for the collapse div itself */
-        background-color: #f8f9fa; /* Slightly different background for add form */
-        border: 1px solid #dee2e6;
-        border-radius: 0.375rem;
-        padding: 1rem; /* Replicates card-body padding */
-        margin-top: 1rem; /* Add some space above the add form */
+    
+    .address-card.selected {
+        border-color: var(--accent-color);
+        background-color: rgba(13, 110, 253, 0.05); /* Light blue tint */
     }
-    .order-summary-card .card-header {
-        background-color: rgb(52, 73, 94); /* Primary Dark Blue-Grey */
-        color: white;
+    [data-theme="dark"] .address-card.selected {
+        background-color: rgba(13, 110, 253, 0.15);
     }
-    .order-summary-card .list-group-item {
-        border-left: none;
-        border-right: none;
-        padding-left: 0;
-        padding-right: 0;
+
+    .address-card .form-check-input {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        margin: 0;
     }
-    .order-summary-card .list-group-item:first-child {
-        border-top: none;
+    
+    .address-card label {
+        cursor: pointer;
+        width: 100%;
+        height: 100%;
+        display: block;
+        margin: 0;
     }
-    .order-summary-card .list-group-item:last-child {
+
+    .address-details strong {
+        display: block;
+        font-size: 1.05rem;
+        margin-bottom: 0.25rem;
+        color: var(--text-main);
+    }
+    
+    .address-details {
+        font-size: 0.95rem;
+        color: var(--text-muted);
+        padding-right: 1.5rem; /* Space for radio button */
+    }
+
+    /* Payment Methods */
+    .payment-method-item {
+        border-color: var(--border-color);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        background-color: var(--bg-surface);
+    }
+    
+    .payment-method-item:hover {
+        background-color: var(--bg-body);
+        border-color: var(--accent-color);
+    }
+    
+    .payment-method-item.selected {
+        border-color: var(--accent-color);
+        background-color: rgba(13, 110, 253, 0.05);
+        box-shadow: 0 0 0 1px var(--accent-color);
+    }
+    [data-theme="dark"] .payment-method-item.selected {
+        background-color: rgba(13, 110, 253, 0.15);
+    }
+
+    .payment-method-item .form-check-input {
+        margin-right: 1rem;
+    }
+    
+    .payment-method-content {
+        flex-grow: 1;
+    }
+    
+    .payment-method-title {
+        font-weight: 600;
+        color: var(--text-main);
+        display: block;
+    }
+    
+    .payment-method-icons {
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+        font-size: 1.2rem;
+    }
+
+    /* Order Summary */
+    .order-summary-card {
+        position: sticky;
+        top: 2rem;
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        background-color: var(--bg-surface);
+        box-shadow: 0 15px 40px -5px rgba(0,0,0,0.1);
+        height: fit-content;
+    }
+    
+    .order-summary-header {
+        background-color: transparent;
+        padding: 1.5rem 1.5rem 0.5rem;
         border-bottom: none;
     }
-    .btn-add-new-address {
-        font-size: 0.875rem;
+    
+    .order-summary-header h4 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--text-main);
+        letter-spacing: -0.02em;
+    }
+    
+    .order-summary-body {
+        padding: 0.5rem 1.5rem 1.5rem;
+    }
+    
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        font-size: 1rem;
+        color: var(--text-muted);
+        align-items: center;
+    }
+    
+    .summary-row.total {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 2px dashed var(--border-color);
+        font-weight: 800;
+        font-size: 1.5rem;
+        color: var(--accent-color);
+        margin-bottom: 0;
+    }
+
+    /* Add Address Form */
+    .add-address-form-container {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+        color: var(--text-main);
+    }
+
+    /* Dark Mode Specifics */
+    [data-theme="dark"] .text-muted {
+        color: #aab7c4 !important;
+    }
+    
+    [data-theme="dark"] .form-control, 
+    [data-theme="dark"] .form-select {
+        background-color: var(--bg-input);
+        border-color: var(--border-color);
+        color: var(--text-main);
+    }
+    [data-theme="dark"] .form-control:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    [data-theme="dark"] .form-check-input {
+        background-color: var(--bg-input);
+        border-color: var(--border-color);
+    }
+    [data-theme="dark"] .form-check-input:checked {
+        background-color: var(--accent-color);
+        border-color: var(--accent-color);
     }
 </style>
 {% endblock %}
@@ -103,30 +252,30 @@
 
                 <!-- Billing Address Section -->
                 <div class="checkout-section" id="billingAddressSection">
-                    <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="checkout-section-header">
                         <h4>1. {% trans "Billing Address" %}</h4>
                         <button type="button" class="btn btn-sm btn-outline-primary btn-add-new-address" data-bs-toggle="collapse" data-bs-target="#addNewBillingAddressForm" aria-expanded="false" aria-controls="addNewBillingAddressForm">
                             <i class="bi bi-plus-circle"></i> {% trans "Add New" %}
                         </button>
                     </div>
-                    <div class="checkout-section-content">
+                    <div class="checkout-section-body">
                         {% if billing_addresses %}
+                            <div class="address-selection-grid">
                             {% for address in billing_addresses %}
-                                <div class="form-check address-list-item-wrapper">
+                                <div class="address-card {% if address.is_default or billing_addresses|length == 1 %}selected{% endif %}">
                                     <input class="form-check-input" type="radio" name="billing_address_id" id="billing_address_{{ address.id }}" value="{{ address.id }}" {% if address.is_default or billing_addresses|length == 1 %}checked{% endif %} {% if billing_addresses %}required{% endif %}>
                                     <label class="form-check-label" for="billing_address_{{ address.id }}">
-                                        <div class="d-flex justify-content-between">
-                                            <div>
+                                        <div class="address-details">
                                                 <strong>{{ address.full_name }}</strong> {% if address.is_default %}<span class="badge bg-info">{% trans "Default" %}</span>{% endif %}<br>
                                                 {{ address.street_address }}{% if address.apartment_address %}, {{ address.apartment_address }}{% endif %}<br>
                                                 {{ address.city }}, {{ address.state }} {{ address.zip_code }}<br>
                                                 {{ address.country }}
                                                 {% if address.phone_number %}<br><i class="bi bi-telephone"></i> {{ address.phone_number }}{% endif %}
-                                            </div>
                                         </div>
                                     </label>
                                 </div>
                             {% endfor %}
+                            </div>
                         {% else %}
                             <p class="mb-3">{% trans "You have no billing addresses saved. Please add an address." %}</p>
                         {% endif %}
@@ -137,13 +286,13 @@
                 <!-- Shipping Address -->
                 {% if requires_shipping %}
                 <div class="checkout-section" id="shippingAddressSection">
-                    <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="checkout-section-header">
                         <h4>2. {% trans "Shipping Address" %}</h4>
                         <button type="button" class="btn btn-sm btn-outline-primary btn-add-new-address" data-bs-toggle="collapse" data-bs-target="#addNewShippingAddressForm" aria-expanded="false" aria-controls="addNewShippingAddressForm">
                              <i class="bi bi-plus-circle"></i> {% trans "Add New" %}
                         </button>
                     </div>
-                    <div class="checkout-section-content">
+                    <div class="checkout-section-body">
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" name="use_billing_for_shipping" id="use_billing_for_shipping">
                             <label class="form-check-label" for="use_billing_for_shipping">
@@ -153,22 +302,22 @@
 
                         <div id="shippingAddressOptions">
                             {% if shipping_addresses %}
+                                <div class="address-selection-grid">
                                 {% for address in shipping_addresses %}
-                                    <div class="form-check address-list-item-wrapper">
+                                    <div class="address-card {% if address.is_default and not billing_addresses|length == 1 and not shipping_addresses|length == 1 %}selected{% endif %}">
                                         <input class="form-check-input" type="radio" name="shipping_address_id" id="shipping_address_{{ address.id }}" value="{{ address.id }}" {% if address.is_default and not billing_addresses|length == 1 and not shipping_addresses|length == 1 %}checked{% endif %}> {# JS handles required for this based on checkbox #}
                                         <label class="form-check-label" for="shipping_address_{{ address.id }}">
-                                            <div class="d-flex justify-content-between">
-                                                <div>
+                                            <div class="address-details">
                                                     <strong>{{ address.full_name }}</strong> {% if address.is_default %}<span class="badge bg-info">{% trans "Default" %}</span>{% endif %}<br>
                                                     {{ address.street_address }}{% if address.apartment_address %}, {{ address.apartment_address }}{% endif %}<br>
                                                     {{ address.city }}, {{ address.state }} {{ address.zip_code }}<br>
                                                     {{ address.country }}
                                                     {% if address.phone_number %}<br><i class="bi bi-telephone"></i> {{ address.phone_number }}{% endif %}
-                                                </div>
                                             </div>
                                         </label>
                                     </div>
                                 {% endfor %}
+                                </div>
                             {% else %}
                                 <p class="mb-3">{% trans "You have no shipping addresses saved. Please add an address or use your billing address." %}</p>
                             {% endif %}
@@ -180,23 +329,55 @@
 
                 <!-- Payment Method Section -->
                 <div class="checkout-section" id="paymentMethodSection"> {# ID ADDED HERE #}
-                    <div class="card-header">
+                    <div class="checkout-section-header">
                         <h4>{% if requires_shipping %}3.{% else %}2.{% endif %} {% trans "Payment Method" %}</h4>
                     </div>
-                    <div class="checkout-section-content">
-                        {% if payment_method_choices %}
-                            <p class="mb-3">{% trans "Please select your preferred payment method:" %}</p>
-                            {% for value, display_name in payment_method_choices %}
-                            <div class="form-check address-list-item-wrapper">
-                                <input class="form-check-input" type="radio" name="payment_method" id="payment_method_{{ value }}" value="{{ value }}" {% if forloop.first %}checked{% endif %} required>
-                                <label class="form-check-label" for="payment_method_{{ value }}">
-                                    {{ display_name }}
-                                </label>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-danger">{% trans "No payment methods are currently available. Please contact support." %}</p>
-                        {% endif %}
+                    <div class="checkout-section-body">
+                        <p class="mb-3">{% trans "Please select your preferred payment method:" %}</p>
+                        
+                        <!-- Credit/Debit Card -->
+                        <div class="payment-method-item selected">
+                            <input class="form-check-input" type="radio" name="payment_method" id="payment_method_card" value="card" checked required>
+                            <label class="form-check-label w-100" for="payment_method_card">
+                                <div class="payment-method-content">
+                                    <span class="payment-method-title">{% trans "Credit or Debit Card" %}</span>
+                                    <div class="payment-method-icons">
+                                    <i class="fab fa-cc-visa fa-lg me-1" title="Visa"></i>
+                                    <i class="fab fa-cc-mastercard fa-lg me-1" title="Mastercard"></i>
+                                    <i class="fab fa-cc-amex fa-lg me-1" title="American Express"></i>
+                                    <i class="fab fa-cc-discover fa-lg" title="Discover"></i>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Apple Pay & Google Pay -->
+                        <div class="payment-method-item">
+                            <input class="form-check-input" type="radio" name="payment_method" id="payment_method_wallet" value="digital_wallet">
+                            <label class="form-check-label w-100" for="payment_method_wallet">
+                                <div class="payment-method-content">
+                                    <span class="payment-method-title">{% trans "Digital Wallets" %}</span>
+                                    <div class="payment-method-icons">
+                                    <i class="fab fa-apple-pay fa-2x me-2 align-middle" title="Apple Pay"></i>
+                                    <i class="fab fa-google-pay fa-2x align-middle" title="Google Pay"></i>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Bank Transfer -->
+                        <div class="payment-method-item">
+                            <input class="form-check-input" type="radio" name="payment_method" id="payment_method_bank" value="bank_transfer">
+                            <label class="form-check-label w-100" for="payment_method_bank">
+                                <div class="payment-method-content">
+                                    <span class="payment-method-title">{% trans "Bank Transfer" %}</span>
+                                    <div class="payment-method-icons">
+                                    <i class="fas fa-university me-1"></i> {% trans "Local & International Bank Transfers" %}
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
                         <p class="mt-3 small text-muted">{% trans "Clicking 'Place Order' below will finalize your cart, address, and payment method selection." %}</p>
                     </div>
                 </div>
@@ -236,47 +417,46 @@
 
         <div class="col-lg-4">
             <div class="card shadow-sm order-summary-card">
-                <div class="card-header">
+                <div class="order-summary-header">
                     <h4 class="mb-0">{% trans "Order Summary" %}</h4>
                 </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
+                <div class="order-summary-body">
                         {% for item in cart_items %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="summary-row">
                                 <div>
-                                    <h6 class="my-0">{{ item.product.name }}</h6>
+                                    <strong class="d-block text-body">{{ item.product.name }}</strong>
                                     <small class="text-muted">{% trans "Qty:" %} {{ item.quantity }}</small>
                                 </div>
-                                <span class="text-muted">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ item.total_item_price|floatformat:2 }}</span>
-                            </li>
+                                <span class="text-body">{{ currency_symbol|default:"£" }}{{ item.total_item_price|floatformat:2 }}</span>
+                            </div>
                         {% empty %}
-                            <li class="list-group-item">{% trans "Your cart is empty." %}</li>
+                            <p>{% trans "Your cart is empty." %}</p>
                         {% endfor %}
+                        
                         {# --- Order Summary Totals (Dynamic) --- #}
-                        <li class="list-group-item d-flex justify-content-between">
+                        <div class="summary-row mt-4">
                             <span>{% trans "Subtotal" %}</span>
-                            <span>{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ cart_total|floatformat:2 }}</span>
-                        </li>
+                            <span>{{ currency_symbol|default:"£" }}{{ cart_total|floatformat:2 }}</span>
+                        </div>
                         {% if requires_shipping %}
                             {# These list items will be updated by JavaScript #}
-                            <li class="list-group-item d-flex justify-content-between" id="nexusDeliveryFeeRow" style="{% if estimated_platform_delivery_fee <= 0 %}display: none;{% endif %}">
+                            <div class="summary-row" id="nexusDeliveryFeeRow" style="{% if estimated_platform_delivery_fee <= 0 %}display: none;{% endif %}">
                                 <span>{% trans "Nexus Delivery Fee" %}</span>
-                                <span id="estimatedPlatformDeliveryFee">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ estimated_platform_delivery_fee|floatformat:2 }}</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between" id="vendorDeliveryFeesRow" style="{% if estimated_total_vendor_delivery_fees <= 0 %}display: none;{% endif %}">
+                                <span id="estimatedPlatformDeliveryFee">{{ currency_symbol|default:"£" }}{{ estimated_platform_delivery_fee|floatformat:2 }}</span>
+                            </div>
+                            <div class="summary-row" id="vendorDeliveryFeesRow" style="{% if estimated_total_vendor_delivery_fees <= 0 %}display: none;{% endif %}">
                                 <span>{% trans "Vendor Delivery Fees" %}</span>
-                                <span id="estimatedTotalVendorDeliveryFees">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ estimated_total_vendor_delivery_fees|floatformat:2 }}</span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between" id="totalDeliveryFeeRow">
-                                <strong>{% trans "Total Delivery Fee" %}</strong>
-                                <strong id="estimatedTotalDeliveryFee">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ estimated_total_delivery_fee|floatformat:2 }}</strong>
-                            </li>
+                                <span id="estimatedTotalVendorDeliveryFees">{{ currency_symbol|default:"£" }}{{ estimated_total_vendor_delivery_fees|floatformat:2 }}</span>
+                            </div>
+                            <div class="summary-row" id="totalDeliveryFeeRow">
+                                <span>{% trans "Total Delivery Fee" %}</span>
+                                <span id="estimatedTotalDeliveryFee">{{ currency_symbol|default:"£" }}{{ estimated_total_delivery_fee|floatformat:2 }}</span>
+                            </div>
                         {% endif %}
-                        <li class="list-group-item d-flex justify-content-between border-top pt-2">
-                            <strong>{% trans "Order Total" %}</strong>
-                            <strong id="finalOrderTotal">{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}{{ cart_total|add:estimated_total_delivery_fee|floatformat:2 }}</strong>
-                        </li>
-                    </ul>
+                        <div class="summary-row total">
+                            <span>{% trans "Order Total" %}</span>
+                            <span id="finalOrderTotal">{{ currency_symbol|default:"£" }}{{ cart_total|add:estimated_total_delivery_fee|floatformat:2 }}</span>
+                        </div>
                     {% if not cart_items %}
                         <a href="{% url 'core:home' %}" class="btn btn-secondary w-100 mt-3">{% trans "Continue Shopping" %}</a>
                     {% endif %}
@@ -290,7 +470,7 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const currencySymbol = "{{ settings.DEFAULT_CURRENCY_SYMBOL|default:'GH₵' }}";
+    const currencySymbol = "{{ currency_symbol|default:'£' }}";
     const cartSubtotal = parseFloat("{{ cart_total|floatformat:2 }}"); // Get cart subtotal as a number
     console.log("DOM fully loaded and parsed. Starting checkout page script."); // Log 1
     const useBillingCheckbox = document.getElementById('use_billing_for_shipping');
@@ -307,7 +487,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 shippingRadioButtons.forEach(radio => {
                     radio.checked = false;
                     radio.required = false;
-                    const wrapper = radio.closest('.address-list-item-wrapper');
+                    const wrapper = radio.closest('.address-card');
                     if (wrapper) wrapper.classList.remove('selected');
                 });
                 updateDeliveryFeeDisplay(0, 0, 0, true); // Set fees to 0 when using billing address
@@ -475,16 +655,16 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('input[type="radio"][name="billing_address_id"], input[type="radio"][name="shipping_address_id"], input[type="radio"][name="payment_method"]').forEach(radio => {
         radio.addEventListener('change', function() {
             document.querySelectorAll(`input[name="${this.name}"]`).forEach(r => {
-                const wrapper = r.closest('.address-list-item-wrapper');
+                const wrapper = r.closest('.address-card') || r.closest('.payment-method-item');
                 if (wrapper) wrapper.classList.remove('selected');
             });
             if (this.checked) {
-                const wrapper = this.closest('.address-list-item-wrapper');
+                const wrapper = this.closest('.address-card') || this.closest('.payment-method-item');
                 if (wrapper) wrapper.classList.add('selected');
             }
         });
         if (radio.checked) {
-            const wrapper = radio.closest('.address-list-item-wrapper');
+            const wrapper = radio.closest('.address-card') || radio.closest('.payment-method-item');
             if (wrapper) wrapper.classList.add('selected');
         }
     });

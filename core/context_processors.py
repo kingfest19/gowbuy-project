@@ -1,5 +1,7 @@
 from .models import Service, Category, Message # Import Message model
 from django.db.models import Count
+from django.conf import settings
+from .utils import get_exchange_rate # Import the helper function
 
 def provider_info(request):
     is_provider = False
@@ -29,3 +31,27 @@ def unread_message_count(request):
         is_read=False
     ).exclude(sender=request.user).count()
     return {'unread_message_count': count}
+
+def currency_context(request):
+    """
+    Adds currency information to the context.
+    """
+    currency_code = request.session.get('currency_code', getattr(settings, 'DEFAULT_CURRENCY_CODE', 'GBP'))
+    
+    symbols = {
+        'GBP': '£',
+        'USD': '$',
+        'EUR': '€',
+        'GHS': 'GH₵',
+        'NGN': '₦'
+    }
+    currency_symbol = symbols.get(currency_code, '£')
+    
+    # Fetch exchange rate (Base is GBP defined in settings)
+    currency_rate = get_exchange_rate(currency_code)
+    
+    return {
+        'currency_code': currency_code,
+        'currency_symbol': currency_symbol,
+        'currency_rate': currency_rate, # Pass rate to templates
+    }

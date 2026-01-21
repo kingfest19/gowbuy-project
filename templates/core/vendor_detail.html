@@ -274,7 +274,7 @@
                             <h5 class="card-title">
                                 <a href="{{ product.get_absolute_url }}" class="text-decoration-none text-reset">{{ product.name|truncatechars:40 }}</a>
                             </h5>
-                            <p class="card-text">GH₵ {{ product.price }}</p>
+                            <p class="card-text">£{{ product.price }}</p>
                             <div class="mt-auto d-flex gap-2">
                                 <a href="{{ product.get_absolute_url }}" class="btn btn-outline-primary btn-sm flex-grow-1">{% trans "View" %}</a>
                                 <form action="{% url 'core:add_to_cart' product.id %}" method="post" class="flex-grow-1">

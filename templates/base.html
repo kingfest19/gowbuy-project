@@ -280,7 +280,7 @@
             <img src="{% static 'assets/location_icon.png' %}" height="20" alt="" />
             <div>
                 <p>{% trans "Location" %}</p> {# <<< Mark for translation #}
-                <h1>{{ delivery_location|default:"United States" }}</h1> {# <<< Use context variable #}
+                <h1 id="nav-location-text">{{ request.session.delivery_location|default:"United States" }}</h1> {# <<< Use session variable #}
             </div>
         </div>
 
@@ -296,9 +296,36 @@
         </form>
         {# --- END: Search Form --- #}
 
+        {# --- Currency Selector Form --- #}
+        <form action="{% url 'core:update_currency' %}" method="post" class="d-inline-block ms-2">
+            {% csrf_token %}
+            <select name="currency_code" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto; cursor: pointer;">
+                <option value="GBP" {% if request.session.currency_code == 'GBP' %}selected{% endif %}>GBP (£)</option>
+                <option value="USD" {% if request.session.currency_code == 'USD' %}selected{% endif %}>USD ($)</option>
+                <option value="EUR" {% if request.session.currency_code == 'EUR' %}selected{% endif %}>EUR (€)</option>
+                <option value="GHS" {% if request.session.currency_code == 'GHS' %}selected{% endif %}>GHS (GH₵)</option>
+                <option value="NGN" {% if request.session.currency_code == 'NGN' %}selected{% endif %}>NGN (₦)</option>
+            </select>
+        </form>
+
         {# --- Updated Language Section --- #}
         <div class="nav-language" data-bs-toggle="modal" data-bs-target="#languageModal" style="cursor: pointer;">
-            <img src="{% static 'assets/us_flag.png' %}" width="22px" alt="US Flag" />
+            {% get_current_language as LANGUAGE_CODE %}
+            {% if LANGUAGE_CODE|slice:":2" == 'es' %}
+                <img src="{% static 'assets/es_flag.png' %}" width="22px" alt="Spanish Flag" />
+            {% elif LANGUAGE_CODE|slice:":2" == 'fr' %}
+                <img src="{% static 'assets/fr_flag.png' %}" width="22px" alt="French Flag" />
+            {% elif LANGUAGE_CODE|slice:":2" == 'de' %}
+                <img src="{% static 'assets/de_flag.png' %}" width="22px" alt="German Flag" />
+            {% elif LANGUAGE_CODE|slice:":2" == 'zh' %}
+                <img src="{% static 'assets/cn_flag.png' %}" width="22px" alt="Chinese Flag" />
+            {% elif LANGUAGE_CODE|slice:":2" == 'ar' %}
+                <img src="{% static 'assets/sa_flag.png' %}" width="22px" alt="Arabic Flag" />
+            {% elif LANGUAGE_CODE|slice:":2" == 'pt' %}
+                <img src="{% static 'assets/pt_flag.png' %}" width="22px" alt="Portuguese Flag" />
+            {% else %}
+                <img src="{% static 'assets/us_flag.png' %}" width="22px" alt="US Flag" />
+            {% endif %}
             {# Display current language from context, default to 'en-us' #}
             <span>{{ LANGUAGE_CODE|language_name_local|upper }}</span> {# Use LANGUAGE_CODE here #}
             <img src="{% static 'assets/dropdown_icon.png' %}" class="dropdown-icon" alt="" />
@@ -541,17 +568,33 @@
                  </div>
                  <div class="footer-payment">
                     <h4>{% trans "We Accept" %}</h4> {# <<< Mark for translation #}
-                    {# Replace with actual icons/images if desired #}
-                    <span class="payment-icon visa">Visa</span>
-                    <span class="payment-icon mc">MC</span>
-                    <span class="payment-icon paypal">PayPal</span>
-                    <span class="payment-icon amex">Amex</span>
+                    <div class="d-flex flex-wrap gap-3 fs-2" style="color: var(--text-muted);">
+                        <i class="fab fa-cc-visa" title="Visa"></i>
+                        <i class="fab fa-cc-mastercard" title="Mastercard"></i>
+                        <i class="fab fa-cc-amex" title="American Express"></i>
+                        <i class="fab fa-cc-paypal" title="PayPal"></i>
+                        <i class="fab fa-apple-pay" title="Apple Pay"></i>
+                        <i class="fab fa-google-pay" title="Google Pay"></i>
+                        <i class="fab fa-amazon-pay" title="Amazon Pay"></i>
+                        <i class="fas fa-university" title="Bank Transfer (Local & International)"></i>
+                    </div>
                  </div>
                  <div class="footer-language-currency">
                      {# Make these functional if needed #}
-                     <button>English</button>
-                     <button>USD ($)</button>
-                     <button>GHANA (GH)</button>
+                     <form action="{% url 'core:update_language' %}" method="post" class="d-inline-block">
+                        {% csrf_token %}
+                        <select name="language_input" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto; cursor: pointer; display: inline-block;">
+                            {% get_current_language as LANGUAGE_CODE %}
+                            <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option>
+                            <option value="es" {% if LANGUAGE_CODE == 'es' %}selected{% endif %}>Español</option>
+                            <option value="fr" {% if LANGUAGE_CODE == 'fr' %}selected{% endif %}>Français</option>
+                            <option value="de" {% if LANGUAGE_CODE == 'de' %}selected{% endif %}>Deutsch</option>
+                            <option value="zh-hans" {% if LANGUAGE_CODE == 'zh-hans' %}selected{% endif %}>中文</option>
+                            <option value="ar" {% if LANGUAGE_CODE == 'ar' %}selected{% endif %}>العربية</option>
+                            <option value="pt" {% if LANGUAGE_CODE == 'pt' %}selected{% endif %}>Português</option>
+                        </select>
+                     </form>
+                     <button type="button" class="btn btn-sm btn-outline-secondary text-white border-secondary" data-bs-toggle="modal" data-bs-target="#currencyModal">GBP (£)</button>
                  </div>
             </div>
         </div>
@@ -577,7 +620,10 @@
                 {# Simple text input for now - replace with dropdown/zip later #}
                 <div class="mb-3">
                   <label for="locationInput" class="form-label">Enter Location (e.g., Country, City, Zip)</label>
-                  <input type="text" class="form-control" id="locationInput" name="location_input" placeholder="{{ delivery_location|default:'United States' }}" required>
+                  <div class="input-group">
+                      <input type="text" class="form-control" id="locationInput" name="location_input" value="{{ request.session.delivery_location|default:'' }}" placeholder="{{ request.session.delivery_location|default:'United States' }}" required>
+                      <button class="btn btn-outline-secondary" type="button" id="detectLocationBtn" title="{% trans 'Detect my location' %}"><i class="bi bi-geo-alt"></i></button>
+                  </div>
                 </div>
                 {# TODO: Add country dropdown, zip code validation etc. here #}
               </div>
@@ -610,7 +656,10 @@
                     <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option> {# Match settings.LANGUAGE_CODE #}
                     <option value="es" {% if LANGUAGE_CODE == 'es' %}selected{% endif %}>Español</option>
                     <option value="fr" {% if LANGUAGE_CODE == 'fr' %}selected{% endif %}>Français</option>
-                    {# TODO: Add more languages as needed, potentially dynamically from settings.LANGUAGES #}
+                    <option value="de" {% if LANGUAGE_CODE == 'de' %}selected{% endif %}>Deutsch</option>
+                    <option value="zh-hans" {% if LANGUAGE_CODE == 'zh-hans' %}selected{% endif %}>中文</option>
+                    <option value="ar" {% if LANGUAGE_CODE == 'ar' %}selected{% endif %}>العربية</option>
+                    <option value="pt" {% if LANGUAGE_CODE == 'pt' %}selected{% endif %}>Português</option>
                   </select>
                 </div>
               </div>
@@ -623,6 +672,38 @@
       </div>
     </div>
     <!-- ================= End Language Modal ================= -->
+
+    <!-- ==================== Currency Modal ==================== -->
+    <div class="modal fade" id="currencyModal" tabindex="-1" aria-labelledby="currencyModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <form action="{% url 'core:update_currency' %}" method="post">
+              {% csrf_token %}
+              <div class="modal-header">
+                <h1 class="modal-title fs-5" id="currencyModalLabel">{% trans "Choose your currency" %}</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <p>{% trans "Select your preferred currency. Prices will be converted approximately." %}</p>
+                <div class="mb-3">
+                  <label for="currencyInput" class="form-label">{% trans "Currency" %}</label>
+                  <select class="form-select" id="currencyInput" name="currency_code">
+                    <option value="GBP" selected>GBP - British Pound (£)</option>
+                    <option value="USD">USD - US Dollar ($)</option>
+                    <option value="EUR">EUR - Euro (€)</option>
+                    <option value="GHS">GHS - Ghanaian Cedi (GH₵)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Close" %}</button>
+                <button type="submit" class="btn btn-primary">{% trans "Update Currency" %}</button>
+              </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <!-- ================= End Currency Modal ================= -->
 
     <!-- ==================== Nav Bottom Modal ==================== -->
     <div class="modal fade" id="navBottomModal" tabindex="-1" aria-labelledby="navBottomModalLabel" aria-hidden="true">
@@ -939,7 +1020,7 @@
                         <div class="d-flex gap-2 w-100 justify-content-between">
                             <div>
                                 <h6 class="mb-0">${product.name}</h6>
-                                <p class="mb-0 opacity-75 small">{% trans "Category:" %} ${product.category || 'N/A'} - {% trans "Price:" %} GH₵${product.price}</p>
+                                <p class="mb-0 opacity-75 small">{% trans "Category:" %} ${product.category || 'N/A'} - {% trans "Price:" %} £${product.price}</p>
                             </div>
                             <small class="opacity-50 text-nowrap"><i class="bi bi-eye-fill me-1"></i>{% trans "View" %}</small>
                         </div>
@@ -1047,7 +1128,7 @@
                 {% endif %}
 
                 let programsHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Programs & Features" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{% trans 'Daily Offers' %}", "{% url 'core:daily_offers' %}", "fas fa-tag")}${createLink("{% trans 'Sell on NEXUS' %}", "{% url 'core:sell_on_nexus' %}", "fas fa-store")}${createLink("{% trans 'Services' %}", "{% url 'core:service_list' %}", "fas fa-concierge-bell")}${createLink("{% trans 'Become Rider' %}", "{% url 'core:become_rider_info_page' %}", "fas fa-motorcycle")}${createLink("{% trans 'Support Center' %}", "{% url 'help' %}", "fas fa-headset")}</ul></div>`;
-                let settingsHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Settings" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{% trans 'English' %}", "javascript:void(0)", "fas fa-globe", 'data-bs-toggle="modal" data-bs-target="#languageModal"')}${createLink("{% trans 'United States' %}", "javascript:void(0)", "fas fa-flag", 'data-bs-toggle="modal" data-bs-target="#locationModal"')}<li class="mb-3"><button onclick="toggleTheme()" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5 border-0 bg-transparent p-0 w-100 text-start py-2"><i class="bi bi-moon-stars-fill text-muted" style="width: 25px; text-align: center;"></i><span>{% trans "Toggle Theme" %}</span></button></li></ul></div>`;
+                let settingsHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Settings" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{{ LANGUAGE_CODE|language_name_local|title }}", "javascript:void(0)", "fas fa-globe", 'data-bs-toggle="modal" data-bs-target="#languageModal"')}${createLink("{{ request.session.delivery_location|default:'United States'|escapejs }}", "javascript:void(0)", "fas fa-flag", 'data-bs-toggle="modal" data-bs-target="#locationModal"')}<li class="mb-3"><button onclick="toggleTheme()" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5 border-0 bg-transparent p-0 w-100 text-start py-2"><i class="bi bi-moon-stars-fill text-muted" style="width: 25px; text-align: center;"></i><span>{% trans "Toggle Theme" %}</span></button></li></ul></div>`;
 
                 menuContainer.innerHTML = authHtml + '<hr class="my-3">' + programsHtml + '<hr class="my-3">' + settingsHtml;
                 const closeBtnDiv = document.createElement('div');
@@ -1163,6 +1244,95 @@
         });
     </script>
     {# --- END: Newsletter AJAX Script --- #}
+
+    {# --- START: Location Detection Script --- #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const locationText = document.getElementById('nav-location-text');
+            const locationInput = document.getElementById('locationInput');
+            const detectBtn = document.getElementById('detectLocationBtn');
+
+            function updateLocationUI(city, country, saveToSession = false) {
+                const locStr = `${city}, ${country}`;
+                if (locationText) locationText.innerText = locStr;
+                if (locationInput) locationInput.value = locStr;
+
+                if (saveToSession) {
+                    const formData = new FormData();
+                    formData.append('location_input', locStr);
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                    fetch("{% url 'core:update_location' %}", {
+                        method: 'POST',
+                        body: formData
+                    }).catch(err => console.error('Error saving location:', err));
+                }
+            }
+
+            // 1. Auto-detect on load if location is default
+            if (locationText && locationText.innerText.trim() === "United States") {
+                fetch('https://ipapi.co/json/')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.city && data.country_name) {
+                            updateLocationUI(data.city, data.country_name, true);
+                        }
+                    })
+                    .catch(err => console.log('Auto-location detection failed:', err));
+            }
+
+            // 2. Manual detection via button
+            if (detectBtn) {
+                detectBtn.addEventListener('click', function() {
+                    if (!navigator.geolocation) {
+                        alert("{% trans 'Geolocation is not supported by your browser.' %}");
+                        return;
+                    }
+                    
+                    const originalContent = detectBtn.innerHTML;
+                    detectBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+                    detectBtn.disabled = true;
+
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            const { latitude, longitude } = position.coords;
+                            // Use OpenStreetMap Nominatim for reverse geocoding (Free, no key required)
+                            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    const address = data.address;
+                                    const city = address.city || address.town || address.village || address.county || '';
+                                    const country = address.country || '';
+                                    if (city || country) {
+                                        updateLocationUI(city, country, true);
+                                    } else {
+                                        alert("{% trans 'Could not determine location address.' %}");
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error(err);
+                                    alert("{% trans 'Error fetching address details.' %}");
+                                })
+                                .finally(() => {
+                                    detectBtn.innerHTML = originalContent;
+                                    detectBtn.disabled = false;
+                                });
+                        },
+                        (error) => {
+                            console.error(error);
+                            detectBtn.innerHTML = originalContent;
+                            detectBtn.disabled = false;
+                            let msg = "{% trans 'Unable to retrieve your location.' %}";
+                            if (error.code === error.PERMISSION_DENIED) {
+                                msg = "{% trans 'Location permission denied.' %}";
+                            }
+                            alert(msg);
+                        }
+                    );
+                });
+            }
+        });
+    </script>
+    {# --- END: Location Detection Script --- #}
 
 {# Test comment to ensure file is fully parsed #}
 </body>

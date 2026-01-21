@@ -151,6 +151,7 @@ TEMPLATES = [
                 'django.template.context_processors.i18n', # Removed 'core.views.menu'
                 'core.context_processors.unread_message_count', # <<< Add this for unread messages
                 # 'core.views.menu', # <<< THIS WAS THE PROBLEM
+                'core.context_processors.currency_context', # <<< Add currency context processor
             ],
         },
     },
@@ -274,6 +275,11 @@ CLOUDINARY_STORAGE = {
     'MAGIC_FILE_PATH': 'magic', # Required for content-type detection in some setups
 }
 
+# If using python-dotenv or similar
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
+# You will also need to add the webhook secret later
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
 
 # core/static is automatically found because 'core' is in INSTALLED_APPS.
 # Adding it here causes duplicate file warnings.
@@ -358,7 +364,9 @@ else:
 LOGIN_REDIRECT_URL = 'core:home'  # Name of the URL to redirect to after login
 ACCOUNT_LOGOUT_REDIRECT_URL = 'signin' # Name of the URL to redirect to after logout
 
-DEFAULT_CURRENCY_CODE = 'GHS' # Example default currency
+DEFAULT_CURRENCY_CODE = 'GBP' # Changed to Pounds
+DEFAULT_CURRENCY_SYMBOL = '£' # Default symbol
+FIXER_API_KEY = os.environ.get('FIXER_API_KEY') # API Key for currency conversion
 
 # --- NEXUS Platform Settings ---
 PLATFORM_COMMISSION_RATE = Decimal('0.10') # 10% commission rate

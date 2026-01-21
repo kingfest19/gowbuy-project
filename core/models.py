@@ -414,6 +414,7 @@ class Order(models.Model):
         PENDING = 'PENDING', _('Pending Payment Choice')
         AWAITING_ESCROW_PAYMENT = 'AWAITING_ESCROW_PAYMENT', _('Awaiting Escrow Payment')
         AWAITING_DIRECT_PAYMENT = 'AWAITING_DIRECT_PAYMENT', _('Awaiting Direct Payment')
+        AWAITING_BANK_TRANSFER = 'AWAITING_BANK_TRANSFER', _('Awaiting Bank Transfer') # <<< Added
         ON_HOLD_FRAUD_REVIEW = 'ON_HOLD_FRAUD_REVIEW', _('On Hold (Fraud Review)')
         PROCESSING = 'PROCESSING', _('Processing')
         IN_PROGRESS = 'IN_PROGRESS', _('Service In Progress')
@@ -429,6 +430,9 @@ class Order(models.Model):
         ('escrow', _('Escrow (Paystack)')),
         ('direct', _('Direct Arrangement')),
         ('paypal', _('PayPal')),
+        ('card', _('Credit/Debit Card')), # <<< Added
+        ('digital_wallet', _('Digital Wallet')), # <<< Added
+        ('bank_transfer', _('Bank Transfer')), # <<< Added
         # Add other methods like 'cod' (Cash on Delivery) if needed
     )
     promotion = models.ForeignKey(
@@ -465,10 +469,11 @@ class Order(models.Model):
     shipping_address_text = models.TextField(blank=True, null=True, help_text="Snapshot of shipping address at time of order.")
     billing_address_text = models.TextField(blank=True, null=True, help_text="Snapshot of billing address at time of order.")
     transaction_id = models.CharField(max_length=255, blank=True, null=True, help_text="Payment gateway transaction ID.")
+    ip_address = models.GenericIPAddressField(blank=True, null=True, help_text="IP address of the customer at the time of order.")
     notes = models.TextField(blank=True, null=True, help_text="Internal notes about the order.")
     # --- Fields for Dual Payment System ---
     payment_method = models.CharField(
-        max_length=10,
+        max_length=20,
         choices=PAYMENT_METHOD_CHOICES,
         blank=True, # Allow blank initially until choice is made
         null=True   # Allow null initially
