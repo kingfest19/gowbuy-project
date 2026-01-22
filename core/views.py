@@ -2788,7 +2788,7 @@ def initiate_stripe_payment(request, order_id):
         # Create a checkout session
         # We use a single line item for the total to avoid rounding discrepancies with discounts/taxes
         checkout_session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
+            payment_method_types=['card', 'klarna', 'amazon_pay'],
             line_items=[{
                 'price_data': {
                     'currency': order.currency.lower(),
@@ -2813,6 +2813,7 @@ def initiate_stripe_payment(request, order_id):
         return redirect(checkout_session.url, code=303)
     except Exception as e:
         logger.error(f"Stripe initialization error: {e}")
+        print(f"STRIPE ERROR: {e}") # Debug print for Render logs
         messages.error(request, _("Could not connect to payment gateway. Please try again later."))
         return redirect('core:order_detail', order_id=order.order_id)
 
@@ -3062,27 +3063,6 @@ def cancel_order(request, order_id):
     cancellable_statuses = ['PENDING', 'AWAITING_ESCROW_PAYMENT', 'AWAITING_BANK_TRANSFER', 'AWAITING_DIRECT_PAYMENT', 'PROCESSING']
     
     if order.status in cancellable_statuses:
-        # --- Refund Logic for Stripe Payments ---
-        # Only attempt refund if payment was confirmed (PROCESSING) and we have a transaction ID
-        if order.status == 'PROCESSING' and order.transaction_id:
-            if order.payment_method in ['card', 'digital_wallet', 'escrow']:
-                try:
-                    refund = stripe.Refund.create(payment_intent=order.transaction_id)
-                    Transaction.objects.create(
-                        user=request.user,
-                        order=order,
-                        transaction_type='refund',
-                        amount=order.total_amount,
-                        currency=order.currency,
-                        status='completed',
-                        gateway_transaction_id=refund.id,
-                        description=f"Refund for cancelled order {order.order_id}"
-                    )
-                    messages.info(request, _("A refund has been initiated to your original payment method."))
-                except stripe.error.StripeError as e:
-                    logger.error(f"Stripe refund failed for order {order.order_id}: {e}")
-                    messages.warning(request, _("Order cancelled, but automatic refund failed. Please contact support."))
-
         order.status = 'CANCELLED'
         order.save(update_fields=['status'])
         
@@ -3174,6 +3154,7 @@ def initiate_paystack_payment(request, order_id):
             messages.error(request, _("Could not initialize payment with Paystack: {error}").format(error=response_data.get("message", "Unknown error")))
     except requests.exceptions.RequestException as e:
         logger.error(f"Paystack API request failed: {e}")
+        print(f"PAYSTACK ERROR: {e}") # Debug print for Render logs
         messages.error(request, _("Could not connect to payment gateway. Please try again later."))
 
     return redirect('core:order_detail', order_id=order.order_id)
@@ -3236,6 +3217,7 @@ def initiate_plan_payment(request, plan_id):
             messages.error(request, _("Could not initialize payment: {error}").format(error=response_data.get("message", "Unknown error")))
     except requests.exceptions.RequestException as e:
         logger.error(f"Paystack API request failed for plan payment: {e}")
+        print(f"PAYSTACK PLAN ERROR: {e}") # Debug print for Render logs
         messages.error(request, _("Could not connect to payment gateway. Please try again later."))
 
     return redirect('core:vendor_upgrade')

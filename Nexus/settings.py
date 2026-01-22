@@ -37,12 +37,18 @@ DEBUG = os.environ.get('DEBUG', '0') == '1'
 ALLOWED_HOSTS = [
     '127.0.0.1', 'localhost', 'gowbuy-project.onrender.com',
     'gowbuy.com', 'www.gowbuy.com',
-    'gowbuy.co.uk', 'www.gowbuy.co.uk'
+    'gowbuy.co.uk', 'www.gowbuy.co.uk',
+    '.ngrok-free.app', # Allow ngrok free domains
+    '.ngrok.io',       # Allow older ngrok domains
+    '.ngrok-free.dev', # Allow ngrok dev domains
 ]
 CSRF_TRUSTED_ORIGINS = [
     'https://gowbuy-project.onrender.com',
     'https://gowbuy.com', 'https://www.gowbuy.com',
-    'https://gowbuy.co.uk', 'https://www.gowbuy.co.uk'
+    'https://gowbuy.co.uk', 'https://www.gowbuy.co.uk',
+    'https://*.ngrok-free.app', # Allow ngrok free domains
+    'https://*.ngrok.io',       # Allow older ngrok domains
+    'https://*.ngrok-free.dev', # Allow ngrok dev domains
 ]
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
