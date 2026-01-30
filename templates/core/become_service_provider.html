@@ -5,44 +5,54 @@
 
 {% block title %}{% trans "Become a Service Provider" %} - {{ block.super }}{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'assets/css/vendor_registration.css' %}">
+{% endblock extra_css %}
+
 {% block content %}
-<div class="container mt-5 mb-5">
+<div class="container my-5">
     <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-7">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h2 class="mb-0">{% trans "Become a Service Provider on NEXUS" %}</h2>
+        <div class="col-md-8 col-lg-6">
+            {% if request.user.is_service_provider or request.user.service_provider_profile %}
+                <div class="text-center">
+                    <h1 class="mb-4">{% trans "Already Registered" %}</h1>
+                    <div class="alert alert-success">
+                        <h4 class="alert-heading">{% trans "You are already a service provider!" %}</h4>
+                        <p>{% trans "You are already registered as a service provider." %}</p>
+                        <hr>
+                        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                            <a href="{% url 'core:service_provider_dashboard' %}" class="btn btn-primary">{% trans "Go to Dashboard" %}</a>
+                            <a href="{% url 'core:service_provider_service_create' %}" class="btn btn-outline-success">{% trans "Offer New Service" %}</a>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body p-4">
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
+            {% else %}
+                <h1 class="text-center mb-4">{% trans "Become a Service Provider" %}</h1>
+                <p class="text-center text-muted mb-4">
+                    {% blocktrans %}Join NEXUS to offer your skills and services. Fill out the form below to register.{% endblocktrans %}
+                </p>
 
-                    {# The view now redirects if already a provider, so this 'if' might not be strictly needed here #}
-                    {% if request.user.is_service_provider or request.user.service_provider_profile %}
-                        <p class="lead">{% trans "You are already registered as a service provider." %}</p>
-                        <a href="{% url 'core:provider_dashboard' %}" class="btn btn-info">{% trans "Go to Provider Dashboard" %}</a>
-                        <a href="{% url 'core:service_create' %}" class="btn btn-success ms-2">{% trans "Offer a New Service" %}</a>
-                    {% else %}
-                        <p class="lead">{% trans "Ready to offer your skills and services to a wider audience? Register as a service provider today!" %}</p>
-                        <p>{% trans "By registering, you'll be able to create service listings, set your prices, and connect with clients on NEXUS." %}</p>
-                        <p>{% trans "Please fill out the form below to complete your provider profile." %}</p>
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
 
-                        <form method="post">
-                            {% csrf_token %}
-                            {{ form|crispy }}
-                            <div class="d-grid mt-4">
-                                <button type="submit" class="btn btn-success btn-lg">{% trans "Complete Provider Registration" %}</button>
-                            </div>
-                        </form>
-                    {% endif %}
+                <div class="registration-form-container">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                {% trans "Complete Provider Registration" %}
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            </div>
+            {% endif %}
         </div>
     </div>
 </div>

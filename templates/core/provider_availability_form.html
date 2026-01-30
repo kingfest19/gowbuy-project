@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load i18n crispy_forms_tags %}
+
+{% block title %}{% trans "Set Availability" %} | Nexus{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow border-0 rounded-3">
+                <div class="card-header bg-primary text-white py-3">
+                    <h4 class="mb-0 d-flex align-items-center">
+                        <i class="bi bi-calendar-plus me-2"></i>
+                        {% if form.instance.pk %}
+                            {% trans "Edit Availability Slot" %}
+                        {% else %}
+                            {% trans "Add Availability Slot" %}
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body p-4 bg-light">
+                    <p class="text-muted mb-4">
+                        {% trans "Define when you are available to provide your services. Customers will be able to book these slots." %}
+                    </p>
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="bg-white p-3 rounded shadow-sm mb-4 border">
+                            {{ form|crispy }}
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <a href="{% url 'core:service_provider_availability_list' %}" class="btn btn-outline-secondary px-4">
+                                <i class="bi bi-arrow-left me-1"></i> {% trans "Cancel" %}
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4 btn-lg shadow-sm">
+                                <i class="bi bi-check-lg me-1"></i> {% trans "Save Slot" %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -363,14 +363,13 @@ class IsVendorMixin(UserPassesTestMixin):
 
 class IsServiceProviderMixin(UserPassesTestMixin):
     """
-    Mixin to check if the user is an approved service provider.
+    Mixin to check if the user is a service provider (approved or pending).
     """
     def test_func(self):
         return (
             self.request.user.is_authenticated and
             hasattr(self.request.user, 'service_provider_profile') and
-            self.request.user.service_provider_profile is not None and
-            self.request.user.service_provider_profile.is_approved
+            self.request.user.service_provider_profile is not None
         )
 
     def handle_no_permission(self):
@@ -1971,7 +1970,7 @@ def cart_detail(request):
                 date_str = item_details.get('preferred_start_date')
                 if date_str:
                     try:
-                        item.booking_details['preferred_start_date_obj'] = datetime.fromisoformat(date_str)
+                        item.booking_details['preferred_start_date_obj'] = datetime.datetime.fromisoformat(date_str)
                     except (ValueError, TypeError):
                         item.booking_details['preferred_start_date_obj'] = None
     # --- END: Augment cart items with booking details from session ---
@@ -2167,6 +2166,27 @@ def checkout(request):
         messages.info(request, _("Your cart is empty. Add some items to proceed to checkout."))
         return redirect('core:product_list') # Or home
 
+    # --- START: Service Booking Details Logic ---
+    service_booking_items = []
+    booking_details_session = request.session.get('booking_details', {})
+    for item in cart_data['cart_items']:
+        if item.service_package:
+            item_details = booking_details_session.get(str(item.id))
+            if item_details:
+                item.booking_details = item_details
+                # Optionally parse date for display
+                date_str = item_details.get('preferred_start_date')
+                if date_str:
+                    try:
+                        # The date is stored as 'Y-m-d' string
+                        item.booking_details['preferred_start_date_obj'] = datetime.date.fromisoformat(date_str)
+                    except (ValueError, TypeError):
+                        item.booking_details['preferred_start_date_obj'] = None
+            service_booking_items.append(item)
+
+    requires_service_location = len(service_booking_items) > 0
+    # --- END: Service Booking Details Logic ---
+
     billing_addresses = Address.objects.filter(user=request.user, address_type='billing')
     shipping_addresses = Address.objects.filter(user=request.user, address_type='shipping')
 
@@ -2216,6 +2236,8 @@ def checkout(request):
         'cart_total': cart_data['cart_total'],
         'billing_addresses': billing_addresses,
         'shipping_addresses': shipping_addresses,
+        'service_booking_items': service_booking_items,
+        'requires_service_location': requires_service_location,
         'address_form': AddressForm(), # For adding new addresses
         'requires_shipping': requires_shipping,
         'estimated_platform_delivery_fee': estimated_platform_delivery_fee,
@@ -2309,6 +2331,7 @@ def place_order(request):
             return redirect('core:checkout')
 
         requires_shipping = any(item.product and item.product.product_type == 'physical' for item in cart_items_qs)
+        requires_service_location = any(item.service_package for item in cart_items_qs)
 
         try:
             billing_address_id = request.POST.get('billing_address_id')
@@ -2328,6 +2351,19 @@ def place_order(request):
                         messages.error(request, _("Shipping address is required."))
                         return redirect('core:checkout')
                     shipping_address = get_object_or_404(Address, id=shipping_address_id, user=request.user, address_type='shipping')
+
+            service_location_address = None
+            if requires_service_location:
+                use_billing_for_service = request.POST.get('use_billing_for_service_location') == 'on'
+                if use_billing_for_service:
+                    service_location_address = billing_address
+                else:
+                    service_location_address_id = request.POST.get('service_location_address_id')
+                    if not service_location_address_id:
+                        messages.error(request, _("A service location address is required."))
+                        return redirect('core:checkout')
+                    # An address saved for shipping can be used for service location
+                    service_location_address = get_object_or_404(Address, id=service_location_address_id, user=request.user)
 
         except (Address.DoesNotExist, ValueError, TypeError) as e:
             logger.error(f"Address selection error in place_order: {e}")
@@ -2467,9 +2503,12 @@ def place_order(request):
                 if item_booking_details:
                     availability_slot_id = item_booking_details.get('availability_slot_id')
                     date_str = item_booking_details.get('preferred_start_date')
-                    if start_date:
+                    if date_str:
                         # Convert ISO format string back to datetime object
-                        start_date = datetime.fromisoformat(start_date)
+                        try:
+                            start_date = datetime.date.fromisoformat(date_str)
+                        except (ValueError, TypeError):
+                            start_date = None # Handle malformed date string
 
                     # --- Mark the availability slot as booked ---
                     if availability_slot_id:
@@ -2493,6 +2532,7 @@ def place_order(request):
                         user=request.user,
                         provider=service_pkg.service.provider,
                         preferred_start_date=start_date,
+                        location_address=service_location_address, # Assumes ServiceBooking model has a ForeignKey to Address
                         specific_requirements=item_booking_details.get('specific_requirements', ''),
                         status='PENDING' # Initial status for a new booking
                     )
@@ -2504,6 +2544,7 @@ def place_order(request):
                         service_package=service_pkg,
                         user=request.user,
                         provider=service_pkg.service.provider,
+                        location_address=service_location_address, # Assumes ServiceBooking model has a ForeignKey to Address
                         status='PENDING'
                     )
                     logger.warning(f"No booking details found in session for CartItem {cart_item.id}. Created a basic ServiceBooking for Order {order.order_id}.")
@@ -2585,11 +2626,8 @@ def place_order(request):
         elif order.payment_method == 'bank_transfer':
             order.status = 'AWAITING_BANK_TRANSFER'
             order.save(update_fields=['status'])
-            # This message is now handled by Stripe's hosted page for bank transfers.
-            # A generic success message is better here.
-            # messages.success(request, _("Order placed! Please see below for bank transfer details. These have also been sent to your email."))
-            # The order detail page will show the bank info based on the status
-            return redirect(order.get_absolute_url())
+            messages.info(request, _("Please complete your bank transfer using the details provided below."))
+            return redirect('core:order_detail', order_id=order.order_id)
         else:
             messages.error(request, _("There was an issue with your order's payment method. Please contact support."))
             return redirect(order.get_absolute_url())
@@ -2602,15 +2640,15 @@ def place_order(request):
 @login_required
 def add_checkout_address(request):
     if request.method == 'POST':
+        address_type = request.POST.get('address_type', 'billing')  # Default to billing if not provided
+        
         form = AddressForm(request.POST)
-        address_type = request.POST.get('address_type')
 
         if form.is_valid():
             # Pass the user to the form's save method
             address = form.save(commit=False, user=request.user)
             address.user = request.user
-            if not hasattr(address, 'address_type') or not address.address_type:
-                 address.address_type = address_type
+            address.address_type = address_type  # Set address_type from POST data
 
             if address.is_default:
                 Address.objects.filter(user=request.user, address_type=address.address_type).update(is_default=False)
@@ -2757,8 +2795,7 @@ def process_checkout_choice(request, order_id):
     elif payment_method_choice == 'bank_transfer':
         order.status = 'AWAITING_BANK_TRANSFER'
         order.save()
-        messages.success(request, _("Order placed! Please transfer the total amount to our bank account. Details have been sent to your email."))
-        # You might want to redirect to a page showing bank details here
+        messages.info(request, _("Please complete your bank transfer using the details provided below."))
         return redirect('core:order_detail', order_id=order.order_id)
 
     else:
@@ -3105,10 +3142,68 @@ def customer_email_invoice(request, order_id):
 
 
 @login_required
+@require_POST
+def submit_payment_proof(request, order_id):
+    """
+    Allows customers to submit a transaction reference for manual bank transfers.
+    Does NOT automatically approve the order to prevent fraud.
+    """
+    order = get_object_or_404(Order, order_id=order_id, user=request.user)
+    
+    if order.status != 'AWAITING_BANK_TRANSFER':
+        messages.error(request, _("This order is not awaiting bank transfer payment."))
+        return redirect('core:order_detail', order_id=order.order_id)
+        
+    reference = request.POST.get('payment_reference')
+    if not reference:
+        messages.error(request, _("Please provide a payment reference."))
+        return redirect('core:order_detail', order_id=order.order_id)
+        
+    # Store the reference provided by the user
+    order.transaction_id = reference
+    # NOTE: We do NOT change status to 'PROCESSING' here. 
+    # Fraud Prevention: Admin must verify funds in bank before changing status.
+    order.save(update_fields=['transaction_id'])
+    
+    # --- Send Admin Notification ---
+    try:
+        User = get_user_model()
+        staff_emails = list(User.objects.filter(is_staff=True, is_active=True).exclude(email='').values_list('email', flat=True))
+        
+        if staff_emails:
+            subject = _("New Payment Proof: Order #{}").format(order.order_id)
+            admin_url = request.build_absolute_uri(reverse('admin:core_order_change', args=[order.id]))
+            
+            body = _(
+                "User {username} has submitted a payment proof for Order #{order_id}.\n\n"
+                "Transaction Reference: {reference}\n"
+                "Amount: {currency} {amount}\n\n"
+                "Please verify the payment in the bank account and approve the order here:\n{admin_url}"
+            ).format(
+                username=request.user.username,
+                order_id=order.order_id,
+                reference=reference,
+                currency=order.currency,
+                amount=order.total_amount,
+                admin_url=admin_url
+            )
+            
+            email = EmailMessage(subject, body, settings.DEFAULT_FROM_EMAIL, staff_emails)
+            email.send(fail_silently=True)
+            logger.info(f"Admin notification sent for payment proof on Order {order.order_id}")
+    except Exception as e:
+        logger.error(f"Failed to send admin notification for payment proof (Order {order.order_id}): {e}")
+    
+    messages.success(request, _("Payment reference submitted! We will verify the transfer and process your order shortly."))
+    return redirect('core:order_detail', order_id=order.order_id)
+
+
+@login_required
 def initiate_paystack_payment(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    if order.payment_method not in ['escrow', 'card', 'digital_wallet'] or order.status != 'AWAITING_ESCROW_PAYMENT':
+    if order.payment_method not in ['escrow', 'card', 'digital_wallet', 'bank_transfer'] or \
+       order.status not in ['AWAITING_ESCROW_PAYMENT', 'AWAITING_BANK_TRANSFER']:
         messages.error(request, _("This order is not eligible for Paystack payment at this time."))
         return redirect('core:order_detail', order_id=order.order_id)
 
@@ -3140,6 +3235,10 @@ def initiate_paystack_payment(request, order_id):
         }
     }
 
+    # Temporarily disable channel restriction to avoid 400 Bad Request errors if unsupported
+    # if order.payment_method == 'bank_transfer':
+    #     payload['channels'] = ['bank_transfer']
+
     try:
         response = requests.post(url, headers=headers, json=payload)
         response.raise_for_status()
@@ -3154,6 +3253,8 @@ def initiate_paystack_payment(request, order_id):
             messages.error(request, _("Could not initialize payment with Paystack: {error}").format(error=response_data.get("message", "Unknown error")))
     except requests.exceptions.RequestException as e:
         logger.error(f"Paystack API request failed: {e}")
+        if e.response is not None:
+            logger.error(f"Paystack Error Response: {e.response.text}")
         print(f"PAYSTACK ERROR: {e}") # Debug print for Render logs
         messages.error(request, _("Could not connect to payment gateway. Please try again later."))
 
@@ -3284,7 +3385,7 @@ def paystack_callback(request):
             paystack_order_ref = response_data["data"]["reference"]
             try:
                 order = Order.objects.get(paystack_ref=paystack_order_ref)
-                if order.status == 'AWAITING_ESCROW_PAYMENT':
+                if order.status in ['AWAITING_ESCROW_PAYMENT', 'AWAITING_BANK_TRANSFER']:
                     order.status = 'PROCESSING'
                     order.transaction_id = response_data["data"]["id"]
                     order.save(update_fields=['status', 'transaction_id'])
@@ -3586,24 +3687,42 @@ def view_wishlist(request):
 @login_required
 @require_POST
 def add_to_wishlist(request):
-    product_id = request.POST.get('product_id')
-    product = get_object_or_404(Product, id=product_id)
     wishlist, created = Wishlist.objects.get_or_create(user=request.user)
+    message = ""
+    added = False
 
-    if product in wishlist.products.all():
-        wishlist.products.remove(product)
-        added = False
-        message = _(f"'{product.name}' removed from your wishlist.")
-    else:
-        wishlist.products.add(product)
-        added = True
-        message = _(f"'{product.name}' added to your wishlist.")
+    product_id = request.POST.get('product_id')
+    service_id = request.POST.get('service_id')
+
+    if product_id:
+        product = get_object_or_404(Product, id=product_id)
+        if product in wishlist.products.all():
+            wishlist.products.remove(product)
+            added = False
+            message = _(f"'{product.name}' removed from your wishlist.")
+        else:
+            wishlist.products.add(product)
+            added = True
+            message = _(f"'{product.name}' added to your wishlist.")
+    elif service_id:
+        service = get_object_or_404(Service, id=service_id)
+        if service in wishlist.services.all():
+            wishlist.services.remove(service)
+            added = False
+            message = _(f"'{service.title}' removed from your wishlist.")
+        else:
+            wishlist.services.add(service)
+            added = True
+            message = _(f"'{service.title}' added to your wishlist.")
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return JsonResponse({'added': added, 'message': message, 'wishlist_count': wishlist.products.count()})
+        count = wishlist.products.count()
+        if hasattr(wishlist, 'services'):
+            count += wishlist.services.count()
+        return JsonResponse({'added': added, 'message': message, 'wishlist_count': count})
 
     messages.success(request, message)
-    return redirect(request.META.get('HTTP_REFERER', 'core:product_list'))
+    return redirect(request.META.get('HTTP_REFERER', 'core:home'))
 
 
 @login_required
@@ -3716,7 +3835,6 @@ class ServiceListView(ListView):
     def get_queryset(self):
         queryset = Service.objects.filter(
             is_active=True,
-            provider__service_provider_profile__is_approved=True
         ).select_related(
             'provider',
             'provider__service_provider_profile', # Ensures this is loaded
@@ -3759,13 +3877,12 @@ class ServiceListView(ListView):
         context['featured_services'] = Service.objects.filter(
             is_active=True,
             is_featured=True,
-            provider__service_provider_profile__is_approved=True
         ).select_related('provider', 'category').prefetch_related('images', 'packages')[:4]
 
         context['top_service_categories'] = ServiceCategory.objects.filter(
             is_active=True
         ).annotate(
-            num_services=Count('services', filter=Q(services__is_active=True, services__provider__service_provider_profile__is_approved=True))
+            num_services=Count('services', filter=Q(services__is_active=True))
         ).filter(num_services__gt=0).order_by('-num_services')[:8]
 
         context['categories'] = ServiceCategory.objects.filter(is_active=True).order_by('name')
@@ -3805,7 +3922,6 @@ class ServiceCategoryDetailView(ListView):
         return Service.objects.filter(
             category__in=all_categories,
             is_active=True,
-            provider__service_provider_profile__is_approved=True
         ).select_related(
             'provider', 'provider__service_provider_profile', 'category'
         ).prefetch_related('images', 'packages').order_by('-created_at')
@@ -3987,11 +4103,60 @@ def logout_other_sessions_view(request):
 
 class ProviderDashboardView(LoginRequiredMixin, IsServiceProviderMixin, TemplateView):
     template_name = 'core/service_provider/provider_dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        provider_profile = self.request.user.service_provider_profile
+        
+        # Show warning if profile is not yet approved
+        if not provider_profile.is_approved:
+            messages.warning(
+                self.request, 
+                _("Your service provider profile is pending approval. Your services will go live once approved by our admin team.")
+            )
+        
+        return context
 
 @login_required
 def become_service_provider(request):
-    # Placeholder
-    return HttpResponse("Become Service Provider")
+    if hasattr(request.user, 'service_provider_profile') and request.user.service_provider_profile:
+        messages.info(request, _("You are already a registered service provider."))
+        return redirect('core:provider_dashboard')
+
+    if request.method == 'POST':
+        form = ServiceProviderProfileForm(request.POST, request.FILES)
+        if form.is_valid():
+            profile = form.save(commit=False)
+            profile.user = request.user
+            profile.save()
+            messages.success(request, _("Your service provider application has been submitted successfully!"))
+            return redirect('core:service_provider_dashboard')
+    else:
+        form = ServiceProviderProfileForm()
+
+    context = {
+        'form': form,
+        'page_title': _("Become a Service Provider")
+    }
+    return render(request, 'core/become_service_provider.html', context)
+
+
+class ServiceProviderVerificationView(LoginRequiredMixin, IsServiceProviderMixin, TemplateView):
+    """
+    Handles service provider verification/account approval display.
+    Shows the current verification status and allows providers to submit verification if needed.
+    """
+    template_name = 'core/service_provider_verification.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        provider_profile = self.request.user.service_provider_profile
+        
+        context['page_title'] = _("Service Provider Verification")
+        context['provider_profile'] = provider_profile
+        context['is_verified'] = provider_profile.is_approved
+        
+        return context
 
 class ProviderProfileDetailView(DetailView):
     model = ServiceProviderProfile
@@ -4274,42 +4439,94 @@ class ServiceCreateView(LoginRequiredMixin, IsServiceProviderMixin, CreateView):
     template_name = 'core/service_form.html'
     success_url = reverse_lazy('core:service_provider_dashboard')
 
-    def get_form_kwargs(self):
-        """Pass the current user to the form."""
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
+    def get_context_data(self, **kwargs):
+        data = super().get_context_data(**kwargs)
+        # If formsets are not passed in kwargs (from form_invalid), create them.
+        if 'package_formset' not in kwargs:
+            data['package_formset'] = ServicePackageFormSet()
+        if 'availability_formset' not in kwargs:
+            data['availability_formset'] = ServiceAvailabilityFormSet()
+        return data
 
-    def form_valid(self, form):
-        """
-        This method is called when valid form data has been POSTed.
-        It should return an HttpResponse.
-        """
+    def post(self, request, *args, **kwargs):
+        self.object = None
+        form = self.get_form()
+        package_formset = ServicePackageFormSet(request.POST)
+        availability_formset = ServiceAvailabilityFormSet(request.POST)
+
+        if form.is_valid() and package_formset.is_valid() and availability_formset.is_valid():
+            return self.form_valid(form, package_formset, availability_formset)
+        else:
+            messages.error(request, _("Please correct the errors below. Note: You may need to re-upload images and videos."))
+            # Pass the invalid forms and formsets to the context for re-rendering
+            return self.render_to_response(
+                self.get_context_data(form=form,
+                                      package_formset=package_formset,
+                                      availability_formset=availability_formset)
+            )
+
+    def form_valid(self, form, package_formset, availability_formset):
         # Set the provider on the service instance before saving
         form.instance.provider = self.request.user
-
-        # Save the Service instance and get the object
         self.object = form.save()
 
+        # Save formsets
+        package_formset.instance = self.object
+        package_formset.save()
+        
+        availability_formset.instance = self.object
+        availability_formset.save()
+
         # Handle multiple image uploads
-        images = self.request.FILES.getlist('images')
+        images = self.request.FILES.getlist('service_images')
         for image_file in images:
             ServiceImage.objects.create(service=self.object, image=image_file)
 
         # Handle multiple video uploads
-        videos = self.request.FILES.getlist('videos')
+        videos = self.request.FILES.getlist('service_videos')
         for video_file in videos:
             ServiceVideo.objects.create(service=self.object, video=video_file)
 
         messages.success(self.request, _("Your service has been created successfully."))
         return HttpResponseRedirect(self.get_success_url())
 
+    def get_form_kwargs(self):
+        """Pass the current user to the form."""
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
 class ServiceDetailView(DetailView):
     model = Service
     template_name = 'core/service_detail.html'
     context_object_name = 'service'
-    slug_url_kwarg = 'service_slug'
-    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
+
+    def get_queryset(self):
+        return Service.objects.filter(is_active=True).select_related(
+            'provider', 'provider__service_provider_profile', 'category'
+        ).prefetch_related('images', 'packages', 'reviews', 'videos')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        service = self.object
+        context['related_services'] = Service.objects.filter(
+            category=service.category,
+            is_active=True
+        ).exclude(id=service.id)[:4]
+        context['availability_slots'] = ServiceAvailability.objects.filter(
+            service=service,
+            is_booked=False,
+            start_time__gte=timezone.now()
+        ).order_by('start_time')[:60]
+        context['reviews'] = service.reviews.filter(is_approved=True).order_by('-created_at')
+        
+        if self.request.user.is_authenticated:
+            context['in_wishlist'] = Wishlist.objects.filter(user=self.request.user, services=service).exists()
+        else:
+            context['in_wishlist'] = False
+            
+        return context
 
 class ServiceUpdateView(LoginRequiredMixin, IsServiceProviderMixin, UpdateView):
     model = Service
@@ -4319,19 +4536,82 @@ class ServiceUpdateView(LoginRequiredMixin, IsServiceProviderMixin, UpdateView):
     slug_url_kwarg = 'service_slug'
     slug_field = 'slug'
 
+    def get_form_kwargs(self):
+        """Pass the current user to the form."""
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        data = super().get_context_data(**kwargs)
+        if self.request.POST:
+            data['package_formset'] = ServicePackageFormSet(self.request.POST, instance=self.object)
+            data['availability_formset'] = ServiceAvailabilityFormSet(self.request.POST, instance=self.object)
+        else:
+            data['package_formset'] = ServicePackageFormSet(instance=self.object)
+            data['availability_formset'] = ServiceAvailabilityFormSet(instance=self.object)
+        return data
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+        context = self.get_context_data()
+        package_formset = context['package_formset']
+        availability_formset = context['availability_formset']
+
+        if form.is_valid() and package_formset.is_valid() and availability_formset.is_valid():
+            return self.form_valid(form, package_formset, availability_formset)
+        else:
+            return self.render_to_response(self.get_context_data(form=form))
+
+    def form_valid(self, form, package_formset, availability_formset):
+        self.object = form.save()
+        package_formset.instance = self.object
+        package_formset.save()
+        availability_formset.instance = self.object
+        availability_formset.save()
+
+        # Handle multiple image uploads
+        images = self.request.FILES.getlist('service_images')
+        if images:
+            self.object.images.all().delete()
+            for image_file in images:
+                ServiceImage.objects.create(service=self.object, image=image_file)
+
+        # Handle multiple video uploads
+        videos = self.request.FILES.getlist('service_videos')
+        if videos:
+            self.object.videos.all().delete()
+            for video_file in videos:
+                ServiceVideo.objects.create(service=self.object, video=video_file)
+
+        messages.success(self.request, _("Your service has been updated successfully."))
+        return HttpResponseRedirect(self.get_success_url())
+
 class ServiceDeleteView(LoginRequiredMixin, IsServiceProviderMixin, DeleteView):
     model = Service
     template_name = 'core/service_confirm_delete.html'
     success_url = reverse_lazy('core:service_provider_dashboard')
 
 @login_required
-def submit_service_review(request, service_slug):
-    service = get_object_or_404(Service, slug=service_slug)
+def submit_service_review(request, slug):
+    service = get_object_or_404(Service, slug=slug)
     if request.method == 'POST':
         form = ServiceReviewForm(request.POST)
 
         if ServiceReview.objects.filter(service=service, user=request.user).exists():
             messages.warning(request, _("You have already reviewed this service."))
+            return redirect(service.get_absolute_url())
+        
+        # Check if the user has purchased and completed the service
+        has_completed_booking = ServiceBooking.objects.filter(
+            user=request.user,
+            service_package__service=service,
+            status='COMPLETED'
+        ).exists()
+
+        if not has_completed_booking:
+            messages.error(request, _("You can only review services you have purchased and completed."))
             return redirect(service.get_absolute_url())
 
         if form.is_valid():
@@ -4352,8 +4632,83 @@ def submit_service_review(request, service_slug):
     return redirect(service.get_absolute_url())
 
 @login_required
+@require_POST
+def contact_service_provider(request, service_slug):
+    service = get_object_or_404(Service, slug=service_slug)
+    provider_user = service.provider
+    current_user = request.user
+
+    if provider_user == current_user:
+        messages.error(request, _("You cannot contact yourself."))
+        return redirect(service.get_absolute_url())
+
+    subject = request.POST.get('subject', f"Inquiry about {service.title}")
+    message_text = request.POST.get('message')
+
+    if not message_text:
+        messages.error(request, _("Please enter a message."))
+        return redirect(service.get_absolute_url())
+
+    # Find existing conversation or create new one
+    conversation = Conversation.objects.annotate(
+        num_participants=Count('participants')
+    ).filter(
+        participants=current_user, num_participants=2
+    ).filter(
+        participants=provider_user
+    ).first()
+
+    if not conversation:
+        conversation = Conversation.objects.create(subject=subject)
+        conversation.participants.add(current_user, provider_user)
+    
+    # Create the message
+    Message.objects.create(
+        conversation=conversation,
+        sender=current_user,
+        content=message_text
+    )
+
+    messages.success(request, _("Message sent successfully!"))
+    return redirect('core:customer_message_detail', pk=conversation.pk)
+
+@login_required
 def create_service_booking(request, package_id):
-    return HttpResponse(f"Create service booking for package {package_id}")
+    package = get_object_or_404(ServicePackage, id=package_id)
+    slot_id = request.GET.get('slot_id')
+
+    if not slot_id:
+        messages.error(request, _("Please select an availability slot."))
+        return redirect(package.service.get_absolute_url())
+
+    # Ensure slot exists and is available
+    slot = get_object_or_404(ServiceAvailability, id=slot_id, is_booked=False)
+
+    # Add to cart
+    cart, created = Cart.objects.get_or_create(user=request.user, ordered=False)
+    cart_item, item_created = CartItem.objects.get_or_create(
+        cart=cart,
+        service_package=package,
+        defaults={'quantity': 1}
+    )
+
+    # Store booking details in session keyed by the cart item ID
+    if 'booking_details' not in request.session:
+        request.session['booking_details'] = {}
+    
+    request.session['booking_details'][str(cart_item.id)] = {
+        'availability_slot_id': slot.id,
+        'preferred_start_date': slot.start_time.date().isoformat(),
+        'start_time': slot.start_time.strftime('%H:%M'),
+        'end_time': slot.end_time.strftime('%H:%M'),
+        'service_name': package.service.title,
+        'package_name': package.name
+    }
+    request.session.modified = True
+
+    messages.success(request, _("Service added to cart. Please proceed to checkout."))
+    return redirect('core:cart_detail')
+
 class BecomeRiderView(LoginRequiredMixin, CreateView):
     model = RiderApplication
     form_class = RiderProfileApplicationForm
@@ -4647,14 +5002,12 @@ def shop_local(request):
     return render(request, 'core/shop_local.html', context)
 @login_required
 def service_provider_advertisements(request):
-    # This view is a placeholder for service provider advertisements.
-    # For now, we'll render a simple template indicating the feature is coming soon.
+    # This view displays service provider advertisements.
     context = {
         'page_title': _("Advertisements"),
         'is_service_provider_view': True, # To help the template adapt
     }
-    messages.info(request, _("Advertising features for service providers are coming soon!"))
-    return render(request, 'core/service_provider/provider_advertisements_placeholder.html', context)
+    return render(request, 'core/service_provider/advertisements.html', context)
 
 
 def _get_chatbot_knowledge_base():
@@ -4799,7 +5152,7 @@ class ServiceProviderAdCampaignCreateView(LoginRequiredMixin, IsServiceProviderM
     # This view is a placeholder. A full implementation would require a dedicated form.
     model = AdCampaign
     fields = ['name', 'promoted_product', 'placement', 'start_date', 'end_date', 'budget']
-    template_name = 'core/provider_ad_campaign_form.html'
+    template_name = 'core/service_provider/service_provider_ad_campaign_form.html'
     success_url = reverse_lazy('core:service_provider_advertisements')
 
 class ServiceProviderBookingsListView(LoginRequiredMixin, IsServiceProviderMixin, ListView):
@@ -4821,11 +5174,17 @@ class ServiceProviderBookingDetailView(LoginRequiredMixin, IsServiceProviderMixi
         """
         Ensures that providers can only see bookings for services they offer.
         """
-        return ServiceBooking.objects.filter(provider=self.request.user.service_provider_profile.user)
+        return ServiceBooking.objects.filter(provider=self.request.user).select_related('location_address', 'user', 'service_package__service')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = _("Booking Details")
+
+        # Pass map data if location is available
+        if self.object.location_address and self.object.location_address.latitude and self.object.location_address.longitude:
+            context['google_maps_api_key'] = settings.GOOGLE_MAPS_API_KEY
+            context['latitude'] = self.object.location_address.latitude
+            context['longitude'] = self.object.location_address.longitude
         return context
 
 class ServiceProviderReviewListView(LoginRequiredMixin, IsServiceProviderMixin, ListView):
@@ -4962,15 +5321,6 @@ def service_provider_confirm_booking(request, booking_id):
 
     return redirect('core:service_provider_booking_detail', booking_id=booking.id)
 
-class ServiceProviderVerificationView(LoginRequiredMixin, IsServiceProviderMixin, TemplateView):
-    template_name = 'core/provider_verification_placeholder.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _("Service Provider Verification")
-        messages.info(self.request, _("The detailed verification process for service providers is coming soon."))
-        return context
-
 class ServiceProviderPayoutRequestListView(LoginRequiredMixin, IsServiceProviderMixin, ListView):
     model = PayoutRequest
     template_name = 'core/service_provider/service_provider_payout_request_list.html' # Corrected path
@@ -5101,17 +5451,29 @@ class ServiceAvailabilityListView(LoginRequiredMixin, IsServiceProviderMixin, Li
     def get_queryset(self):
         return ServiceAvailability.objects.filter(service__provider=self.request.user)
 
-class ServiceAvailabilityCreateView(LoginRequiredMixin, IsServiceProviderMixin, CreateView):
+class ServiceAvailabilityCreateView(LoginRequiredMixin, IsServiceProviderMixin, SuccessMessageMixin, CreateView):
     model = ServiceAvailability
     form_class = ServiceAvailabilityForm
     template_name = 'core/provider_availability_form.html'
     success_url = reverse_lazy('core:service_provider_availability_list')
+    success_message = _("Availability slot created successfully.")
 
-class ServiceAvailabilityUpdateView(LoginRequiredMixin, IsServiceProviderMixin, UpdateView):
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['service'].queryset = Service.objects.filter(provider=self.request.user)
+        return form
+
+class ServiceAvailabilityUpdateView(LoginRequiredMixin, IsServiceProviderMixin, SuccessMessageMixin, UpdateView):
     model = ServiceAvailability
     form_class = ServiceAvailabilityForm
     template_name = 'core/provider_availability_form.html'
     success_url = reverse_lazy('core:service_provider_availability_list')
+    success_message = _("Availability slot updated successfully.")
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields['service'].queryset = Service.objects.filter(provider=self.request.user)
+        return form
 
 class ServiceAvailabilityDeleteView(LoginRequiredMixin, IsServiceProviderMixin, DeleteView):
     model = ServiceAvailability

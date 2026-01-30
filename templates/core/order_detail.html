@@ -258,6 +258,17 @@
             .steps .step .step-icon-wrap::before, .steps .step .step-icon-wrap::after { display: none; }
         }
 
+        .glass-like-border {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        [data-theme="dark"] .glass-like-border {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
     </style>
 {% endblock extra_css %}
 
@@ -324,22 +335,39 @@
         {% endif %}
 
         {# --- Bank Transfer Instructions --- #}
-        {% if order.status == 'AWAITING_BANK_TRANSFER' and bank_transfer_info %}
-        <div class="alert-nexus alert-nexus-warning mb-4">
-            <h4><i class="bi bi-bank me-2"></i> {% trans "Bank Transfer Instructions" %}</h4>
-            <div>
-                <p>{% trans "Please transfer the total amount to the following bank account:" %}</p>
-                <ul class="list-unstyled p-3 rounded" style="background-color: rgba(0,0,0,0.03);">
-                    [data-theme="dark"] & { background-color: rgba(255,255,255,0.05); }
-                    <li><strong>{% trans "Bank Name:" %}</strong> {{ bank_transfer_info.bank_name }}</li>
-                    <li><strong>{% trans "Account Name:" %}</strong> {{ bank_transfer_info.account_name }}</li>
-                    <li><strong>{% trans "Account Number:" %}</strong> {{ bank_transfer_info.account_number }}</li>
-                    <li><strong>{% trans "Sort Code / Routing:" %}</strong> {{ bank_transfer_info.sort_code }}</li>
-                    <li><strong>{% trans "Reference:" %}</strong> {{ bank_transfer_info.reference }}</li>
-                </ul>
-                <p class="small text-muted mb-0">{% trans "Your order will be processed once we receive the funds. Please include your Order ID as the reference." %}</p>
-            </div>
-        </div>
+        {% if order.status == 'AWAITING_BANK_TRANSFER' %}
+            {% if order.transaction_id %}
+                <div class="alert-nexus alert-nexus-info mb-4">
+                    <h4><i class="bi bi-hourglass-split me-2"></i> {% trans "Payment Under Review" %}</h4>
+                    <p class="mb-0">{% trans "We have received your payment reference. Your payment is currently being verified by our team. You will be notified once it's confirmed." %}</p>
+                    <p class="small text-muted mt-2 mb-0"><strong>{% trans "Your Reference:" %}</strong> {{ order.transaction_id }}</p>
+                </div>
+            {% elif bank_transfer_info %}
+                <div class="alert-nexus alert-nexus-warning mb-4">
+                    <h4><i class="bi bi-bank me-2"></i> {% trans "Bank Transfer Instructions" %}</h4>
+                    <div>
+                        <p>{% trans "Please transfer the total amount to the following bank account:" %}</p>
+                        <ul class="list-unstyled p-3 rounded glass-like-border">
+                            <li><strong>{% trans "Bank Name:" %}</strong> {{ bank_transfer_info.bank_name }}</li>
+                            <li><strong>{% trans "Account Name:" %}</strong> {{ bank_transfer_info.account_name }}</li>
+                            <li><strong>{% trans "Account Number:" %}</strong> {{ bank_transfer_info.account_number }}</li>
+                            <li><strong>{% trans "Sort Code / Routing:" %}</strong> {{ bank_transfer_info.sort_code }}</li>
+                            <li><strong>{% trans "Reference:" %}</strong> {{ bank_transfer_info.reference }}</li>
+                        </ul>
+                        <p class="small text-muted mb-0">{% trans "Your order will be processed once we receive the funds. Please include your Order ID as the reference." %}</p>
+                        
+                        <hr class="border-secondary opacity-25 my-3">
+                        <form action="{% url 'core:submit_payment_proof' order_id=order.order_id %}" method="post" class="mt-2">
+                            {% csrf_token %}
+                            <label class="form-label small fw-bold">{% trans "Already paid? Enter your Transaction Reference/ID:" %}</label>
+                            <div class="input-group">
+                                <input type="text" name="payment_reference" class="form-control" placeholder="e.g., REF-123456789" required>
+                                <button class="btn btn-primary" type="submit">{% trans "Notify Admin" %}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
         {% endif %}
 
         <div class="row g-lg-5">
@@ -485,8 +513,8 @@
                     <div class="order-sidebar-section">
                         <h3>{% trans "Actions" %}</h3>
                         <div class="d-grid gap-2">
-                            {# Invoice: Hide if pending payment #}
-                            {% if order.status != 'AWAITING_ESCROW_PAYMENT' and order.status != 'PENDING' and order.status != 'CANCELLED' %}
+                            {# Invoice: Show only if transaction is successful #}
+                            {% if order.status != 'PENDING' and order.status in 'PROCESSING,IN_PROGRESS,SHIPPED,DELIVERED,COMPLETED,PENDING_PAYOUT' %}
                             <a href="{% url 'core:download_invoice' order_id=order.order_id %}" class="btn btn-outline-primary" target="_blank">
                                 <i class="bi bi-file-earmark-pdf me-2"></i> {% trans "Download Invoice" %}
                             </a>

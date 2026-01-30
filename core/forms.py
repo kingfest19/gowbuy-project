@@ -561,15 +561,15 @@ class ServiceForm(forms.ModelForm):
     """
     Form for creating and editing services.
     """
-    images = MultipleFileField(
+    service_images = MultipleFileField(
         required=False,
         label=_("Service Images"),
-        help_text=_('Upload one or more images for your service gallery. Hold Ctrl or Cmd to select multiple files.')
+        help_text=_('Upload one or more images. Hold Ctrl/Cmd to select multiple.')
     )
-    videos = MultipleFileField(
+    service_videos = MultipleFileField(
         required=False,
         label=_("Service Videos"),
-        help_text=_('Optional: Upload one or more videos (MP4, WebM recommended).')
+        help_text=_('Optional: Upload one or more videos (MP4, WebM).')
     )
     category = forms.ModelChoiceField(
         queryset=ServiceCategory.objects.filter(is_active=True).order_by('name'),
@@ -581,7 +581,7 @@ class ServiceForm(forms.ModelForm):
     class Meta:
         model = Service
         fields = [
-            'category', 'title', 'description', 'price', 'images', 'videos', 'is_featured',
+            'category', 'title', 'description', 'price', 'is_featured',
             'skills', 'experience', 'education', 'location', 'is_active'
         ]
         widgets = {
@@ -608,30 +608,30 @@ class ServiceForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)  # Safely get the user and remove it from kwargs
-        super().__init__(*args, **kwargs)  # Call the parent __init__ with the cleaned kwargs
-
+        user = kwargs.pop('user', None)  # The view passes the user, so we must accept and remove it.
+        super().__init__(*args, **kwargs)
+        # The user is not used in the form's logic, but it's passed from the view.
         self.helper = FormHelper()
-        self.helper.form_method = 'post'
+        self.helper.form_tag = False
         self.helper.layout = Layout(
-            Field('category', css_class='mb-3'),
-            Field('title', css_class='mb-3'),
-            Field('price', css_class='mb-3'),
+            Row(
+                Column('title', css_class='col-md-6 mb-3'),
+                Column('category', css_class='col-md-6 mb-3'),
+            ),
             Field('description', css_class='mb-3'),
-            Fieldset(_('Media Gallery'),
-                Field('images', css_class='mb-3'),
-                Field('videos', css_class='mb-3'),
-                css_class='border p-3 rounded mb-3'
+            Row(
+                Column('price', css_class='col-md-6 mb-3'),
+                Column('location', css_class='col-md-6 mb-3'),
             ),
-            Fieldset(_('Your Qualifications (Optional)'),
-                Field('skills', css_class='mb-3'),
-                Field('experience', css_class='mb-3'),
-                Field('education', css_class='mb-3'),
-                css_class='border p-3 rounded mb-3'
+            Field('skills', css_class='mb-3'),
+            Field('experience', css_class='mb-3'),
+            Field('education', css_class='mb-3'),
+            Field('service_images', css_class='mb-3'),
+            Field('service_videos', css_class='mb-3'),
+            Row(
+                Column('is_featured', css_class='col-md-6 mb-3'),
+                Column('is_active', css_class='col-md-6 mb-3'),
             ),
-            Field('location', css_class='mb-3'),
-            Field('is_active', css_class='form-check form-switch mb-3'),
-            Field('is_featured', css_class='form-check form-switch mb-3')
         )
 
 # --- START: Service Package Form (Standalone Class) ---
@@ -856,11 +856,8 @@ class AddressForm(forms.ModelForm):
         user = kwargs.pop('user', None) # Pop the user kwarg to avoid passing it to the parent
         super().__init__(*args, **kwargs) # Call parent __init__
         for field_name, field in self.fields.items():
-            if field_name not in ['apartment_address', 'phone_number', 'is_default']:
+            if field_name not in ['apartment_address', 'phone_number', 'is_default', 'address_type']:
                 field.required = False
-
-        if 'address_type' in self.fields:
-            self.fields['address_type'].required = False
 # --- END: Address Form ---
 
     # Add user as an argument
@@ -968,48 +965,37 @@ class ServiceProviderProfileForm(forms.ModelForm):
     class Meta:
         model = ServiceProviderProfile
         fields = [
-            'business_name', 'bio',
-            'mobile_money_provider', 'mobile_money_number',
-            'paypal_email',
-            'bank_account_name', 'bank_account_number', 'bank_name', 'bank_branch',
-            'stripe_account_id', 'payoneer_email', 'wise_email',
-            'crypto_wallet_address', 'crypto_wallet_network',
+            'business_name', 'bio', 'contact_email', 'phone_number', 'address', 'profile_image'
         ]
         widgets = {
-            'business_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'bio': forms.Textarea(attrs={'rows': 5, 'class': 'form-control'}),
-            # Mobile Money
-            'mobile_money_provider': forms.Select(attrs={'class': 'form-select'}),
-            'mobile_money_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 024xxxxxxx')}),
-            # PayPal
-            'paypal_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('you@example.com')}),
-            # Bank
-            'bank_account_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Full name as it appears on the account")}),
-            'bank_account_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Your account number")}),
-            'bank_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Name of your bank")}),
-            'bank_branch': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _("Branch where you opened the account")}),
-            # Other
-            'stripe_account_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., acct_xxxxxxxxxxxxxx')}),
-            'payoneer_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('your.payoneer.email@example.com')}),
-            'wise_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('your.wise.email@example.com')}),
-            'crypto_wallet_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 0xAbC... or bc1q...')}),
-            'crypto_wallet_network': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Ethereum (ERC20), Bitcoin')}),
+            'business_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Your Awesome Services Inc.')}),
+            'bio': forms.Textarea(attrs={'rows': 5, 'class': 'form-control', 'placeholder': _('Tell us about the services you offer, your experience, and what makes you stand out...')}),
+            'contact_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': _('business@example.com')}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., +233...')}),
+            'address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Accra, Ghana')}),
+            'profile_image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
         labels = {
-            'business_name': _("Business Name (Optional)"),
+            'business_name': _("Business Name"),
             'bio': _("Your Bio / Service Description"),
-            'paypal_email': _("PayPal Email Address"),
+            'contact_email': _("Business Contact Email"),
+            'phone_number': _("Business Phone Number"),
+            'address': _("Business Address"),
+            'profile_image': _("Profile Image / Logo"),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Make all fields on the edit form optional
-        for field_name in self.fields:
-            self.fields[field_name].required = False
+        # Explicitly set required fields to prevent blank submissions.
+        self.fields['business_name'].required = True
+        self.fields['bio'].required = True
+        self.fields['contact_email'].required = True
+        self.fields['phone_number'].required = True
+        self.fields['address'].required = True
 
-# --- END: Service Provider Profile Form ---
- 
- 
+        # Ensure profile image remains optional
+        self.fields['profile_image'].required = False
+
 # --- START: Service Provider Payout Form ---
 class ServiceProviderPayoutForm(forms.ModelForm):
     """

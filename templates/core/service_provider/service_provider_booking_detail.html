@@ -151,6 +151,41 @@
                          {% endif %}
                      </div>
                  </div>
+
+                 <!-- Service Location -->
+                 <div class="detail-card">
+                     <div class="card-header">{% trans "Service Location" %}</div>
+                     <div class="card-body">
+                         {% if booking.location_address %}
+                             <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                                 <div>
+                                     <p class="mb-1 fw-bold">{{ booking.location_address.full_name }}</p>
+                                     <p class="mb-1">{{ booking.location_address.street_address }}</p>
+                                     {% if booking.location_address.apartment_address %}
+                                         <p class="mb-1">{{ booking.location_address.apartment_address }}</p>
+                                     {% endif %}
+                                     <p class="mb-1">{{ booking.location_address.city }}, {{ booking.location_address.state }} {{ booking.location_address.zip_code }}</p>
+                                     <p class="mb-0">{{ booking.location_address.country }}</p>
+                                     {% if booking.location_address.phone_number %}
+                                         <p class="mb-0 mt-2"><i class="bi bi-telephone me-2"></i>{{ booking.location_address.phone_number }}</p>
+                                     {% endif %}
+                                 </div>
+                                 <div>
+                                     <a href="https://www.google.com/maps/dir/?api=1&destination={% if booking.location_address.latitude and booking.location_address.longitude %}{{ booking.location_address.latitude }},{{ booking.location_address.longitude }}{% else %}{{ booking.location_address.street_address|urlencode }}%20{{ booking.location_address.city|urlencode }}{% endif %}" target="_blank" class="btn btn-dark">
+                                         <i class="bi bi-map-fill me-2"></i>{% trans "Get Directions" %}
+                                     </a>
+                                 </div>
+                             </div>
+
+                             {% if latitude and longitude and google_maps_api_key %}
+                                 <div id="service-location-map" style="height: 300px; width: 100%; border-radius: 8px;"></div>
+                             {% endif %}
+
+                         {% else %}
+                             <p class="text-muted mb-0">{% trans "No specific location provided (e.g. Remote Service)." %}</p>
+                         {% endif %}
+                     </div>
+                 </div>
              </div>
  
              <div class="col-lg-4">
@@ -221,3 +256,24 @@
      </div>
  </div>
  {% endblock content %}
+
+ {% block extra_js %}
+ {% if latitude and longitude and google_maps_api_key %}
+ <script>
+     function initMap() {
+         const locationCoords = { lat: {{ latitude|stringformat:"f" }}, lng: {{ longitude|stringformat:"f" }} };
+         const map = new google.maps.Map(document.getElementById("service-location-map"), {
+             zoom: 15,
+             center: locationCoords,
+             mapId: 'NEXUS_SERVICE_MAP' // Optional: for custom styling in Google Cloud
+         });
+         const marker = new google.maps.Marker({
+             position: locationCoords,
+             map: map,
+             title: "{{ booking.location_address.full_name|escapejs }}"
+         });
+     }
+ </script>
+ <script async src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap"></script>
+ {% endif %}
+ {% endblock extra_js %}

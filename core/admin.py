@@ -1,5 +1,15 @@
 # c:\Users\Hp\Desktop\Nexus\core\admin.py
 from django.db.models import Sum, F, Value
+from django.contrib.admin.views.main import ChangeList
+import datetime
+import csv
+from django.http import HttpResponse
+from django.urls import path
+from django.db.models.functions import TruncDay
+import json
+from django.core.serializers.json import DjangoJSONEncoder
+from django.utils import timezone
+from datetime import timedelta
 from django.contrib import admin, messages
 from django.utils.html import format_html # For user_link helper
 from django.utils.translation import gettext_lazy as _
@@ -17,7 +27,8 @@ from authapp.models import CustomUser
 from .models import (
     Category, Vendor, Product, Address, Order, OrderItem, Transaction,
     WishlistItem, ProductReview, VendorReview, ProductImage, logger, PortfolioItem, # <<< Added logger and PortfolioItem
-    ProductVideo, ServiceCategory, Service, ServiceReview, ServiceImage, ServiceVideo, PayoutRequest, PricingPlan, 
+    ProductVideo, ServiceCategory, Service, ServiceReview, ServiceImage, ServiceVideo, PayoutRequest, PricingPlan,
+    Notification,
     ServicePackage, DeliveryTask, ServiceProviderProfile, RiderProfile,
     RiderApplication, BoostPackage, ActiveRiderBoost, FraudReport # <<< Import RiderApplication, BoostPackage, and ActiveRiderBoost
 )
@@ -224,6 +235,26 @@ def mark_direct_payment_received(modeladmin, request, queryset):
 mark_direct_payment_received.short_description = "Mark Direct Payment as Received (Set to Processing)"
 
 
+@admin.action(description=_('Approve Bank Transfer (Verify Payment)'))
+def approve_bank_transfer(modeladmin, request, queryset):
+    updated_count = 0
+    for order in queryset:
+        # Only approve orders that are actually waiting for transfer
+        if order.status == 'AWAITING_BANK_TRANSFER':
+            order.status = 'PROCESSING'
+            order.save(update_fields=['status'])
+
+            # Notify the customer
+            if order.user:
+                Notification.objects.create(
+                    recipient=order.user,
+                    message=_("Payment verified! Your order #{} is now being processed.").format(order.order_id),
+                    link=reverse('core:order_detail', kwargs={'order_id': order.order_id})
+                )
+            updated_count += 1
+
+    modeladmin.message_user(request, _("{} orders successfully verified and moved to processing.").format(updated_count))
+
 def get_paystack_momo_bank_code(provider_name):
     """Helper to get Paystack bank code for MoMo providers."""
     provider_name_upper = provider_name.upper()
@@ -327,7 +358,7 @@ def process_provider_payouts(modeladmin, request, queryset):
     failed_payouts_info = []
 
     for order in queryset:
-        if order.status == 'PENDING_PAYOUT' and order.payment_method == 'escrow':
+        if order.status == 'PENDING_PAYOUT' and order.payment_method in ['escrow', 'bank_transfer', 'stripe', 'card']:
             # Find unique providers for this order's service items
             provider_payout_data = {} # {provider_user: amount_to_payout}
 
@@ -453,7 +484,7 @@ def process_vendor_payouts(modeladmin, request, queryset):
     failed_payouts_info = []
 
     for order in queryset:
-        if order.status == 'PENDING_PAYOUT' and order.payment_method == 'escrow':
+        if order.status == 'PENDING_PAYOUT' and order.payment_method in ['escrow', 'bank_transfer', 'stripe', 'card']:
             # Aggregate amounts per vendor for this order
             vendor_payout_data = {} # {vendor_instance: {amount_to_payout: Decimal, commission_earned: Decimal, items_info: str}}
 
@@ -590,11 +621,66 @@ def process_vendor_payouts(modeladmin, request, queryset):
 process_vendor_payouts.short_description = _("Process Payouts to Product Vendors")
 # --- END: New Admin Action for Vendor Payouts ---
 
+class DateRangeFilter(admin.SimpleListFilter):
+    title = _('Date Range')
+    parameter_name = 'date_range'
+    template = 'admin/core/date_range_filter.html'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('today', _('Today')),
+            ('yesterday', _('Yesterday')),
+            ('last_7_days', _('Last 7 days')),
+            ('this_month', _('This month')),
+            ('custom', _('Custom Range')),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'today':
+            return queryset.filter(created_at__date=timezone.now().date())
+        if self.value() == 'yesterday':
+            return queryset.filter(created_at__date=timezone.now().date() - timedelta(days=1))
+        if self.value() == 'last_7_days':
+            return queryset.filter(created_at__gte=timezone.now() - timedelta(days=7))
+        if self.value() == 'this_month':
+            now = timezone.now()
+            return queryset.filter(created_at__year=now.year, created_at__month=now.month)
+        
+        if self.value() == 'custom':
+            start_date_str = request.GET.get('created_at_start')
+            end_date_str = request.GET.get('created_at_end')
+            
+            if start_date_str and end_date_str:
+                try:
+                    start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d')
+                    end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1) # Inclusive
+                    if settings.USE_TZ:
+                        start_date = timezone.make_aware(start_date)
+                        end_date = timezone.make_aware(end_date)
+                    return queryset.filter(created_at__range=(start_date, end_date))
+                except ValueError:
+                    pass
+        return queryset
+
+    def choices(self, changelist):
+        yield {
+            'selected': self.value() is None,
+            'query_string': changelist.get_query_string(remove=[self.parameter_name, 'created_at_start', 'created_at_end']),
+            'display': _('All'),
+        }
+        for lookup, title in self.lookup_choices:
+            yield {
+                'selected': self.value() == lookup,
+                'query_string': changelist.get_query_string({self.parameter_name: lookup}, remove=['created_at_start', 'created_at_end']),
+                'display': title,
+            }
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('order_id', 'user_link', 'status', 'payment_method', 'total_amount', 'created_at', 'customer_confirmed_delivery_at')
-    list_filter = ('status', 'payment_method', 'created_at', 'customer_confirmed_delivery_at')
+    change_list_template = 'admin/core/order/change_list.html'
+
+    list_display = ('order_id', 'user_link', 'status', 'payment_method', 'transaction_id', 'total_amount', 'created_at', 'customer_confirmed_delivery_at')
+    list_filter = ('status', 'payment_method', DateRangeFilter, 'customer_confirmed_delivery_at')
     search_fields = ('order_id', 'user__username', 'transaction_id', 'shipping_address_text', 'billing_address_text', 'paystack_ref')
     list_editable = ('status',)
     readonly_fields = (
@@ -602,7 +688,7 @@ class OrderAdmin(admin.ModelAdmin):
         'total_amount', 'shipping_address_text', 'billing_address_text',
         'transaction_id', 'user_link', 'paystack_ref', 'customer_confirmed_delivery_at'
     )
-    date_hierarchy = 'created_at'
+    # date_hierarchy = 'created_at' # Removed in favor of custom filter
     ordering = ('-created_at',)
     inlines = [OrderItemInline]
     list_select_related = ('user',)
@@ -613,7 +699,67 @@ class OrderAdmin(admin.ModelAdmin):
         ('Addresses', {'fields': ('shipping_address', 'shipping_address_text', 'billing_address', 'billing_address_text')}),
         ('Notes', {'fields': ('notes',), 'classes': ('collapse',)}),
     )
-    actions = [mark_direct_payment_received, process_provider_payouts, process_vendor_payouts] # <<< Added process_vendor_payouts
+    actions = [mark_direct_payment_received, approve_bank_transfer, process_provider_payouts, process_vendor_payouts] # <<< Added process_vendor_payouts
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('export-orders/', self.admin_site.admin_view(self.export_orders_csv), name='order_export_csv'),
+        ]
+        return custom_urls + urls
+
+    def export_orders_csv(self, request):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="orders_report.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['Order ID', 'User', 'Status', 'Payment Method', 'Total Amount', 'Transaction ID', 'Date Placed'])
+        
+        # Filter queryset based on admin filters
+        cl = ChangeList(
+            request, 
+            self.model, 
+            self.list_display, 
+            self.list_display_links, 
+            self.list_filter, 
+            self.date_hierarchy, 
+            self.search_fields, 
+            self.list_select_related, 
+            self.list_per_page, 
+            self.list_max_show_all, 
+            self.list_editable, 
+            self,
+            self.sortable_by
+        )
+        queryset = cl.get_queryset(request)
+        
+        for order in queryset:
+            writer.writerow([
+                order.order_id,
+                order.user.username if order.user else 'Guest',
+                order.get_status_display(),
+                order.get_payment_method_display(),
+                order.total_amount,
+                order.transaction_id,
+                order.created_at.strftime('%Y-%m-%d %H:%M')
+            ])
+            
+        return response
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['awaiting_transfer_count'] = self.model.objects.filter(status='AWAITING_BANK_TRANSFER').count()
+        
+        response = super().changelist_view(request, extra_context=extra_context)
+        
+        try:
+            qs = response.context_data['cl'].queryset
+            extra_context['total_order_value'] = qs.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+        except (AttributeError, KeyError):
+            pass
+            
+        return response
+
     def user_link(self, obj):
         if obj.user:
             try:
@@ -875,6 +1021,8 @@ class ActiveRiderBoostAdmin(admin.ModelAdmin):
 # --- START: PayoutRequest Admin ---
 @admin.register(PayoutRequest)
 class PayoutRequestAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/core/payoutrequest/change_list.html'
+
     list_display = ('profile_link', 'amount_requested', 'status', 'requested_at', 'processed_at')
     list_filter = ('status', 'requested_at', 'processed_at')
     search_fields = ('rider_profile__user__username', 'vendor_profile__name', 'service_provider_profile__user__username', 'amount_requested')
@@ -909,6 +1057,98 @@ class PayoutRequestAdmin(admin.ModelAdmin):
             'vendor_profile__user', 
             'service_provider_profile__user'
         )
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('export-payouts/', self.admin_site.admin_view(self.export_payouts_csv), name='payoutrequest_export_csv'),
+        ]
+        return custom_urls + urls
+
+    def export_payouts_csv(self, request):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="payouts_report.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['ID', 'User/Entity', 'Profile Type', 'Amount', 'Status', 'Requested At', 'Processed At', 'Transaction ID'])
+        
+        # Use ChangeList to filter queryset based on current admin filters
+        cl = ChangeList(
+            request, 
+            self.model, 
+            self.list_display, 
+            self.list_display_links, 
+            self.list_filter, 
+            self.date_hierarchy, 
+            self.search_fields, 
+            self.list_select_related, 
+            self.list_per_page, 
+            self.list_max_show_all, 
+            self.list_editable, 
+            self,
+            self.sortable_by
+        )
+        queryset = cl.get_queryset(request)
+        
+        for obj in queryset:
+            name = "N/A"
+            profile_type = "N/A"
+            
+            if obj.rider_profile:
+                name = obj.rider_profile.user.username
+                profile_type = "Rider"
+            elif obj.vendor_profile:
+                name = obj.vendor_profile.name
+                profile_type = "Vendor"
+            elif obj.service_provider_profile:
+                name = obj.service_provider_profile.user.username
+                profile_type = "Service Provider"
+                
+            writer.writerow([
+                obj.id,
+                name,
+                profile_type,
+                obj.amount_requested,
+                obj.get_status_display(),
+                obj.requested_at.strftime('%Y-%m-%d %H:%M') if obj.requested_at else '',
+                obj.processed_at.strftime('%Y-%m-%d %H:%M') if obj.processed_at else '',
+                obj.transaction.gateway_transaction_id if obj.transaction else ''
+            ])
+            
+        return response
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        today = timezone.now().date()
+        
+        # 1. Pending Payouts (Last 7 Days)
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        pending_payouts = self.model.objects.filter(status='pending', requested_at__gte=seven_days_ago)
+        
+        extra_context['pending_payouts_count'] = pending_payouts.count()
+        extra_context['pending_payouts_total'] = pending_payouts.aggregate(Sum('amount_requested'))['amount_requested__sum'] or 0
+        extra_context['filter_date'] = seven_days_ago.strftime('%Y-%m-%d')
+
+        # 2. Processed Today
+        processed_today = self.model.objects.filter(status='completed', processed_at__date=today)
+        extra_context['processed_today_count'] = processed_today.count()
+        extra_context['processed_today_total'] = processed_today.aggregate(Sum('amount_requested'))['amount_requested__sum'] or 0
+
+        # 3. Chart Data (Last 30 Days Trend)
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        daily_payouts = self.model.objects.filter(status='completed', processed_at__gte=thirty_days_ago) \
+            .annotate(day=TruncDay('processed_at')) \
+            .values('day') \
+            .annotate(total=Sum('amount_requested')) \
+            .order_by('day')
+        
+        chart_labels = [entry['day'].strftime('%Y-%m-%d') for entry in daily_payouts]
+        chart_data = [float(entry['total']) for entry in daily_payouts]
+        
+        extra_context['chart_labels'] = json.dumps(chart_labels, cls=DjangoJSONEncoder)
+        extra_context['chart_data'] = json.dumps(chart_data, cls=DjangoJSONEncoder)
+
+        return super().changelist_view(request, extra_context=extra_context)
 
     def mark_as_processing(self, request, queryset):
         updated_count = queryset.update(status='processing', admin_notes=F('admin_notes') + _("\nMarked as processing by admin."))

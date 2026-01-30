@@ -625,7 +625,7 @@ class Service(models.Model):
         return f"{self.title} (by {self.provider.username})"
 
     def get_absolute_url(self):
-        return reverse('core:service_detail', kwargs={'service_slug': self.slug})
+        return reverse('core:service_detail', kwargs={'slug': self.slug})
 
 # --- START: ServicePackage Model (Moved Up) ---
 class ServicePackage(models.Model):
@@ -704,6 +704,7 @@ class Wishlist(models.Model):
     """
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wishlist_profile') # Each user has one wishlist
     products = models.ManyToManyField(Product, blank=True, related_name='wishlisted_by_users') # Products in this wishlist
+    services = models.ManyToManyField(Service, blank=True, related_name='wishlisted_by_users')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1168,15 +1169,21 @@ class ServiceProviderProfile(models.Model):
     )
     business_name = models.CharField(
         max_length=255,
-        blank=True,
-        null=True,
-        verbose_name=_("Business Name (Optional)"),
-        help_text=_("If different from your personal name.")
+        verbose_name=_("Business Name"),
+        help_text=_("If different from your personal name."),
+        default=''
     )
     bio = models.TextField(
         verbose_name=_("Service Provider Bio/Description"),
-        help_text=_("Describe your services, experience, and what you offer.")
+        help_text=_("Describe your services, experience, and what you offer."),
+        default=''
     )
+    # --- START: Business Details ---
+    contact_email = models.EmailField(verbose_name=_("Business Contact Email"), default='')
+    phone_number = models.CharField(max_length=20, verbose_name=_("Business Phone Number"), default='')
+    address = models.CharField(max_length=255, verbose_name=_("Business Address"), default='')
+    profile_image = models.ImageField(upload_to='service_providers/images/', blank=True, null=True, verbose_name=_("Profile Image/Logo"))
+    # --- END: Business Details ---
     # --- START: Payout Information ---
     PAYOUT_MM_PROVIDER_CHOICES = (
         ('', _('Select Provider')),
@@ -1521,6 +1528,7 @@ class ServiceBooking(models.Model):
     booking_date = models.DateTimeField(default=timezone.now, help_text=_("Date and time the booking was made."))
     # Optional: preferred_start_date, specific_requirements
     preferred_start_date = models.DateTimeField(null=True, blank=True, help_text=_("User's preferred start date/time for the service."))
+    location_address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True, blank=True, related_name='service_bookings', help_text=_("Address where the service will be performed."))
     specific_requirements = models.TextField(blank=True, help_text=_("Any specific requirements or notes from the user for this service."))
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)

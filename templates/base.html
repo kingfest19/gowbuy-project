@@ -752,11 +752,11 @@
                     <li class="mb-2"><a href="{% url 'core:order_history' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-receipt me-2"></i> {% trans "Your Orders" %}</a></li>
                     <li class="mb-2"><a href="{% url 'core:wishlist_detail' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-heart me-2"></i> {% trans "My Wishlist" %}</a></li>
                     <li class="mb-2"><a href="{% url 'core:recent_comparisons' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-clock-history me-2"></i> {% trans "Recent Comparisons" %}</a></li>
+                    <li class="mb-2"><a href="{% url 'core:customer_message_list' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-chat-dots me-2"></i> {% trans "My Messages" %}</a></li>
                             <li class="mb-2"><a href="{% url 'core:customer_notification_list' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light text-primary"><i class="fas fa-bell me-2"></i> {% trans "My Notifications" %} <span class="badge bg-danger notification-badge-nav"></span></a></li>
-                    {% if is_provider %} {# <<< Link for Service Providers #}
-                    <li class="mb-2"><a href="{% url 'core:provider_dashboard' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-person-workspace me-2"></i> {% trans "Service Provider Hub" %}</a></li>
-                    {% endif %}
-                    {% if user.is_authenticated and not user.is_service_provider %} {# Show if authenticated and not already a provider #}
+                    {% if user.is_service_provider or user.service_provider_profile %}
+                    <li class="mb-2"><a href="{% url 'core:service_provider_dashboard' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="fas fa-tachometer-alt me-2"></i> {% trans "Service Hub" %}</a></li>
+                    {% else %}
                     <li class="mb-2"><a href="{% url 'core:become_service_provider' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-briefcase-fill me-2"></i> {% trans "Become a Service Provider" %}</a></li>
                     {% endif %}
                     {% if user.vendor_profile %} {# Check if user has a vendor profile #}
@@ -1122,7 +1122,7 @@
 
                 let authHtml = '';
                 {% if user.is_authenticated %}
-                    authHtml = `<div class="mb-4"><div class="d-flex align-items-center px-2 mb-3"><img src="https://ui-avatars.com/api/?name={{ user.username }}&background=random&color=fff&size=128" alt="Avatar" class="rounded-circle me-3 shadow-sm" style="width: 50px; height: 50px;"><h5 class="fw-bold m-0">{% trans "Hello, " %}{{ user.username }}</h5></div><ul class="list-unstyled m-0 px-2">${createLink("{% trans 'Profiles' %}", "{% url 'core:user_profile' %}", "fas fa-user-circle")}${createLink("{% trans 'Your Orders' %}", "{% url 'core:order_history' %}", "fas fa-box")}${createLink("{% trans 'Your Lists' %}", "{% url 'core:wishlist_detail' %}", "fas fa-list-alt")}${createLogoutLink("{% trans 'Sign Out' %}", "{% url 'logout' %}", "fas fa-sign-out-alt")}</ul></div>`;
+                    authHtml = `<div class="mb-4"><div class="d-flex align-items-center px-2 mb-3"><img src="https://ui-avatars.com/api/?name={{ user.username }}&background=random&color=fff&size=128" alt="Avatar" class="rounded-circle me-3 shadow-sm" style="width: 50px; height: 50px;"><h5 class="fw-bold m-0">{% trans "Hello, " %}{{ user.username }}</h5></div><ul class="list-unstyled m-0 px-2">${createLink("{% trans 'Profiles' %}", "{% url 'core:user_profile' %}", "fas fa-user-circle")}${createLink("{% trans 'Your Orders' %}", "{% url 'core:order_history' %}", "fas fa-box")}${createLink("{% trans 'My Messages' %}", "{% url 'core:customer_message_list' %}", "fas fa-comments")}${createLink("{% trans 'Your Lists' %}", "{% url 'core:wishlist_detail' %}", "fas fa-list-alt")}${createLogoutLink("{% trans 'Sign Out' %}", "{% url 'logout' %}", "fas fa-sign-out-alt")}</ul></div>`;
                 {% else %}
                     authHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Hello, Sign in" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{% trans 'Sign In' %}", "{% url 'signin' %}", "fas fa-sign-in-alt")}${createLink("{% trans 'Sign Up' %}", "{% url 'signup' %}", "fas fa-user-plus")}</ul></div>`;
                 {% endif %}

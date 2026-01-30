@@ -132,6 +132,7 @@ urlpatterns = [
     # path('order/<str:order_id>/download/<int:product_id>/', views.download_digital_product, name='download_digital_product'), # Keep if function-based
     path('reorder/<str:order_id>/', views.reorder, name='reorder'), # Added
     path('order/<str:order_id>/cancel/', views.cancel_order, name='cancel_order'), # Added Cancel Order URL
+    path('order/<str:order_id>/submit-payment-proof/', views.submit_payment_proof, name='submit_payment_proof'),
 
     # Checkout & Order Placement
     path('checkout/', views.checkout, name='checkout'),
@@ -190,10 +191,6 @@ urlpatterns = [
     path('profile/security/sessions/', views.session_management_view, name='session_management'),
     path('profile/security/sessions/logout-others/', views.logout_other_sessions_view, name='logout_other_sessions'),
 
-
-    # Service Provider
-    path('dashboard/provider/', views.ProviderDashboardView.as_view(), name='provider_dashboard'),
-
     path('become-service-provider/', views.become_service_provider, name='become_service_provider'),
 
 
@@ -251,10 +248,11 @@ urlpatterns += [
     path('service-category/<slug:category_slug>/', views.ServiceCategoryDetailView.as_view(), name='service_category_detail'),
     path('services/search/', views.ServiceSearchResultsView.as_view(), name='service_search_results'),
     path('services/create/', views.ServiceCreateView.as_view(), name='service_create'),
-    path('service/<slug:service_slug>/', views.ServiceDetailView.as_view(), name='service_detail'),
-    path('service/<slug:service_slug>/edit/', views.ServiceUpdateView.as_view(), name='service_edit'),
-    path('service/<slug:service_slug>/delete/', views.ServiceDeleteView.as_view(), name='service_delete'),
-    path('service/<slug:service_slug>/add-review/', views.submit_service_review, name='submit_service_review'),
+    path('service/<slug:slug>/', views.ServiceDetailView.as_view(), name='service_detail'),
+    path('service/<slug:slug>/edit/', views.ServiceUpdateView.as_view(), name='service_edit'),
+    path('service/<slug:slug>/delete/', views.ServiceDeleteView.as_view(), name='service_delete'),
+    path('service/<slug:slug>/add-review/', views.submit_service_review, name='submit_service_review'),
+    path('service/<slug:service_slug>/contact/', views.contact_service_provider, name='contact_service_provider'),
 
     path('book-service/<int:package_id>/', views.create_service_booking, name='create_service_booking'),
 ]
@@ -294,15 +292,15 @@ urlpatterns += [
     path('provider/dashboard/', views.ProviderDashboardView.as_view(), name='service_provider_dashboard'),
     path('provider/services/', views.ServiceProviderServicesListView.as_view(), name='service_provider_services_list'),
     path('provider/services/create/', views.ServiceCreateView.as_view(), name='service_provider_service_create'), # Reusing ServiceCreateView
-    path('provider/services/<slug:service_slug>/edit/', views.ServiceUpdateView.as_view(), name='service_provider_service_edit'), # Reusing ServiceUpdateView
-    path('provider/services/<slug:service_slug>/delete/', views.ServiceDeleteView.as_view(), name='service_provider_service_delete'), # Reusing ServiceDeleteView
+    path('provider/services/<slug:service_slug>/edit/', views.ServiceUpdateView.as_view(slug_url_kwarg='service_slug'), name='service_provider_service_edit'), # Reusing ServiceUpdateView
+    path('provider/services/<slug:service_slug>/delete/', views.ServiceDeleteView.as_view(slug_url_kwarg='service_slug'), name='service_provider_service_delete'), # Reusing ServiceDeleteView
     path('provider/advertisements/', views.service_provider_advertisements, name='service_provider_advertisements'),
     path('provider/advertisements/create/', views.ServiceProviderAdCampaignCreateView.as_view(), name='service_provider_ad_campaign_create'),
     path('provider/payout-settings/', views.EditServiceProviderPayoutView.as_view(), name='service_provider_payout_settings'),
     path('provider/bookings/', views.ServiceProviderBookingsListView.as_view(), name='service_provider_bookings_list'),
     path('provider/bookings/<int:booking_id>/', views.ServiceProviderBookingDetailView.as_view(), name='service_provider_booking_detail'),
     path('provider/bookings/<int:booking_id>/confirm/', views.service_provider_confirm_booking, name='service_provider_confirm_booking'),
-    path('provider/verify/', views.MultiStepVendorVerificationView.as_view(), name='service_provider_verification_multistep'), # Placeholder, ensure you have a view for this
+    path('provider/verify/', views.ServiceProviderVerificationView.as_view(), name='service_provider_verification_multistep'),
     # --- Service Provider Reviews ---
     path('provider/reviews/', views.ServiceProviderReviewListView.as_view(), name='service_provider_review_list'),
     path('provider/reviews/<int:pk>/reply/', views.ServiceProviderReviewReplyView.as_view(), name='service_provider_review_reply'),

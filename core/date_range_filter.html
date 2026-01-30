@@ -1,0 +1,30 @@
+{% load i18n %}
+<h3>{% blocktrans with filter_title=title %} By {{ filter_title }} {% endblocktrans %}</h3>
+<ul>
+{% for choice in choices %}
+    <li{% if choice.selected %} class="selected"{% endif %}>
+    <a href="{{ choice.query_string|iriencode }}" title="{{ choice.display }}">{{ choice.display }}</a>
+    </li>
+{% endfor %}
+</ul>
+
+{% if choices.4.selected %} {# Index 4 corresponds to 'Custom Range' #}
+<form method="GET" action="" style="padding: 10px; background: #f8f9fa; border-top: 1px solid #eaeaea;">
+    {% for k, v in request.GET.items %}
+        {% if k != 'created_at_start' and k != 'created_at_end' and k != 'date_range' %}
+            <input type="hidden" name="{{ k }}" value="{{ v }}">
+        {% endif %}
+    {% endfor %}
+    <input type="hidden" name="date_range" value="custom">
+    
+    <div style="margin-bottom: 10px;">
+        <label for="created_at_start" style="display: block; font-size: 11px; color: #666; margin-bottom: 2px;">{% trans "From" %}</label>
+        <input type="date" id="created_at_start" name="created_at_start" value="{{ request.GET.created_at_start }}" style="width: 100%; box-sizing: border-box; padding: 4px; border: 1px solid #ccc; border-radius: 3px;">
+    </div>
+    <div style="margin-bottom: 10px;">
+        <label for="created_at_end" style="display: block; font-size: 11px; color: #666; margin-bottom: 2px;">{% trans "To" %}</label>
+        <input type="date" id="created_at_end" name="created_at_end" value="{{ request.GET.created_at_end }}" style="width: 100%; box-sizing: border-box; padding: 4px; border: 1px solid #ccc; border-radius: 3px;">
+    </div>
+    <input type="submit" value="{% trans 'Apply' %}" class="btn btn-sm btn-primary" style="width: 100%; background: #79aec8; color: white; border: none; padding: 5px; border-radius: 3px; cursor: pointer;">
+</form>
+{% endif %}

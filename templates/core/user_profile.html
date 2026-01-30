@@ -266,7 +266,7 @@
                     <a href="{% url 'core:vendor_dashboard' %}" class="btn btn-info"><i class="fas fa-store me-2"></i>{% trans "Vendor Dashboard" %}</a>
                 {% endif %}
                 {% if is_service_provider %}
-                    <a href="{% url 'core:provider_dashboard' %}" class="btn btn-success"><i class="fas fa-concierge-bell me-2"></i>{% trans "Provider Dashboard" %}</a>
+                    <a href="{% url 'core:service_provider_dashboard' %}" class="btn btn-success"><i class="fas fa-concierge-bell me-2"></i>{% trans "Provider Dashboard" %}</a>
                 {% endif %}
                 {% if is_rider %}
                     <a href="{% url 'core:rider_dashboard' %}" class="btn btn-primary"><i class="fas fa-motorcycle me-2"></i>{% trans "Rider Dashboard" %}</a>

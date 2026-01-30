@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n crispy_forms_tags static %}
+{% load i18n crispy_forms_tags static %} {# This is the active template #}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -8,14 +8,14 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
         .form-container {
-            max-width: 1200px; /* Adjusted for wider service form */
+            max-width: 1200px;
             margin: 0 auto;
             background-color:  #ebe8e8;
             padding: 2rem 2.5rem;
             border-radius: 12px;
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
             border: 1px solid #c7c9cb;
-            font-family: "Outfit", sans-serif; /* Consistent font from theme */
+            font-family: "Outfit", sans-serif;
         }
 
         .page-header {
@@ -30,7 +30,7 @@
         }
 
         .page-header h1 {
-            font-family: "Poppins", sans-serif; /* Consistent font from theme */
+            font-family: "Poppins", sans-serif;
             font-weight: 700;
             color: #1a2533;
             margin-bottom: 0;
@@ -50,7 +50,7 @@
         }
 
         legend {
-            font-family: "Poppins", sans-serif; /* Consistent font from theme */
+            font-family: "Poppins", sans-serif;
             font-size: 1.25rem;
             font-weight: 600;
             color: #1a2533;
@@ -124,7 +124,8 @@
                 {# Main Service Details #}
                 <fieldset>
                     <legend>{% trans "Service Details" %}</legend>
-                    {{ form|crispy }}
+                    
+                    {% crispy form %}
 
                     {% if form.instance.pk %} {# Only show for update form #}
                         <hr>

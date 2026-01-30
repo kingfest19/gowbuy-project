@@ -360,13 +360,88 @@
             </div>
             {% endif %}
 
+            {% if requires_service_location %}
+            <div class="checkout-section" id="serviceLocationSection">
+                <div class="checkout-section-header">
+                    <h4>{% if requires_shipping %}3.{% else %}2.{% endif %} {% trans "Service Location & Schedule" %}</h4>
+                </div>
+                <div class="checkout-section-body">
+                    <h5 class="mb-3">{% trans "Appointment Summary" %}</h5>
+                    {% for item in service_booking_items %}
+                        <div class="alert alert-info">
+                            <strong>{{ item.booking_details.service_name }} - {{ item.booking_details.package_name }}</strong><br>
+                            <i class="bi bi-calendar-check"></i> {% trans "Date:" %} {{ item.booking_details.preferred_start_date_obj|date:"D, M d, Y" }}<br>
+                            <i class="bi bi-clock"></i> {% trans "Time:" %} {{ item.booking_details.start_time }} - {{ item.booking_details.end_time }}
+                        </div>
+                    {% endfor %}
+
+                    <h5 class="mt-4 mb-3">{% trans "Select Service Location" %}</h5>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="use_billing_for_service_location" id="use_billing_for_service_location" form="placeOrderForm">
+                        <label class="form-check-label" for="use_billing_for_service_location">
+                            {% trans "Use my billing address" %}
+                        </label>
+                    </div>
+
+                    <div id="serviceLocationOptions">
+                        {% if shipping_addresses %} {# Re-using shipping addresses as they are general purpose user addresses #}
+                            <div class="address-selection-grid">
+                            {% for address in shipping_addresses %}
+                                <div class="address-card">
+                                    <input class="form-check-input" type="radio" name="service_location_address_id" id="service_loc_address_{{ address.id }}" value="{{ address.id }}" form="placeOrderForm">
+                                    <label class="form-check-label" for="service_loc_address_{{ address.id }}">
+                                        <div class="address-details">
+                                                <strong>{{ address.full_name }}</strong> {% if address.is_default %}<span class="badge bg-info">{% trans "Default" %}</span>{% endif %}<br>
+                                                {{ address.street_address }}{% if address.apartment_address %}, {{ address.apartment_address }}{% endif %}<br>
+                                                {{ address.city }}, {{ address.state }} {{ address.zip_code }}<br>
+                                                {{ address.country }}
+                                                {% if address.phone_number %}<br><i class="bi bi-telephone"></i> {{ address.phone_number }}{% endif %}
+                                        </div>
+                                    </label>
+                                </div>
+                            {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="mb-3">{% trans "You have no saved addresses. Please add an address below or use your billing address." %}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mt-3">
+                         <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#addNewServiceLocationAddressForm">
+                            <i class="bi bi-plus-circle"></i> {% trans "Add New Address for Service" %}
+                        </button>
+                    </div>
+
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" value="" id="confirmServiceDetails" required form="placeOrderForm">
+                        <label class="form-check-label" for="confirmServiceDetails">
+                            <strong>{% trans "I confirm the appointment time and service location are correct." %}</strong>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- "Add New Service Location Address" Form -->
+            <div class="collapse add-address-form-container mt-3" id="addNewServiceLocationAddressForm">
+                <h5>{% trans "Add New Service Location" %}</h5>
+                <form method="post" action="{% url 'core:add_checkout_address' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="address_type" value="shipping"> {# Saving as a 'shipping' type address for re-use #}
+                    <input type="hidden" name="next" value="{% url 'core:checkout' %}">
+                    {{ address_form|crispy }}
+                    <button type="submit" class="btn btn-primary mt-2">{% trans "Save Address" %}</button>
+                </form>
+            </div>
+            {% endif %}
+
             <form method="post" action="{% url 'core:place_order' %}" id="placeOrderForm">
                 {% csrf_token %} <!-- CSRF for the main place_order form -->
 
                 <!-- Payment Method Section -->
                 <div class="checkout-section" id="paymentMethodSection"> {# ID ADDED HERE #}
                     <div class="checkout-section-header">
-                        <h4>{% if requires_shipping %}3.{% else %}2.{% endif %} {% trans "Payment Method" %}</h4>
+                        <h4>{% if requires_shipping and requires_service_location %}4.{% elif requires_shipping or requires_service_location %}3.{% else %}2.{% endif %} {% trans "Payment Method" %}</h4>
                     </div>
                     <div class="checkout-section-body">
                         <p class="mb-3">{% trans "Please select your preferred payment method:" %}</p>
@@ -532,6 +607,37 @@ document.addEventListener('DOMContentLoaded', function () {
         handleShippingAddressRequirement(); // Initial call
     }
 
+    // --- Service Location Address Logic ---
+    const useBillingForServiceCheckbox = document.getElementById('use_billing_for_service_location');
+    const serviceLocationOptionsDiv = document.getElementById('serviceLocationOptions');
+    const serviceLocationRadioButtons = document.querySelectorAll('input[name="service_location_address_id"]');
+
+    function handleServiceLocationRequirement() {
+        console.log("handleServiceLocationRequirement called.");
+        if (useBillingForServiceCheckbox && serviceLocationOptionsDiv) {
+            if (useBillingForServiceCheckbox.checked) {
+                serviceLocationOptionsDiv.style.display = 'none';
+                serviceLocationRadioButtons.forEach(radio => {
+                    radio.checked = false;
+                    radio.required = false;
+                    const wrapper = radio.closest('.address-card');
+                    if (wrapper) wrapper.classList.remove('selected');
+                });
+            } else {
+                serviceLocationOptionsDiv.style.display = 'block';
+                // Only make required if there are options and the section is visible.
+                if (serviceLocationRadioButtons.length > 0) {
+                    serviceLocationRadioButtons.forEach(radio => radio.required = true);
+                }
+            }
+        }
+    }
+
+    if (useBillingForServiceCheckbox) {
+        useBillingForServiceCheckbox.addEventListener('change', handleServiceLocationRequirement);
+        handleServiceLocationRequirement(); // Initial call
+    }
+
     // --- AJAX for Delivery Fee Calculation ---
     const shippingAddressRadios = document.querySelectorAll('input[name="shipping_address_id"]');
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
@@ -638,7 +744,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // by calling updateDeliveryFeeDisplay with initial values if needed.
     // For now, the template renders initial values, and JS updates on change.
 
-    document.querySelectorAll('input[type="radio"][name="billing_address_id"], input[type="radio"][name="shipping_address_id"], input[type="radio"][name="payment_method"]').forEach(radio => {
+    document.querySelectorAll('input[type="radio"][name="billing_address_id"], input[type="radio"][name="shipping_address_id"], input[type="radio"][name="service_location_address_id"], input[type="radio"][name="payment_method"]').forEach(radio => {
         radio.addEventListener('change', function() {
             document.querySelectorAll(`input[name="${this.name}"]`).forEach(r => {
                 const wrapper = r.closest('.address-card') || r.closest('.payment-method-item');

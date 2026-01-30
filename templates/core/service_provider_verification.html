@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Service Provider Verification" %} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        .verification-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            margin: 1rem 0;
+        }
+
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+        }
+
+        .status-approved {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #28a745;
+        }
+
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .requirements-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .requirements-list li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .requirements-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .requirements-list li.pending:before {
+            content: "⏳";
+            color: #ffc107;
+        }
+
+        .action-buttons {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .action-buttons a {
+            flex: 1;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container verification-container">
+    <div class="text-center mb-4">
+        <h1>{% trans "Service Provider Verification" %}</h1>
+        <p class="text-muted">{% trans "Your account status and verification details" %}</p>
+    </div>
+
+    <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle me-2"></i>
+        {% blocktrans %}Before you can go live and start receiving bookings, your account must be verified and approved by our team.{% endblocktrans %}
+    </div>
+
+    <!-- Status Section -->
+    <div class="text-center mb-4">
+        {% if is_verified %}
+            <span class="status-badge status-approved">
+                <i class="bi bi-check-circle me-2"></i>{% trans "Account Verified & Approved" %}
+            </span>
+            <p class="text-success mt-3">
+                <i class="bi bi-check-lg"></i> {% trans "Your account has been approved. You can now go live!" %}
+            </p>
+        {% else %}
+            <span class="status-badge status-pending">
+                <i class="bi bi-hourglass-split me-2"></i>{% trans "Pending Admin Approval" %}
+            </span>
+            <p class="text-warning mt-3">
+                <i class="bi bi-exclamation-triangle"></i> {% trans "Your account is under review. Admin approval is pending." %}
+            </p>
+        {% endif %}
+    </div>
+
+    <!-- Profile Information -->
+    <div class="info-box">
+        <h5 class="mb-3">
+            <i class="bi bi-person-check me-2"></i>{% trans "Your Profile Information" %}
+        </h5>
+        <ul class="requirements-list">
+            <li>
+                <strong>{% trans "Business Name:" %}</strong> {{ provider_profile.business_name|default:request.user.get_full_name|default:request.user.username }}
+            </li>
+            <li>
+                <strong>{% trans "Email:" %}</strong> {{ provider_profile.contact_email|default:request.user.email }}
+            </li>
+            <li>
+                <strong>{% trans "Phone:" %}</strong> {{ provider_profile.phone_number|default:"Not provided" }}
+            </li>
+            <li>
+                <strong>{% trans "Address:" %}</strong> {{ provider_profile.address|default:"Not provided" }}
+            </li>
+        </ul>
+    </div>
+
+    <!-- Verification Requirements -->
+    <div class="info-box">
+        <h5 class="mb-3">
+            <i class="bi bi-clipboard-check me-2"></i>{% trans "Verification Checklist" %}
+        </h5>
+        <ul class="requirements-list">
+            <li class="{% if provider_profile.business_name %}{% else %}pending{% endif %}">
+                {% trans "Complete Business Profile" %}
+            </li>
+            <li class="{% if provider_profile.contact_email %}{% else %}pending{% endif %}">
+                {% trans "Valid Contact Email" %}
+            </li>
+            <li class="{% if provider_profile.phone_number %}{% else %}pending{% endif %}">
+                {% trans "Phone Number" %}
+            </li>
+            <li class="{% if provider_profile.address %}{% else %}pending{% endif %}">
+                {% trans "Business Address" %}
+            </li>
+            <li class="{% if provider_profile.profile_image %}{% else %}pending{% endif %}">
+                {% trans "Profile Image/Logo" %}
+            </li>
+        </ul>
+    </div>
+
+    <!-- What Happens Next -->
+    <div class="info-box">
+        <h5 class="mb-3">
+            <i class="bi bi-info-circle me-2"></i>{% trans "What Happens Next?" %}
+        </h5>
+        <ol>
+            <li>{% trans "Our admin team reviews your submitted information" %}</li>
+            <li>{% trans "We verify your business details and authenticity" %}</li>
+            <li>{% trans "Once approved, you'll receive an email notification" %}</li>
+            <li>{% trans "Your shop goes live and you can start receiving bookings" %}</li>
+        </ol>
+    </div>
+
+    <!-- Typical Timeline -->
+    {% if not is_verified %}
+    <div class="alert alert-secondary" role="alert">
+        <strong>{% trans "Typical Approval Timeline:" %}</strong> {% trans "24-48 hours" %}
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <a href="{% url 'core:edit_service_provider_profile' %}" class="btn btn-primary">
+            <i class="bi bi-pencil me-2"></i>{% trans "Edit Profile" %}
+        </a>
+        <a href="{% url 'core:service_provider_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>{% trans "Back to Dashboard" %}
+        </a>
+    </div>
+
+    <!-- Additional Info -->
+    {% if not is_verified %}
+    <div class="alert alert-info mt-4" role="alert">
+        <strong>{% trans "Note:" %}</strong> 
+        {% blocktrans %}You can continue setting up your services and packages while waiting for approval. However, they will not be visible to customers until your account is verified and approved.{% endblocktrans %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

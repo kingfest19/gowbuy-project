@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 {% load static i18n crispy_forms_tags %}
 
@@ -6,61 +7,569 @@
 {% block extra_css %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
-        .form-container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: #fff;
-            padding: 2rem 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
-            border: 1px solid #dee2e6;
+        :root {
+            --primary-color: #0d6efd;
+            --primary-dark: #0a58ca;
+            --background-light: #ffffff;
+            --background-secondary: #f8f9fa;
+            --border-color: #dee2e6;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.07);
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
         }
+
+        [data-bs-theme="dark"] {
+            --primary-color: #0d6efd;
+            --primary-dark: #0a58ca;
+            --background-light: #1a1a1a;
+            --background-secondary: #2d2d2d;
+            --border-color: #404040;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.4);
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+
+        .campaign-form-wrapper {
+            background-color: var(--background-light);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        .form-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--background-light);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-md);
+        }
+
+        @media (min-width: 768px) {
+            .form-container {
+                padding: 2rem 2.5rem;
+            }
+        }
+
         .page-header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
+            flex-direction: column;
+            gap: 1.5rem;
             padding: 1.5rem;
             margin-bottom: 2.5rem;
             border-radius: 8px;
-            background-color: #e7f3fe; 
-            border-left: 5px solid #0d6efd; 
-            border: 1px solid #dee2e6;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            box-shadow: var(--shadow-sm);
         }
+
+        @media (min-width: 768px) {
+            .page-header {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+        }
+
         .page-header h1 {
             font-weight: 600;
-            color: #0a58ca;
+            margin-bottom: 0.25rem;
+            font-size: 1.75rem;
+            color: white;
+        }
+
+        @media (min-width: 768px) {
+            .page-header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        .page-header p {
             margin-bottom: 0;
+            opacity: 0.95;
+            font-size: 0.95rem;
+        }
+
+        .page-header .btn {
+            font-weight: 500;
+            padding: 0.6rem 1.2rem;
+            width: 100%;
+        }
+
+        @media (min-width: 576px) {
+            .page-header .btn {
+                width: auto;
+            }
+        }
+
+        .page-header .btn-outline-secondary {
+            border-color: white;
+            color: white;
+        }
+
+        .page-header .btn-outline-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: white;
+            color: white;
+        }
+
+        /* Form Styling */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            display: block;
+            font-size: 0.95rem;
+        }
+
+        .form-control,
+        .form-select {
+            background-color: var(--background-secondary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+            padding: 0.7rem 0.9rem;
+            border-radius: 6px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-size: 1rem;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+            background-color: var(--background-light);
+        }
+
+        .form-control::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .form-text {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: block;
+        }
+
+        .form-check {
+            margin-bottom: 0.75rem;
+        }
+
+        .form-check-input {
+            background-color: var(--background-secondary);
+            border-color: var(--border-color);
+            width: 1.25em;
+            height: 1.25em;
+            cursor: pointer;
+        }
+
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .form-check-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+
+        .form-check-label {
+            margin-left: 0.5rem;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        /* Help text styling */
+        .form-info-box {
+            background-color: var(--background-secondary);
+            border-left: 4px solid var(--primary-color);
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 2rem;
+        }
+
+        .form-info-box h5 {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .form-info-box ul {
+            margin-bottom: 0;
+            padding-left: 1.5rem;
+        }
+
+        .form-info-box li {
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        /* Button Styling */
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        @media (min-width: 576px) {
+            .button-group {
+                flex-direction: row;
+                gap: 1rem;
+            }
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .btn-cancel {
+            background-color: var(--background-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+        }
+
+        .btn-cancel:hover {
+            background-color: var(--border-color);
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        /* Alert/Messages */
+        .alert {
+            background-color: var(--background-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-danger {
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .alert-success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .alert-warning {
+            border-left: 4px solid var(--warning-color);
+        }
+
+        /* Form sections */
+        .form-section {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .form-section:last-of-type {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .form-section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Fade in animation */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 576px) {
+            .form-label {
+                font-size: 0.9rem;
+            }
+
+            .form-control,
+            .form-select {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+
+            .btn-submit,
+            .btn-cancel {
+                padding: 0.65rem 1.2rem;
+                font-size: 0.95rem;
+            }
         }
     </style>
 {% endblock extra_css %}
 
 {% block content %}
-<div class="container mt-5 mb-5">
-    <div class="form-container">
-        <div class="page-header">
-            <div>
-                <h1>{% trans "Create New Ad Campaign" %}</h1>
-                <p class="text-muted mb-0">{% trans "Promote your services to reach a wider audience." %}</p>
+<div class="campaign-form-wrapper">
+    <div class="container-fluid mt-3 mb-5">
+        <div class="form-container fade-in">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div>
+                    <h1>
+                        <i class="bi bi-rocket-launch-fill me-2"></i>{% trans "Create New Ad Campaign" %}
+                    </h1>
+                    <p>{% trans "Promote your services to reach a wider audience." %}</p>
+                </div>
+                <a href="{% url 'core:service_provider_advertisements' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>{% trans "Back to Ads" %}
+                </a>
             </div>
-            <a href="{% url 'core:service_provider_advertisements' %}" class="btn btn-lg btn-outline-secondary">
-                <i class="bi bi-arrow-left me-2"></i>{% trans "Back to Ads" %}
-            </a>
+
+            {% include 'partials/_messages.html' %}
+
+            <!-- Info Box -->
+            <div class="form-info-box">
+                <h5>
+                    <i class="bi bi-info-circle me-2"></i>{% trans "Campaign Tips" %}
+                </h5>
+                <ul>
+                    <li>{% trans "Give your campaign a clear, descriptive name" %}</li>
+                    <li>{% trans "Set an appropriate budget for your target audience" %}</li>
+                    <li>{% trans "Choose optimal start and end dates for maximum reach" %}</li>
+                    <li>{% trans "Monitor your campaign performance regularly" %}</li>
+                </ul>
+            </div>
+
+            <!-- Campaign Form -->
+            <form method="post" novalidate class="campaign-form">
+                {% csrf_token %}
+
+                <!-- Campaign Details Section -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="bi bi-pencil-square"></i>{% trans "Campaign Details" %}
+                    </div>
+
+                    {% if form.name %}
+                    <div class="form-group">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            {% trans "Campaign Name" %} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.help_text %}
+                            <small class="form-text">{{ form.name.help_text|safe }}</small>
+                        {% endif %}
+                        {% if form.name.errors %}
+                            <div class="text-danger mt-2">{{ form.name.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if form.promoted_product %}
+                    <div class="form-group">
+                        <label for="{{ form.promoted_product.id_for_label }}" class="form-label">
+                            {% trans "Product/Service to Promote" %} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.promoted_product }}
+                        {% if form.promoted_product.help_text %}
+                            <small class="form-text">{{ form.promoted_product.help_text|safe }}</small>
+                        {% endif %}
+                        {% if form.promoted_product.errors %}
+                            <div class="text-danger mt-2">{{ form.promoted_product.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Campaign Placement & Budget Section -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="bi bi-gem"></i>{% trans "Placement & Budget" %}
+                    </div>
+
+                    {% if form.placement %}
+                    <div class="form-group">
+                        <label for="{{ form.placement.id_for_label }}" class="form-label">
+                            {% trans "Ad Placement" %} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.placement }}
+                        {% if form.placement.help_text %}
+                            <small class="form-text">{{ form.placement.help_text|safe }}</small>
+                        {% endif %}
+                        {% if form.placement.errors %}
+                            <div class="text-danger mt-2">{{ form.placement.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if form.budget %}
+                    <div class="form-group">
+                        <label for="{{ form.budget.id_for_label }}" class="form-label">
+                            {% trans "Budget (£)" %} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.budget }}
+                        {% if form.budget.help_text %}
+                            <small class="form-text">{{ form.budget.help_text|safe }}</small>
+                        {% endif %}
+                        {% if form.budget.errors %}
+                            <div class="text-danger mt-2">{{ form.budget.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Campaign Duration Section -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="bi bi-calendar-event"></i>{% trans "Campaign Duration" %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 col-md-6">
+                            {% if form.start_date %}
+                            <div class="form-group">
+                                <label for="{{ form.start_date.id_for_label }}" class="form-label">
+                                    {% trans "Start Date" %} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.start_date }}
+                                {% if form.start_date.help_text %}
+                                    <small class="form-text">{{ form.start_date.help_text|safe }}</small>
+                                {% endif %}
+                                {% if form.start_date.errors %}
+                                    <div class="text-danger mt-2">{{ form.start_date.errors }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12 col-md-6">
+                            {% if form.end_date %}
+                            <div class="form-group">
+                                <label for="{{ form.end_date.id_for_label }}" class="form-label">
+                                    {% trans "End Date" %} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.end_date }}
+                                {% if form.end_date.help_text %}
+                                    <small class="form-text">{{ form.end_date.help_text|safe }}</small>
+                                {% endif %}
+                                {% if form.end_date.errors %}
+                                    <div class="text-danger mt-2">{{ form.end_date.errors }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Fields (if any) -->
+                {% for field in form %}
+                    {% if field.name not in "name,promoted_product,placement,budget,start_date,end_date" %}
+                        <div class="form-group">
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {% if field.help_text %}
+                                <small class="form-text">{{ field.help_text|safe }}</small>
+                            {% endif %}
+                            {% if field.errors %}
+                                <div class="text-danger mt-2">{{ field.errors }}</div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- Action Buttons -->
+                <div class="button-group">
+                    <button type="submit" class="btn-submit">
+                        <i class="bi bi-rocket-launch-fill me-2"></i>{% trans "Launch Campaign (Demo)" %}
+                    </button>
+                    <a href="{% url 'core:service_provider_advertisements' %}" class="btn-cancel">
+                        <i class="bi bi-x-lg me-2"></i>{% trans "Cancel" %}
+                    </a>
+                </div>
+            </form>
         </div>
-
-        {% include 'partials/_messages.html' %}
-
-        <form method="post" novalidate>
-            {% csrf_token %}
-            {{ form|crispy }}
-            <div class="mt-4">
-                <button type="submit" class="btn btn-primary btn-lg w-100">
-                    <i class="bi bi-rocket-launch-fill me-2"></i> {% trans "Launch Campaign (Demo)" %}
-                </button>
-            </div>
-        </form>
     </div>
 </div>
 {% endblock content %}
 
+{% block extra_js %}
+    {{ block.super }}
+    <script>
+        // Enhance form interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add focus animation to form inputs
+            const inputs = document.querySelectorAll('.form-control, .form-select');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.parentElement.classList.add('focused');
+                });
+                input.addEventListener('blur', function() {
+                    this.parentElement.classList.remove('focused');
+                });
+            });
+
+            // Smooth theme transitions
+            const htmlElement = document.documentElement;
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.attributeName === 'data-bs-theme') {
+                        // Theme switched
+                    }
+                });
+            });
+            observer.observe(htmlElement, { attributes: true });
+        });
+    </script>
+{% endblock extra_js %}
