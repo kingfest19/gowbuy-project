@@ -2,13 +2,14 @@
 {% load i18n %} {# <<< Load the i18n tags #}
 {% load rider_tags %} {# Load your custom rider template tags #}
 {% load notification_tags %} {# Load your notification tags #}
+{% load core_extras %} {# Load country_flag and other core template filters #} 
 <!DOCTYPE html>
 <html lang="{{ current_language|default:"en" }}"> {# <<< Make lang dynamic, default to 'en' if not set #}
 <head lang="{{ LANGUAGE_CODE|default:"en" }}"> {# Use LANGUAGE_CODE here #}
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     {# Default title, can be overridden by child templates using {% block title %} #}
-    <title>{% block title %}NEXUS{% endblock title %}</title>
+    <title>{% block title %}GOWBUY{% endblock title %}</title>
     {% block extra_head %}{% endblock extra_head %}
 
 
@@ -24,7 +25,7 @@
 
 {# Link to CSS file(s) containing styles for nav, footer, and base layout #}
     {# Assuming home.css contains nav/footer styles. Consider creating a dedicated base.css #}
-    <link rel="stylesheet" href="{% static 'assets/css/home.css' %}" />
+    <link rel="stylesheet" href="{% static 'assets/css/home.css' %}?v=20260207" />
 
     {# Block for page-specific CSS links #}
     {% block extra_css %}
@@ -67,106 +68,372 @@
 
         /* Footer Styles - Enhanced Visibility */
         footer {
-            background-color: var(--bg-surface);
-            color: var(--text-main);
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.98), rgba(31, 41, 55, 0.98)) !important;
+            color: #cbd5e1;
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            transition: background-color 0.3s;
+            transition: all 0.3s ease;
+            position: relative;
+            border-top: 1px solid rgba(139, 92, 246, 0.2);
         }
+
+        [data-theme="light"] footer {
+            background: linear-gradient(135deg, #ffffff, #f8f9fa) !important;
+            color: #495057;
+            border-top: 1px solid rgba(148, 163, 184, 0.25);
+        }
+
         .footer-back-to-top {
-            background-color: var(--border-color);
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.05));
             text-align: center;
-            padding: 15px 0;
+            padding: 1.25rem 0;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.15);
         }
+
         .footer-back-to-top:hover {
-            filter: brightness(1.1);
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.1));
         }
+
         .footer-back-to-top a {
-            color: var(--text-main);
+            color: #f0f4ff;
             text-decoration: none;
             font-size: 0.9rem;
             font-weight: 600;
             display: block;
             width: 100%;
+            transition: color 0.2s ease;
         }
+
+        [data-theme="light"] .footer-back-to-top a {
+            color: #1a202c;
+        }
+
+        .footer-back-to-top a:hover {
+            color: rgba(139, 92, 246, 1);
+        }
+
         .footer-content-wrapper {
-            padding: 40px 20px;
+            padding: 3.5rem 2rem;
             max-width: 1200px;
             margin: 0 auto;
         }
+
+        /* Newsletter Section */
+        .footer-newsletter {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.05));
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+
+        .footer-newsletter h4 {
+            color: #f0f4ff;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        [data-theme="light"] .footer-newsletter h4 {
+            color: #1a202c;
+        }
+
+        .footer-newsletter p {
+            color: #cbd5e1;
+            font-size: 0.95rem;
+        }
+
+        [data-theme="light"] .footer-newsletter p {
+            color: #6c757d;
+        }
+
+        .footer-newsletter input {
+            background: rgba(255, 255, 255, 0.1);
+            color: #f0f4ff !important;
+            border: 1px solid rgba(148, 163, 184, 0.3) !important;
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .footer-newsletter input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .footer-newsletter input:focus {
+            border-color: rgba(139, 92, 246, 0.5) !important;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+
+        [data-theme="light"] .footer-newsletter input {
+            background: rgba(0, 0, 0, 0.05);
+            color: #1a202c !important;
+            border-color: rgba(148, 163, 184, 0.25) !important;
+        }
+
+        [data-theme="light"] .footer-newsletter input::placeholder {
+            color: rgba(0, 0, 0, 0.4);
+        }
+
         .footer-links {
             display: flex;
             flex-wrap: wrap;
             justify-content: space-between;
-            gap: 30px;
+            gap: 2rem;
+            margin-bottom: 2rem;
         }
+
         .footer-column {
             flex: 1;
             min-width: 200px;
         }
+
         .footer-column h4 {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 700;
-            margin-bottom: 15px;
-            color: var(--text-main);
+            margin-bottom: 1.25rem;
+            color: #f0f4ff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
+
+        [data-theme="light"] .footer-column h4 {
+            color: #1a202c;
+        }
+
+        .footer-column h4::before {
+            content: '';
+            width: 3px;
+            height: 20px;
+            background: linear-gradient(180deg, rgba(139, 92, 246, 1), rgba(236, 72, 153, 0.5));
+            border-radius: 2px;
+        }
+
         .footer-column ul {
             list-style: none;
             padding: 0;
             margin: 0;
         }
+
         .footer-column ul li {
-            margin-bottom: 10px;
+            margin-bottom: 0.75rem;
         }
+
         .footer-column ul li a {
-            color: var(--text-muted);
+            color: #cbd5e1;
             text-decoration: none;
             font-size: 0.9rem;
-            transition: color 0.2s, text-decoration 0.2s;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
         }
+
         .footer-column ul li a:hover {
-            text-decoration: underline;
-            color: var(--text-main);
+            color: rgba(139, 92, 246, 1);
+            padding-left: 0.3rem;
         }
+
+        [data-theme="light"] .footer-column ul li a {
+            color: #6c757d;
+        }
+
+        [data-theme="light"] .footer-column ul li a:hover {
+            color: #1a202c;
+        }
+
         .footer-divider {
-            border-color: var(--border-color);
-            margin: 30px 0;
+            border: none;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent);
+            margin: 2.5rem 0;
+        }
+
+        /* Footer Secondary Section */
+        .footer-secondary {
+            display: grid;
+            grid-template-columns: auto 1fr auto auto;
+            gap: 3rem;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .footer-logo-area {
+            display: flex;
+            align-items: center;
+        }
+
+        .footer-logo-area img {
+            height: 40px;
+            width: auto;
+            opacity: 0.95;
+            transition: opacity 0.3s ease;
+        }
+
+        .footer-logo-area a:hover img {
             opacity: 1;
         }
+
+        [data-theme="light"] .footer-logo-area img {
+            filter: none;
+        }
+
+        .footer-social {
+            text-align: center;
+        }
+
+        .footer-social h4 {
+            color: #f0f4ff;
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+        }
+
+        [data-theme="light"] .footer-social h4 {
+            color: #1a202c;
+        }
+
+        .footer-social .social-icon {
+            color: #cbd5e1;
+            font-size: 1.3rem;
+            margin: 0 0.6rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .footer-social .social-icon:hover {
+            color: rgba(139, 92, 246, 1);
+            background: rgba(139, 92, 246, 0.2);
+            transform: translateY(-3px);
+        }
+
+        [data-theme="light"] .footer-social .social-icon {
+            color: #6c757d;
+            background: rgba(148, 163, 184, 0.1);
+        }
+
+        [data-theme="light"] .footer-social .social-icon:hover {
+            color: #1a202c;
+            background: rgba(148, 163, 184, 0.2);
+        }
+
+        .footer-payment {
+            text-align: right;
+        }
+
+        .footer-payment h4 {
+            color: #f0f4ff;
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+        }
+
+        [data-theme="light"] .footer-payment h4 {
+            color: #1a202c;
+        }
+
+        .footer-payment .d-flex i {
+            transition: all 0.2s ease;
+            opacity: 0.8;
+        }
+
+        .footer-payment .d-flex i:hover {
+            opacity: 1;
+            transform: scale(1.15);
+        }
+
+        .footer-language-currency {
+            text-align: right;
+        }
+
+        .footer-language-currency select,
+        .footer-language-currency button {
+            background: rgba(139, 92, 246, 0.1) !important;
+            color: #f0f4ff !important;
+            border: 1px solid rgba(139, 92, 246, 0.3) !important;
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            margin-left: 0.5rem;
+        }
+
+        .footer-language-currency select:hover,
+        .footer-language-currency button:hover {
+            background: rgba(139, 92, 246, 0.2) !important;
+            border-color: rgba(139, 92, 246, 0.5) !important;
+        }
+
+        [data-theme="light"] .footer-language-currency select,
+        [data-theme="light"] .footer-language-currency button {
+            background: rgba(148, 163, 184, 0.1) !important;
+            color: #1a202c !important;
+            border-color: rgba(148, 163, 184, 0.25) !important;
+        }
+
+        [data-theme="light"] .footer-language-currency select:hover,
+        [data-theme="light"] .footer-language-currency button:hover {
+            background: rgba(148, 163, 184, 0.15) !important;
+            border-color: rgba(148, 163, 184, 0.4) !important;
+        }
+
         .footer-bottom {
-            background-color: var(--bg-body);
-            padding: 25px 0;
+            background: linear-gradient(90deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.1));
+            padding: 1.5rem 0;
             text-align: center;
             font-size: 0.85rem;
-            color: var(--text-muted);
-            border-top: 1px solid var(--border-color);
+            color: #cbd5e1;
+            border-top: 1px solid rgba(139, 92, 246, 0.15);
         }
-        .footer-social .social-icon {
-            color: var(--text-main);
-            font-size: 1.5rem;
-            margin: 0 10px;
-            transition: color 0.2s;
+
+        [data-theme="light"] .footer-bottom {
+            background: rgba(148, 163, 184, 0.05);
+            color: #6c757d;
+            border-top-color: rgba(148, 163, 184, 0.25);
         }
-        .footer-social .social-icon:hover {
-            color: var(--accent-color);
+
+        /* Responsive Footer */
+        @media (max-width: 768px) {
+            .footer-content-wrapper {
+                padding: 2rem 1rem;
+            }
+
+            .footer-links {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .footer-secondary {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                text-align: center;
+            }
+
+            .footer-payment,
+            .footer-language-currency {
+                text-align: center;
+            }
+
+            .footer-newsletter {
+                padding: 1.5rem 1rem;
+            }
+
+            .footer-newsletter form {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .footer-newsletter input {
+                width: 100%;
+            }
         }
-        /* Newsletter Input Styling */
-        .footer-newsletter input {
-            background-color: var(--bg-input);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-        }
-        /* Ensure logo in footer is visible on dark background */
-        .footer-logo-area img {
-            filter: none;
-            opacity: 1;
-        }
-        [data-theme="dark"] .footer-logo-area img {
-            filter: invert(1);
-            mix-blend-mode: screen;
-            opacity: 0.9;
-        }
+
         /* Onboarding Animations */
         @keyframes pulse-ring {
             0% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.7); }
@@ -195,19 +462,92 @@
         .search-button {
             border: none !important;
         }
-        /* Navbar Scroll Effect */
+        /* Navbar Scroll Effect + Ultra Modern Style */
         nav {
-            padding: 0.4rem 0.5rem !important;
-            transition: padding 0.3s ease;
+            position: sticky;
+            top: 0;
+            z-index: 1050;
+            padding: 0.6rem 1rem !important;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
         }
         .search-form {
-            transition: width 0.3s ease-in-out, margin 0.3s ease-in-out;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.35rem;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            border-radius: 999px;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02);
+            transition: width 0.3s ease-in-out, margin 0.3s ease-in-out, box-shadow 0.3s ease;
+        }
+        .search-form:focus-within {
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.18);
+            border-color: rgba(37, 99, 235, 0.35);
+        }
+        .search-input {
+            border: none !important;
+            background: transparent !important;
+            padding: 0.35rem 0.6rem !important;
+            width: 100% !important;
+            outline: none !important;
+            font-size: 0.95rem;
+        }
+        .search-button,
+        .mic-button {
+            border: none !important;
+            background: #2563eb !important;
+            color: #fff !important;
+            border-radius: 999px !important;
+            padding: 0.45rem 0.7rem !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+        }
+        .mic-button {
+            background: #111827 !important;
+            box-shadow: 0 6px 16px rgba(17, 24, 39, 0.25);
+        }
+        .search-button:hover,
+        .mic-button:hover {
+            transform: translateY(-1px);
         }
         .nav-logo img, nav > a > img {
-            max-height: 35px;
+            max-height: 34px;
+            border-radius: 6px;
+        }
+        .nav-country {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.6rem;
+            border-radius: 999px;
+            background: rgba(0,0,0,0.04);
+        }
+        .nav-country h1 {
+            font-size: 0.9rem !important;
+        }
+        .nav-currency select {
+            border-radius: 999px !important;
+            border: 1px solid rgba(0,0,0,0.08) !important;
+            padding: 0.3rem 0.7rem !important;
+            background: rgba(255,255,255,0.9) !important;
         }
         nav.scrolled {
-            padding: 0.2rem 0.5rem !important;
+            padding: 0.35rem 0.75rem !important;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
         }
         nav.scrolled .nav-logo,
         nav.scrolled > a,
@@ -215,7 +555,8 @@
         nav.scrolled .nav-cart,
         nav.scrolled .nav-text,
         nav.scrolled .nav-country,
-        nav.scrolled .nav-language {
+        nav.scrolled .nav-language,
+        nav.scrolled .nav-currency {
             display: none !important;
         }
         nav.scrolled .search-form {
@@ -226,31 +567,74 @@
         /* Mobile Responsiveness Adjustments for Navbar */
         @media (max-width: 768px) {
             nav {
-                padding: 0.4rem 0.5rem !important;
+                padding: 0.6rem 0.8rem !important;
                 transition: padding 0.3s ease;
+                flex-wrap: wrap !important;
+                gap: 0.5rem;
+                justify-content: space-between;
             }
+            
+            /* Hide non-essential items on mobile */
+            .nav-country, .nav-currency, .nav-language, .nav-text {
+                display: none !important;
+            }
+
+            /* Logo & Cart Positioning */
+            nav > a:first-child { order: 1; }
+            .nav-cart { order: 2; }
+
             .search-form {
+                order: 3;
+                width: 100% !important;
+                margin: 0 !important;
+                max-width: none !important;
                 transition: width 0.3s ease-in-out, margin 0.3s ease-in-out;
             }
+
             .nav-logo img, nav > a > img {
                 max-height: 35px;
             }
+
+            /* Scrolled State */
             nav.scrolled {
-                padding: 0.2rem 0.5rem !important;
+                padding: 0.5rem !important;
             }
+            nav.scrolled > a, /* Hides Logo and Cart */
             nav.scrolled .nav-logo,
-            nav.scrolled > a,
-            nav.scrolled img,
-            nav.scrolled .nav-cart,
             nav.scrolled .nav-text,
             nav.scrolled .nav-country,
-            nav.scrolled .nav-language {
+            nav.scrolled .nav-language,
+            nav.scrolled .nav-currency {
                 display: none !important;
             }
             nav.scrolled .search-form {
+                order: 1;
                 width: 100% !important;
                 margin: 0 !important;
             }
+        }
+
+        /* Ultra modern navbar overrides (inline to prevent cache issues) */
+        nav {
+            background: rgba(255, 255, 255, 0.75) !important;
+            backdrop-filter: blur(14px) !important;
+            -webkit-backdrop-filter: blur(14px) !important;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06) !important;
+            padding: 0.6rem 1rem !important;
+        }
+        .search-form {
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid rgba(0, 0, 0, 0.06) !important;
+            border-radius: 999px !important;
+        }
+        .search-input {
+            border: none !important;
+            background: transparent !important;
+        }
+        .search-button,
+        .mic-button {
+            border-radius: 999px !important;
         }
     </style>
 </head>
@@ -274,10 +658,12 @@
     <!-- ==================== 1. Navigation (Copied from home.html) ==================== -->
     <nav>
         {# --- CORRECTED: Added 'core:' namespace --- #}
-        <a href="{% url 'core:home' %}"><img src="{% static 'assets/logo.jpg' %}" width="100" alt="NEXUS" /></a>
+        <a href="{% url 'core:home' %}"><img src="{% static 'assets/gowbuy-logo.webp' %}" width="100" alt="GOWBUY" /></a>
         {# --- Added modal trigger --- #}
         <div class="nav-country" data-bs-toggle="modal" data-bs-target="#locationModal" style="cursor: pointer;">
-            <img src="{% static 'assets/location_icon.png' %}" height="20" alt="" />
+            <svg class="nav-icon-top" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
+                <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z"/>
+            </svg>
             <div>
                 <p>{% trans "Location" %}</p> {# <<< Mark for translation #}
                 <h1 id="nav-location-text">{{ request.session.delivery_location|default:"United States" }}</h1> {# <<< Use session variable #}
@@ -286,18 +672,23 @@
 
         {# --- START: Search Form --- #}
         <form class="search-form" action="{% url 'core:search_results' %}" method="get">
-            <input type="text" name="q" id="searchInput" class="search-input" placeholder="{% trans 'Search NEXUS...' %}" value="{{ request.GET.q|default:'' }}" />
-            <button class="search-button" type="submit" aria-label="{% trans 'Search' %}"> {# <<< Mark aria-label #}
-                <i class="bi bi-search fs-5"></i>
+            <input type="text" name="q" id="searchInput" class="search-input" placeholder="{% trans 'Search GOWBUY...' %}" value="{{ request.GET.q|default:'' }}" />
+            <button class="search-button" type="submit" aria-label="{% trans 'Search' %}">
+                <svg class="nav-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 2C15.52 2 20 6.48 20 12C20 17.52 15.52 22 10 22C4.48 22 0 17.52 0 12C0 6.48 4.48 2 10 2ZM10 4C5.58 4 2 7.58 2 12C2 16.42 5.58 20 10 20C14.42 20 18 16.42 18 12C18 7.58 14.42 4 10 4Z" fill="currentColor"/>
+                    <path d="M23.5 21.5L17.5 15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
             </button>
             <button class="mic-button" id="micSearchButton" type="button" title="{% trans 'Search by voice' %}">
-                <i class="bi bi-mic-fill fs-5"></i>
+                <svg class="nav-svg-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 14C13.66 14 14.99 12.66 14.99 11L15 5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14ZM17.3 11C17.3 14 14.76 16.1 12 16.1C9.24 16.1 6.7 14 6.7 11H5C5 14.41 7.72 17.23 11 17.72V21H13V17.72C16.28 17.23 19 14.41 19 11H17.3Z"/>
+                </svg>
             </button>
         </form>
         {# --- END: Search Form --- #}
 
         {# --- Currency Selector Form --- #}
-        <form action="{% url 'core:update_currency' %}" method="post" class="d-inline-block ms-2">
+        <form action="{% url 'core:update_currency' %}" method="post" class="d-inline-block ms-2 nav-currency">
             {% csrf_token %}
             <select name="currency_code" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto; cursor: pointer;">
                 <option value="GBP" {% if request.session.currency_code == 'GBP' %}selected{% endif %}>GBP (£)</option>
@@ -305,6 +696,38 @@
                 <option value="EUR" {% if request.session.currency_code == 'EUR' %}selected{% endif %}>EUR (€)</option>
                 <option value="GHS" {% if request.session.currency_code == 'GHS' %}selected{% endif %}>GHS (GH₵)</option>
                 <option value="NGN" {% if request.session.currency_code == 'NGN' %}selected{% endif %}>NGN (₦)</option>
+                <option value="CAD" {% if request.session.currency_code == 'CAD' %}selected{% endif %}>CAD (C$)</option>
+                <option value="AUD" {% if request.session.currency_code == 'AUD' %}selected{% endif %}>AUD (A$)</option>
+                <option value="JPY" {% if request.session.currency_code == 'JPY' %}selected{% endif %}>JPY (¥)</option>
+                <option value="CNY" {% if request.session.currency_code == 'CNY' %}selected{% endif %}>CNY (¥)</option>
+                <option value="INR" {% if request.session.currency_code == 'INR' %}selected{% endif %}>INR (₹)</option>
+                <option value="ZAR" {% if request.session.currency_code == 'ZAR' %}selected{% endif %}>ZAR (R)</option>
+                <option value="KES" {% if request.session.currency_code == 'KES' %}selected{% endif %}>KES (KSh)</option>
+                <option value="BRL" {% if request.session.currency_code == 'BRL' %}selected{% endif %}>BRL (R$)</option>
+                <option value="MXN" {% if request.session.currency_code == 'MXN' %}selected{% endif %}>MXN (MX$)</option>
+                <option value="AED" {% if request.session.currency_code == 'AED' %}selected{% endif %}>AED (د.إ)</option>
+                <option value="SAR" {% if request.session.currency_code == 'SAR' %}selected{% endif %}>SAR (﷼)</option>
+                <option value="CHF" {% if request.session.currency_code == 'CHF' %}selected{% endif %}>CHF</option>
+                <option value="SEK" {% if request.session.currency_code == 'SEK' %}selected{% endif %}>SEK (kr)</option>
+                <option value="NOK" {% if request.session.currency_code == 'NOK' %}selected{% endif %}>NOK (kr)</option>
+                <option value="DKK" {% if request.session.currency_code == 'DKK' %}selected{% endif %}>DKK (kr)</option>
+                <option value="PLN" {% if request.session.currency_code == 'PLN' %}selected{% endif %}>PLN (zł)</option>
+                <option value="TRY" {% if request.session.currency_code == 'TRY' %}selected{% endif %}>TRY (₺)</option>
+                <option value="RUB" {% if request.session.currency_code == 'RUB' %}selected{% endif %}>RUB (₽)</option>
+                <option value="THB" {% if request.session.currency_code == 'THB' %}selected{% endif %}>THB (฿)</option>
+                <option value="SGD" {% if request.session.currency_code == 'SGD' %}selected{% endif %}>SGD (S$)</option>
+                <option value="MYR" {% if request.session.currency_code == 'MYR' %}selected{% endif %}>MYR (RM)</option>
+                <option value="PHP" {% if request.session.currency_code == 'PHP' %}selected{% endif %}>PHP (₱)</option>
+                <option value="IDR" {% if request.session.currency_code == 'IDR' %}selected{% endif %}>IDR (Rp)</option>
+                <option value="VND" {% if request.session.currency_code == 'VND' %}selected{% endif %}>VND (₫)</option>
+                <option value="EGP" {% if request.session.currency_code == 'EGP' %}selected{% endif %}>EGP (E£)</option>
+                <option value="MAD" {% if request.session.currency_code == 'MAD' %}selected{% endif %}>MAD (د.م.)</option>
+                <option value="NZD" {% if request.session.currency_code == 'NZD' %}selected{% endif %}>NZD (NZ$)</option>
+                <option value="HKD" {% if request.session.currency_code == 'HKD' %}selected{% endif %}>HKD (HK$)</option>
+                <option value="KRW" {% if request.session.currency_code == 'KRW' %}selected{% endif %}>KRW (₩)</option>
+                <option value="ILS" {% if request.session.currency_code == 'ILS' %}selected{% endif %}>ILS (₪)</option>
+                <option value="CZK" {% if request.session.currency_code == 'CZK' %}selected{% endif %}>CZK (Kč)</option>
+                <option value="HUF" {% if request.session.currency_code == 'HUF' %}selected{% endif %}>HUF (Ft)</option>
             </select>
         </form>
 
@@ -334,6 +757,9 @@
         <!-- ===== UPDATED SECTION to trigger Account Modal ===== -->
         {# --- Changed nav-text to be a modal trigger --- #}
         <div class="nav-text" data-bs-toggle="modal" data-bs-target="#accountModal" style="cursor: pointer;">
+            <svg class="nav-icon-top" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.67 14 5 15.17 5 17.5V20H19V17.5C19 15.17 14.33 14 12 14Z" fill="currentColor"/>
+            </svg>
             {% if user.is_authenticated %}
                 <p>Hi, {{ user.username }}!</p>
             {% else %}
@@ -346,6 +772,9 @@
         <!-- ===== END UPDATED SECTION ===== -->
 
         <div class="nav-text">
+            <svg class="nav-icon-top" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="currentColor"/>
+            </svg>
             {# --- CORRECTED: Renamed 'r_o' to 'order_history' and added 'core:' namespace --- #}
             {% if user.is_authenticated %}
                 <p><a href="{% url 'core:order_history' %}">{% trans "Order" %}</a></p>
@@ -361,7 +790,9 @@
         {# 'cart' is defined in main urls.py - NO namespace needed #}
         <a href="{% url 'cart' %}" class="nav-cart d-flex align-items-center text-decoration-none" style="color: inherit;">
             <div class="position-relative">
-                <i class="bi bi-cart3 fs-3"></i>
+                <svg class="nav-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 18C5.9 18 5 18.9 5 20C5 21.1 5.9 22 7 22C8.1 22 9 21.1 9 20C9 18.9 8.1 18 7 18ZM16 18C14.9 18 14 18.9 14 20C14 21.1 14.9 22 16 22C17.1 22 18 21.1 18 20C18 18.9 17.1 18 16 18ZM16 8H7V13H16V8ZM19 3H5C3.9 3 3 3.9 3 5V6H2V8H3V15C3 16.1 3.9 17 5 17H16C17.1 17 18 16.1 18 15V8H19V6H18V5C18 3.9 17.1 3 16 3H19Z" fill="currentColor"/>
+                </svg>
                 {% if cart_item_count %}
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
                     {{ cart_item_count }}
@@ -374,14 +805,16 @@
     <div class="nav-bottom"> {# Keep the container for styling, but content moves to modal trigger #}
         {# --- START: Changed Menu link to trigger modal --- #}
         <div id="navMenuTrigger" class="nav-bottom-menu-trigger" data-bs-toggle="modal" data-bs-target="#navBottomModal" style="cursor: pointer;">
-            <img src="{% static 'assets/menu_icon.png' %}" width="25px" alt="" />
+            <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="width: 25px; height: 25px;">
+                <path d="M3 18H21V16H3V18ZM3 13H21V11H3V13ZM3 6V8H21V6H3Z"/>
+            </svg>
             <p>{% trans "Menu" %}</p> {# <<< Mark for translation #}
         </div>
         {# --- END: Changed Menu link --- #}
         {# --- START: Restored original nav-bottom links --- #}
-        <p><a href="{% url 'core:daily_offers' %}">{% trans "Daily Offers" %}</a></p>
-        <p><a href="{% url 'help' %}">{% trans "Support Center" %}</a></p>
-        <p><a href="{% url 'core:service_list' %}">{% trans "Services" %}</a></p> {# <<< Added Service Marketplace Link #}
+        <p><a href="{% url 'core:daily_offers' %}" class="nav-link-with-icon"><svg class="nav-icon-bottom" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12.5 13H11V7H12.5V13ZM12 18C11.45 18 11 17.55 11 17C11 16.45 11.45 16 12 16C12.55 16 13 16.45 13 17C13 17.55 12.55 18 12 18Z"/></svg>{% trans "Daily Offers" %}</a></p>
+        <p><a href="{% url 'help' %}" class="nav-link-with-icon"><svg class="nav-icon-bottom" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM11 9H13V7H11V9ZM11 17H13V11H11V17Z"/></svg>{% trans "Support Center" %}</a></p>
+        <p><a href="{% url 'core:service_list' %}" class="nav-link-with-icon"><svg class="nav-icon-bottom" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M20 6H16V4H8V6H4C2.9 6 2 6.9 2 8V19C2 20.1 2.9 21 4 21H20C21.1 21 22 20.1 22 19V8C22 6.9 21.1 6 20 6ZM20 19H4V8H20V19ZM14 13H10V17H14V13Z"/></svg>{% trans "Services" %}</a></p>
         
         {# --- START: Conditional "Become Rider" or "Categories" Link --- #}
         {% if user|can_apply_as_rider %}
@@ -389,14 +822,18 @@
                 <p>
             <p>
                   <a href="{% url 'core:become_rider_info_page' %}" style="color: inherit; text-decoration: none;">
-                    <i class="fas fa-motorcycle me-1"></i>{% trans "Become Rider" %}
+                    <svg class="nav-icon-inline" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 21.1 3.9 22 5 22H6C7.1 22 8 21.1 8 20V19H16V20C16 21.1 16.9 22 18 22H19C20.1 22 21 21.1 21 20V12L18.92 6.01ZM6.5 9H17.5V12H6.5V9ZM8 16C7.45 16 7 15.55 7 15C7 14.45 7.45 14 8 14C8.55 14 9 14.45 9 15C9 15.55 8.55 16 8 16ZM16 16C15.45 16 15 15.55 15 15C15 14.45 15.45 14 16 14C16.55 14 17 14.45 17 15C17 15.55 16.55 16 16 16Z"/>
+                    </svg>{% trans "Become Rider" %}
                 </a>
             </p>
        {% elif user|has_rider_profile %}
                 {# User has applied or is a rider - show "Rider Area" link #}
                 <p>
                     <a href="{% url 'core:rider_dashboard' %}" style="color: inherit; text-decoration: none;">
-                        <i class="fas fa-tachometer-alt me-1"></i>{% trans "Rider Area" %}
+                        <svg class="nav-icon-inline" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M13 3H11V13H13V3ZM17.83 5.17L16.41 6.59C17.69 8.12 18.5 10.07 18.5 12.27C18.5 16.79 14.79 20.5 10.27 20.5C5.75 20.5 2.04 16.79 2.04 12.27C2.04 8.16 5.26 4.88 9.27 4.73V2.7C4.54 4.86 1 8.98 1 13.77C1 19.84 5.92 24.75 12 24.75C18.08 24.75 23 19.84 23 13.77C23 11.07 21.98 8.61 20.37 6.71L22.83 4.25L17.83 5.17Z"/>
+                        </svg>{% trans "Rider Area" %}
                     </a>
                 </p>
         {% else %}
@@ -422,36 +859,67 @@
         {# --- START: Conditional Sell/Dashboard/Help Links --- #}
         {% if user.is_authenticated and user.vendor_profile %}
             {# User is logged in AND is a vendor -> Show Dashboard #}
-            <p><a href="{% url 'core:vendor_dashboard' %}">{% trans "Your Dashboard" %}</a></p>
+            <p><a href="{% url 'core:vendor_dashboard' %}" class="nav-link-with-icon"><svg class="nav-icon-bottom" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M3 13H11V3H3V13ZM3 21H11V15H3V21ZM13 21H21V11H13V21ZM13 3V9H21V3H13Z"/></svg>{% trans "Your Dashboard" %}</a></p>
         {% else %}
             {# User is NOT a vendor (or not logged in) -> Show Sell link #}
-            <p><a href="{% url 'core:sell_on_nexus' %}">{% trans "Sell on NEXUS" %}</a></p>
+            <p><a href="{% url 'core:sell_on_gowbuy' %}" class="nav-link-with-icon"><svg class="nav-icon-bottom" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17 10.5V7C17 6.45 16.55 6 16 6H4C3.45 6 3 6.45 3 7V10.5C3 11.05 3.45 11.5 4 11.5H16C16.55 11.5 17 11.05 17 10.5ZM16 13.5H4C3.45 13.5 3 13.95 3 14.5V20C3 20.55 3.45 21 4 21H16C16.55 21 17 20.55 17 20V14.5C17 13.95 16.55 13.5 16 13.5ZM20.5 6H19V17H20.5C21.05 17 21.5 16.55 21.5 16V7C21.5 6.45 21.05 6 20.5 6ZM7 19H5V15H7V19Z"/></svg>{% trans "Sell on GOWBUY" %}</a></p>
         {% endif %}
         {# --- END: Conditional Sell/Dashboard/Help Links --- #}
         {# --- END: Restored original nav-bottom links --- #}
-        <span class="nav-promo-caption">✨ WELCOME TO NEXUS! ✨</span>
+        <span class="nav-promo-caption">✨ WELCOME TO GOWBUY! ✨</span>
     </div>
     <!-- ================= End Navigation ================= -->
 
     {% comment %} --- START: Visual Search UI --- {% endcomment %}
-    <div class="container my-4"> {# Added a container for better layout #}
-        <div class="visual-search-container my-3 p-3 border rounded bg-light-subtle"> {# Styled container #}
-            <h5 class="mb-3">{% trans "Search by Image" %} <i class="bi bi-image-alt"></i></h5>
-            <div class="input-group mb-2">
-                <input type="file" class="form-control" id="visualSearchInput" accept="image/*" aria-label="{% trans 'Upload image for visual search' %}">
-                <button class="btn btn-primary" type="button" id="visualSearchButton" disabled><i class="bi bi-camera-fill"></i> {% trans "Find Similar" %}</button>
+    <div class="modern-visual-search-wrapper">
+        <div class="visual-search-container">
+            <div class="search-header">
+                <h2 class="search-title"><i class="bi bi-image"></i> {% trans "Search by Image" %}</h2>
+                <p class="search-subtitle">{% trans "Upload a photo to find similar products instantly" %}</p>
             </div>
-            <div id="visualSearchPreviewContainer" class="mt-2 text-center" style="display:none;">
-                <img id="visualSearchPreview" src="#" alt="Image Preview" style="max-height: 150px; max-width: 100%; border: 1px solid #ddd; padding: 5px; border-radius: .25rem;"/>
+            
+            <div class="search-upload-zone">
+                <input type="file" class="form-control" id="visualSearchInput" accept="image/*" aria-label="{% trans 'Upload image for visual search' %}" style="display: none;">
+                
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <i class="bi bi-cloud-upload"></i>
+                    </div>
+                    <p class="upload-text">{% trans "Drag and drop your image here" %}</p>
+                    <p class="upload-subtext">{% trans "or" %}</p>
+                    <button class="upload-btn" type="button" id="uploadTriggerBtn">
+                        {% trans "Choose Image" %}
+                    </button>
+                </div>
+                
+                <div id="visualSearchPreviewContainer" class="preview-container" style="display:none;">
+                    <div class="preview-content">
+                        <img id="visualSearchPreview" src="#" alt="Image Preview" class="preview-image"/>
+                        <button type="button" class="btn-remove-image" id="removeImageBtn" title="{% trans 'Remove image' %}">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
+                    </div>
+                    <button class="btn btn-search-primary" type="button" id="visualSearchButton">
+                        <i class="bi bi-search"></i> {% trans "Find Similar Products" %}
+                    </button>
+                </div>
             </div>
-            <div id="visualSearchSpinner" class="text-center mt-2" style="display:none;">
-                <div class="spinner-border text-primary" role="status"><span class="visually-hidden">{% trans "Loading..." %}</span></div>
+            
+            <div id="visualSearchSpinner" class="search-spinner" style="display:none;">
+                <div class="spinner-animation"></div>
+                <p>{% trans "Searching for similar products..." %}</p>
             </div>
-            <div id="visualSearchError" class="alert alert-danger mt-2" role="alert" style="display:none;"></div>
-            <div id="visualSearchResults" class="mt-3"></div>
+            
+            <div id="visualSearchError" class="alert alert-danger search-alert" role="alert" style="display:none;"></div>
+            <div id="visualSearchResults" class="search-results-container"></div>
         </div>
     </div>
     {% comment %} --- END: Visual Search UI --- {% endcomment %}
+
+    {# --- Floating Theme Toggle Button --- #}
+    <button id="themeToggleBtn" class="floating-theme-toggle" type="button" title="{% trans 'Toggle dark mode' %}" aria-label="{% trans 'Toggle dark mode' %}">
+        <i class="bi bi-moon-stars-fill"></i>
+    </button>
 
     <main> {# Wrap main content area #}
 
@@ -507,22 +975,21 @@
                 <div class="footer-column">
                     <h4>{% trans "Get to Know Us" %}</h4> {# <<< Mark for translation #}
                     <ul>
-                        <li><a href="#">About NEXUS</a></li>
-                        <li><a href="#">Careers</a></li>
-                        <li><a href="#">Press Releases</a></li>
-                        <li><a href="#">NEXUS Blog</a></li>
-                        <li><a href="#">NEXUS Science</a></li>
+                        <li><a href="{% url 'core:info_about' %}">About GOWBUY</a></li>
+                        <li><a href="{% url 'core:info_careers' %}">Careers</a></li>
+                        <li><a href="{% url 'core:info_press' %}">Press Releases</a></li>
+                        <li><a href="{% url 'core:info_blog' %}">GOWBUY Blog</a></li>
                     </ul>
                 </div>
                 <div class="footer-column">
                     <h4>{% trans "Make Money with Us" %}</h4> {# <<< Mark for translation #}
                     <ul>
-                        <li><a href="{% url 'core:sell_on_nexus' %}">Sell on NEXUS</a></li> {# Updated link #}
-                        <li><a href="#">Sell on NEXUS Business</a></li>
-                        <li><a href="#">Become an Affiliate</a></li>
-                        <li><a href="#">Advertise Your Products</a></li>
-                        <li><a href="#">Become a Delivery Partner</a></li>
-                        <li><a href="#">Self-Publish with Us</a></li>
+                        {% if not user.vendor_profile %}
+                        <li><a href="{% url 'core:sell_on_gowbuy' %}">Sell on GOWBUY</a></li> {# Updated link #}
+                        {% endif %}
+                        <li><a href="{% url 'core:info_affiliate' %}">Become an Affiliate</a></li>
+                        <li><a href="{% url 'core:info_advertise' %}">Advertise Your Products</a></li>
+                        <li><a href="{% url 'core:info_delivery_partner' %}">Become a Delivery Partner</a></li>
                     </ul>
                 </div>
                 <div class="footer-column">
@@ -533,9 +1000,9 @@
                         <li><a href="{% url 'core:user_profile' %}">Your Account</a></li> {# Updated link #}
                         {# 'order_history' is in 'core' namespace #}
                         <li><a href="{% url 'core:order_history' %}">Your Orders</a></li>
-                        <li><a href="#">Shipping Rates & Policies</a></li>
-                        <li><a href="#">Returns & Replacements</a></li>
-                        <li><a href="#">Contact Us</a></li>
+                        <li><a href="{% url 'core:info_shipping' %}">Shipping Rates & Policies</a></li>
+                        <li><a href="{% url 'core:info_returns' %}">Returns & Replacements</a></li>
+                        <li><a href="{% url 'core:info_contact' %}">Contact Us</a></li>
                     </ul>
                 </div>
                  <div class="footer-column">
@@ -544,9 +1011,8 @@
                         {# 'privacy' and 'terms' are defined in main urls.py - NO namespace needed #}
                         <li><a href="{% url 'privacy' %}">Privacy Policy</a></li>
                         <li><a href="{% url 'terms' %}">Terms of Service</a></li>
-                        <li><a href="#">Accessibility</a></li>
-                        <li><a href="#">Gift Cards</a></li>
-                        <li><a href="#">Site Map</a></li>
+                        <li><a href="{% url 'core:info_accessibility' %}">Accessibility</a></li>
+                        <li><a href="{% url 'core:info_sitemap' %}">Site Map</a></li>
                     </ul>
                 </div>
             </div>
@@ -555,7 +1021,7 @@
                  <div class="footer-logo-area">
                      {# --- CORRECTED: Added 'core:' namespace --- #}
                      <a href="{% url 'core:home' %}">
-                         <img src="{% static 'assets/logo.jpg' %}" alt="NEXUS Logo">
+                         <img src="{% static 'assets/gowbuy-logo.webp' %}" alt="GOWBUY Logo">
                      </a>
                  </div>
                  <div class="footer-social">
@@ -599,7 +1065,7 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; {% now "Y" %} NEXUS.com, Inc. or its affiliates. All Rights Reserved.</p>
+            <p>&copy; {% now "Y" %} GOWBUY.com, Inc. or its affiliates. All Rights Reserved.</p>
         </div>
 
    </footer>
@@ -688,10 +1154,55 @@
                 <div class="mb-3">
                   <label for="currencyInput" class="form-label">{% trans "Currency" %}</label>
                   <select class="form-select" id="currencyInput" name="currency_code">
-                    <option value="GBP" selected>GBP - British Pound (£)</option>
-                    <option value="USD">USD - US Dollar ($)</option>
-                    <option value="EUR">EUR - Euro (€)</option>
-                    <option value="GHS">GHS - Ghanaian Cedi (GH₵)</option>
+                    <optgroup label="Popular">
+                      <option value="GBP" {% if request.session.currency_code == 'GBP' %}selected{% endif %}>GBP - British Pound (£)</option>
+                      <option value="USD" {% if request.session.currency_code == 'USD' %}selected{% endif %}>USD - US Dollar ($)</option>
+                      <option value="EUR" {% if request.session.currency_code == 'EUR' %}selected{% endif %}>EUR - Euro (€)</option>
+                      <option value="GHS" {% if request.session.currency_code == 'GHS' %}selected{% endif %}>GHS - Ghanaian Cedi (GH₵)</option>
+                    </optgroup>
+                    <optgroup label="Africa">
+                      <option value="NGN" {% if request.session.currency_code == 'NGN' %}selected{% endif %}>NGN - Nigerian Naira (₦)</option>
+                      <option value="ZAR" {% if request.session.currency_code == 'ZAR' %}selected{% endif %}>ZAR - South African Rand (R)</option>
+                      <option value="KES" {% if request.session.currency_code == 'KES' %}selected{% endif %}>KES - Kenyan Shilling (KSh)</option>
+                      <option value="EGP" {% if request.session.currency_code == 'EGP' %}selected{% endif %}>EGP - Egyptian Pound (E£)</option>
+                      <option value="MAD" {% if request.session.currency_code == 'MAD' %}selected{% endif %}>MAD - Moroccan Dirham (د.م.)</option>
+                    </optgroup>
+                    <optgroup label="Americas">
+                      <option value="CAD" {% if request.session.currency_code == 'CAD' %}selected{% endif %}>CAD - Canadian Dollar (C$)</option>
+                      <option value="BRL" {% if request.session.currency_code == 'BRL' %}selected{% endif %}>BRL - Brazilian Real (R$)</option>
+                      <option value="MXN" {% if request.session.currency_code == 'MXN' %}selected{% endif %}>MXN - Mexican Peso (MX$)</option>
+                    </optgroup>
+                    <optgroup label="Asia Pacific">
+                      <option value="AUD" {% if request.session.currency_code == 'AUD' %}selected{% endif %}>AUD - Australian Dollar (A$)</option>
+                      <option value="JPY" {% if request.session.currency_code == 'JPY' %}selected{% endif %}>JPY - Japanese Yen (¥)</option>
+                      <option value="CNY" {% if request.session.currency_code == 'CNY' %}selected{% endif %}>CNY - Chinese Yuan (¥)</option>
+                      <option value="INR" {% if request.session.currency_code == 'INR' %}selected{% endif %}>INR - Indian Rupee (₹)</option>
+                      <option value="THB" {% if request.session.currency_code == 'THB' %}selected{% endif %}>THB - Thai Baht (฿)</option>
+                      <option value="SGD" {% if request.session.currency_code == 'SGD' %}selected{% endif %}>SGD - Singapore Dollar (S$)</option>
+                      <option value="MYR" {% if request.session.currency_code == 'MYR' %}selected{% endif %}>MYR - Malaysian Ringgit (RM)</option>
+                      <option value="PHP" {% if request.session.currency_code == 'PHP' %}selected{% endif %}>PHP - Philippine Peso (₱)</option>
+                      <option value="IDR" {% if request.session.currency_code == 'IDR' %}selected{% endif %}>IDR - Indonesian Rupiah (Rp)</option>
+                      <option value="VND" {% if request.session.currency_code == 'VND' %}selected{% endif %}>VND - Vietnamese Dong (₫)</option>
+                      <option value="NZD" {% if request.session.currency_code == 'NZD' %}selected{% endif %}>NZD - New Zealand Dollar (NZ$)</option>
+                      <option value="HKD" {% if request.session.currency_code == 'HKD' %}selected{% endif %}>HKD - Hong Kong Dollar (HK$)</option>
+                      <option value="KRW" {% if request.session.currency_code == 'KRW' %}selected{% endif %}>KRW - South Korean Won (₩)</option>
+                    </optgroup>
+                    <optgroup label="Europe">
+                      <option value="CHF" {% if request.session.currency_code == 'CHF' %}selected{% endif %}>CHF - Swiss Franc (CHF)</option>
+                      <option value="SEK" {% if request.session.currency_code == 'SEK' %}selected{% endif %}>SEK - Swedish Krona (kr)</option>
+                      <option value="NOK" {% if request.session.currency_code == 'NOK' %}selected{% endif %}>NOK - Norwegian Krone (kr)</option>
+                      <option value="DKK" {% if request.session.currency_code == 'DKK' %}selected{% endif %}>DKK - Danish Krone (kr)</option>
+                      <option value="PLN" {% if request.session.currency_code == 'PLN' %}selected{% endif %}>PLN - Polish Zloty (zł)</option>
+                      <option value="CZK" {% if request.session.currency_code == 'CZK' %}selected{% endif %}>CZK - Czech Koruna (Kč)</option>
+                      <option value="HUF" {% if request.session.currency_code == 'HUF' %}selected{% endif %}>HUF - Hungarian Forint (Ft)</option>
+                      <option value="TRY" {% if request.session.currency_code == 'TRY' %}selected{% endif %}>TRY - Turkish Lira (₺)</option>
+                      <option value="RUB" {% if request.session.currency_code == 'RUB' %}selected{% endif %}>RUB - Russian Ruble (₽)</option>
+                    </optgroup>
+                    <optgroup label="Middle East">
+                      <option value="AED" {% if request.session.currency_code == 'AED' %}selected{% endif %}>AED - UAE Dirham (د.إ)</option>
+                      <option value="SAR" {% if request.session.currency_code == 'SAR' %}selected{% endif %}>SAR - Saudi Riyal (﷼)</option>
+                      <option value="ILS" {% if request.session.currency_code == 'ILS' %}selected{% endif %}>ILS - Israeli Shekel (₪)</option>
+                    </optgroup>
                   </select>
                 </div>
               </div>
@@ -709,25 +1220,30 @@
     <div class="modal fade" id="navBottomModal" tabindex="-1" aria-labelledby="navBottomModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"> {# Added scrollable #}
         <div class="modal-content">
-          <div class="modal-header"> {# <<< Changed title to Categories #}
-            <h1 class="modal-title fs-5" id="navBottomModalLabel">{% trans "Shop by Category" %}</h1>
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="navBottomModalLabel">{% trans "Shop by Country" %}</h1>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            {# --- START: Display categories from context --- #}
+            {# --- START: Display origin countries from context --- #}
             <ul class="list-unstyled">
-                {% if menu_categories %} {# Use menu_categories from context_processor #}
-                    {% for category in menu_categories %}
+                {% if menu_countries %}
+                    {% for country in menu_countries %}
                         <li>
-                            <a href="{{ category.get_absolute_url }}">{{ category.name }}</a>
-                            {# Optionally display subcategories here if needed #}
+                            <a href="{% url 'core:origin_detail' country.code %}" class="country-menu-link">
+                                <svg class="country-flag-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; margin-right: 8px;">
+                                    <rect width="24" height="24" rx="3" fill="{% if country.code == 'US' %}#3C3B6E{% elif country.code == 'GB' %}#012169{% elif country.code == 'CN' %}#DE2910{% elif country.code == 'JP' %}#BC002D{% elif country.code == 'DE' %}#000000{% elif country.code == 'FR' %}#0055A4{% elif country.code == 'IT' %}#009246{% elif country.code == 'ES' %}#C60B1E{% elif country.code == 'CA' %}#FF0000{% elif country.code == 'AU' %}#012169{% elif country.code == 'BR' %}#009B3A{% elif country.code == 'MX' %}#006341{% elif country.code == 'IN' %}#FF9933{% elif country.code == 'KR' %}#003478{% elif country.code == 'RU' %}#0039A6{% elif country.code == 'TR' %}#E30A17{% elif country.code == 'SA' %}#165B31{% elif country.code == 'AE' %}#00732F{% elif country.code == 'ZA' %}#007A4D{% elif country.code == 'NG' %}#008751{% else %}#6366f1{% endif %}"/>
+                                    <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">{{ country.code }}</text>
+                                </svg>
+                                {{ country.name }} <small class="text-muted">({{ country.count }})</small>
+                            </a>
                         </li>
                     {% endfor %}
                 {% else %}
-                    <li>{% trans "No categories available." %}</li>
+                    <li>{% trans "No countries available." %}</li>
                 {% endif %}
             </ul>
-            {# --- END: Display categories --- #}
+            {# --- END: Display countries --- #}
           </div>
         </div>
       </div>
@@ -745,30 +1261,30 @@
           <div class="modal-body">
             {% if user.is_authenticated %}
                 <ul class="list-unstyled">
-                    <li class="mb-2"><a href="{% url 'core:user_profile' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-person-circle me-2"></i> {% trans "My Profile" %}</a></li>
+                    <li class="mb-2"><a href="{% url 'core:user_profile' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><svg class="modal-menu-icon icon-blue" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 20C6.5 16.5 9.2 15 12 15C14.8 15 17.5 16.5 20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> {% trans "My Profile" %}</a></li>
                     {# --- START: Offer Service Link --- #}
-                    <li class="mb-2"><a href="{% url 'core:service_create' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-tools me-2"></i> {% trans "Offer a Service" %}</a></li>
+                    <li class="mb-2"><a href="{% url 'core:service_create' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><svg class="modal-menu-icon icon-amber" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 2L19 4M17 6L7 16L4 17L5 14L15 4M14 7L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> {% trans "Offer a Service" %}</a></li>
                     {# --- END: Offer Service Link --- #}
-                    <li class="mb-2"><a href="{% url 'core:order_history' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-receipt me-2"></i> {% trans "Your Orders" %}</a></li>
-                    <li class="mb-2"><a href="{% url 'core:wishlist_detail' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-heart me-2"></i> {% trans "My Wishlist" %}</a></li>
-                    <li class="mb-2"><a href="{% url 'core:recent_comparisons' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-clock-history me-2"></i> {% trans "Recent Comparisons" %}</a></li>
-                    <li class="mb-2"><a href="{% url 'core:customer_message_list' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-chat-dots me-2"></i> {% trans "My Messages" %}</a></li>
-                            <li class="mb-2"><a href="{% url 'core:customer_notification_list' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light text-primary"><i class="fas fa-bell me-2"></i> {% trans "My Notifications" %} <span class="badge bg-danger notification-badge-nav"></span></a></li>
+                    <li class="mb-2"><a href="{% url 'core:order_history' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><svg class="modal-menu-icon icon-emerald" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 3H18V21L15 19L12 21L9 19L6 21V3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7H15M9 11H15M9 15H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> {% trans "Your Orders" %}</a></li>
+                    <li class="mb-2"><a href="{% url 'core:wishlist_detail' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><svg class="modal-menu-icon icon-rose" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 20C7 16.5 4 13.5 4 10C4 7.5 6 6 8 6C9.5 6 11 6.8 12 8C13 6.8 14.5 6 16 6C18 6 20 7.5 20 10C20 13.5 17 16.5 12 20Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg> {% trans "My Wishlist" %}</a></li>
+                    <li class="mb-2"><a href="{% url 'core:recent_comparisons' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><svg class="modal-menu-icon icon-purple" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> {% trans "Recent Comparisons" %}</a></li>
+                            <li class="mb-2"><a href="{% url 'core:customer_message_list' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><svg class="modal-menu-icon icon-cyan" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5H20V15H8L4 19V5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 9H16M8 12H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> {% trans "My Messages" %}</a></li>
+                                <li class="mb-2"><a href="{% url 'core:customer_notification_list' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><svg class="modal-menu-icon icon-rose" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 8C18 5.24 15.76 3 13 3C10.24 3 8 5.24 8 8C8 13 6 14 6 14H20C20 14 18 13 18 8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 18C10.5 19.5 11.5 20 13 20C14.5 20 15.5 19.5 16 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> {% trans "My Notifications" %} <span class="badge bg-danger notification-badge-nav"></span></a></li>
                     {% if user.is_service_provider or user.service_provider_profile %}
-                    <li class="mb-2"><a href="{% url 'core:service_provider_dashboard' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="fas fa-tachometer-alt me-2"></i> {% trans "Service Hub" %}</a></li>
+                    <li class="mb-2"><a href="{% url 'core:service_provider_dashboard' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><svg class="modal-menu-icon icon-teal" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 13H10V20H4V13ZM14 4H20V20H14V4ZM4 4H10V10H4V4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg> {% trans "Service Hub" %}</a></li>
                     {% else %}
-                    <li class="mb-2"><a href="{% url 'core:become_service_provider' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-briefcase-fill me-2"></i> {% trans "Become a Service Provider" %}</a></li>
+                    <li class="mb-2"><a href="{% url 'core:become_service_provider' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><svg class="modal-menu-icon icon-orange" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7H20V20H4V7Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V5H15V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> {% trans "Become a Service Provider" %}</a></li>
                     {% endif %}
                     {% if user.vendor_profile %} {# Check if user has a vendor profile #}
-                    <li class="mb-2"><a href="{% url 'core:vendor_dashboard' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><i class="bi bi-shop-window me-2"></i> {% trans "Vendor Dashboard" %}</a></li>
+                    <li class="mb-2"><a href="{% url 'core:vendor_dashboard' %}" class="text-decoration-none d-block p-2 rounded hover-bg-light"><svg class="modal-menu-icon icon-indigo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21L19 4H5L3 9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M5 9V20H19V9" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 20V13H15V20" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg> {% trans "Vendor Dashboard" %}</a></li>
                     {% endif %} {# <<< This is the endif we added #}
-                    <li class="mb-2"><button onclick="toggleTheme()" class="btn text-decoration-none d-block p-2 rounded hover-bg-light w-100 text-start" style="color: var(--text-main) !important;"><i class="bi bi-moon-stars-fill me-2"></i> {% trans "Toggle Theme" %}</button></li>
+                    <li class="mb-2"><button onclick="toggleTheme()" class="btn text-decoration-none d-block p-2 rounded hover-bg-light w-100 text-start" style="color: var(--text-main) !important;"><svg class="modal-menu-icon icon-purple" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 14.5C19.2 17.7 16.3 20 12.8 20C8.6 20 5.2 16.6 5.2 12.4C5.2 8.9 7.5 6 10.7 5.2C9.9 6.4 9.4 7.8 9.4 9.4C9.4 13.6 12.8 17 17 17C18.2 17 19.4 16.7 20 14.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg> {% trans "Toggle Theme" %}</button></li>
                     <hr>
                     <li class="mb-2">
                         <form method="post" action="{% url 'logout' %}">
                             {% csrf_token %}
                             <button type="submit" class="text-danger text-decoration-none d-block p-2 rounded hover-bg-light w-100 text-start border-0 bg-transparent">
-                                <i class="bi bi-box-arrow-right me-2"></i> {% trans "Logout" %}
+                                <svg class="modal-menu-icon icon-rose" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 17L15 12L10 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 12H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 4H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> {% trans "Logout" %}
                             </button>
                         </form>
                     </li>
@@ -788,7 +1304,9 @@
     {# --- END BOOTSTRAP JS --- #}
 
     {# Global JavaScript files - Add Bootstrap JS etc. if you use them #}
-   {# <script src="{% static 'assets/js/script.js' %}"></script> <!-- Temporarily commented out --> #}
+    {# Core category menu JS: toggles multi-level category lists on click/tap #}
+    <script src="{% static 'assets/js/category-menu.js' %}"></script>
+    {# <script src="{% static 'assets/js/script.js' %}"></script> <!-- Temporarily commented out --> #}
 
 <script>
         // Basic initMap function for Google Maps API callback
@@ -857,14 +1375,28 @@
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const navbar = document.querySelector('nav');
+            let lastScrollTop = 0;
+            let ticking = false;
+
             if (navbar) {
                 window.addEventListener('scroll', function() {
-                    if (window.scrollY > 20) {
-                        navbar.classList.add('scrolled');
-                    } else {
-                        navbar.classList.remove('scrolled');
+                    if (!ticking) {
+                        window.requestAnimationFrame(function() {
+                            let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+                            // Collapse nav when scrolling down, expand when scrolling up
+                            if (scrollTop > 100) {
+                                navbar.classList.add('nav-collapsed');
+                            } else {
+                                navbar.classList.remove('nav-collapsed');
+                            }
+                            
+                            lastScrollTop = scrollTop;
+                            ticking = false;
+                        });
+                        ticking = true;
                     }
-                });
+                }, { passive: true });
             }
         });
     </script>
@@ -923,30 +1455,79 @@
         const resultsContainer = document.getElementById('visualSearchResults');
         const spinner = document.getElementById('visualSearchSpinner');
         const errorContainer = document.getElementById('visualSearchError');
+        const uploadArea = document.getElementById('uploadArea');
+        const uploadTriggerBtn = document.getElementById('uploadTriggerBtn');
+        const removeImageBtn = document.getElementById('removeImageBtn');
 
         let selectedFile = null;
 
+        // Trigger file input on button click
+        if (uploadTriggerBtn && imageInput) {
+            uploadTriggerBtn.addEventListener('click', function() {
+                imageInput.click();
+            });
+        }
+
+        // Handle file input change
         if (imageInput) {
             imageInput.addEventListener('change', function(event) {
-                selectedFile = event.target.files[0];
-                if (selectedFile) {
-                    previewImage.src = URL.createObjectURL(selectedFile);
-                    previewContainer.style.display = 'block';
-                    searchButton.disabled = false;
-                    errorContainer.style.display = 'none';
-                    resultsContainer.innerHTML = ''; // Clear previous results
-                } else {
-                    previewContainer.style.display = 'none';
-                    searchButton.disabled = true;
-                    selectedFile = null;
+                const file = event.target.files[0];
+                if (file) {
+                    loadImage(file);
                 }
             });
         }
 
+        // Drag and drop functionality
+        if (uploadArea && imageInput) {
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', function() {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    if (file.type.startsWith('image/')) {
+                        imageInput.files = files;
+                        loadImage(file);
+                    }
+                }
+            });
+        }
+
+        // Load and display image
+        function loadImage(file) {
+            selectedFile = file;
+            previewImage.src = URL.createObjectURL(file);
+            previewContainer.style.display = 'block';
+            uploadArea.style.display = 'none';
+            errorContainer.style.display = 'none';
+            resultsContainer.innerHTML = '';
+        }
+
+        // Remove image
+        if (removeImageBtn) {
+            removeImageBtn.addEventListener('click', function() {
+                selectedFile = null;
+                imageInput.value = '';
+                previewContainer.style.display = 'none';
+                uploadArea.style.display = 'block';
+                resultsContainer.innerHTML = '';
+            });
+        }
+
+        // Search button click
         if (searchButton) {
             searchButton.addEventListener('click', async function() {
                 if (!selectedFile) {
-                    // Using Bootstrap alert for consistency if possible, or simple alert
                     errorContainer.textContent = "{% trans 'Please select an image first.' %}";
                     errorContainer.style.display = 'block';
                     return;
@@ -1038,16 +1619,25 @@
     <!-- Mobile Bottom Navigation Bar -->
     <div class="mobile-bottom-nav d-md-none">
         <a href="{% url 'core:home' %}" class="nav-item">
-            <i class="fas fa-home"></i>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 20V14H14V20H19V12H22L12 3L2 12H5V20Z" fill="currentColor"/>
+            </svg>
             <span>{% trans "Home" %}</span>
         </a>
         <a href="javascript:void(0)" class="nav-item" data-bs-toggle="modal" data-bs-target="#categoryModal">
-            <i class="fas fa-th-large"></i>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="3" width="7" height="7" fill="currentColor"/>
+                <rect x="14" y="3" width="7" height="7" fill="currentColor"/>
+                <rect x="3" y="14" width="7" height="7" fill="currentColor"/>
+                <rect x="14" y="14" width="7" height="7" fill="currentColor"/>
+            </svg>
             <span>{% trans "Categories" %}</span>
         </a>
         <a href="{% url 'cart' %}" class="nav-item position-relative">
             <div class="d-inline-block position-relative">
-                <i class="fas fa-shopping-cart"></i>
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 18C5.9 18 5 18.9 5 20C5 21.1 5.9 22 7 22C8.1 22 9 21.1 9 20C9 18.9 8.1 18 7 18ZM16 18C14.9 18 14 18.9 14 20C14 21.1 14.9 22 16 22C17.1 22 18 21.1 18 20C18 18.9 17.1 18 16 18ZM16 8H7V13H16V8ZM19 3H5C3.9 3 3 3.9 3 5V6H2V8H3V15C3 16.1 3.9 17 5 17H16C17.1 17 18 16.1 18 15V8H19V6H18V5C18 3.9 17.1 3 16 3H19Z" fill="currentColor"/>
+                </svg>
                 {% if cart_item_count %}
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.5rem; padding: 0.25em 0.35em;">
                     {{ cart_item_count }}
@@ -1056,9 +1646,17 @@
             </div>
             <span>{% trans "Cart" %}</span>
         </a>
-        <a href="javascript:void(0)" class="nav-item" data-bs-toggle="modal" data-bs-target="#mobileMyNexusModal">
-            <i class="fas fa-user"></i>
-            <span>{% trans "My Nexus" %}</span>
+        <a href="javascript:void(0)" class="nav-item" data-bs-toggle="modal" data-bs-target="#mobileMyGowbuyModal">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.67 14 5 15.17 5 17.5V20H19V17.5C19 15.17 14.33 14 12 14Z" fill="currentColor"/>
+            </svg>
+            <span>{% trans "My Gowbuy" %}</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" id="mobileThemeToggleBtn" title="{% trans 'Toggle dark mode' %}">
+            <svg class="nav-icon theme-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 12.79C20.84 14.75 19.61 16.64 17.95 17.95C16.26 19.29 14.06 20 12 20C6.48 20 2 15.52 2 10C2 7.94 2.71 5.74 4.05 4.05C5.36 2.39 7.25 1.16 9.21 1C6.95 2.45 5 5.12 5 8.3C5 12.61 8.39 16 12.7 16C15.88 16 18.55 14.05 20 11.79C20.68 11.86 21.35 12.05 21 12.79Z" fill="currentColor"/>
+            </svg>
+            <span>{% trans "Theme" %}</span>
         </a>
     </div>
 
@@ -1067,36 +1665,41 @@
         <div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="categoryModalLabel">{% trans "All Categories" %}</h5>
+                    <h5 class="modal-title fw-bold" id="categoryModalLabel">{% trans "Shop by Country" %}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-0">
-                    <div class="list-group list-group-flush">
-                        {% for category in menu_categories %} {# Changed from top_categories to menu_categories for global access #}
-                        <a href="{{ category.get_absolute_url }}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
-                            {% if category.image %}
-                                <img src="{{ category.image.url }}" alt="{{ category.name }}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                    <div class="p-3">
+                        <ul class="list-unstyled m-0">
+                            {% if menu_countries %}
+                                {% for country in menu_countries %}
+                                    <li class="mb-2">
+                                        <a href="{% url 'core:origin_detail' country.code %}" class="country-menu-link d-flex align-items-center">
+                                            <svg class="country-flag-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; margin-right: 8px;">
+                                                <rect width="24" height="24" rx="3" fill="{% if country.code == 'US' %}#3C3B6E{% elif country.code == 'GB' %}#012169{% elif country.code == 'CN' %}#DE2910{% elif country.code == 'JP' %}#BC002D{% elif country.code == 'DE' %}#000000{% elif country.code == 'FR' %}#0055A4{% elif country.code == 'IT' %}#009246{% elif country.code == 'ES' %}#C60B1E{% elif country.code == 'CA' %}#FF0000{% elif country.code == 'AU' %}#012169{% elif country.code == 'BR' %}#009B3A{% elif country.code == 'MX' %}#006341{% elif country.code == 'IN' %}#FF9933{% elif country.code == 'KR' %}#003478{% elif country.code == 'RU' %}#0039A6{% elif country.code == 'TR' %}#E30A17{% elif country.code == 'SA' %}#165B31{% elif country.code == 'AE' %}#00732F{% elif country.code == 'ZA' %}#007A4D{% elif country.code == 'NG' %}#008751{% else %}#6366f1{% endif %}"/>
+                                                <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">{{ country.code }}</text>
+                                            </svg>
+                                            <span>{{ country.name }}</span>
+                                            <small class="text-muted ms-2">({{ country.count }})</small>
+                                        </a>
+                                    </li>
+                                {% endfor %}
                             {% else %}
-                                <div class="bg-light d-flex align-items-center justify-content-center rounded" style="width: 40px; height: 40px;">
-                                    <i class="fas fa-folder text-muted"></i>
-                                </div>
+                                <li>{% trans "No countries available." %}</li>
                             {% endif %}
-                            <span class="fw-medium">{{ category.name }}</span>
-                            <i class="fas fa-chevron-right ms-auto text-muted small"></i>
-                        </a>
-                        {% endfor %}
+                        </ul>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- My Nexus Modal for Mobile -->
-    <div class="modal fade" id="mobileMyNexusModal" tabindex="-1" aria-labelledby="mobileMyNexusModalLabel" aria-hidden="true">
+    <!-- My Gowbuy Modal for Mobile -->
+    <div class="modal fade" id="mobileMyGowbuyModal" tabindex="-1" aria-labelledby="mobileMyGowbuyModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="mobileMyNexusModalLabel">{% trans "My Nexus" %}</h5>
+                    <h5 class="modal-title fw-bold" id="mobileMyGowbuyModalLabel">{% trans "My Gowbuy" %}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -1109,26 +1712,86 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Mobile Menu Population Script
-            const modalBody = document.querySelector('#mobileMyNexusModal .modal-body');
+            const modalBody = document.querySelector('#mobileMyGowbuyModal .modal-body');
             if (modalBody && !document.querySelector('#mobile-menu-injected')) {
                 modalBody.innerHTML = ''; // Clear existing content
                 const menuContainer = document.createElement('div');
                 menuContainer.id = 'mobile-menu-injected';
                 
+                const icons = {
+                    profile: `<span class="mobile-menu-icon icon-blue"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 20C6.5 16.5 9.2 15 12 15C14.8 15 17.5 16.5 20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>`,
+                    offerService: `<span class="mobile-menu-icon icon-amber"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 2L19 4M17 6L7 16L4 17L5 14L15 4M14 7L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`,
+                    orders: `<span class="mobile-menu-icon icon-emerald"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 3H18V21L15 19L12 21L9 19L6 21V3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7H15M9 11H15M9 15H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>`,
+                    wishlist: `<span class="mobile-menu-icon icon-rose"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 20C7 16.5 4 13.5 4 10C4 7.5 6 6 8 6C9.5 6 11 6.8 12 8C13 6.8 14.5 6 16 6C18 6 20 7.5 20 10C20 13.5 17 16.5 12 20Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>`,
+                    comparisons: `<span class="mobile-menu-icon icon-purple"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>`,
+                    messages: `<span class="mobile-menu-icon icon-cyan"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5H20V15H8L4 19V5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 9H16M8 12H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>`,
+                    notifications: `<span class="mobile-menu-icon icon-rose"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 8C18 5.24 15.76 3 13 3C10.24 3 8 5.24 8 8C8 13 6 14 6 14H20C20 14 18 13 18 8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 18C10.5 19.5 11.5 20 13 20C14.5 20 15.5 19.5 16 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>`,
+                    serviceHub: `<span class="mobile-menu-icon icon-teal"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 13H10V20H4V13ZM14 4H20V20H14V4ZM4 4H10V10H4V4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>`,
+                    becomeServiceProvider: `<span class="mobile-menu-icon icon-orange"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7H20V20H4V7Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V5H15V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>`,
+                    vendorDashboard: `<span class="mobile-menu-icon icon-indigo"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21L19 4H5L3 9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M5 9V20H19V9" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 20V13H15V20" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>`,
+                    signout: `<span class="mobile-menu-icon icon-rose"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 17L15 12L10 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 12H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 4H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>`,
+                    signin: `<span class="mobile-menu-icon icon-blue"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 7L19 12L14 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 4H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>`,
+                    signup: `<span class="mobile-menu-icon icon-purple"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M2 20C4.5 16.5 6.8 15 9 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 8V14M15 11H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>`,
+                    tag: `<span class="mobile-menu-icon icon-amber"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12L12 3H21V12L12 21L3 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="8" r="1.5" fill="currentColor"/></svg></span>`,
+                    store: `<span class="mobile-menu-icon icon-indigo"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21L19 4H5L3 9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M5 9V20H19V9" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 20V13H15V20" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>`,
+                    services: `<span class="mobile-menu-icon icon-orange"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 2L19 4M17 6L7 16L4 17L5 14L15 4M14 7L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`,
+                    rider: `<span class="mobile-menu-icon icon-teal"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="17" r="3" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="17" r="3" stroke="currentColor" stroke-width="2"/><path d="M6 17H11L13 10H18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 6H13L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>`,
+                    support: `<span class="mobile-menu-icon icon-cyan"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12A8 8 0 0 1 20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 12V16A2 2 0 0 0 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20 12V16A2 2 0 0 1 18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="9" y="17" width="6" height="3" rx="1" fill="currentColor"/></svg></span>`,
+                    globe: `<span class="mobile-menu-icon icon-blue"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M3 12H21M12 3C14.5 5.5 14.5 18.5 12 21C9.5 18.5 9.5 5.5 12 3Z" stroke="currentColor" stroke-width="2"/></svg></span>`,
+                    flag: `<span class="mobile-menu-icon icon-emerald"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 3V21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 4H18L16 8L18 12H5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>`,
+                    moon: `<span class="mobile-menu-icon icon-purple"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 14.5C19.2 17.7 16.3 20 12.8 20C8.6 20 5.2 16.6 5.2 12.4C5.2 8.9 7.5 6 10.7 5.2C9.9 6.4 9.4 7.8 9.4 9.4C9.4 13.6 12.8 17 17 17C18.2 17 19.4 16.7 20 14.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>`
+                };
+
                 const createLink = (text, href, icon, attrs='') => `
-                    <li class="mb-3"><a href="${href}" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5 w-100 py-2" ${attrs}>${icon ? `<i class="${icon} text-muted" style="width: 25px; text-align: center;"></i>` : ''}<span>${text}</span></a></li>`;
+                    <li class="mb-3"><a href="${href}" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5 w-100 py-2" ${attrs}>${icon ? icon : ''}<span>${text}</span></a></li>`;
                 const createLogoutLink = (text, action, icon) => `
-                    <li class="mb-3"><form method="post" action="${action}">{% csrf_token %}<button type="submit" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5 border-0 bg-transparent p-0 w-100 text-start py-2">${icon ? `<i class="${icon} text-muted" style="width: 25px; text-align: center;"></i>` : ''}<span>${text}</span></button></form></li>`;
+                    <li class="mb-3"><form method="post" action="${action}">{% csrf_token %}<button type="submit" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5 border-0 bg-transparent p-0 w-100 text-start py-2">${icon ? icon : ''}<span>${text}</span></button></form></li>`;
 
                 let authHtml = '';
                 {% if user.is_authenticated %}
-                    authHtml = `<div class="mb-4"><div class="d-flex align-items-center px-2 mb-3"><img src="https://ui-avatars.com/api/?name={{ user.username }}&background=random&color=fff&size=128" alt="Avatar" class="rounded-circle me-3 shadow-sm" style="width: 50px; height: 50px;"><h5 class="fw-bold m-0">{% trans "Hello, " %}{{ user.username }}</h5></div><ul class="list-unstyled m-0 px-2">${createLink("{% trans 'Profiles' %}", "{% url 'core:user_profile' %}", "fas fa-user-circle")}${createLink("{% trans 'Your Orders' %}", "{% url 'core:order_history' %}", "fas fa-box")}${createLink("{% trans 'My Messages' %}", "{% url 'core:customer_message_list' %}", "fas fa-comments")}${createLink("{% trans 'Your Lists' %}", "{% url 'core:wishlist_detail' %}", "fas fa-list-alt")}${createLogoutLink("{% trans 'Sign Out' %}", "{% url 'logout' %}", "fas fa-sign-out-alt")}</ul></div>`;
+                    // Build the authenticated user menu with all items from desktop modal
+                    let userMenuItems = '';
+                    userMenuItems += createLink("{% trans 'My Profile' %}", "{% url 'core:user_profile' %}", icons.profile);
+                    userMenuItems += createLink("{% trans 'Offer a Service' %}", "{% url 'core:service_create' %}", icons.offerService);
+                    userMenuItems += createLink("{% trans 'Your Orders' %}", "{% url 'core:order_history' %}", icons.orders);
+                // Build Programs & Features section with conditional service provider check
+                let programsMenuItems = '';
+                programsMenuItems += createLink("{% trans 'Daily Offers' %}", "{% url 'core:daily_offers' %}", icons.tag);
+                {% if user.is_authenticated %}
+                    {% if user.is_service_provider or user.service_provider_profile %}
+                    programsMenuItems += createLink("{% trans 'Service Hub' %}", "{% url 'core:service_provider_dashboard' %}", icons.serviceHub);
+                    {% else %}
+                    programsMenuItems += createLink("{% trans 'Sell on GOWBUY' %}", "{% url 'core:sell_on_gowbuy' %}", icons.store);
+                    {% endif %}
                 {% else %}
-                    authHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Hello, Sign in" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{% trans 'Sign In' %}", "{% url 'signin' %}", "fas fa-sign-in-alt")}${createLink("{% trans 'Sign Up' %}", "{% url 'signup' %}", "fas fa-user-plus")}</ul></div>`;
+                programsMenuItems += createLink("{% trans 'Sell on GOWBUY' %}", "{% url 'core:sell_on_gowbuy' %}", icons.store);
+                {% endif %}
+                programsMenuItems += createLink("{% trans 'Services' %}", "{% url 'core:service_list' %}", icons.services);
+                programsMenuItems += createLink("{% trans 'Become Rider' %}", "{% url 'core:become_rider_info_page' %}", icons.rider);
+                programsMenuItems += createLink("{% trans 'Support Center' %}", "{% url 'help' %}", icons.support);
+                let programsHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Programs & Features" %}</h5><ul class="list-unstyled m-0 px-2">${programsMenuItems
+                    userMenuItems += createLink("{% trans 'Recent Comparisons' %}", "{% url 'core:recent_comparisons' %}", icons.comparisons);
+                    userMenuItems += createLink("{% trans 'My Messages' %}", "{% url 'core:customer_message_list' %}", icons.messages);
+                    userMenuItems += createLink("{% trans 'My Notifications' %}", "{% url 'core:customer_notification_list' %}", icons.notifications);
+                    {% if user.is_service_provider or user.service_provider_profile %}
+                    userMenuItems += createLink("{% trans 'Service Hub' %}", "{% url 'core:service_provider_dashboard' %}", icons.serviceHub);
+                    {% else %}
+                    userMenuItems += createLink("{% trans 'Become a Service Provider' %}", "{% url 'core:become_service_provider' %}", icons.becomeServiceProvider);
+                    {% endif %}
+                    {% if user.vendor_profile %}
+                    userMenuItems += createLink("{% trans 'Vendor Dashboard' %}", "{% url 'core:vendor_dashboard' %}", icons.vendorDashboard);
+                    {% endif %}
+                    userMenuItems += '<li class="mb-3"><button onclick="toggleTheme()" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5 border-0 bg-transparent p-0 w-100 text-start py-2">' + icons.moon + '<span>{% trans "Toggle Theme" %}</span></button></li>';
+                    userMenuItems += '<li class="mb-0"><hr class="my-2"></li>';
+                    userMenuItems += createLogoutLink("{% trans 'Sign Out' %}", "{% url 'logout' %}", icons.signout);
+                    
+                    authHtml = `<div class="mb-4"><div class="d-flex align-items-center px-2 mb-3"><img src="https://ui-avatars.com/api/?name={{ user.username }}&background=random&color=fff&size=128" alt="Avatar" class="rounded-circle me-3 shadow-sm" style="width: 50px; height: 50px;"><h5 class="fw-bold m-0">{% trans "Hello, " %}{{ user.username }}</h5></div><ul class="list-unstyled m-0 px-2">${userMenuItems}</ul></div>`;
+                {% else %}
+                    authHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Hello, Sign in" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{% trans 'Sign In' %}", "{% url 'signin' %}", icons.signin)}${createLink("{% trans 'Sign Up' %}", "{% url 'signup' %}", icons.signup)}</ul></div>`;
                 {% endif %}
 
-                let programsHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Programs & Features" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{% trans 'Daily Offers' %}", "{% url 'core:daily_offers' %}", "fas fa-tag")}${createLink("{% trans 'Sell on NEXUS' %}", "{% url 'core:sell_on_nexus' %}", "fas fa-store")}${createLink("{% trans 'Services' %}", "{% url 'core:service_list' %}", "fas fa-concierge-bell")}${createLink("{% trans 'Become Rider' %}", "{% url 'core:become_rider_info_page' %}", "fas fa-motorcycle")}${createLink("{% trans 'Support Center' %}", "{% url 'help' %}", "fas fa-headset")}</ul></div>`;
-                let settingsHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Settings" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{{ LANGUAGE_CODE|language_name_local|title }}", "javascript:void(0)", "fas fa-globe", 'data-bs-toggle="modal" data-bs-target="#languageModal"')}${createLink("{{ request.session.delivery_location|default:'United States'|escapejs }}", "javascript:void(0)", "fas fa-flag", 'data-bs-toggle="modal" data-bs-target="#locationModal"')}<li class="mb-3"><button onclick="toggleTheme()" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5 border-0 bg-transparent p-0 w-100 text-start py-2"><i class="bi bi-moon-stars-fill text-muted" style="width: 25px; text-align: center;"></i><span>{% trans "Toggle Theme" %}</span></button></li></ul></div>`;
+                let programsHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Programs & Features" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{% trans 'Daily Offers' %}", "{% url 'core:daily_offers' %}", icons.tag)}${createLink("{% trans 'Sell on GOWBUY' %}", "{% url 'core:sell_on_gowbuy' %}", icons.store)}${createLink("{% trans 'Services' %}", "{% url 'core:service_list' %}", icons.services)}${createLink("{% trans 'Become Rider' %}", "{% url 'core:become_rider_info_page' %}", icons.rider)}${createLink("{% trans 'Support Center' %}", "{% url 'help' %}", icons.support)}</ul></div>`;
+                let settingsHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Settings" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{{ LANGUAGE_CODE|language_name_local|title }}", "javascript:void(0)", icons.globe, 'data-bs-toggle="modal" data-bs-target="#languageModal"')}${createLink("{{ request.session.delivery_location|default:'United States'|escapejs }}", "javascript:void(0)", icons.flag, 'data-bs-toggle="modal" data-bs-target="#locationModal"')}<li class="mb-3"><button onclick="toggleTheme()" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5 border-0 bg-transparent p-0 w-100 text-start py-2"><span class="mobile-menu-icon">${icons.moon}</span><span>{% trans "Toggle Theme" %}</span></button></li></ul></div>`;
 
                 menuContainer.innerHTML = authHtml + '<hr class="my-3">' + programsHtml + '<hr class="my-3">' + settingsHtml;
                 const closeBtnDiv = document.createElement('div');
@@ -1152,7 +1815,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Check if user has seen onboarding
-            if (!localStorage.getItem('nexus_onboarding_seen')) {
+            if (!localStorage.getItem('gowbuy_onboarding_seen')) {
                 
                 // 1. Highlight Search Bar (Desktop & Mobile)
                 const searchForm = document.querySelector('.search-form');
@@ -1184,7 +1847,7 @@
                     if (searchForm) searchForm.classList.remove('onboarding-pulse');
                     if (cartNav) cartNav.classList.remove('onboarding-pulse');
                     if (hand) hand.style.display = 'none';
-                    localStorage.setItem('nexus_onboarding_seen', 'true');
+                    localStorage.setItem('gowbuy_onboarding_seen', 'true');
                 }, 6000);
             }
         });
@@ -1333,6 +1996,46 @@
         });
     </script>
     {# --- END: Location Detection Script --- #}
+
+    {# --- Theme Toggle Button Script --- #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggleBtn = document.getElementById('themeToggleBtn');
+            const mobileThemeToggleBtn = document.getElementById('mobileThemeToggleBtn');
+            
+            function updateThemeIcon() {
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                const icon = currentTheme === 'dark' ? 'bi-sun-fill' : 'bi-moon-stars-fill';
+                
+                if (themeToggleBtn) {
+                    themeToggleBtn.querySelector('i').className = `bi ${icon}`;
+                }
+                if (mobileThemeToggleBtn) {
+                    mobileThemeToggleBtn.querySelector('i').className = `bi ${icon}`;
+                }
+            }
+            
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    toggleTheme();
+                    updateThemeIcon();
+                });
+            }
+            
+            if (mobileThemeToggleBtn) {
+                mobileThemeToggleBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    toggleTheme();
+                    updateThemeIcon();
+                });
+            }
+            
+            // Initialize icon on page load
+            updateThemeIcon();
+        });
+    </script>
+    {# --- END: Theme Toggle Button Script --- #}
 
 {# Test comment to ensure file is fully parsed #}
 </body>
