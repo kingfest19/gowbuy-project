@@ -1025,6 +1025,7 @@
 
 {% block extra_js %}
 {{ block.super }}
+{{ form.media }}
 <script src="{% static 'assets/js/category-picker.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
