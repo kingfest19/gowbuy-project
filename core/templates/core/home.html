@@ -573,7 +573,7 @@
             <div class="horizontal-scroll-item" style="width: 140px;"> <!-- Slightly wider for countries -->
                 <div class="category-card h-100 text-center">
                     <a href="{% url 'core:origin_detail' country.code %}">
-                        <h5>{{ country.code|country_flag }} {{ country.name }}</h5>
+                        <h5>{{ country.name }}</h5>
                         <p class="text-muted small">{{ country.count }} {% trans "products" %}</p>
                     </a>
                 </div>
