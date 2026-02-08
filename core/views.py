@@ -992,6 +992,13 @@ class VendorProductCreateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageM
         for video_file in videos:
             ProductVideo.objects.create(product=self.object, video=video_file)
 
+        # Check if "Save & Continue Later" button was clicked
+        save_draft = self.request.POST.get('save_draft')
+        if save_draft:
+            messages.success(self.request, _("Product saved! You can continue editing it later."))
+            # Redirect back to edit form instead of product list
+            return HttpResponseRedirect(reverse_lazy('core:vendor_product_update', kwargs={'pk': self.object.pk}))
+
         messages.success(self.request, self.get_success_message(form.cleaned_data))
 
         # Non-blocking suggestion: remind vendors to set origin if it's blank

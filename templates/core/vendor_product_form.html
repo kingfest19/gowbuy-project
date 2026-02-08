@@ -944,6 +944,12 @@
 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                     <a href="{% url 'core:vendor_product_list' %}" class="btn btn-outline-secondary">{% translate "Cancel" %}</a>
+                    <button type="reset" class="btn btn-outline-warning">
+                        <i class="fas fa-redo me-1"></i>{% translate "Restart" %}
+                    </button>
+                    <button type="submit" class="btn btn-outline-info" name="save_draft" value="true">
+                        <i class="fas fa-clock me-1"></i>{% translate "Save & Continue Later" %}
+                    </button>
                     <button type="submit" class="btn btn-primary">
                         {% if is_update_form %}{% translate "Save Changes" %}{% else %}{% translate "Create Product" %}{% endif %}
                     </button>
