@@ -38,6 +38,7 @@ django-paypal==2.1
 django-ratelimit==4.1.0
 django-redis==6.0.0
 django-tinymce==4.0.0
+django-modeltranslation==0.20.5
 djlint==1.36.4
 EditorConfig==0.17.1
 fido2==2.0.0
