@@ -23,7 +23,7 @@ from django_ratelimit.decorators import ratelimit
 from authapp.views import register_view, signin, signout
 from core.sitemaps import (
     StaticViewSitemap, ProductSitemap, CategorySitemap,
-    ServiceSitemap, ServiceCategorySitemap, VendorSitemap, BlogSitemap
+    ServiceSitemap, ServiceCategorySitemap, VendorSitemap, BlogSitemap, OriginSitemap
 )
 
 sitemaps = {
@@ -34,15 +34,17 @@ sitemaps = {
     'service_categories': ServiceCategorySitemap,
     'vendors': VendorSitemap,
     'blog': BlogSitemap,
+    'origins': OriginSitemap,
 }
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('tinymce/', include('tinymce.urls')),
 
     # Core app URLs (namespaced)
     # This will handle URLs like /profile/, /profile/edit/ etc. via core.urls
-    path('', include('core.urls', namespace='core')), 
+    path('', include('core.urls')), 
 
     # --- Cart URLs (Globally accessible, not namespaced under 'core' or 'authapp') ---
     # These are directly defined here using views imported from core.views

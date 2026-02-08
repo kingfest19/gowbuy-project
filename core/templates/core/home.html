@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
 {% load static i18n %}
 {% load currency_filters %} {# <<< Load the new filters #}
+{% load core_extras %}
 
-{% block title %}NEXUS - Your Online Marketplace{% endblock title %}
+{% block title %}GOWBUY - Your Online Marketplace{% endblock title %}
 
 {% block extra_head %}
     {{ block.super }}
@@ -22,7 +23,7 @@
     {
       "@context": "https://schema.org",
       "@type": "Organization",
-      "name": "NEXUS",
+      "name": "GOWBUY",
       "url": "https://gowbuy.co.uk/",
       "logo": "https://gowbuy.co.uk{% static 'assets/logo.jpg' %}"
     }
@@ -34,245 +35,504 @@
     <link rel="stylesheet" href="{% static 'assets/css/service_marketplace.css' %}">
     <link rel="stylesheet" href="{% static 'assets/css/home.css' %}">
     <style>
+        /* Enhanced Home Page Styling */
+        
+        /* Hero Section */
         .service-hero-section {
             position: relative; 
             z-index: 10;
         }
+        
+        .hero-slider {
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(15, 23, 42, 0.1);
+            margin-bottom: 3rem;
+        }
+        
+        .carousel-item img {
+            height: 400px;
+            object-fit: cover;
+        }
+        
+        .carousel-indicators button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            transition: all 0.3s ease;
+        }
+        
+        .carousel-indicators button.active {
+            background-color: rgba(139, 92, 246, 1);
+            border-color: rgba(139, 92, 246, 1);
+        }
+        
+        /* Section Titles */
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-main, #1a202c);
+            margin-bottom: 2rem;
+            position: relative;
+            padding-bottom: 1rem;
+            display: inline-block;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, rgba(139, 92, 246, 1), rgba(236, 72, 153, 0.5));
+            border-radius: 2px;
+        }
+        
+        [data-theme="dark"] .section-title {
+            color: #f0f4ff;
+        }
 
+        /* Item Cards */
         .service-item-flat, .vendor-item-flat {
             padding: 1.25rem;
-            border: 1px solid var(--border-color);
-            border-radius: 0.375rem;
-            background-color: var(--bg-surface);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 14px;
+            background-color: rgba(255, 255, 255, 0.8);
             display: flex;
             flex-direction: column;
             height: 100%;
             position: relative;
             z-index: 1;
-            transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
         }
+        
         .service-item-flat:hover, .vendor-item-flat:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+            transform: translateY(-8px);
+            box-shadow: 0 12px 30px rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.3);
         }
+        
+        [data-theme="dark"] .service-item-flat,
+        [data-theme="dark"] .vendor-item-flat {
+            background-color: rgba(17, 24, 39, 0.7);
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+        
+        [data-theme="dark"] .service-item-flat:hover,
+        [data-theme="dark"] .vendor-item-flat:hover {
+            background-color: rgba(30, 41, 59, 0.8);
+            box-shadow: 0 12px 30px rgba(139, 92, 246, 0.2);
+        }
+        
         .service-item-flat img, .vendor-item-flat img {
             height: 220px;
             aspect-ratio: 1 / 1;
             width: 100%;
             object-fit: contain;
-            border-radius: 0.25rem;
+            border-radius: 10px;
             margin-bottom: 1rem;
-            background-color: #fff;
+            background: linear-gradient(135deg, #f0f4ff, #f8f9fa);
             padding: 10px;
+            transition: transform 0.3s ease;
         }
+        
+        .service-item-flat:hover img {
+            transform: scale(1.05);
+        }
+        
+        [data-theme="dark"] .service-item-flat img,
+        [data-theme="dark"] .vendor-item-flat img {
+            background: linear-gradient(135deg, #1e3a8a, #111827);
+        }
+        
         .service-item-flat h5 a, .vendor-item-flat h5 a {
-            color: var(--text-main);
+            color: var(--text-main, #1a202c);
             font-weight: 600;
+            font-size: 1rem;
             text-decoration: none;
+            transition: color 0.2s;
+            line-height: 1.4;
         }
+        
         .service-item-flat h5 a:hover, .vendor-item-flat h5 a:hover {
-            color: var(--accent-color);
+            color: rgba(139, 92, 246, 1);
         }
+        
+        [data-theme="dark"] .service-item-flat h5 a,
+        [data-theme="dark"] .vendor-item-flat h5 a {
+            color: #f0f4ff;
+        }
+        
         .provider-info {
             font-size: 0.875rem;
-            color: var(--text-muted);
+            color: #495057;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
+        
+        [data-theme="dark"] .provider-info {
+            color: #cbd5e1;
+        }
+        
+        .provider-info i {
+            color: rgba(139, 92, 246, 0.7);
+            font-size: 0.8rem;
+        }
+        
         .service-description-flat {
             font-size: 0.9rem;
-            color: var(--text-main);
-            opacity: 0.8;
+            color: #495057;
+            opacity: 0.85;
             flex-grow: 1;
+            margin-bottom: 1rem;
+            line-height: 1.5;
         }
+        
+        [data-theme="dark"] .service-description-flat {
+            color: #cbd5e1;
+        }
+        
         .service-price-flat {
-            font-weight: bold;
-            color: var(--bs-success);
+            font-weight: 700;
+            color: #198754;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
         }
+        
+        [data-theme="dark"] .service-price-flat {
+            color: #4ade80;
+        }
+        
         .btn-details-flat {
             margin-top: auto;
+            display: flex;
+            gap: 0.5rem;
         }
+        
         .rating-display {
-            color: #ffc107;
+            color: #fbbf24;
+            font-weight: 500;
+        }
+        
+        /* Category Section */
+        .country-section {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(236, 72, 153, 0.03)) !important;
+            border: 1px solid rgba(139, 92, 246, 0.15) !important;
+            border-radius: 16px !important;
+            padding: 2.5rem !important;
+        }
+        
+        [data-theme="dark"] .country-section {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(236, 72, 153, 0.08)) !important;
+            border-color: rgba(139, 92, 246, 0.25) !important;
+        }
+        
+        .category-card {
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .category-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+        
+        [data-theme="dark"] .category-card {
+            background: rgba(17, 24, 39, 0.7);
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+        
+        [data-theme="dark"] .category-card:hover {
+            background: rgba(30, 41, 59, 0.8);
+        }
+        
+        .category-card h5 {
+            color: var(--text-main, #1a202c);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            transition: color 0.2s;
+        }
+        
+        [data-theme="dark"] .category-card h5 {
+            color: #f0f4ff;
+        }
+        
+        .category-card p {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin: 0;
+        }
+        
+        [data-theme="dark"] .category-card p {
+            color: #cbd5e1;
+        }
+
+        /* Horizontal Scroll Wrapper */
+        .horizontal-scroll-wrapper {
+            display: flex;
+            gap: 1.5rem;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(139, 92, 246, 0.4) transparent;
+        }
+        
+        .horizontal-scroll-wrapper::-webkit-scrollbar {
+            height: 8px;
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        [data-theme="dark"] .horizontal-scroll-wrapper::-webkit-scrollbar {
+            background: rgba(17, 24, 39, 0.5);
+        }
+        
+        .horizontal-scroll-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.4);
+            border-radius: 10px;
+            transition: background 0.2s;
+        }
+        
+        .horizontal-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+            background: rgba(139, 92, 246, 0.6);
+        }
+
+        .horizontal-scroll-item {
+            flex: 0 0 auto;
+            width: 260px;
+            scroll-snap-align: start;
         }
         
         /* Quick View Button Styles */
         .image-container {
             position: relative;
-            overflow: visible;
+            overflow: hidden;
+            border-radius: 10px;
+            margin-bottom: 1rem;
         }
+        
         .image-container a {
             display: block;
+            position: relative;
+            overflow: hidden;
         }
+        
+        .image-container a::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0);
+            transition: background 0.3s ease;
+            z-index: 5;
+        }
+        
+        .image-container:hover a::before {
+            background: rgba(0, 0, 0, 0.4);
+        }
+        
         .hover-btns {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            display: flex;
+            display: flex !important;
             gap: 0.5rem;
+            z-index: 15;
+            transition: all 0.3s ease;
             opacity: 0;
             visibility: hidden;
-            transition: all 0.3s ease;
-            z-index: 100;
         }
-        .service-item-flat:hover .hover-btns {
+        
+        .image-container:hover .hover-btns {
             opacity: 1;
             visibility: visible;
         }
+        
         .hover-btn {
-            white-space: nowrap;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            border: none;
+            border-radius: 20px;
+            padding: 0.6rem 1.2rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 0.95) !important;
+            color: #333 !important;
+            font-size: 0.85rem;
         }
         
-        /* Dark Mode Footer Logo Fix */
-        [data-theme="dark"] .footer-logo-area img {
-            filter: invert(1);
-            mix-blend-mode: screen;
-            opacity: 0.9;
-        }
-
-        /* --- NEW: Horizontal Scroll / Carousel Styles --- */
-        .horizontal-scroll-wrapper {
-            display: flex;
-            overflow-x: auto;
-            gap: 1rem;
-            padding-bottom: 1rem; /* Space for scrollbar/shadow */
-            margin-bottom: 1rem;
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-            scroll-snap-type: x mandatory;
-            scrollbar-width: thin;
+        .hover-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 1) !important;
         }
         
-        .horizontal-scroll-wrapper::-webkit-scrollbar {
-            height: 6px;
-        }
-        .horizontal-scroll-wrapper::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        .horizontal-scroll-wrapper::-webkit-scrollbar-thumb {
-            background: #ccc;
-            border-radius: 10px;
+        .hover-btn i {
+            margin-right: 0.3rem;
         }
 
-        .horizontal-scroll-item {
-            flex: 0 0 auto;
-            width: 260px; /* Default Desktop Width */
-            scroll-snap-align: start;
-        }
-
-        /* Mobile Responsiveness Adjustments */
+        /* Responsive Design */
         @media (max-width: 768px) {
+            .carousel-item img {
+                height: 250px;
+            }
+            
+            .section-title {
+                font-size: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+            
             .service-hero-section h1.display-4 {
                 font-size: 2rem;
             }
-            .carousel-inner, .carousel-item img {
-                height: 220px !important;
-            }
 
-            /* Mobile Carousel Adjustments */
             .horizontal-scroll-wrapper {
                 gap: 0.75rem;
-                padding-left: 0.5rem; /* Slight padding on left */
+                padding-left: 0.5rem;
                 padding-right: 0.5rem;
             }
 
             .horizontal-scroll-item {
-                width: 130px; /* Fits ~3 items on typical mobile screens */
-            }
-
-            /* Compact Card Styles for Mobile */
-            .service-item-flat, .vendor-item-flat {
-                padding: 0.5rem !important;
-                min-height: 100%;
+                width: 180px;
             }
             
             .service-item-flat img, .vendor-item-flat img {
-                height: 100px !important; /* Smaller image */
-                padding: 5px !important;
+                height: 140px !important;
                 margin-bottom: 0.5rem !important;
             }
 
-            .service-item-flat h5, .vendor-item-flat h5 {
-                font-size: 0.85rem;
-                line-height: 1.2;
+            .service-item-flat h5 {
+                font-size: 0.9rem;
                 margin-bottom: 0.25rem !important;
-                height: 2.4em; /* Limit to 2 lines */
                 overflow: hidden;
-                display: -webkit-box;
                 -webkit-line-clamp: 2;
+                display: -webkit-box;
                 -webkit-box-orient: vertical;
             }
 
             .provider-info {
-                font-size: 0.7rem;
+                font-size: 0.75rem;
                 margin-bottom: 0.25rem !important;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
             }
 
             .service-description-flat {
-                display: none; /* Hide description on mobile to save space */
+                display: none;
             }
 
             .service-price-flat {
-                font-size: 0.9rem;
+                font-size: 0.95rem;
                 margin-bottom: 0.5rem !important;
             }
 
             .btn-details-flat {
-                padding: 0.2rem 0.5rem;
+                flex-direction: column;
+                gap: 0.4rem;
+            }
+            
+            .btn-details-flat .btn {
+                padding: 0.3rem 0.5rem;
                 font-size: 0.75rem;
             }
 
-            /* Show hover buttons on mobile (on touch/active) */
             .hover-btns {
                 display: flex !important;
                 transform: translate(-50%, -50%) scale(0.8);
             }
             
-            /* Adjust Category Cards for Mobile Carousel */
             .category-card img {
-                height: 60px; /* Smaller category images */
+                height: 60px;
                 width: 60px;
             }
+            
             .category-card h5 {
+                font-size: 0.85rem;
+            }
+            
+            .country-section {
+                padding: 1.5rem !important;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .carousel-item img {
+                height: 180px;
+            }
+            
+            .section-title {
+                font-size: 1.25rem;
+                margin-bottom: 1rem;
+            }
+            
+            .service-item-flat, .vendor-item-flat {
+                padding: 1rem;
+            }
+            
+            .horizontal-scroll-item {
+                width: 140px;
+            }
+            
+            .service-item-flat img, .vendor-item-flat img {
+                height: 100px !important;
+                padding: 5px;
+            }
+            
+            .service-item-flat h5,
+            .vendor-item-flat h5 {
                 font-size: 0.8rem;
+            }
+            
+            .service-price-flat {
+                font-size: 0.85rem;
             }
         }
     </style>
 {% endblock extra_css %}
 
-
 {% block content %}
 <div class="container-fluid px-0">
     <section class="mb-0">
-        <div id="headerSlider" class="carousel slide" data-bs-ride="carousel">
+        <div id="headerSlider" class="carousel slide hero-slider" data-bs-ride="carousel">
             <div class="carousel-indicators">
                 <button type="button" data-bs-target="#headerSlider" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
                 <button type="button" data-bs-target="#headerSlider" data-bs-slide-to="1" aria-label="Slide 2"></button>
                 <button type="button" data-bs-target="#headerSlider" data-bs-slide-to="2" aria-label="Slide 3"></button>
             </div>
-            <div class="carousel-inner" style="max-height: 350px; border-radius: 0rem; overflow: hidden;">
+            <div class="carousel-inner">
                 <div class="carousel-item active">
-                    <img src="{% static 'assets/nexus-slider0.jpg' %}" class="d-block w-100" alt="Slider Image 1" style="object-fit: cover; height: 350px;" fetchpriority="high">
-                    <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 p-3 rounded">
-                        <h5>{% trans "Amazing Deals This Week!" %}</h5>
-                        <p>{% trans "Discover exclusive offers on top products and services." %}</p>
+                    <img src="{% static 'assets/gowbuy-slider0.jpg' %}" class="d-block w-100" alt="Slider Image 1" fetchpriority="high">
+                    <div class="carousel-caption">
+                        <h5 class="display-4">{% trans "Amazing Deals This Week!" %}</h5>
+                        <p class="lead">{% trans "Discover exclusive offers on top products and services." %}</p>
+                        <a href="{% url 'core:product_list' %}" class="btn btn-slider-cta">{% trans "Shop Now" %}</a>
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <img src="{% static 'assets/nexus-slider3.jpg' %}" class="d-block w-100" alt="Slider Image 2" style="object-fit: cover; height: 350px;" loading="lazy">
-                    <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 p-3 rounded">
-                        <h5>{% trans "New Services Added" %}</h5>
-                        <p>{% trans "Explore the latest services from our talented providers." %}</p>
+                    <img src="{% static 'assets/nexus-slider3.jpg' %}" class="d-block w-100" alt="Slider Image 2" loading="lazy">
+                    <div class="carousel-caption">
+                        <h5 class="display-4">{% trans "New Services Added" %}</h5>
+                        <p class="lead">{% trans "Explore the latest services from our talented providers." %}</p>
+                        <a href="{% url 'core:service_provider_services_list' %}" class="btn btn-slider-cta">{% trans "Explore Services" %}</a>
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <img src="{% static 'assets/nexus-slider4.jpg' %}" class="d-block w-100" alt="Slider Image 3" style="object-fit: cover; height: 350px;" loading="lazy">
-                    <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 p-3 rounded">
-                        <h5>{% trans "Join Our Community" %}</h5>
-                        <p>{% trans "Sell your products or offer your services on NEXUS." %}</p>
+                    <img src="{% static 'assets/nexus-slider4.jpg' %}" class="d-block w-100" alt="Slider Image 3" loading="lazy">
+                    <div class="carousel-caption">
+                        <h5 class="display-4">{% trans "Join Our Community" %}</h5>
+                        <p class="lead">{% trans "Sell your products or offer your services on NEXUS." %}</p>
+                        <a href="{% url 'core:register_vendor' %}" class="btn btn-slider-cta">{% trans "Get Started" %}</a>
                     </div>
                 </div>
             </div>
@@ -291,7 +551,7 @@
 <div class="service-hero-section">
     <div class="container">
         <h1 class="display-4 fw-bold">{% trans "Find Products & Professional Services" %}</h1>
-        <p class="lead col-lg-8 mx-auto">{% trans "Connect with skilled professionals and discover amazing products. NEXUS makes it easy." %}</p>
+        <p class="lead col-lg-8 mx-auto">{% trans "Connect with skilled professionals and discover amazing products. GOWBUY makes it easy." %}</p>
         <form method="get" action="{% url 'core:product_list' %}" class="mt-4">
             <div class="input-group input-group-lg">
                 <input type="text" name="q" class="form-control" placeholder="{% trans 'Search for products or services (e.g., smartphone, logo design)' %}" value="{{ request.GET.q|default:'' }}">
@@ -303,26 +563,31 @@
 
 <div class="container my-4">
 
-    <!-- Shop by Category Section -->
-    {% if top_categories %} 
-    <section class="category-section mb-5">
-        <h2 class="section-title">{% trans "Shop by Category" %}</h2>
-        <!-- Also using horizontal scroll for categories on mobile -->
+    <!-- Shop by Country Section (replaces the old Shop by Category) -->
+    {% if top_countries %} 
+    <section class="country-section mb-5 p-4 rounded border shadow-sm" style="background-color: var(--color-background-light); border-color: var(--color-border) !important;">
+        <h2 class="section-title">{% trans "Shop by Product Origin" %}</h2>
+        <!-- Also using horizontal scroll for countries on mobile -->
         <div class="horizontal-scroll-wrapper">
-            {% for category in top_categories %}
-            <div class="horizontal-scroll-item" style="width: 140px;"> <!-- Slightly wider for categories -->
-                <div class="category-card h-100">
-                    <a href="{{ category.get_absolute_url }}">
-                        {% if category.image %}
-                            <img src="{{ category.image.url }}" alt="{{ category.name }}">
-                        {% else %}
-                            <img src="{% static 'assets/img/placeholder_category.png' %}" alt="{{ category.name }}">
-                        {% endif %}
-                        <h5>{{ category.name }}</h5>
+            {% for country in top_countries %}
+            <div class="horizontal-scroll-item" style="width: 140px;"> <!-- Slightly wider for countries -->
+                <div class="category-card h-100 text-center">
+                    <a href="{% url 'core:origin_detail' country.code %}">
+                        <h5>{{ country.code|country_flag }} {{ country.name }}</h5>
+                        <p class="text-muted small">{{ country.count }} {% trans "products" %}</p>
                     </a>
                 </div>
             </div>
             {% endfor %}
+        </div>
+    </section>
+    {% else %}
+    <section class="country-section mb-5">
+        <div class="alert alert-info" role="alert">
+            {% trans "No countries available yet. Vendors: please set the origin country for your products so they appear in 'Shop by Country'." %}
+            {% if user.is_authenticated and user.vendor_profile %}
+                <a class="btn btn-sm btn-primary ms-2" href="{% url 'core:vendor_product_create' %}">{% trans "Add Product" %}</a>
+            {% endif %}
         </div>
     </section>
     {% endif %}
@@ -330,7 +595,10 @@
     <!-- Featured Products Section -->
     {% if featured_products %}
     <section class="mb-5">
-        <h2 class="section-title">{% trans "Featured Products" %}</h2>
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="section-title">{% trans "Featured Products" %}</h2>
+            <a href="{% url 'core:product_list' %}" class="btn btn-sm btn-outline-secondary">{% trans "View all" %}</a>
+        </div>
         <!-- Changed to horizontal-scroll-wrapper -->
         <div class="horizontal-scroll-wrapper">
             {% for product in featured_products %}
@@ -370,7 +638,21 @@
                     </h5>
                     <p class="provider-info mb-2">
                         <i class="bi bi-tag-fill"></i> {{ product.category.name }}
+                        {% if product.vendor.is_verified %}<span class="badge bg-success ms-1" style="font-size: 0.65rem;"><i class="bi bi-check-circle-fill"></i></span>{% endif %}
                     </p>
+                    {% if product.origin_country %}
+                    <p class="provider-info mb-2">
+                        <i class="bi bi-geo-alt"></i> {{ product.origin_country.name }}
+                    </p>
+                    {% endif %}
+                    {% if product.review_count %}
+                    <p class="provider-info mb-2">
+                        <i class="bi bi-star-fill text-warning"></i>
+                        {{ product.average_rating|floatformat:1 }} ({{ product.review_count }} {% trans "reviews" %})
+                    </p>
+                    {% else %}
+                    <p class="provider-info mb-2">{% trans "No reviews yet" %}</p>
+                    {% endif %}
                     <p class="service-description-flat mb-2">{{ product.description|truncatewords_html:12 }}</p>
                     <p class="service-price-flat mb-2">
                         {% convert_price product.price %}
@@ -437,114 +719,47 @@
         </div>
     </section>
 
-    <!-- Discovery Quadrant Section (New) -->
+    <!-- Discovery Quadrant Section - Browse by Country -->
     <section class="mb-5">
-        <h2 class="section-title">{% trans "Explore More" %}</h2>
+        <h2 class="section-title">{% trans "Shop by Country" %}</h2>
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
             
-            <!-- Card 1: Video Games -->
-            <div class="col">
-                <div class="quadrant-card">
-                    <h3>{% trans "Video games & accessories" %}</h3>
-                    <div class="quadrant-grid">
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="PC">
-                            <span>PC</span>
-                        </a>
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Nintendo Switch">
-                            <span>Nintendo Switch</span>
-                        </a>
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="PS5">
-                            <span>PS5</span>
-                        </a>
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Xbox">
-                            <span>Xbox</span>
-                        </a>
-                    </div>
-                    <a href="#" class="quadrant-footer-link">{% trans "Explore now" %}</a>
-                </div>
-            </div>
-
-            <!-- Card 2: Electronics -->
-            <div class="col">
-                <div class="quadrant-card">
-                    <h3>{% trans "Discounted Electronics" %}</h3>
-                    <div class="quadrant-grid">
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Laptops">
-                            <span>Laptops</span>
-                        </a>
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Components">
-                            <span>Components</span>
-                        </a>
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Tablets">
-                            <span>Tablets</span>
-                        </a>
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="All Electronics">
-                            <span>All Electronics</span>
+            {% if top_countries %}
+                {% for country in top_countries %}
+                <div class="col">
+                    <div class="quadrant-card">
+                        <h3>{% trans "Products from" %} {{ country.name }}</h3>
+                        <div class="quadrant-grid">
+                            <a href="{% url 'core:product_list' %}?origin_country={{ country.code }}" class="quadrant-item">
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{{ country.name }}">
+                                <span>{{ country.name }}</span>
+                            </a>
+                            <a href="{% url 'core:product_list' %}?origin_country={{ country.code }}&sort=price_low" class="quadrant-item">
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Best Value' %}">
+                                <span>{% trans "Best Value" %}</span>
+                            </a>
+                            <a href="{% url 'core:product_list' %}?origin_country={{ country.code }}&sort=-rating" class="quadrant-item">
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Top Rated' %}">
+                                <span>{% trans "Top Rated" %}</span>
+                            </a>
+                            <a href="{% url 'core:product_list' %}?origin_country={{ country.code }}&sort=-created_at" class="quadrant-item">
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'New Arrivals' %}">
+                                <span>{% trans "New Arrivals" %}</span>
+                            </a>
+                        </div>
+                        <a href="{% url 'core:product_list' %}?origin_country={{ country.code }}" class="quadrant-footer-link">
+                            {% trans "Browse" %} ({{ country.count }} {% trans "items" %})
                         </a>
                     </div>
-                    <a href="#" class="quadrant-footer-link">{% trans "Shop now" %}</a>
                 </div>
-            </div>
-
-            <!-- Card 3: Fashion -->
-            <div class="col">
-                <div class="quadrant-card">
-                    <h3>{% trans "End-of-season savings" %}</h3>
-                    <div class="quadrant-grid">
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Men">
-                            <span>Men</span>
-                        </a>
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Women">
-                            <span>Women</span>
-                        </a>
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Girls">
-                            <span>Girls</span>
-                        </a>
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Boys">
-                            <span>Boys</span>
-                        </a>
+                {% endfor %}
+            {% else %}
+                <div class="col">
+                    <div class="alert alert-info" role="alert">
+                        {% trans "No country data available yet. Check back soon!" %}
                     </div>
-                    <a href="#" class="quadrant-footer-link">{% trans "Discover more" %}</a>
                 </div>
-            </div>
-
-            <!-- Card 4: Refurbished -->
-            <div class="col">
-                <div class="quadrant-card">
-                    <h3>{% trans "Refurbished computers" %}</h3>
-                    <div class="quadrant-grid">
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Laptops">
-                            <span>Laptops</span>
-                        </a>
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Desktops">
-                            <span>Desktops</span>
-                        </a>
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Monitors">
-                            <span>Monitors</span>
-                        </a>
-                        <a href="#" class="quadrant-item">
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="Accessories">
-                            <span>Accessories</span>
-                        </a>
-                    </div>
-                    <a href="#" class="quadrant-footer-link">{% trans "See more" %}</a>
-                </div>
-            </div>
+            {% endif %}
 
         </div>
     </section>
@@ -552,7 +767,10 @@
     <!-- New Arrivals Section -->
     {% if new_arrivals %}
     <section class="mb-5">
-        <h2 class="section-title">{% trans "New Arrivals" %}</h2>
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="section-title">{% trans "New Arrivals" %}</h2>
+            <a href="{% url 'core:product_list' %}" class="btn btn-sm btn-outline-secondary">{% trans "View all" %}</a>
+        </div>
         <div class="horizontal-scroll-wrapper">
             {% for product in new_arrivals %}
             <div class="horizontal-scroll-item">
@@ -653,7 +871,21 @@
                     </h5>
                     <p class="provider-info mb-2">
                         <i class="bi bi-tag-fill"></i> {{ product.category.name }}
+                        {% if product.vendor.is_verified %}<span class="badge bg-success ms-1" style="font-size: 0.65rem;"><i class="bi bi-check-circle-fill"></i></span>{% endif %}
                     </p>
+                    {% if product.origin_country %}
+                    <p class="provider-info mb-2">
+                        <i class="bi bi-geo-alt"></i> {{ product.origin_country.name }}
+                    </p>
+                    {% endif %}
+                    {% if product.review_count %}
+                    <p class="provider-info mb-2">
+                        <i class="bi bi-star-fill text-warning"></i>
+                        {{ product.average_rating|floatformat:1 }} ({{ product.review_count }} {% trans "reviews" %})
+                    </p>
+                    {% else %}
+                    <p class="provider-info mb-2">{% trans "No reviews yet" %}</p>
+                    {% endif %}
                     <p class="service-price-flat mb-2">
                         GH₵ {{ product.price|floatformat:2 }}
                     </p>
@@ -694,6 +926,14 @@
                     <p class="provider-info mb-2">
                         <i class="bi bi-tag-fill"></i> {{ service.category.name }}
                     </p>
+                    {% if service.review_count %}
+                    <p class="provider-info mb-2">
+                        <i class="bi bi-star-fill text-warning"></i>
+                        {{ service.average_rating|floatformat:1 }} ({{ service.review_count }} {% trans "reviews" %})
+                    </p>
+                    {% else %}
+                    <p class="provider-info mb-2">{% trans "No reviews yet" %}</p>
+                    {% endif %}
                     <p class="service-description-flat mb-2">{{ service.description|truncatewords_html:12 }}</p>
                     {% if service.price %}
                     <p class="service-price-flat mb-2">
@@ -740,46 +980,520 @@
     </section>
     {% endif %}
 
-    <!-- Brand Spotlight Section -->
-    <section class="mb-5">
-        <h2 class="section-title">{% trans "Brand Spotlight" %}</h2>
-        <div class="slider" style="--width: 150px; --height: 100px; --quantity: 8; background-color: transparent;">
-            <div class="list">
-                <div class="item" style="--position: 1"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-apple fa-3x text-dark"></i></div></div>
-                <div class="item" style="--position: 2"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-google fa-3x text-primary"></i></div></div>
-                <div class="item" style="--position: 3"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-microsoft fa-3x text-info"></i></div></div>
-                <div class="item" style="--position: 4"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-amazon fa-3x text-warning"></i></div></div>
-                <div class="item" style="--position: 5"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-samsung fa-3x text-primary"></i></div></div>
-                <div class="item" style="--position: 6"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-sony fa-3x text-dark"></i></div></div>
-                <div class="item" style="--position: 7"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fab fa-lg fa-3x text-danger"></i></div></div>
-                <div class="item" style="--position: 8"><div class="bg-white rounded shadow-sm h-100 d-flex align-items-center justify-content-center p-3"><i class="fas fa-laptop fa-3x text-secondary"></i></div></div>
+    <!-- Featured Sellers & Providers Section -->
+    <style>
+        .featured-sellers-section {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(236, 72, 153, 0.05)) !important;
+            border: 1px solid rgba(139, 92, 246, 0.2) !important;
+            border-radius: 24px !important;
+            padding: 3.5rem 2rem !important;
+            margin-bottom: 3rem;
+        }
+
+        [data-theme="dark"] .featured-sellers-section {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.08)) !important;
+            border-color: rgba(139, 92, 246, 0.3) !important;
+        }
+
+        .seller-card {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 16px;
+            padding: 1.25rem 1rem;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .seller-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .seller-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.3);
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .seller-card:hover::before {
+            top: -30%;
+            right: -30%;
+        }
+
+        [data-theme="dark"] .seller-card {
+            background: rgba(17, 24, 39, 0.6);
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+
+        [data-theme="dark"] .seller-card:hover {
+            background: rgba(30, 41, 59, 0.8);
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.2);
+        }
+
+        .seller-avatar {
+            width: 65px;
+            height: 65px;
+            margin: 0 auto 0.75rem;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.1));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            border: 2px solid rgba(139, 92, 246, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .seller-card:hover .seller-avatar {
+            transform: scale(1.1);
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+
+        .seller-name {
+            font-weight: 700;
+            color: #1a202c;
+            font-size: 0.95rem;
+            margin-bottom: 0.35rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        [data-theme="dark"] .seller-name {
+            color: #f0f4ff;
+        }
+
+        .seller-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 1), rgba(236, 72, 153, 0.8));
+            color: white;
+            padding: 0.25rem 0.7rem;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-bottom: 0.6rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .seller-stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 0.6rem 0;
+            padding: 0.6rem 0;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+            position: relative;
+            z-index: 1;
+        }
+
+        [data-theme="dark"] .seller-stats {
+            border-color: rgba(148, 163, 184, 0.15);
+        }
+
+        .seller-stat {
+            flex: 1;
+        }
+
+        .seller-stat-value {
+            font-weight: 700;
+            color: rgba(139, 92, 246, 1);
+            font-size: 1rem;
+        }
+
+        .seller-stat-label {
+            color: #6c757d;
+            font-size: 0.65rem;
+            margin-top: 0.1rem;
+        }
+
+        [data-theme="dark"] .seller-stat-label {
+            color: #cbd5e1;
+        }
+
+        .seller-description {
+            color: #495057;
+            font-size: 0.8rem;
+            margin: 0.6rem 0;
+            line-height: 1.4;
+            position: relative;
+            z-index: 1;
+        }
+
+        [data-theme="dark"] .seller-description {
+            color: #cbd5e1;
+        }
+
+        .seller-btn {
+            width: 100%;
+            padding: 0.5rem;
+            border: 2px solid rgba(139, 92, 246, 0.5);
+            background: transparent;
+            color: rgba(139, 92, 246, 1);
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .seller-btn:hover {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 1), rgba(236, 72, 153, 0.8));
+            color: white;
+            border-color: transparent;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .featured-sellers-section {
+                padding: 2rem 1.5rem !important;
+            }
+
+            .seller-card {
+                padding: 1.5rem 1rem;
+            }
+
+            .seller-avatar {
+                width: 70px;
+                height: 70px;
+                font-size: 2rem;
+            }
+
+            .seller-name {
+                font-size: 0.95rem;
+            }
+
+            .seller-stat-value {
+                font-size: 1.05rem;
+            }
+        }
+    </style>
+
+    <section class="featured-sellers-section">
+        <div class="container">
+            <h2 class="section-title mb-4">{% trans "Top Sellers & Service Providers" %}</h2>
+            <div class="row g-4">
+                {% for vendor in top_vendors %}
+                <!-- Vendor Card -->
+                <div class="col-6 col-md-6 col-lg-3">
+                    <div class="seller-card">
+                        <div class="seller-avatar">👑</div>
+                        {% if vendor.is_verified %}
+                        <div class="seller-badge">{% trans "Verified Seller" %}</div>
+                        {% else %}
+                        <div class="seller-badge">{% trans "Seller" %}</div>
+                        {% endif %}
+                        <h4 class="seller-name">{{ vendor.store_name|truncatechars:20 }}</h4>
+                        <div class="seller-stats">
+                            <div class="seller-stat">
+                                <div class="seller-stat-value">{{ vendor.avg_rating|default:"4.8"|floatformat:1 }}</div>
+                                <div class="seller-stat-label">{% trans "Rating" %}</div>
+                            </div>
+                            <div class="seller-stat">
+                                <div class="seller-stat-value">{{ vendor.products.count }}</div>
+                                <div class="seller-stat-label">{% trans "Products" %}</div>
+                            </div>
+                        </div>
+                        <p class="seller-description">{{ vendor.description|truncatewords:12 }}</p>
+                        <a href="{% url 'core:vendor_detail' vendor.slug %}" class="seller-btn">{% trans "Visit Store" %}</a>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% for service in featured_services %}
+                <!-- Service Provider Card -->
+                {% if service.provider and service.provider.username %}
+                <div class="col-6 col-md-6 col-lg-3">
+                    <div class="seller-card">
+                        <div class="seller-avatar">💡</div>
+                        {% if service.provider.is_verified %}
+                        <div class="seller-badge">{% trans "Expert" %}</div>
+                        {% else %}
+                        <div class="seller-badge">{% trans "Provider" %}</div>
+                        {% endif %}
+                        <h4 class="seller-name">{{ service.provider.get_full_name|truncatechars:20 }}</h4>
+                        <div class="seller-stats">
+                            <div class="seller-stat">
+                                <div class="seller-stat-value">{{ service.average_rating|default:"5.0"|floatformat:1 }}</div>
+                                <div class="seller-stat-label">{% trans "Rating" %}</div>
+                            </div>
+                            <div class="seller-stat">
+                                <div class="seller-stat-value">{{ service.provider.provided_services.count }}</div>
+                                <div class="seller-stat-label">{% trans "Services" %}</div>
+                            </div>
+                        </div>
+                        <p class="seller-description">{{ service.title|truncatewords:12 }}</p>
+                        <a href="{% url 'core:provider_profile_detail' service.provider.username %}" class="seller-btn">{% trans "Hire Now" %}</a>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+
+                {% if not top_vendors and not featured_services %}
+                <!-- Fallback Message -->
+                <div class="col-12 text-center py-5">
+                    <p class="text-muted">{% trans "No sellers or service providers available at the moment." %}</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </section>
 
-    <!-- "How It Works" Section -->
-    <section class="mb-5 py-4 rounded" style="background-color: var(--bg-surface); border: 1px solid var(--border-color);">
-        <h2 class="section-title">{% trans "How NEXUS Works" %}</h2>
-        <div class="row text-center">
-            <div class="col-md-4">
-                <div class="p-3">
-                    <i class="fas fa-search fa-3x text-primary mb-3"></i>
-                    <h4>{% trans "1. Discover" %}</h4>
-                    <p>{% trans "Browse or search for the product or service you need from our talented vendors and providers." %}</p>
+    <!-- "How GOWBUY Works" Section -->
+    <style>
+        .how-gowbuy-section {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(236, 72, 153, 0.05)) !important;
+            border: 1px solid rgba(139, 92, 246, 0.2) !important;
+            border-radius: 24px !important;
+            padding: 2.5rem 2rem !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        [data-theme="dark"] .how-gowbuy-section {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.08)) !important;
+            border-color: rgba(139, 92, 246, 0.3) !important;
+        }
+
+        .how-gowbuy-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .how-step {
+            position: relative;
+            z-index: 1;
+            padding: 1.5rem 1.25rem;
+            background: rgba(255, 255, 255, 0.6) !important;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 16px;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .how-step:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.3);
+            background: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        [data-theme="dark"] .how-step {
+            background: rgba(17, 24, 39, 0.6) !important;
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+
+        [data-theme="dark"] .how-step:hover {
+            background: rgba(30, 41, 59, 0.8) !important;
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.2);
+        }
+
+        .step-icon-wrapper {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.05));
+            border: 2px solid rgba(139, 92, 246, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .how-step:hover .step-icon-wrapper {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.15));
+            border-color: rgba(139, 92, 246, 0.4);
+            transform: scale(1.1);
+        }
+
+        .step-icon {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-number {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 1), rgba(236, 72, 153, 1));
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        .how-step h4 {
+            color: var(--text-main, #1a202c);
+            font-weight: 700;
+            font-size: 1.05rem;
+            margin-bottom: 0.7rem;
+            margin-top: 0.3rem;
+        }
+
+        [data-theme="dark"] .how-step h4 {
+            color: #f0f4ff;
+        }
+
+        .how-step p {
+            color: #495057;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        [data-theme="dark"] .how-step p {
+            color: #cbd5e1;
+        }
+
+        .step-connector {
+            position: absolute;
+            top: 50%;
+            left: calc(100% + 1rem);
+            width: 2rem;
+            height: 3px;
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.3), transparent);
+            transform: translateY(-50%);
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .how-gowbuy-section {
+                padding: 2rem 1.5rem !important;
+            }
+
+            .how-step {
+                padding: 1.5rem 1rem;
+            }
+
+            .step-icon-wrapper {
+                width: 80px;
+                height: 80px;
+            }
+
+            .step-icon {
+                width: 50px;
+                height: 50px;
+            }
+
+            .how-step h4 {
+                font-size: 1.1rem;
+            }
+
+            .how-step p {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+
+    <section class="mb-5 how-gowbuy-section">
+        <div class="container">
+            <h2 class="section-title text-center mb-4">{% trans "How GOWBUY Works" %}</h2>
+            <div class="row g-4">
+                <!-- Step 1: Discover -->
+                <div class="col-6 col-md-4">
+                    <div class="how-step">
+                        <div class="step-number">1</div>
+                        <div class="step-icon-wrapper">
+                            <div class="step-icon">
+                                <svg width="100%" height="100%" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="32" cy="24" r="12" stroke="url(#gradient1)" stroke-width="2" fill="none"/>
+                                    <path d="M42 38C46.4183 42 49 46 49 52" stroke="url(#gradient1)" stroke-width="2" stroke-linecap="round"/>
+                                    <defs>
+                                        <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
+                                            <stop offset="100%" style="stop-color:#EC4899;stop-opacity:1" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                            </div>
+                        </div>
+                        <h4>{% trans "1. Discover" %}</h4>
+                        <p>{% trans "Browse or search for the product or service you need from our talented vendors and providers." %}</p>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="p-3">
-                    <i class="fas fa-shopping-cart fa-3x text-primary mb-3"></i>
-                    <h4>{% trans "2. Order & Pay" %}</h4>
-                    <p>{% trans "Add to cart, book a time, and pay securely through our platform." %}</p>
+
+                <!-- Step 2: Order & Pay -->
+                <div class="col-6 col-md-4">
+                    <div class="how-step">
+                        <div class="step-number">2</div>
+                        <div class="step-icon-wrapper">
+                            <div class="step-icon">
+                                <svg width="100%" height="100%" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="8" y="16" width="48" height="32" rx="2" stroke="url(#gradient2)" stroke-width="2" fill="none"/>
+                                    <path d="M8 24H56" stroke="url(#gradient2)" stroke-width="2" stroke-linecap="round"/>
+                                    <circle cx="20" cy="36" r="2" fill="url(#gradient2)"/>
+                                    <circle cx="28" cy="36" r="2" fill="url(#gradient2)"/>
+                                    <circle cx="36" cy="36" r="2" fill="url(#gradient2)"/>
+                                    <defs>
+                                        <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
+                                            <stop offset="100%" style="stop-color:#EC4899;stop-opacity:1" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                            </div>
+                        </div>
+                        <h4>{% trans "2. Order & Pay" %}</h4>
+                        <p>{% trans "Add to cart, book a time, and pay securely through our platform." %}</p>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="p-3">
-                    <i class="fas fa-star fa-3x text-primary mb-3"></i>
-                    <h4>{% trans "3. Get It Done" %}</h4>
-                    <p>{% trans "Receive quality products and services, and leave a review to help others." %}</p>
+
+                <!-- Step 3: Get It Done -->
+                <div class="col-6 col-md-4">
+                    <div class="how-step">
+                        <div class="step-number">3</div>
+                        <div class="step-icon-wrapper">
+                            <div class="step-icon">
+                                <svg width="100%" height="100%" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="32" cy="32" r="20" stroke="url(#gradient3)" stroke-width="2" fill="none"/>
+                                    <path d="M24 32L30 38L44 24" stroke="url(#gradient3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                                    <path d="M42 16L48 22M48 22L54 16M48 22L54 28M48 22L42 28" stroke="url(#gradient3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.6"/>
+                                    <defs>
+                                        <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
+                                            <stop offset="100%" style="stop-color:#EC4899;stop-opacity:1" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                            </div>
+                        </div>
+                        <h4>{% trans "3. Get It Done" %}</h4>
+                        <p>{% trans "Receive quality products and services, and leave a review to help others." %}</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -789,7 +1503,7 @@
     {% if not user.is_authenticated or not user.vendor_profile %}
     <section class="my-5">
         <div class="cta-provider-section">
-            <h2 class="display-5 fw-bold">{% trans "Sell Your Products or Skills on NEXUS?" %}</h2>
+            <h2 class="display-5 fw-bold">{% trans "Sell Your Products or Skills on GOWBUY?" %}</h2>
             <p class="col-lg-8 mx-auto fs-5">{% trans "Join our community of talented vendors and service providers to reach new clients. It's easy to get started!" %}</p>
             <a href="{% url 'core:become_service_provider' %}" class="btn btn-success btn-lg mt-3">
                 <i class="fas fa-user-plus me-2"></i>{% trans "Become a Seller" %}
@@ -897,7 +1611,7 @@
             }
 
             // --- Compare Logic ---
-            const compareKey = 'nexus_compare_list';
+            const compareKey = 'gowbuy_compare_list';
             
             function getCompareList() {
                 return JSON.parse(localStorage.getItem(compareKey)) || [];
