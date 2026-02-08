@@ -4,44 +4,139 @@
 
 {% block title %}{% trans "Help & Support" %}{% endblock %}
 
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .help-hero {
+        background: rgba(139, 92, 246, 0.08);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        border-radius: 20px;
+        padding: 2.5rem 1.5rem;
+    }
+    .help-surface {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 16px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+    .help-heading {
+        color: var(--text-main);
+    }
+    .help-muted {
+        color: var(--text-muted);
+    }
+    .help-accordion .accordion-item {
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 14px;
+        overflow: hidden;
+        background: transparent;
+    }
+    .help-accordion .accordion-button {
+        background: transparent;
+        color: var(--text-main);
+        font-weight: 600;
+        padding: 1rem 1.25rem;
+    }
+    .help-accordion .accordion-button:focus {
+        box-shadow: none;
+    }
+    .help-accordion .accordion-body {
+        color: var(--text-muted);
+        background: transparent;
+        padding: 1rem 1.25rem 1.25rem;
+    }
+    .help-card {
+        background: rgba(255, 255, 255, 0.65);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 16px;
+        padding: 1.5rem;
+    }
+    .help-cta {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(236, 72, 153, 0.12));
+        border: 1px solid rgba(139, 92, 246, 0.25);
+        border-radius: 16px;
+    }
+    [data-theme="dark"] .help-hero {
+        background: rgba(139, 92, 246, 0.18);
+        border-color: rgba(139, 92, 246, 0.35);
+    }
+    [data-theme="dark"] .help-surface {
+        background: rgba(17, 24, 39, 0.7);
+        border-color: rgba(148, 163, 184, 0.2);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+    [data-theme="dark"] .help-card {
+        background: rgba(15, 23, 42, 0.7);
+        border-color: rgba(148, 163, 184, 0.2);
+    }
+    [data-theme="dark"] .help-accordion .accordion-item {
+        background: rgba(15, 23, 42, 0.4);
+        border-color: rgba(148, 163, 184, 0.2);
+    }
+    [data-theme="dark"] .help-accordion .accordion-button {
+        color: var(--text-main);
+    }
+    [data-theme="dark"] .help-accordion .accordion-body {
+        color: var(--text-muted);
+    }
+    [data-theme="dark"] .help-cta {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
+        border-color: rgba(139, 92, 246, 0.35);
+    }
+    @media (max-width: 576px) {
+        .help-hero {
+            padding: 2rem 1.25rem;
+        }
+        .help-card {
+            padding: 1.25rem;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
 {% block content %}
 <div class="container my-5">
-    <div class="text-center">
-        <h1 class="mb-4">{% trans "Help & Support" %}</h1>
-        <p class="lead">{% trans "Find answers to common questions or get in touch with our support team." %}</p>
+    <div class="help-hero text-center mb-5">
+        <h1 class="help-heading mb-3">{% trans "Help & Support" %}</h1>
+        <p class="lead help-muted mb-0">{% trans "Find answers to common questions or get in touch with our support team." %}</p>
     </div>
 
-    <div class="row justify-content-center mt-5">
-        <div class="col-lg-9">
-            <h2 class="mb-4">{% trans "Frequently Asked Questions" %}</h2>
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="help-surface p-4 p-md-5">
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4">
+                    <h2 class="help-heading mb-3 mb-md-0">{% trans "Frequently Asked Questions" %}</h2>
+                    <span class="small help-muted">{% trans "Updated regularly" %}</span>
+                </div>
 
-            {% if faqs %}
-                <div class="accordion" id="faqAccordion">
-                    {% for faq in faqs %}
-                        <div class="accordion-item">
-                            <h2 class="accordion-header" id="heading{{ faq.id }}">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ faq.id }}" aria-expanded="false" aria-controls="collapse{{ faq.id }}">
-                                    {{ faq.question }}
-                                </button>
-                            </h2>
-                            <div id="collapse{{ faq.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ faq.id }}" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    {{ faq.answer|linebreaksbr }}
+                {% if faqs %}
+                    <div class="accordion help-accordion" id="faqAccordion">
+                        {% for faq in faqs %}
+                            <div class="accordion-item mb-3">
+                                <h2 class="accordion-header" id="heading{{ faq.id }}">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ faq.id }}" aria-expanded="false" aria-controls="collapse{{ faq.id }}">
+                                        {{ faq.question }}
+                                    </button>
+                                </h2>
+                                <div id="collapse{{ faq.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ faq.id }}" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        {{ faq.answer|linebreaksbr }}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="alert alert-info" role="alert">
-                    {% trans "No frequently asked questions are available at this time. If you need help, please contact support." %}
-                </div>
-            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info mb-0" role="alert">
+                        {% trans "No frequently asked questions are available at this time. If you need help, please contact support." %}
+                    </div>
+                {% endif %}
 
-            <div class="mt-5 p-4 bg-light rounded text-center">
-                <h3 class="h4">{% trans "Still need help?" %}</h3>
-                <p>{% trans "If you can't find the answer you're looking for, feel free to reach out to our support team." %}</p>
-                <a href="{% url 'core:support_ticket_create' %}" class="btn btn-primary">{% trans "Contact Support" %}</a>
+                <div class="help-cta mt-5 p-4 text-center">
+                    <h3 class="h4 help-heading">{% trans "Still need help?" %}</h3>
+                    <p class="help-muted mb-3">{% trans "If you can't find the answer you're looking for, feel free to reach out to our support team." %}</p>
+                    <a href="{% url 'core:info_contact' %}" class="btn btn-primary">{% trans "Contact Support" %}</a>
+                </div>
             </div>
         </div>
     </div>

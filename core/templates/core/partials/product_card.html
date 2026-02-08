@@ -1,18 +1,63 @@
-{% load static %}
+{% load static i18n product_tags currency_filters %}
 {# Expects a 'product' variable to be passed in the context #}
 <div class="col">
-    <div class="card h-100 product-card"> {# Reuse product card styling from home.css/base.css #}
-        <a href="{% url 'core:product_detail' product.slug %}" class="text-decoration-none">
-            {# Use thumbnail if available, otherwise first gallery image, else placeholder #}
-            {% with first_image=product.images.first %}
-            <img src="{% if product.thumbnail %}{{ product.thumbnail.url }}{% elif first_image %}{{ first_image.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
-                 class="card-img-top"
-                 alt="{{ product.name }}">
-            {% endwith %}
-            <div class="card-body">
-                <h5 class="card-title text-dark fs-6">{{ product.name }}</h5>
-                <p class="card-text product-price fw-bold text-dark">${{ product.price|floatformat:2 }}</p>
+    <div class="service-item-flat">
+        <div class="image-container">
+            <a href="{% url 'core:product_detail' product.slug %}">
+                {% with first_image=product.images.first %}
+                <img src="{% if product.thumbnail %}{{ product.thumbnail.url }}{% elif first_image %}{{ first_image.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                     alt="{{ product.name }}">
+                {% endwith %}
+            </a>
+            <div class="hover-btns">
+                <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn" 
+                        title="{% trans 'Quick View' %}"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#quickViewModal"
+                        data-name="{{ product.name }}"
+                        data-price="{{ product.price }}"
+                        data-category="{{ product.category.name }}"
+                        data-description="{{ product.description|striptags|truncatewords:20 }}"
+                        data-url="{{ product.get_absolute_url }}"
+                        data-image="{% if product.images.first %}{{ product.images.first.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                        data-product-id="{{ product.id }}">
+                    <i class="bi bi-eye"></i> {% trans "Quick View" %}
+                </button>
+                <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
+                    <i class="bi bi-arrow-left-right"></i>
+                </button>
             </div>
-        </a>
+        </div>
+        <h5 class="mb-1">
+            <a href="{% url 'core:product_detail' product.slug %}" class="stretched-link">{{ product.name|truncatechars:50 }}</a>
+        </h5>
+        <p class="provider-info mb-2">
+            <i class="bi bi-tag-fill"></i> {{ product.category.name }}
+            {% if product.vendor.is_verified %}<span class="badge bg-success ms-1" style="font-size: 0.65rem;"><i class="bi bi-check-circle-fill"></i></span>{% endif %}
+        </p>
+        {% if product.origin_country %}
+        <p class="provider-info mb-2 text-muted">
+            <i class="bi bi-geo-alt"></i> {{ product.origin_country.name }}
+        </p>
+        {% endif %}
+        {% if product.review_count %}
+        <p class="provider-info mb-2 text-muted">
+            <i class="bi bi-star-fill text-warning"></i>
+            {{ product.average_rating|floatformat:1 }} ({{ product.review_count }} {% trans "reviews" %})
+        </p>
+        {% else %}
+        <p class="provider-info mb-2 text-muted">{% trans "No reviews yet" %}</p>
+        {% endif %}
+        <p class="service-description-flat mb-2">{{ product.description|truncatewords_html:12 }}</p>
+        <p class="service-price-flat mb-2">
+            {% convert_price product.price %}
+        </p>
+        <div class="d-flex gap-2 btn-details-flat w-100">
+            <a href="{% url 'core:product_detail' product.slug %}" class="btn btn-sm btn-outline-primary flex-grow-1">{% trans "View" %}</a>
+            <form action="{% url 'core:add_to_cart' product.id %}" method="post" class="flex-grow-1">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success w-100">{% trans "Buy" %}</button>
+            </form>
+        </div>
     </div>
 </div>

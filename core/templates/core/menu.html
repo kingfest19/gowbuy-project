@@ -1,4 +1,5 @@
 {% load static %}
+{% load i18n core_extras %}
 <!DOCTYPE html>
 <html lang="en">  <head>
 
@@ -16,47 +17,31 @@
 
     <!-- Main Menu Content -->
     <div class="menu-page-container">
-      <h1>Shop by Category</h1>
+      <h1>{% trans "Shop by Country" %}</h1>
 
-      <div class="category-grid">
-        {# Loop through categories passed from the view context #} {% for
-        category in categories %}
-        <a
-          href="{% url 'category' category.slug %}"
-          class="category-card"
-        >
-          {# Link to category detail page #}
-          <div class="category-card-image">
-            <img
-              src="{{ category.image.url|default:'#' }}"
-              alt="{{ category.name }}"
-            />
-          </div>
-          <div class="category-card-content">
-            <h3>{{ category.name }}</h3>
-            {# Optional: Display Subcategories #} {% if
-            category.subcategories.all %}
-            <ul class="subcategory-list">
-              {% for subcat in category.subcategories.all|slice:":3" %} {# Show
-              first 3 #}
-              <li>
-                <a href="{% url 'category' subcat.slug %}"
-                  >{{ subcat.name }}</a
-                >
-              </li>
-              {% endfor %} {% if category.subcategories.all|length > 3 %}
-              <li>
-                <a href="{% url 'category' category.slug %}">More...</a>
-              </li>
-              {% endif %}
-            </ul>
-            
-          </div>
-        </a>
-      
-        <p class="no-categories-message">No categories found.</p>
-       
+      <div class="country-grid">
+        {# Loop through countries from context_processor #}
+        {% if menu_countries %}
+            {% for country in menu_countries %}
+            <a href="{% url 'core:origin_detail' country.code %}" class="country-card">
+                <div class="country-card-content">
+                    <h3>{{ country.code|country_flag }} {{ country.name }}</h3>
+                    <p class="text-muted small">{{ country.count }} {% trans "products" %}</p>
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <p class="no-countries-message">{% trans "No countries found." %}</p>
+        {% endif %}
       </div>
+
+      {# Category tree section (new) #}
+      <section class="category-tree-section mt-4">
+          <h2 class="section-title">{% trans "Shop by Category" %}</h2>
+          <div class="p-3 bg-white rounded shadow-sm">
+              {% include 'core/_category_tree.html' with categories=product_categories %}
+          </div>
+      </section>
 
       {# Optional: Add other sections like featured promotions here #}
       <!--

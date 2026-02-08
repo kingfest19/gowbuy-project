@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<section class="container py-5">
+    <h1 class="fw-bold mb-3">{% trans "Advertise Your Products" %}</h1>
+    <p class="text-muted mb-4">{% trans "Reach customers with targeted placements across the GOWBUY marketplace." %}</p>
+    <p>{% trans "Promote new launches, seasonal deals, and best-sellers to boost visibility and sales." %}</p>
+    <p class="mt-4"><a href="{% url 'core:info_contact' %}" class="btn btn-outline-primary">{% trans "Request Advertising Info" %}</a></p>
+</section>
+{% endblock content %}

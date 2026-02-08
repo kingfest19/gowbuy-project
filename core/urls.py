@@ -1,6 +1,7 @@
 # c:\Users\Hp\Desktop\Nexus\core\urls.py
 # core/urls.py
 from django.urls import path, re_path
+from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
@@ -26,6 +27,18 @@ urlpatterns = [
     path('help/creating-3d-models/', views.Creating3DModelsHelpView.as_view(), name='help_creating_3d_models'),
     path('terms/', views.TermsView.as_view(), name='terms_and_conditions'),
     path('privacy/', views.PrivacyPolicyView.as_view(), name='privacy_policy'),
+    path('about/', TemplateView.as_view(template_name='core/info/about_gowbuy.html', extra_context={'page_title': 'About GOWBUY'}), name='info_about'),
+    path('careers/', TemplateView.as_view(template_name='core/info/careers.html', extra_context={'page_title': 'Careers'}), name='info_careers'),
+    path('press/', TemplateView.as_view(template_name='core/info/press_releases.html', extra_context={'page_title': 'Press Releases'}), name='info_press'),
+    path('blog-info/', TemplateView.as_view(template_name='core/info/gowbuy_blog.html', extra_context={'page_title': 'GOWBUY Blog'}), name='info_blog'),
+    path('affiliate/', TemplateView.as_view(template_name='core/info/affiliate.html', extra_context={'page_title': 'Become an Affiliate'}), name='info_affiliate'),
+    path('advertise/', TemplateView.as_view(template_name='core/info/advertise_products.html', extra_context={'page_title': 'Advertise Your Products'}), name='info_advertise'),
+    path('delivery-partner/', TemplateView.as_view(template_name='core/info/delivery_partner.html', extra_context={'page_title': 'Become a Delivery Partner'}), name='info_delivery_partner'),
+    path('shipping-rates/', TemplateView.as_view(template_name='core/info/shipping_rates_policies.html', extra_context={'page_title': 'Shipping Rates & Policies'}), name='info_shipping'),
+    path('returns/', TemplateView.as_view(template_name='core/info/returns_replacements.html', extra_context={'page_title': 'Returns & Replacements'}), name='info_returns'),
+    path('contact/', TemplateView.as_view(template_name='core/info/contact_us.html', extra_context={'page_title': 'Contact Us'}), name='info_contact'),
+    path('site-map/', TemplateView.as_view(template_name='core/info/site_map.html', extra_context={'page_title': 'Site Map'}), name='info_sitemap'),
+    path('accessibility/', TemplateView.as_view(template_name='core/info/accessibility.html', extra_context={'page_title': 'Accessibility'}), name='info_accessibility'),
 
     # Product pages
     # Catalog pages (These match the get_absolute_url methods in models)
@@ -37,11 +50,12 @@ urlpatterns = [
     path('compare/', views.compare_products, name='compare_products'),
 
     path('product_list/', views.ProductListView.as_view(), name='product_list'), # For ProductListView
+    path('origin/<str:country_code>/', views.OriginDetailView.as_view(), name='origin_detail'),
     # Offers page
     path('offers/', views.daily_offers, name='daily_offers'),
 
-    # Sell on Nexus page
-    path('sell/', views.sell_on_nexus, name='sell_on_nexus'),
+    # Sell on Gowbuy page
+    path('sell/', views.sell_on_gowbuy, name='sell_on_gowbuy'),
 
     # Shop Local page
     path('shop-local/', views.shop_local, name='shop_local'),
@@ -100,7 +114,7 @@ urlpatterns = [
 
     # --- Vendor Products ---
     path('dashboard/products/', views.VendorProductListView.as_view(), name='vendor_product_list'),
-    path('dashboard/products/create/', views.VendorProductCreateView.as_view(), name='vendor_product_create'), # Corrected
+    path('dashboard/products/create/', views.VendorProductWizardView.as_view(), name='vendor_product_create'),
     path('dashboard/products/<int:pk>/update/', views.VendorProductUpdateView.as_view(), name='vendor_product_update'),
     path('dashboard/products/<int:pk>/delete/', views.VendorProductDeleteView.as_view(), name='vendor_product_delete'), # Corrected
 
@@ -227,9 +241,29 @@ urlpatterns = [
     path('ajax/product-image/enhance/', views.ajax_enhance_product_image, name='ajax_enhance_product_image'),
     path('ajax/product-image/remove-background/', views.ajax_remove_image_background, name='ajax_remove_image_background'),
     # --- END: New AJAX Image Tool URLs ---
+    # --- START: Origin Verification AJAX URLs ---
+    path('api/validate-origin/', views.ajax_validate_product_origin, name='ajax_validate_product_origin'),
+    path('api/origin-suggestions/', views.ajax_get_origin_suggestions, name='ajax_get_origin_suggestions'),
+    path('api/check-authenticity-risk/', views.ajax_check_authenticity_risk, name='ajax_check_authenticity_risk'),
+    # --- END: Origin Verification AJAX URLs ---
+
+    # Vendor product origin suggestion endpoints (AJAX)
+    path('dashboard/products/<int:pk>/suggest-origin/', views.ajax_suggest_product_origin, name='vendor_product_suggest_origin'),
+    path('dashboard/products/<int:pk>/apply-origin/', views.ajax_apply_product_origin, name='vendor_product_apply_origin'),
+    
+    # --- Phase 4: Authenticity Feedback Endpoint ---
+    path('product/<int:pk>/report-authenticity/', views.report_product_authenticity, name='report_product_authenticity'),
+    
     path('subscribe-newsletter/', views.subscribe_newsletter, name='subscribe_newsletter'),
   # --- API Endpoints for Mobile App ---
     path('api/v1/product/<int:product_id>/upload-3d-model/', views.api_upload_3d_model, name='api_upload_3d_model'),
+    
+    # --- START: Artisan/Handmade Product Verification AJAX URLs ---
+    path('api/verify-artisan-product/', views.ajax_verify_artisan_product, name='ajax_verify_artisan_product'),
+    path('api/validate-acquisition-info/', views.ajax_validate_acquisition_info, name='ajax_validate_acquisition_info'),
+    path('api/get-acquisition-options/', views.ajax_get_acquisition_options, name='ajax_get_acquisition_options'),
+    path('api/get-vendor-tier-requirements/', views.ajax_get_vendor_tier_requirements, name='ajax_get_vendor_tier_requirements'),
+    # --- END: Artisan/Handmade Product Verification AJAX URLs ---
 ]
 
 # --- START: Product Q&A URLs ---

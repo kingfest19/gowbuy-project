@@ -1,0 +1,17 @@
+            <ul class="list-unstyled">
+                {% if menu_countries %}
+                    {% for country in menu_countries %}
+                        <li>
+                            <a href="{% url 'core:origin_detail' country.code %}" class="country-menu-link">
+                                <svg class="country-flag-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; margin-right: 8px;">
+                                    <rect width="24" height="24" rx="3" fill="{% if country.code == 'US' %}#3C3B6E{% elif country.code == 'GB' %}#012169{% elif country.code == 'CN' %}#DE2910{% elif country.code == 'JP' %}#BC002D{% elif country.code == 'DE' %}#000000{% elif country.code == 'FR' %}#0055A4{% elif country.code == 'IT' %}#009246{% elif country.code == 'ES' %}#C60B1E{% elif country.code == 'CA' %}#FF0000{% elif country.code == 'AU' %}#012169{% elif country.code == 'BR' %}#009B3A{% elif country.code == 'MX' %}#006341{% elif country.code == 'IN' %}#FF9933{% elif country.code == 'KR' %}#003478{% elif country.code == 'RU' %}#0039A6{% elif country.code == 'TR' %}#E30A17{% elif country.code == 'SA' %}#165B31{% elif country.code == 'AE' %}#00732F{% elif country.code == 'ZA' %}#007A4D{% elif country.code == 'NG' %}#008751{% else %}#6366f1{% endif %}"/>
+                                    <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">{{ country.code }}</text>
+                                </svg>
+                                {{ country.name }} <small class="text-muted">({{ country.count }})</small>
+                            </a>
+                        </li>
+                    {% endfor %}
+                {% else %}
+                    <li>{% trans "No countries available." %}</li>
+                {% endif %}
+            </ul>

@@ -116,6 +116,18 @@ NEXUS/
     python manage.py collectstatic
     ```
 
+## Optional ML tooling
+
+If you'd like to train the origin inference model locally, install these optional packages:
+
+```
+pip install lightgbm scikit-learn joblib
+```
+
+The training scaffold saves artifacts under `core/ml/models/` by default (model, vectorizer, label encoder, metadata). Use the management commands `train_origin_model` and `predict_with_origin_model` to train and run predictions.
+
+---
+
 ## Running the Development Server
 
 ```bash

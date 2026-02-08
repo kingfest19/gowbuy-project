@@ -9,12 +9,52 @@
     {# Add specific dashboard CSS if needed later #}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
+        /* CSS Variables for Theming */
+        :root {
+            --bg-body: #ebe8e8;
+            --bg-surface: #ffffff;
+            --text-main: #323232ff;
+            --text-muted: #6c757d;
+            --border-color: #828282ff;
+            --sidebar-bg: #ffffff;
+            --sidebar-border: #c7c9cb;
+            --nav-link-color: #333333;
+            --nav-link-hover-bg: #e9ecef;
+            --nav-link-hover-color: #323232ff;
+            --card-shadow: rgba(0, 0, 0, 0.07);
+            --color-primary: #0d6efd;
+        }
+
+        /* Use data-theme attribute to respect site toggle */
+        [data-theme="dark"] {
+                --bg-body: #1a1a1a;
+                --bg-surface: #2c2c2c;
+                --text-main: #e0e0e0;
+                --text-muted: #b0b0b0;
+                --border-color: #444444;
+                --sidebar-bg: #2c2c2c;
+                --sidebar-border: #444444;
+                --nav-link-color: #e0e0e0;
+                --nav-link-hover-bg: #3a3a3a;
+                --nav-link-hover-color: #ffffff;
+                --card-shadow: rgba(0, 0, 0, 0.2);
+                --color-primary: #6daffc;
+        }
+
         body {
-            background-color: #ebe8e8; /* Match product list background */
+            background-color: var(--bg-body);
+            color: var(--text-main);
+        }
+
+        /* Fix text visibility in dark mode */
+        .text-muted, small, .text-muted small {
+            color: var(--text-muted) !important;
         }
 
         .dashboard-container {
-            display: flex;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            grid-template-rows: auto 1fr;
             gap: 2rem;
             max-width: 1400px;
             margin: 0 auto;
@@ -22,20 +62,23 @@
 
         /* Sidebar styling */
         .dashboard-sidebar {
-            flex: 0 0 280px; /* Fixed width for sidebar */
+            grid-row: 1 / -1;
+            grid-column: 1;
             background-color: #ffffff;
+            background-color: var(--sidebar-bg);
             padding: 1.5rem 1rem;
             border-radius: 12px;
             position: sticky;
             top: 2rem;
             align-self: flex-start; /* Important for sticky positioning */
-            height: calc(100vh - 4rem);
+            max-height: calc(100vh - 4rem); /* Use max-height to prevent forcing height on short content */
             overflow-y: auto;
-            border: 1px solid #c7c9cb;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+            padding-bottom: 2rem; /* Ensure bottom items aren't cut off */
+            border: 1px solid var(--sidebar-border);
+            box-shadow: 0 6px 20px var(--card-shadow);
         }
         .dashboard-sidebar .nav-link {
-            color: #495057;
+            color: var(--nav-link-color);
             padding: 0.75rem 1rem;
             margin-bottom: 0.2rem;
             border-radius: 6px;
@@ -44,12 +87,12 @@
             white-space: nowrap; /* Prevent link text from wrapping */
         }
         .dashboard-sidebar .nav-link.active {
-            background-color: #474747; /* Match btn-dark from product list */
+            background-color: var(--color-primary); /* Use primary color instead of dark grey */
             color: white;
         }
         .dashboard-sidebar .nav-link:hover:not(.active) {
-            background-color: #e9ecef;
-            color: #323232ff;
+            background-color: var(--nav-link-hover-bg);
+            color: var(--nav-link-hover-color);
         }
 
         /* Ensure nav items are stacked vertically */
@@ -61,7 +104,7 @@
         .sidebar-heading {
             font-size: 0.8rem;
             font-weight: 600;
-            color: #6c757d; /* Bootstrap's text-muted color */
+            color: var(--text-muted);
             text-transform: uppercase;
             padding: 0 1rem; /* Match nav-link horizontal padding */
             margin-top: 1.5rem; /* Space above the heading */
@@ -73,89 +116,59 @@
         }
 
         .dashboard-main {
-            flex-grow: 1;
+            grid-column: 2;
+            grid-row: 2;
         }
 
         .page-header {
+            grid-column: 2;
+            grid-row: 1;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 1rem;
             padding: 1.5rem;
-            margin-bottom: 2.5rem;
+            margin-bottom: 0;
             border-radius: 8px;
-            background-color: #ffffff;
+            background-color: var(--bg-surface);
             border-left: 5px solid #323232ff;
-            border: 1px solid #828282ff;
+            border: 1px solid var(--border-color);
         }
 
         .page-header h1 {
             font-weight: 600;
-            color: #323232ff;
+            color: var(--text-main);
             margin-bottom: 0;
         }
 
-        /* New Stat Cards Styling */
-        .stat-cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2.5rem;
-        }
-        .stat-card {
-            background-color: #fff;
-            border: 1px solid #828282ff;
+        /* Overview Card Styling (Matching User Profile) */
+        .dashboard-overview-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+            text-align: center;
+            height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 0.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
-            aspect-ratio: 1 / 1; /* Make the card square */
-            text-align: center;
         }
-        .stat-card:hover {
+        .dashboard-overview-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
-        .stat-card .stat-icon {
-            font-size: 2rem;
-            padding: 0.75rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-        }
-        .stat-card .stat-info .stat-value {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: #323232ff;
-            line-height: 1.2;
-        }
-        .stat-card .stat-info .stat-title {
-            font-size: 0.9rem;
-            color: #6c757d;
-            margin-bottom: 0;
-        }
-
-        /* Icon colors for stat cards */
-        .icon-sales { background-color: #28a745; }
-        .icon-orders { background-color: #17a2b8; }
-        .icon-products { background-color: #6f42c1; }
-        .icon-low-stock { background-color: #fd7e14; }
 
         /* Dashboard Section Styling */
         .dashboard-section {
-            background-color: #fff;
+            background-color: var(--bg-surface);
             padding: 1.5rem;
             border-radius: 8px;
             margin-bottom: 2rem;
-            border: 1px solid #828282ff;
+            border: 1px solid var(--border-color);
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
         .dashboard-section-header {
@@ -169,31 +182,121 @@
         .dashboard-section-header h2 {
             font-size: 1.25rem;
             font-weight: 600;
-            color: #323232ff;
+            color: var(--text-main);
             margin-bottom: 0;
         }
 
         /* List group styling inside sections */
+        .list-group-item {
+            background-color: var(--bg-surface);
+            border-color: var(--border-color);
+            color: var(--text-main);
+        }
         .list-group-item h6 {
             margin-bottom: 0.25rem; /* Adjust spacing in lists */
             font-weight: 500;
-            color: #343a40;
+            color: var(--text-main);
         }
         .list-group-item a {
             text-decoration: none;
         }
         .list-group-item a:hover h6 {
-            color: #323232ff;
+            color: var(--color-primary);
         }
         .list-group-item-action:hover {
-            background-color: #f8f9fa;
+            background-color: var(--bg-body);
         }
 
+        /* Mobile Responsiveness */
+        @media (max-width: 991.98px) {
+            .dashboard-container {
+                display: flex;
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .dashboard-sidebar {
+                order: 2;
+                flex: 0 0 auto;
+                width: 100%;
+                height: auto;
+                position: static;
+                padding: 1rem;
+                margin-bottom: 0;
+                border-radius: 8px;
+            }
+
+            /* Convert sidebar to horizontal scrollable nav */
+            .dashboard-sidebar .nav {
+                flex-direction: row !important;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding-bottom: 5px;
+                gap: 0.5rem;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none; /* Firefox */
+            }
+            .dashboard-sidebar .nav::-webkit-scrollbar {
+                display: none; /* Chrome/Safari */
+            }
+
+            .dashboard-sidebar .nav-link {
+                flex: 0 0 auto;
+                margin-bottom: 0;
+                border: 1px solid var(--border-color);
+                border-radius: 50px; /* Pill shape for mobile tabs */
+                padding: 0.5rem 1rem;
+                background-color: var(--bg-surface);
+                font-size: 0.9rem;
+            }
+            .dashboard-sidebar .nav-link.active {
+                background-color: var(--color-primary);
+                color: #fff;
+                border-color: var(--color-primary);
+            }
+
+            .sidebar-heading {
+                display: none;
+            }
+
+            /* Adjust overview cards for mobile 2-column layout */
+            .dashboard-overview-card {
+                padding: 1rem;
+            }
+            .dashboard-overview-card .card-title {
+                font-size: 0.85rem;
+            }
+            .dashboard-overview-card .card-text {
+                font-size: 1.2rem;
+            }
+            
+            .page-header {
+                order: 1;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            .dashboard-main {
+                order: 3;
+            }
+            
+            .list-group-item {
+                background-color: var(--bg-surface);
+                color: var(--text-main);
+            }
+        }
     </style>
 {% endblock extra_css %}
 
 {% block content %}
 <div class="container dashboard-container my-5">
+    <div class="page-header">
+        <div>
+            <h1>{% trans "Vendor Dashboard" %}</h1>
+            <p class="text-muted mb-0">{% trans "Welcome back," %} {{ vendor.name }}!</p>
+        </div>
+    </div>
+
     {# Sidebar Navigation #}
     <aside class="dashboard-sidebar">
         {% include "core/vendor/vendor_dashboard_sidebar_snippet.html" with active_page='overview' %}
@@ -201,47 +304,57 @@
 
     {# Main Content Area #}
     <main class="dashboard-main">
-        <div class="page-header">
-            <div>
-                <h1>{% trans "Vendor Dashboard" %}</h1>
-                <p class="text-muted mb-0">{% trans "Welcome back," %} {{ vendor.name }}!</p>
-            </div>
-        </div>
-
             {% include 'partials/_messages.html' %} {# Display messages at the top #}
 
-            <!-- Stat Cards -->
-            <div class="stat-cards-grid">
+            <!-- Products Without Origin Alert -->
+            {% if products_without_origin.exists %}
+            <div class="alert alert-warning d-flex align-items-start gap-2" role="alert">
+                <span>⚠️</span>
+                <div>
+                    <h5 class="alert-heading mb-2">{% trans "Action Required: Products Missing Origin" %}</h5>
+                    <p class="mb-2">
+                        {% blocktrans count counter=products_without_origin.count %}
+                        You have {{ counter }} product without an origin country set.
+                        {% plural %}
+                        You have {{ counter }} products without an origin country set.
+                        {% endblocktrans %}
+                    </p>
+                    <p class="mb-2"><strong>{% trans "Origin is mandatory for products to go live." %}</strong> {% trans "Products without origin cannot be activated and will remain hidden from customers." %}</p>
+                    <a href="{% url 'core:vendor_product_list' %}" class="btn btn-sm btn-warning">
+                        <i class="bi bi-pencil-square me-1"></i>{% trans "Edit Products Now" %}
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Overview Cards -->
+            <div class="row g-3 mb-4">
                 <!-- Total Sales -->
-                <div class="stat-card">
-                    <div class="stat-icon icon-sales"><i class="bi bi-cash-stack"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-value">GH₵{{ total_sales|floatformat:2|intcomma }}</div>
-                        <div class="stat-title">{% trans "Total Sales" %}</div>
+                <div class="col-6 col-lg-3">
+                    <div class="dashboard-overview-card">
+                        <h5 class="card-title"><i class="bi bi-cash-stack me-2 text-success"></i>{% trans "Total Sales" %}</h5>
+                        <p class="card-text fs-4 fw-bold">GH₵{{ total_sales|floatformat:2|intcomma }}</p>
                     </div>
                 </div>
                 <!-- Total Orders -->
-                <div class="stat-card">
-                    <div class="stat-icon icon-orders"><i class="bi bi-box-seam"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-value">{{ total_orders_count|intcomma }}</div>
-                        <div class="stat-title">{% trans "Total Orders" %}</div>
+                <div class="col-6 col-lg-3">
+                    <div class="dashboard-overview-card">
+                        <h5 class="card-title"><i class="bi bi-box-seam me-2 text-info"></i>{% trans "Total Orders" %}</h5>
+                        <p class="card-text fs-4 fw-bold">{{ total_orders_count|intcomma }}</p>
                     </div>
                 </div>
                 <!-- Active Products -->
-                <div class="stat-card">
-                    <div class="stat-icon icon-products"><i class="bi bi-tags"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-value">{{ active_products_count|intcomma }}</div>
-                        <div class="stat-title">{% trans "Active Products" %}</div>
+                <div class="col-6 col-lg-3">
+                    <div class="dashboard-overview-card">
+                        <h5 class="card-title"><i class="bi bi-tags me-2 text-primary"></i>{% trans "Active Products" %}</h5>
+                        <p class="card-text fs-4 fw-bold">{{ active_products_count|intcomma }}</p>
                     </div>
                 </div>
                 <!-- Low Stock -->
-                <div class="stat-card">
-                    <div class="stat-icon icon-low-stock"><i class="bi bi-graph-down-arrow"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-value">{{ low_stock_products.count }}</div>
-                        <div class="stat-title">{% trans "Low Stock" %}</div>
+                <div class="col-6 col-lg-3">
+                    <div class="dashboard-overview-card">
+                        <h5 class="card-title"><i class="bi bi-graph-down-arrow me-2 text-danger"></i>{% trans "Low Stock" %}</h5>
+                        <p class="card-text fs-4 fw-bold">{{ low_stock_products.count }}</p>
                     </div>
                 </div>
             </div>

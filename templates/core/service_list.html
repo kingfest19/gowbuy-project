@@ -26,59 +26,355 @@
 {% endblock extra_head %}
 
 {% block extra_css %}
+    {{ block.super }}
     <link rel="stylesheet" href="{% static 'assets/css/service_marketplace.css' %}">
     <style>
         .service-hero-section {
-            /* Ensure this section is a positioned element for z-index to work against other positioned siblings */
             position: relative; 
-            z-index: 10; /* Higher z-index to keep it on top */
+            z-index: 10;
+            background: linear-gradient(135deg, var(--bg-surface, #ffffff) 0%, var(--bg-body, #f8f9fa) 100%);
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color, #dee2e6);
         }
 
+        /* Enhanced Service Card Styling */
         .service-item-flat {
-            padding: 1.25rem; /* Padding for the item content */
-            border: 1px solid #e0e0e0; /* A light border for separation */
-            border-radius: 0.375rem; /* Optional: rounded corners */
-            background-color: #ffffff; /* White background to stand out if page bg is different */
+            padding: 1.25rem;
+            border: 1px solid var(--border-color, #e0e0e0);
+            border-radius: 0.75rem; /* More rounded corners */
+            background-color: var(--bg-surface, #ffffff);
             display: flex;
             flex-direction: column;
-            height: 100%; /* Ensure items in a row take same height if using g-4 */
-            position: relative; /* <<< ADD THIS LINE to contain the stretched-link */
-            z-index: 1; /* Lower z-index than the hero section */
-            transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
+            height: 100%;
+            position: relative;
+            z-index: 1;
+            transition: all 0.3s ease-in-out;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
         .service-item-flat:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 0.3rem 0.8rem rgba(0,0,0,0.1);
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+            border-color: var(--color-primary, #0d6efd);
         }
         .service-item-flat img {
-            height: 180px; /* Fixed height for images */
+            height: 200px;
             width: 100%;
-            object-fit: cover; /* Ensure image covers the area, might crop */
-            border-radius: 0.25rem; /* Rounded corners for image */
-            margin-bottom: 0.75rem;
+            object-fit: cover;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            background-color: var(--bg-body, #f8f9fa);
+        }
+        
+        /* Typography & Content */
+        .service-item-flat h5 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
         }
         .service-item-flat h5 a {
-            color: #333;
-            font-weight: 600;
+            color: var(--text-main, #333);
+            font-weight: 700;
+            text-decoration: none;
+            transition: color 0.2s;
         }
         .service-item-flat h5 a:hover {
-            color: var(--bs-primary);
+            color: var(--color-primary, #0d6efd);
         }
         .service-item-flat .provider-info {
             font-size: 0.85rem;
-            color: #6c757d;
+            color: var(--text-muted, #6c757d);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
         }
         .service-item-flat .service-description-flat {
             font-size: 0.9rem;
-            color: #495057;
-            flex-grow: 1; /* Allows description to take available space */
+            color: var(--text-main, #495057);
+            opacity: 0.85;
+            flex-grow: 1;
+            margin-bottom: 1rem;
+            line-height: 1.5;
         }
         .service-item-flat .service-price-flat {
-            font-weight: bold;
-            color: var(--bs-success); /* Or your preferred price color */
+            font-weight: 800;
+            color: var(--color-success, #198754);
+            font-size: 1.15rem;
+            margin-bottom: 1rem;
         }
         .service-item-flat .btn-details-flat {
-            margin-top: auto; /* Pushes button to the bottom */
+            margin-top: auto;
+            border-radius: 50px;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+        }
+
+        /* Category Cards Styling */
+        .category-card-service {
+            background: var(--bg-surface, #fff);
+            border: 1px solid var(--border-color, #e0e0e0);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            text-align: center;
+            transition: all 0.2s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .category-card-service:hover {
+            border-color: var(--color-primary, #0d6efd);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+        }
+        .category-card-service img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            margin-bottom: 0.75rem;
+        }
+        .category-card-service .icon-placeholder {
+            font-size: 2.5rem;
+            color: var(--color-primary, #0d6efd);
+            margin-bottom: 0.75rem;
+        }
+        .category-card-service .category-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-main, #333);
+        }
+        .category-card-service a {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            width: 100%;
+        }
+
+        /* Horizontal Scroll / Carousel Styles */
+        .horizontal-scroll-wrapper {
+            display: flex;
+            overflow-x: auto;
+            gap: 1rem;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            -webkit-overflow-scrolling: touch;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: thin;
+        }
+        .horizontal-scroll-wrapper::-webkit-scrollbar {
+            height: 6px;
+        }
+        .horizontal-scroll-wrapper::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .horizontal-scroll-wrapper::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 10px;
+        }
+        .horizontal-scroll-item {
+            flex: 0 0 auto;
+            width: 260px;
+            scroll-snap-align: start;
+        }
+
+        /* Mobile Responsiveness (Matching Homepage Cards) */
+        @media (max-width: 768px) {
+            .service-hero-section {
+                padding: 2rem 0;
+            }
+            .service-hero-section h1 {
+                font-size: 2rem;
+            }
+            
+            /* Card Adjustments for Mobile */
+            .service-item-flat {
+                padding: 0.75rem;
+                border-radius: 0.5rem;
+            }
+            .service-item-flat img {
+                height: 140px !important; /* Smaller image */
+                margin-bottom: 0.5rem !important;
+            }
+            .service-item-flat h5 {
+                font-size: 0.9rem;
+                margin-bottom: 0.25rem !important;
+                overflow: hidden;
+                -webkit-line-clamp: 2;
+                display: -webkit-box;
+                -webkit-box-orient: vertical;
+                line-height: 1.3;
+            }
+            .provider-info {
+                font-size: 0.75rem;
+                margin-bottom: 0.25rem !important;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .service-description-flat {
+                display: none; /* Hide description on mobile to save space */
+            }
+            .service-price-flat {
+                font-size: 1rem;
+                margin-bottom: 0.5rem !important;
+            }
+            .btn-details-flat {
+                padding: 0.3rem 0.75rem;
+                font-size: 0.85rem;
+                width: 100%;
+            }
+
+            /* Grid Adjustments */
+            .row.g-4 {
+                --bs-gutter-y: 1rem;
+                --bs-gutter-x: 0.75rem;
+            }
+            
+            /* Category Card Mobile */
+            .category-card-service {
+                padding: 0.75rem;
+            }
+            .category-card-service img {
+                width: 40px;
+                height: 40px;
+            }
+            .category-card-service .icon-placeholder {
+                font-size: 1.8rem;
+            }
+            .category-card-service .category-name {
+                font-size: 0.8rem;
+            }
+            
+            .horizontal-scroll-item {
+                width: 160px;
+            }
+        }
+
+        @media (min-width: 992px) {
+            .filter-card {
+                position: sticky;
+                top: 80px; /* Adjust based on navbar height */
+                z-index: 5;
+            }
+        }
+
+        /* Light/Dark Mode Enhancements */
+        .section-title {
+            color: var(--text-main, #212529);
+        }
+        .list-group-item {
+            background: var(--bg-surface, #ffffff);
+            color: var(--text-main, #212529);
+            border-color: var(--border-color, #dee2e6);
+        }
+        .list-group-item.active {
+            background: rgba(139, 92, 246, 0.12);
+            color: var(--text-main, #212529);
+            border-color: rgba(139, 92, 246, 0.35);
+        }
+        .category-filter-icon {
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            background: rgba(139, 92, 246, 0.12);
+            color: #8b5cf6;
+            flex-shrink: 0;
+        }
+        .category-filter-icon svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        [data-theme="dark"] .service-hero-section {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.85) 0%, rgba(15, 23, 42, 0.85) 100%);
+            border-bottom-color: rgba(148, 163, 184, 0.2);
+        }
+        [data-theme="dark"] .service-item-flat {
+            background: rgba(15, 23, 42, 0.75);
+            border-color: rgba(148, 163, 184, 0.2);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+        }
+        [data-theme="dark"] .service-item-flat h5 a {
+            color: var(--text-main, #ffffff);
+        }
+        [data-theme="dark"] .service-item-flat .service-description-flat {
+            color: var(--text-muted, #aab7c4);
+        }
+        [data-theme="dark"] .category-card-service {
+            background: rgba(15, 23, 42, 0.7);
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+        [data-theme="dark"] .category-card-service .category-name {
+            color: var(--text-main, #ffffff);
+        }
+        [data-theme="dark"] .horizontal-scroll-wrapper::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        [data-theme="dark"] .horizontal-scroll-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        [data-theme="dark"] .list-group-item {
+            background: rgba(17, 24, 39, 0.8);
+            color: var(--text-main, #ffffff);
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+        [data-theme="dark"] .list-group-item.active {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: rgba(139, 92, 246, 0.4);
+        }
+        [data-theme="dark"] .category-filter-icon {
+            background: rgba(139, 92, 246, 0.2);
+            color: #c4b5fd;
+        }
+        [data-theme="dark"] .cta-provider-section {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        .service-steps {
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 20px;
+        }
+        .service-step-card {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+            height: 100%;
+        }
+        .service-step-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(139, 92, 246, 0.12);
+            color: #8b5cf6;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        [data-theme="dark"] .service-steps {
+            background: rgba(15, 23, 42, 0.75);
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+        [data-theme="dark"] .service-step-card {
+            background: rgba(17, 24, 39, 0.75);
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+        [data-theme="dark"] .service-step-icon {
+            background: rgba(139, 92, 246, 0.2);
+            color: #c4b5fd;
+        }
+        [data-theme="dark"] .service-step-card .text-muted {
+            color: var(--text-muted, #aab7c4) !important;
         }
     </style>
 {% endblock extra_css %}
@@ -87,7 +383,7 @@
 <div class="service-hero-section">
     <div class="container">
         <h1 class="display-4 fw-bold">{% trans "Find & Book Professional Services" %}</h1>
-        <p class="lead col-lg-8 mx-auto">{% trans "Connect with skilled professionals for any task, big or small. NEXUS makes it easy." %}</p>
+        <p class="lead col-lg-8 mx-auto">{% trans "Connect with skilled professionals for any task, big or small. GOWBUY makes it easy." %}</p>
         {# Search Bar - can reuse your existing search form logic #}
         <form method="get" action="{% url 'core:service_search_results' %}" class="mt-4">
             <div class="input-group input-group-lg">
@@ -103,9 +399,9 @@
     {% if featured_services %}
     <section class="mb-5">
         <h2 class="section-title">{% trans "Featured Services" %}</h2>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        <div class="horizontal-scroll-wrapper">
             {% for service in featured_services %}
-            <div class="col">
+            <div class="horizontal-scroll-item">
                 <div class="service-item-flat">
                     <a href="{{ service.get_absolute_url }}">
                         {% if service.images.first.image.url %}
@@ -123,6 +419,14 @@
                             <i class="bi bi-patch-check-fill text-success ms-1" title="{% trans 'Verified Provider' %}"></i>
                         {% endif %}
                     </p>
+                    {% if service.review_count %}
+                    <p class="provider-info mb-2 text-muted">
+                        <i class="bi bi-star-fill text-warning"></i>
+                        {{ service.average_rating|floatformat:1 }} ({{ service.review_count }} {% trans "reviews" %})
+                    </p>
+                    {% else %}
+                    <p class="provider-info mb-2 text-muted">{% trans "No reviews yet" %}</p>
+                    {% endif %}
                     <p class="service-description-flat mb-2">{{ service.description|truncatewords_html:12 }}</p>
                     {% if service.packages.exists %}
                         <p class="service-price-flat mb-2">
@@ -145,7 +449,7 @@
             {% for category in top_service_categories %}
             <div class="col">
                 <div class="category-card-service">
-                    <a href="{% url 'core:services_by_category' category_slug=category.slug %}">
+                    <a href="{% url 'core:service_category_detail' category_slug=category.slug %}">
                         {% if category.image %}
                             <img src="{{ category.image.url }}" alt="{{ category.name }}">
                         {% else %}
@@ -164,9 +468,9 @@
     {% if recently_viewed_services %}
     <section class="mb-5">
         <h2 class="section-title">{% trans "Recently Viewed" %}</h2>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+        <div class="horizontal-scroll-wrapper">
             {% for service in recently_viewed_services %}
-            <div class="col">
+            <div class="horizontal-scroll-item">
                 <div class="service-item-flat">
                     <a href="{{ service.get_absolute_url }}">
                         {% if service.images.first.image.url %}
@@ -184,6 +488,14 @@
                             <i class="bi bi-patch-check-fill text-success ms-1" title="{% trans 'Verified Provider' %}"></i>
                         {% endif %}
                     </p>
+                    {% if service.review_count %}
+                    <p class="provider-info mb-2 text-muted">
+                        <i class="bi bi-star-fill text-warning"></i>
+                        {{ service.average_rating|floatformat:1 }} ({{ service.review_count }} {% trans "reviews" %})
+                    </p>
+                    {% else %}
+                    <p class="provider-info mb-2 text-muted">{% trans "No reviews yet" %}</p>
+                    {% endif %}
                     {% if service.packages.exists %}
                         <p class="service-price-flat mb-2">
                              {% trans "From" %}: GH₵ {{ service.packages.all.first.price|floatformat:2|intcomma }}
@@ -197,28 +509,28 @@
     {% endif %}
 
          <!-- "How It Works" Section (Static Example) -->
-    <section class="mb-5 py-4 rounded" style="background-color: var(--bg-surface); border: 1px solid var(--border-color);">
-        <h2 class="section-title">{% trans "How NEXUS Services Work" %}</h2>
-        <div class="row text-center">
+    <section class="mb-5 py-5 service-steps">
+        <h2 class="section-title text-center mb-4">{% trans "How GOWBUY Services Work" %}</h2>
+        <div class="row g-4 text-center">
             <div class="col-md-4">
-                <div class="p-3">
-                    <i class="fas fa-search fa-3x text-primary mb-3"></i>
-                    <h4>{% trans "1. Discover" %}</h4>
-                    <p>{% trans "Browse or search for the service you need from our talented providers." %}</p>
+                <div class="service-step-card">
+                    <div class="service-step-icon"><i class="fas fa-search"></i></div>
+                    <h4 class="mb-2">{% trans "1. Discover" %}</h4>
+                    <p class="mb-0 text-muted">{% trans "Browse or search for the service you need from our talented providers." %}</p>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="p-3">
-                    <i class="fas fa-calendar-check fa-3x text-primary mb-3"></i>
-                    <h4>{% trans "2. Book & Pay" %}</h4>
-                    <p>{% trans "Select a package, book a time, and pay securely through our platform." %}</p>
+                <div class="service-step-card">
+                    <div class="service-step-icon"><i class="fas fa-calendar-check"></i></div>
+                    <h4 class="mb-2">{% trans "2. Book & Pay" %}</h4>
+                    <p class="mb-0 text-muted">{% trans "Select a package, book a time, and pay securely through our platform." %}</p>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="p-3">
-                    <i class="fas fa-star fa-3x text-primary mb-3"></i>
-                    <h4>{% trans "3. Get It Done" %}</h4>
-                    <p>{% trans "Receive quality service and leave a review to help others." %}</p>
+                <div class="service-step-card">
+                    <div class="service-step-icon"><i class="fas fa-star"></i></div>
+                    <h4 class="mb-2">{% trans "3. Get It Done" %}</h4>
+                    <p class="mb-0 text-muted">{% trans "Receive quality service and leave a review to help others." %}</p>
                 </div>
             </div>
         </div>
@@ -247,14 +559,28 @@
                 <h5 class="mt-3">{% trans "Categories" %}</h5>
                 <ul class="list-group list-group-flush">
                     <a href="{% url 'core:service_list' %}{% if search_query %}?q={{ search_query }}{% endif %}" 
-                       class="list-group-item list-group-item-action {% if not current_category %}active{% endif %}">
-                       <i class="fas fa-th-list me-2"></i>{% trans "All Categories" %}
+                       class="list-group-item list-group-item-action d-flex align-items-center gap-2 {% if not current_category %}active{% endif %}">
+                       <span class="category-filter-icon">
+                           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                               <path d="M4 6H20M7 12H17M10 18H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                           </svg>
+                       </span>
+                       <span>{% trans "All Categories" %}</span>
                     </a>
-                    {% for category_item in all_service_categories %} {# Changed loop var to avoid conflict #}
-                        <a href="{% url 'core:services_by_category' category_slug=category_item.slug %}{% if search_query %}&q={{ search_query }}{% endif %}" 
-                           class="list-group-item list-group-item-action {% if current_category and current_category.slug == category_item.slug %}active{% endif %}">
-                            {{ category_item.name }} <span class="badge bg-secondary float-end">{{ category_item.num_services }}</span>
+                    {% for category_item in categories %}
+                        <a href="{% url 'core:service_category_detail' category_slug=category_item.slug %}" 
+                           class="list-group-item list-group-item-action d-flex align-items-center gap-2 {% if current_category and current_category.slug == category_item.slug %}active{% endif %}">
+                            <span class="category-filter-icon">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 3H18V8H6V3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                                    <path d="M6 10H18V21H6V10Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                                    <path d="M9 14H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                            <span>{{ category_item.name }}</span>
                         </a>
+                    {% empty %}
+                        <li class="list-group-item text-muted">{% trans "No categories available" %}</li>
                     {% endfor %}
                 </ul>
                 {# Add more filters here: Price Range, Location, Provider Rating etc. #}
@@ -263,7 +589,7 @@
             <!-- Main Content Area for Service Listing -->
             <div class="col-lg-9">
                 {% if services %}
-                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    <div class="row row-cols-2 row-cols-md-2 row-cols-lg-3 g-3 g-md-4">
                         {% for service in services %}
                         <div class="col">
                             <div class="service-item-flat">
@@ -319,7 +645,7 @@
     <!-- Become a Provider CTA Section -->
     <section class="my-5">
         <div class="cta-provider-section">
-            <h2 class="display-5 fw-bold">{% trans "Offer Your Skills on NEXUS?" %}</h2>
+            <h2 class="display-5 fw-bold">{% trans "Offer Your Skills on GOWBUY?" %}</h2>
             <p class="col-lg-8 mx-auto fs-5">{% trans "Join our community of talented service providers and reach new clients. It's easy to get started!" %}</p>
             <a href="{% url 'core:become_service_provider' %}" class="btn btn-success btn-lg mt-3">
                 <i class="fas fa-user-plus me-2"></i>{% trans "Become a Provider" %}

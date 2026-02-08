@@ -5,79 +5,206 @@
 
 {% block extra_css %}
     {{ block.super }}
+    <link rel="stylesheet" href="{% static 'assets/css/service_marketplace.css' %}">
     <style>
-        .profile-container {
-            background-color: #fff;
-            padding: 2rem 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
-            border: 1px solid #000000ff;
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #0f172a;
+            --primary-light: #e0e7ff;
+            --border-color: #e5e7eb;
+            --surface: #ffffff;
+            --surface-muted: #f8fafc;
+            --text-primary: #0f172a;
+            --text-muted: #6b7280;
+            --bg-surface: #ffffff;
+            --bg-body: #f8fafc;
+            --text-main: #111827;
+            --color-success: #16a34a;
+            --color-primary: #6366f1;
         }
-        .card {
-            border: 1px solid #000000ff;
-        }
-        .profile-sidebar .profile-name {
-            color: rgb(52, 73, 94); /* Primary Dark Blue-Grey */
-        }
-        .profile-sidebar .card {
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 
-}
-        .profile-section {
-            padding-bottom: 2rem;
-            margin-bottom: 2rem;
-            border-bottom: 1px solid #e9ecef;
+        [data-theme="dark"] {
+            --primary-color: #a5b4fc;
+            --primary-dark: #e2e8f0;
+            --primary-light: #312e81;
+            --border-color: #1f2937;
+            --surface: #0f172a;
+            --surface-muted: #111827;
+            --text-primary: #e5e7eb;
+            --text-muted: #9ca3af;
+            --bg-surface: #0f172a;
+            --bg-body: #111827;
+            --text-main: #e5e7eb;
+            --color-success: #22c55e;
+            --color-primary: #a5b4fc;
         }
+
+        body {
+            background: var(--surface-muted);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        .badge.bg-light {
+            background-color: var(--surface-muted) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-color);
+        }
+
+        .profile-container {
+            background-color: var(--surface);
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: none;
+            border: 1px solid var(--border-color);
+            margin-top: 0;
+        }
+
+        /* Profile Header Section */
+        .profile-header-background {
+            display: none;
+        }
+
+        .card {
+            background-color: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            transition: none;
+        }
+
+        .profile-sidebar {
+            position: sticky;
+            top: 20px;
+        }
+
+        .profile-sidebar .card {
+            box-shadow: none;
+            border: 1px solid var(--border-color);
+        }
+
+        .profile-sidebar .profile-name {
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-picture {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 3px solid var(--primary-color);
+            box-shadow: none;
+            margin: -75px auto 1rem;
+            display: block;
+        }
+
+        .profile-sidebar .btn-outline-primary {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .profile-sidebar .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        /* Rating Badge */
+        .rating-badge {
+            display: inline-block;
+            background: var(--primary-light);
+            color: var(--text-primary);
+            padding: 0.75rem 1.25rem;
+            border-radius: 50px;
+            font-weight: 600;
+            margin: 0.5rem 0;
+        }
+
+        /* Section Styling */
+        .profile-section {
+            padding-bottom: 2.5rem;
+            margin-bottom: 2.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
         .profile-section:last-of-type {
             border-bottom: none;
             margin-bottom: 0;
             padding-bottom: 0;
         }
-        .service-card-item .card {
-            transition: transform .2s ease-in-out, box-shadow .2s ease-in-out;
-        }
+
         .section-title {
             font-size: 1.75rem;
-            font-weight: 600;
-            color: #34495e;
+            font-weight: 700;
+            color: var(--text-primary);
             margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
-        .service-card-item .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+
+        .section-title::before {
+            content: '';
+            display: block;
+            width: 4px;
+            height: 2rem;
+            background: var(--primary-color);
+            border-radius: 2px;
         }
+
+        /* Service Card Styling */
+        .service-card-item .card {
+            border: 1px solid var(--border-color);
+            transition: none;
+            overflow: hidden;
+            height: 100%;
+        }
+
         .service-item-title a {
-            color: rgb(52, 73, 94); /* Primary Dark Blue-Grey */
+            color: var(--text-primary);
             text-decoration: none;
-            font-weight: 600;
-        }
-        .service-item-title a:hover {
-            color: rgb(26, 188, 156); /* Accent Teal */
-        }
-        .service-card-item .btn-primary {
-            background-color: rgb(26, 188, 156); /* Accent Teal */
-            border-color: rgb(26, 188, 156);
-        }
-        .review-item {
-            padding-bottom: 1rem;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid #f1f1f1;
-        }
-        .review-item:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-        .review-item-title {
+            font-weight: 700;
             font-size: 1.1rem;
+            transition: color 0.3s ease;
+        }
+
+        .service-item-title a:hover {
+            color: var(--primary-color);
+        }
+
+        .service-card-item .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
             font-weight: 600;
-            color: rgb(52, 73, 94);
         }
-        /* Styles for portfolio items */
+
+        .service-card-item .btn-primary:hover {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+        }
+
+        /* Portfolio Item Card */
+        .portfolio-item-card {
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
         .portfolio-item-card .card-img-top {
-            height: 200px;
+            height: 240px;
             object-fit: cover;
+            transition: none;
         }
+
+        .portfolio-item-card .ratio-16x9 {
+            background-color: #000;
+        }
+
         .portfolio-item-card .ratio-16x9 iframe {
             position: absolute;
             top: 0;
@@ -85,116 +212,265 @@
             width: 100%;
             height: 100%;
         }
+
         .portfolio-item-card .no-preview-placeholder {
-            height: 200px;
+            height: 240px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #f8f9fa; /* Light grey background */
+            background: var(--surface-muted);
+            color: var(--text-muted);
+        }
+
+        /* Review Item Styling */
+        .review-item {
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+            border-left: 4px solid var(--primary-color);
+            background-color: var(--primary-light);
+            border-radius: 8px;
+            transition: none;
+        }
+
+        .review-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .review-item-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .review-stars {
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.25rem;
+        }
+
+        .review-comment {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
+        }
+
+        .review-meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Contact Details Section */
+        .contact-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .contact-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .contact-list li:last-child {
+            border-bottom: none;
+        }
+
+        .contact-list a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .contact-list a:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        /* Social Media Links */
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            transition: none;
+            font-size: 1.2rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .profile-container {
+                padding: 1.5rem;
+            }
+
+            .profile-sidebar {
+                position: relative;
+                top: auto;
+                margin-bottom: 2rem;
+            }
+
+            .section-title {
+                font-size: 1.5rem;
+            }
+
+            .profile-picture {
+                width: 120px;
+                height: 120px;
+                margin: -60px auto 1rem;
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            background-color: var(--primary-light);
+            border-radius: 12px;
+            color: var(--text-primary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
         }
     </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mt-5 mb-5">
+<div class="profile-header-background"></div>
+<div class="container mt-4 mb-5">
     <div class="profile-container">
         <div class="row">
-            <div class="col-md-3 profile-sidebar text-center">
-                <div class="card mb-3">
-                    <div class="card-body">
+            <div class="col-lg-3 profile-sidebar">
+                <div class="card mb-4">
+                    <div class="card-body text-center">
                         {% if profile_owner.userprofile.profile_picture %}
-                            <img src="{{ profile_owner.userprofile.profile_picture.url }}" alt="{{ profile_owner.username }} {% trans 'profile picture' %}" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                            <img src="{{ profile_owner.userprofile.profile_picture.url }}" alt="{{ profile_owner.username }} {% trans 'profile picture' %}" class="profile-picture">
                         {% else %}
-                             <i class="bi bi-person-circle display-1 text-muted mb-3"></i>
+                            <div style="width: 150px; height: 150px; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; margin: -75px auto 1rem;">
+                                <i class="bi bi-person-circle" style="font-size: 4rem; color: var(--primary-color);"></i>
+                            </div>
                         {% endif %}
                         <h4 class="profile-name">{{ profile_owner.get_full_name|default:profile_owner.username }}</h4>
-                        <p class="text-muted">@{{ profile_owner.username }}</p>
+                        <p class="text-muted fw-500">@{{ profile_owner.username }}</p>
 
                         {% if request.user == profile_owner %}
-                            <a href="{% url 'core:edit_service_provider_profile' %}" class="btn btn-outline-primary btn-sm mb-3"><i class="bi bi-pencil-square me-1"></i> {% trans "Edit Provider Profile" %}</a>
+                            <a href="{% url 'core:edit_service_provider_profile' %}" class="btn btn-outline-primary btn-sm w-100 mb-3">
+                                <i class="bi bi-pencil-square me-2"></i>{% trans "Edit Provider Profile" %}
+                            </a>
                         {% endif %}
 
                         {% if average_rating %}
-                            <div class="mb-2">
-                                <span class="badge bg-warning text-dark fs-6">
-                                    <i class="bi bi-star-fill"></i> {{ average_rating|floatformat:1 }}
-                                </span>
-                                <small class="text-muted">({% blocktrans count review_count=review_count %}{{ review_count }} review{% plural %}{{ review_count }} reviews{% endblocktrans %})</small>
+                            <div class="rating-badge w-100">
+                                <i class="bi bi-star-fill"></i> {{ average_rating|floatformat:1 }}/5
+                                <div class="small text-muted mt-2">({% blocktrans count review_count=review_count %}{{ review_count }} review{% plural %}{{ review_count }} reviews{% endblocktrans %})</div>
                             </div>
                         {% endif %}
 
                         {# --- Public Contact Information --- #}
-                        <hr class="my-3">
+                        <hr class="my-4">
                         <div class="text-start">
-                            <h6 class="text-muted mb-2">{% trans "Contact Details" %}</h6>
-                            <ul class="list-unstyled small">
+                            <h6 class="text-muted mb-3 fw-700">
+                                <i class="bi bi-telephone-fill me-2" style="color: var(--primary-color);"></i>{% trans "Contact Details" %}
+                            </h6>
+                            <ul class="contact-list small">
                                 {% if provider_profile.public_phone_number %}
-                                    <li class="mb-1"><i class="bi bi-telephone-fill me-2 text-primary"></i>{{ provider_profile.public_phone_number }}</li>
+                                    <li><i class="bi bi-telephone me-2" style="color: var(--primary-color);"></i>{{ provider_profile.public_phone_number }}</li>
                                 {% endif %}
                                 {% if provider_profile.public_email %}
-                                    <li class="mb-1"><i class="bi bi-envelope-fill me-2 text-primary"></i><a href="mailto:{{ provider_profile.public_email }}">{{ provider_profile.public_email }}</a></li>
+                                    <li><i class="bi bi-envelope me-2" style="color: var(--primary-color);"></i><a href="mailto:{{ provider_profile.public_email }}">{{ provider_profile.public_email }}</a></li>
                                 {% endif %}
                                 {% if provider_profile.whatsapp_number %}
-                                    <li class="mb-1">
+                                    <li class="mb-2">
                                         <i class="bi bi-whatsapp me-2 text-success"></i>
-                                        <a href="https://wa.me/{{ provider_profile.whatsapp_number|slice:'1:' }}?text={% trans "Hello, I saw your profile on NEXUS." %}" target="_blank" rel="noopener noreferrer">
+                                        <a href="https://wa.me/{{ provider_profile.whatsapp_number|slice:'1:' }}?text={% trans "Hello, I saw your profile on GOWBUY." %}" target="_blank" rel="noopener noreferrer">
                                             {{ provider_profile.whatsapp_number }}
                                         </a>
                                     </li>
                                 {% endif %}
                                 {% if provider_profile.website_url %}
-                                    <li class="mb-1"><i class="bi bi-globe me-2 text-primary"></i><a href="{{ provider_profile.website_url }}" target="_blank" rel="noopener noreferrer">{{ provider_profile.website_url }}</a></li>
+                                    <li><i class="bi bi-globe me-2" style="color: var(--primary-color);"></i><a href="{{ provider_profile.website_url }}" target="_blank" rel="noopener noreferrer">{{ provider_profile.website_url }}</a></li>
                                 {% endif %}
                             </ul>
+
                             {# Social Media Links #}
                             {% if provider_profile.facebook_url or provider_profile.instagram_url or provider_profile.twitter_url or provider_profile.linkedin_url %}
-                                <h6 class="text-muted mt-3 mb-2">{% trans "Social Media" %}</h6>
-                                <div class="d-flex flex-wrap">
+                                <h6 class="text-muted mt-4 mb-3 fw-700">
+                                    <i class="bi bi-share-fill me-2" style="color: var(--primary-color);"></i>{% trans "Social Media" %}
+                                </h6>
+                                <div class="social-links">
                                     {% if provider_profile.facebook_url %}
-                                        <a href="{{ provider_profile.facebook_url }}" target="_blank" rel="noopener noreferrer" class="fs-4 me-3 text-primary"><i class="bi bi-facebook"></i></a>
+                                        <a href="{{ provider_profile.facebook_url }}" target="_blank" rel="noopener noreferrer" title="Facebook">
+                                            <i class="bi bi-facebook"></i>
+                                        </a>
                                     {% endif %}
                                     {% if provider_profile.instagram_url %}
-                                        <a href="{{ provider_profile.instagram_url }}" target="_blank" rel="noopener noreferrer" class="fs-4 me-3 text-danger"><i class="bi bi-instagram"></i></a>
+                                        <a href="{{ provider_profile.instagram_url }}" target="_blank" rel="noopener noreferrer" title="Instagram" style="background-color: #fce7f3; color: #ec4899;">
+                                            <i class="bi bi-instagram"></i>
+                                        </a>
                                     {% endif %}
                                     {% if provider_profile.twitter_url %}
-                                        <a href="{{ provider_profile.twitter_url }}" target="_blank" rel="noopener noreferrer" class="fs-4 me-3 text-info"><i class="bi bi-twitter-x"></i></a>
+                                        <a href="{{ provider_profile.twitter_url }}" target="_blank" rel="noopener noreferrer" title="Twitter" style="background-color: #e0f2fe; color: #0284c7;">
+                                            <i class="bi bi-twitter-x"></i>
+                                        </a>
                                     {% endif %}
                                     {% if provider_profile.linkedin_url %}
-                                        <a href="{{ provider_profile.linkedin_url }}" target="_blank" rel="noopener noreferrer" class="fs-4 text-primary"><i class="bi bi-linkedin"></i></a>
+                                        <a href="{{ provider_profile.linkedin_url }}" target="_blank" rel="noopener noreferrer" title="LinkedIn" style="background-color: #dbeafe; color: #2563eb;">
+                                            <i class="bi bi-linkedin"></i>
+                                        </a>
                                     {% endif %}
                                 </div>
                             {% endif %}
                         </div>
 
                         {% if profile_owner.userprofile.bio %}
-                            <hr class="my-3">
-                            <h6 class="text-muted mb-2 text-start">{% trans "About Me" %}</h6>
-                            <p class="text-muted text-start small">{{ profile_owner.userprofile.bio|linebreaksbr }}</p>
+                            <hr class="my-4">
+                            <h6 class="text-muted mb-3 fw-700 text-start">
+                                <i class="bi bi-chat-quote me-2" style="color: var(--primary-color);"></i>{% trans "About Me" %}
+                            </h6>
+                            <p class="text-muted text-start small" style="line-height: 1.6;">{{ profile_owner.userprofile.bio|linebreaksbr }}</p>
                         {% endif %}
-                        <p class="text-muted text-start small mt-3">{% trans "Member since" %} {{ profile_owner.date_joined|date:"M Y" }}</p>
+                        <p class="text-muted text-start small mt-4 pt-3 border-top">
+                            <i class="bi bi-calendar3 me-2" style="color: var(--primary-color);"></i>{% trans "Member since" %} <strong>{{ profile_owner.date_joined|date:"M Y" }}</strong>
+                        </p>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-9">
+            <div class="col-lg-9">
                 <!-- Service Provider Specific Bio Section -->
                 {% if provider_profile.bio %}
                 <div class="profile-section">
-                    <h2 class="section-title">{% trans "About My Services" %}</h2>
-                    <p>{{ provider_profile.bio|linebreaksbr }}</p>
+                    <h2 class="section-title">
+                        <i class="bi bi-info-circle"></i>{% trans "About My Services" %}
+                    </h2>
+                    <p style="font-size: 1rem; line-height: 1.8; color: #555;">{{ provider_profile.bio|linebreaksbr }}</p>
                 </div>
                 {% endif %}
 
                 <!-- Portfolio Section -->
                 {% if portfolio_items %}
                 <div class="profile-section">
-                    <h2 class="section-title">{% trans "My Portfolio" %}</h2>
-                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 g-3">
+                    <h2 class="section-title">
+                        <i class="bi bi-image"></i>{% trans "My Portfolio" %}
+                    </h2>
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 g-4">
                         {% for item in portfolio_items %}
                             <div class="col">
                                 <div class="card shadow-sm portfolio-item-card h-100">
                                     {% if item.image %}
-                                        <a href="{{ item.image.url }}" data-bs-toggle="modal" data-bs-target="#portfolioModal{{ item.id }}">
+                                        <a href="{{ item.image.url }}" data-bs-toggle="modal" data-bs-target="#portfolioModal{{ item.id }}" style="cursor: pointer;">
                                             <img src="{{ item.image.url }}" class="card-img-top" alt="{{ item.title|default:'Portfolio image' }}">
                                         </a>
                                     {% elif item.video_url %}
@@ -204,18 +480,23 @@
                                                     <iframe src="{{ embed_url }}" title="{{ item.title|default:'Portfolio video' }}" allowfullscreen></iframe>
                                                 {% else %}
                                                     <div class="no-preview-placeholder">
-                                                        <a href="{{ item.video_url }}" target="_blank" class="btn btn-outline-primary">{% trans "Watch Video" %}</a>
+                                                        <a href="{{ item.video_url }}" target="_blank" class="btn btn-outline-primary">
+                                                            <i class="bi bi-play-circle me-2"></i>{% trans "Watch Video" %}
+                                                        </a>
                                                     </div>
                                                 {% endif %}
                                             {% endwith %}
                                         </div>
                                     {% else %}
                                         <div class="no-preview-placeholder">
-                                            <p class="text-muted m-0">{% trans "No preview available" %}</p>
+                                            <p class="text-muted m-0">
+                                                <i class="bi bi-image" style="font-size: 2rem; opacity: 0.3;"></i><br>
+                                                {% trans "No preview available" %}
+                                            </p>
                                         </div>
                                     {% endif %}
                                     <div class="card-body">
-                                        <h6 class="card-title">{{ item.title|default_if_none:"" }}</h6>
+                                        <h6 class="card-title fw-700">{{ item.title|default_if_none:"" }}</h6>
                                         {% if item.description %}
                                             <p class="card-text small text-muted">{{ item.description|truncatewords:20 }}</p>
                                         {% endif %}
@@ -228,13 +509,13 @@
                             <div class="modal fade" id="portfolioModal{{ item.id }}" tabindex="-1" aria-labelledby="portfolioModalLabel{{ item.id }}" aria-hidden="true">
                                 <div class="modal-dialog modal-lg modal-dialog-centered">
                                     <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="portfolioModalLabel{{ item.id }}">{{ item.title|default_if_none:"Portfolio Image" }}</h5>
+                                        <div class="modal-header border-bottom">
+                                            <h5 class="modal-title fw-700" id="portfolioModalLabel{{ item.id }}">{{ item.title|default_if_none:"Portfolio Image" }}</h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
-                                        <div class="modal-body text-center">
+                                        <div class="modal-body text-center p-0">
                                             <img src="{{ item.image.url }}" class="img-fluid" alt="{{ item.title|default:'Portfolio image' }}">
-                                            {% if item.description %}<p class="mt-2">{{ item.description }}</p>{% endif %}
+                                            {% if item.description %}<p class="mt-4 px-4 pb-4 text-muted">{{ item.description }}</p>{% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -248,55 +529,86 @@
 
                 <!-- Services Offered -->
                 <div class="profile-section">
-                    <h2 class="section-title">{% trans "Services Offered" %}</h2>
+                    <h2 class="section-title">
+                        <i class="bi bi-briefcase"></i>{% trans "Services Offered" %}
+                    </h2>
                     {% if services %}
-                        <div class="row row-cols-1 row-cols-md-2 g-4">
+                        <div class="row row-cols-2 row-cols-md-2 row-cols-lg-3 g-3 g-md-4">
                             {% for service in services %}
-                            <div class="col service-card-item">
-                                <div class="card h-100">
-                                    <div class="card-body d-flex flex-column">
-                                        <h5 class="service-item-title"><a href="{{ service.get_absolute_url }}">{{ service.title }}</a></h5>
-                                        <p class="card-text small text-muted">{{ service.category.name }}</p>
-                                        <p class="card-text flex-grow-1">{{ service.description|truncatewords:20 }}</p>
-                                        {% if service.packages.exists %}
-                                            <p class="card-text fw-bold">{% trans "Starting from" %} GH₵{{ service.packages.all.0.price|floatformat:2 }}</p>
-                                        {% elif service.price %}
-                                             <p class="card-text fw-bold">GH₵{{ service.price|floatformat:2 }}</p>
+                            <div class="col">
+                                <div class="service-item-flat">
+                                    <a href="{{ service.get_absolute_url }}">
+                                        {% if service.images.first.image.url %}
+                                            <img src="{{ service.images.first.image.url }}" alt="{{ service.title }}">
+                                        {% else %}
+                                            <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
                                         {% endif %}
-                                        <a href="{{ service.get_absolute_url }}" class="btn btn-primary mt-auto align-self-start">{% trans "View Service" %}</a>
-                                    </div>
+                                    </a>
+                                    <h5 class="mb-1">
+                                        <a href="{{ service.get_absolute_url }}" class="text-decoration-none">{{ service.title|truncatechars:50 }}</a>
+                                    </h5>
+                                    <p class="provider-info mb-2">
+                                        <i class="bi bi-person-fill"></i> {{ service.provider.username }}
+                                        {% if service.provider.service_provider_profile and service.provider.service_provider_profile.is_approved %}
+                                            <i class="bi bi-patch-check-fill text-success ms-1" title="{% trans 'Verified Provider' %}"></i>
+                                        {% endif %}
+                                    </p>
+                                    <p class="service-description-flat mb-2">{{ service.description|truncatewords_html:12 }}</p>
+                                    {% if service.packages.exists %}
+                                        <p class="service-price-flat mb-2">
+                                            {% trans "From" %}: GH₵ {{ service.packages.all.first.price|floatformat:2|intcomma }}
+                                        </p>
+                                    {% endif %}
+                                    <a href="{{ service.get_absolute_url }}" class="btn btn-sm btn-outline-primary w-100 btn-details-flat">{% trans "View Details" %}</a>
                                 </div>
                             </div>
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p>{% trans "This provider has not listed any active services yet." %}</p>
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <i class="bi bi-inbox"></i>
+                            </div>
+                            <p>{% trans "This provider has not listed any active services yet." %}</p>
+                        </div>
                     {% endif %}
                 </div>
 
                 <!-- Reviews for Provider's Services -->
                 <div class="profile-section">
-                    <h2 class="section-title">{% trans "Reviews" %}</h2>
+                    <h2 class="section-title">
+                        <i class="bi bi-chat-left-quote"></i>{% trans "Reviews" %}
+                    </h2>
                     {% if service_reviews %}
                         {% for review in service_reviews %}
                             <div class="review-item">
-                                <h5 class="review-item-title">{% blocktrans with service_title=review.service.title %}Review for {{ service_title }}{% endblocktrans %}</h5>
-                                <div class="mb-2">
+                                <h5 class="review-item-title">
+                                    <i class="bi bi-quote me-2"></i>{% blocktrans with service_title=review.service.title %}{{ service_title }}{% endblocktrans %}
+                                </h5>
+                                <div class="review-stars">
                                     {% for i in "12345" %}
-                                        <i class="bi {% if i|add:0 <= review.rating %}bi-star-fill text-warning{% else %}bi-star text-warning{% endif %}"></i>
+                                        <i class="bi {% if i|add:0 <= review.rating %}bi-star-fill{% else %}bi-star{% endif %} text-warning"></i>
                                     {% endfor %}
                                 </div>
-                                <p>{{ review.comment }}</p>
-                                <footer class="blockquote-footer small">{% trans "By" %} {{ review.user.username }} {% trans "on" %} {{ review.created_at|date:"d M Y" }}</footer>
+                                <p class="review-comment">{{ review.comment }}</p>
+                                <footer class="review-meta">
+                                    <i class="bi bi-person-circle me-1"></i><strong>{{ review.user.username }}</strong>
+                                    <span class="mx-2">•</span>
+                                    <i class="bi bi-calendar3 me-1"></i>{{ review.created_at|date:"d M Y" }}
+                                </footer>
                             </div>
                         {% endfor %}
                     {% else %}
-                        <p>{% trans "No reviews yet for this provider's services." %}</p>
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <i class="bi bi-chat-left-text"></i>
+                            </div>
+                            <p>{% trans "No reviews yet for this provider's services." %}</p>
+                        </div>
                     {% endif %}
                 </div>
             </div>
         </div>
-    </div>
     </div>
 </div>
 {% endblock %}

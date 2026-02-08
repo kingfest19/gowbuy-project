@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<section class="container py-5">
+    <h1 class="fw-bold mb-3">{% trans "Site Map" %}</h1>
+    <p class="text-muted mb-4">{% trans "Quick links to key areas of GOWBUY." %}</p>
+    <ul>
+        <li><a href="{% url 'core:home' %}">{% trans "Home" %}</a></li>
+        <li><a href="{% url 'core:menu' %}">{% trans "Categories" %}</a></li>
+        <li><a href="{% url 'core:service_list' %}">{% trans "Services" %}</a></li>
+        <li><a href="{% url 'core:blog_post_list' %}">{% trans "Blog" %}</a></li>
+        <li><a href="{% url 'help' %}">{% trans "Help Center" %}</a></li>
+        <li><a href="{% url 'privacy' %}">{% trans "Privacy Policy" %}</a></li>
+        <li><a href="{% url 'terms' %}">{% trans "Terms of Service" %}</a></li>
+        <li><a href="/sitemap.xml">{% trans "XML Sitemap" %}</a></li>
+    </ul>
+</section>
+{% endblock content %}

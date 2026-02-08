@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<section class="container py-5">
+    <a class="text-decoration-none d-inline-flex align-items-center mb-4" href="{% url 'core:blog_post_list' %}">
+        <span class="me-2">&larr;</span> {% trans "Back to Blog" %}
+    </a>
+
+    <article class="mx-auto" style="max-width: 900px;">
+        <h1 class="fw-bold mb-3">{{ post.title }}</h1>
+        <div class="text-muted mb-4">
+            {% trans "By" %} {{ post.author }} · {{ post.publish_date|date:"M d, Y" }}
+            {% if post.category %} · {{ post.category }}{% endif %}
+        </div>
+        <div class="blog-content">
+            {{ post.content|safe }}
+        </div>
+    </article>
+</section>
+{% endblock content %}

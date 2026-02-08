@@ -1,0 +1,31 @@
+{% extends 'admin/base_site.html' %}
+
+{% block content %}
+  <h1>Run ML Origin Suggestions</h1>
+
+  <form method="post">
+    {% csrf_token %}
+    <p>Only products missing <strong>origin_country</strong> will be considered by default.</p>
+
+    <label for="min_confidence">Minimum confidence (0-1):</label>
+    <input type="number" step="0.01" min="0" max="1" name="min_confidence" id="min_confidence" value="0.5" />
+    <br/><br/>
+    <button class="default" type="submit" name="preview">Preview (no DB writes)</button>
+    <button class="default" type="submit" name="apply" value="1" onclick="return confirm('Are you sure you want to apply suggested origins to the selected products? This is reversible by admin actions.');">Apply (persist suggestions)</button>
+  </form>
+
+  {% if summary %}
+    <hr/>
+    <h2>Summary</h2>
+    <pre>{{ summary|json_script:'summary' }}</pre>
+    <p>Checked: {{ summary.checked }} &nbsp; Suggested: {{ summary.suggested }} &nbsp; Applied: {{ summary.applied }}</p>
+    <h3>Sample predictions</h3>
+    <ul>
+    {% for s in summary.samples %}
+      <li>Product {{ s.product_id }}: {{ s.predicted_country }} ({{ s.confidence|floatformat:2 }})</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+
+  <p><a href="{% url 'admin:core_product_changelist' %}">Back to products</a></p>
+{% endblock %}

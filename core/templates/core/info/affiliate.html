@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<section class="container py-5">
+    <h1 class="fw-bold mb-3">{% trans "Become an Affiliate" %}</h1>
+    <p class="text-muted mb-4">{% trans "Earn commissions by sharing products and services you love." %}</p>
+    <p>{% trans "We provide tracking links, reporting, and promotional resources to help you succeed." %}</p>
+    <p class="mt-4"><a href="{% url 'core:info_contact' %}" class="btn btn-outline-primary">{% trans "Contact Us to Get Started" %}</a></p>
+</section>
+{% endblock content %}

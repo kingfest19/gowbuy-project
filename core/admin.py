@@ -28,9 +28,10 @@ from .models import (
     Category, Vendor, Product, Address, Order, OrderItem, Transaction,
     WishlistItem, ProductReview, VendorReview, ProductImage, logger, PortfolioItem, # <<< Added logger and PortfolioItem
     ProductVideo, ServiceCategory, Service, ServiceReview, ServiceImage, ServiceVideo, PayoutRequest, PricingPlan,
-    Notification,
+    Notification, OriginLabel, OriginInferenceJob,
     ServicePackage, DeliveryTask, ServiceProviderProfile, RiderProfile,
-    RiderApplication, BoostPackage, ActiveRiderBoost, FraudReport # <<< Import RiderApplication, BoostPackage, and ActiveRiderBoost
+    RiderApplication, BoostPackage, ActiveRiderBoost, FraudReport, # <<< Import RiderApplication, BoostPackage, and ActiveRiderBoost
+    AuthenticityReview, AuthenticityFeedback, VerificationProvider, VerificationRequest, AuthenticityScore  # <<< Phase 4
 )
 
 # Import custom forms
@@ -48,6 +49,62 @@ class CategoryAdmin(admin.ModelAdmin):
     search_fields = ('name', 'description') # Restored
     prepopulated_fields = {'slug': ('name',)} # Restored
     ordering = ('name',) # Restored
+    change_list_template = 'admin/core/category/change_list.html'
+
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path('populate-subcategories/', self.admin_site.admin_view(self.populate_subcategories_view), name='core_category_populate_subcategories'),
+        ]
+        return custom_urls + urls
+
+    def populate_subcategories_view(self, request):
+        """Admin view to preview and apply populate_subcategories management command."""
+        from django.core.management import call_command
+        import io, tempfile, json
+        from django.template.response import TemplateResponse
+        from django.shortcuts import redirect
+
+        context = dict(self.admin_site.each_context(request))
+        context['title'] = 'Populate Subcategories'
+        output = ''
+
+        if request.method == 'POST':
+            preview = ('preview' in request.POST)
+            force = ('force' in request.POST)
+            create_top = ('create_top' in request.POST)
+            mapping_file = request.FILES.get('mapping_file')
+            tmp_path = None
+            args = []
+            if preview:
+                args.append('--preview')
+            if force:
+                args.append('--force')
+            if create_top:
+                args.append('--create-top-level')
+            if mapping_file:
+                # Save uploaded JSON mapping to a temp file
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.json')
+                tmp.write(mapping_file.read())
+                tmp.flush()
+                tmp_path = tmp.name
+                tmp.close()
+                args.extend(['--mapping', tmp_path])
+
+            out = io.StringIO()
+            try:
+                call_command('populate_subcategories', *args, stdout=out)
+            except Exception as e:
+                out.write(str(e))
+            output = out.getvalue()
+            context['output'] = output
+            # If apply (not preview) redirect back to category changelist so admin sees updates
+            if request.POST.get('apply') and not preview:
+                self.message_user(request, 'Subcategory creation completed. See output below.', level=messages.SUCCESS)
+                return redirect('admin:core_category_changelist')
+
+        return TemplateResponse(request, 'admin/core/category/populate_subcategories.html', context)
 
 # --- UPDATED Vendor Admin ---
 @admin.register(Vendor)
@@ -160,18 +217,159 @@ class ProductVideoInline(admin.TabularInline):
     readonly_fields = ('uploaded_at',)
 
 
+class HasOriginFilter(admin.SimpleListFilter):
+    title = _('Origin set')
+    parameter_name = 'has_origin'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('1', _('Has origin')),
+            ('0', _('No origin')),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == '1':
+            return queryset.exclude(origin_country__isnull=True)
+        if self.value() == '0':
+            return queryset.filter(origin_country__isnull=True)
+        return queryset
+
+
+# TEMPORARILY DISABLED - causes slow lightgbm/sklearn import on startup
+# from core.ml.origin_trainer import predict_products
+
+
+def export_products_to_csv(modeladmin, request, queryset):
+    import csv
+    from django.http import HttpResponse
+    fieldnames = ['id', 'name', 'vendor_id', 'vendor', 'origin_country', 'price', 'is_active']
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename=products.csv'
+    writer = csv.DictWriter(response, fieldnames=fieldnames)
+    writer.writeheader()
+    for p in queryset:
+        writer.writerow({'id': p.id, 'name': p.name, 'vendor_id': p.vendor_id, 'vendor': str(p.vendor), 'origin_country': p.origin_country or '', 'price': p.price, 'is_active': p.is_active})
+    return response
+export_products_to_csv.short_description = _('Export selected products to CSV')
+
+# TEMPORARILY DISABLED - ML functions require slow lightgbm import
+# def ml_preview_suggestions(modeladmin, request, queryset):
+#     """Admin action: preview ML-based origin suggestions for selected products (no DB writes)."""
+#     try:
+#         summary = predict_products(queryset=queryset, apply=False)
+#         if request is not None:
+#             modeladmin.message_user(request, _('ML Preview: checked=%(checked)s suggested=%(suggested)s') % {'checked': summary.get('checked'), 'suggested': summary.get('suggested')})
+#         else:
+#             logger.info('ML Preview: %s', summary)
+#         return summary
+#     except RuntimeError as e:
+#         if request is not None:
+#             modeladmin.message_user(request, _('ML Preview failed: %s') % e, level=messages.ERROR)
+#         else:
+#             logger.exception('ML Preview failed: %s', e)
+#         return {'error': str(e)}
+# ml_preview_suggestions.short_description = _('Preview ML Suggested Origin (selected products)')
+
+
+# def ml_apply_suggestions(modeladmin, request, queryset):
+#     """Admin action: run ML suggestions on selected products and persist suggestions for high-confidence predictions."""
+#     try:
+#         summary = predict_products(queryset=queryset, apply=True)
+#         if request is not None:
+#             modeladmin.message_user(request, _('ML Apply: checked=%(checked)s applied=%(applied)s') % {'checked': summary.get('checked'), 'applied': summary.get('applied')})
+#         else:
+#             logger.info('ML Apply: %s', summary)
+#         return summary
+#     except RuntimeError as e:
+#         if request is not None:
+#             modeladmin.message_user(request, _('ML Apply failed: %s') % e, level=messages.ERROR)
+#         else:
+#             logger.exception('ML Apply failed: %s', e)
+#         return {'error': str(e)}
+# ml_apply_suggestions.short_description = _('Apply ML Suggested Origin (selected products)')
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     form = VendorProductForm
-    list_display = ('name', 'slug', 'vendor', 'category', 'price', 'stock', 'is_active', 'is_available', 'is_featured', 'created_at') # Restored 'is_available'
-    list_filter = ('is_active', 'is_featured', 'category', 'vendor', 'created_at') # Restored
-    search_fields = ('name', 'description', 'slug', 'vendor__name', 'category__name') # Restored
+    change_list_template = 'admin/core/product/change_list.html'
+    list_display = ('name', 'slug', 'vendor', 'category', 'origin_country', 'device_identifier_display', 'price', 'stock', 'is_active', 'is_available', 'is_featured', 'created_at') # Added device_identifier_display
+    list_filter = (HasOriginFilter, 'is_active', 'is_featured', 'origin_country', 'device_identifier_type', 'category', 'vendor', 'created_at') # Added device_identifier_type
+    actions = [export_products_to_csv, 'accept_suggestions', 'reject_suggestions']  # REMOVED ml_preview_suggestions, ml_apply_suggestions
+    search_fields = ('name', 'description', 'slug', 'vendor__name', 'category__name', 'device_identifier_value') # Added device_identifier_value
     prepopulated_fields = {'slug': ('name',)} # Restored
     list_editable = ('price', 'stock', 'is_active', 'is_featured') # Restored
     raw_id_fields = ('vendor', 'category') # Restored
     ordering = ('-created_at',) # Restored
     inlines = [ProductImageInline, ProductVideoInline] # Restored inlines
     date_hierarchy = 'created_at' # Restored
+
+    def device_identifier_display(self, obj):
+        if obj.device_identifier_type and obj.device_identifier_value:
+            return f"{obj.get_device_identifier_type_display()}: {obj.device_identifier_value}"
+        return "-"
+    device_identifier_display.short_description = _("Device Identifier")
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('run-ml-suggestions/', self.admin_site.admin_view(self.run_ml_suggestions_view), name='core_product_run_ml_suggestions'),
+        ]
+        return custom_urls + urls
+
+    def run_ml_suggestions_view(self, request):
+        from django.template.response import TemplateResponse
+        from django.shortcuts import redirect
+        from django import forms
+
+        context = dict(self.admin_site.each_context(request))
+        context['title'] = 'Run ML Origin Suggestions'
+        summary = None
+
+        if request.method == 'POST':
+            min_conf = float(request.POST.get('min_confidence') or 0.5)
+            apply = 'apply' in request.POST
+            # If apply is requested, enqueue a Celery job to run predictions asynchronously
+            if apply:
+                try:
+                    from core.models import OriginInferenceJob
+                    from core import tasks as core_tasks
+                    job = OriginInferenceJob.objects.create(params={'min_confidence': min_conf})
+                    try:
+                        # Try to enqueue the Celery task
+                        core_tasks.run_origin_inference_job.delay(job.id, min_conf)
+                        self.message_user(request, _('ML job queued (id=%s). It will run in the background.') % job.id)
+                    except Exception:
+                        # Fall back to synchronous run (e.g., no broker configured)
+                        self.message_user(request, _('No Celery broker available. Running ML job synchronously (this may take a while).'))
+                        core_tasks.run_origin_inference_job(job.id, min_conf)
+                        # Reload job to get updated summary
+                        job.refresh_from_db()
+                        if job.status == job.STATUS_SUCCESS:
+                            self.message_user(request, _('ML Apply completed: applied=%(applied)s') % {'applied': job.summary.get('applied')} )
+                        else:
+                            self.message_user(request, _('ML Apply failed: %s') % (job.error or 'unknown'), level=messages.ERROR)
+                except Exception as e:
+                    self.message_user(request, _('Failed to enqueue or run ML job: %s') % e, level=messages.ERROR)
+            else:
+                # DISABLED - predict_products not available
+                # try:
+                #     summary = predict_products(apply=False, min_confidence=min_conf, limit=20)
+                #     self.message_user(request, _('ML Preview: checked=%(checked)s suggested=%(suggested)s') % {'checked': summary.get('checked'), 'suggested': summary.get('suggested')})
+                # except RuntimeError as e:
+                #     self.message_user(request, _('ML operation failed: %s') % e, level=messages.ERROR)
+                pass
+        else:
+            # Default preview run limited to 20 for fast response
+            # DISABLED - predict_products not available
+            # try:
+            #     summary = predict_products(apply=False, limit=20)
+            # except RuntimeError as e:
+            #     context['error'] = str(e)
+            summary = {}
+
+        context['summary'] = summary
+        return TemplateResponse(request, 'admin/core/product/run_ml_suggestions.html', context)
 
     # Option 1: Using fieldsets for better organization
     fieldsets = (
@@ -186,6 +384,9 @@ class ProductAdmin(admin.ModelAdmin):
         ('Description & Media', {
             'fields': ('description', 'keywords_for_ai', 'three_d_model', 'digital_file')
         }),
+        ('Origin', {
+            'fields': ('origin_country','suggested_origin_country','origin_confidence','origin_inferred_by','origin_inference_status','origin_inference_metadata','origin_inferred_at'),
+        }),
         ('Fulfillment', {
             'fields': ('fulfillment_method', 'vendor_delivery_fee')
 
@@ -198,7 +399,44 @@ class ProductAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
         }),
     )
-    readonly_fields = ('created_at', 'updated_at') # Add any other fields you want as read-only
+    readonly_fields = ('created_at', 'updated_at','origin_inference_metadata','origin_inferred_at') # Add any other fields you want as read-only
+
+    def accept_suggestions(self, request, queryset):
+        updated = 0
+        for p in queryset:
+            if getattr(p, 'suggested_origin_country', None):
+                p.apply_suggested_origin(accept_by=request.user)
+                updated += 1
+        self.message_user(request, _('%d suggestion(s) accepted and applied.') % updated)
+    accept_suggestions.short_description = _('Accept & Apply Suggested Origin')
+
+    def reject_suggestions(self, request, queryset):
+        updated = 0
+        for p in queryset:
+            if getattr(p, 'suggested_origin_country', None):
+                p.reject_suggested_origin(reject_by=request.user)
+                updated += 1
+        self.message_user(request, _('%d suggestion(s) rejected.') % updated)
+    reject_suggestions.short_description = _('Reject Suggested Origin')
+
+@admin.register(OriginLabel)
+class OriginLabelAdmin(admin.ModelAdmin):
+    list_display = ('product', 'label_country', 'labeler', 'confidence', 'source', 'created_at')
+    list_filter = ('source', 'created_at', 'label_country')
+    search_fields = ('product__name', 'labeler__username')
+
+
+@admin.register(OriginInferenceJob)
+class OriginInferenceJobAdmin(admin.ModelAdmin):
+    list_display = ('id', 'status', 'created_at', 'started_at', 'finished_at', 'applied_from_summary')
+    readonly_fields = ('created_at', 'started_at', 'finished_at', 'params', 'summary', 'error')
+    list_filter = ('status', 'created_at')
+    search_fields = ('id',)
+
+    def applied_from_summary(self, obj):
+        s = obj.summary or {}
+        return s.get('applied')
+    applied_from_summary.short_description = 'Applied'
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
@@ -1208,7 +1446,7 @@ class PayoutRequestAdmin(admin.ModelAdmin):
 
                     # TODO: (Future) Integrate with Paystack Transfers API here to initiate actual payment
                     # For now, this action assumes the payment is handled manually or by another system,
-                    # and this admin action is just to record it in Nexus.
+                    # and this admin action is just to record it in Gowbuy.
 
                     successful_payouts += 1
                     logger.info(f"Payout request {payout_request.id} for {profile_name_for_desc} marked as completed. Transaction ID: {payout_transaction.id}")
@@ -1416,3 +1654,208 @@ class FraudReportAdmin(admin.ModelAdmin):
         link = reverse("admin:core_order_change", args=[obj.order.id])
         return format_html('<a href="{}">{}</a>', link, obj.order.order_id)
     order_link.short_description = 'Order'
+
+
+# --- Phase 4: Authenticity & Verification Admin ---
+
+@admin.register(AuthenticityReview)
+class AuthenticityReviewAdmin(admin.ModelAdmin):
+    list_display = ('product_link', 'status_badge', 'flagged_by', 'reviewed_by', 'flagged_at', 'reviewed_at')
+    list_filter = ('status', 'flagged_at', 'reviewed_at')
+    search_fields = ('product__name', 'reason')
+    readonly_fields = ('flagged_at', 'product_link', 'flagged_by')
+    fieldsets = (
+        ('Product', {'fields': ('product_link', 'product')}),
+        ('Flagging', {'fields': ('flagged_by', 'flagged_at', 'reason')}),
+        ('Review', {'fields': ('status', 'reviewed_by', 'reviewed_at')}),
+    )
+    actions = ['mark_verified', 'mark_suspicious', 'mark_rejected', 'mark_cleared']
+    date_hierarchy = 'flagged_at'
+    
+    def product_link(self, obj):
+        link = reverse("admin:core_product_change", args=[obj.product.id])
+        return format_html('<a href="{}">{}</a>', link, obj.product.name)
+    product_link.short_description = 'Product'
+    
+    def status_badge(self, obj):
+        colors = {
+            'pending': '#FFA500',
+            'verified': '#28A745',
+            'suspicious': '#FFC107',
+            'rejected': '#DC3545',
+            'cleared': '#17A2B8',
+        }
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            colors.get(obj.status, '#999'),
+            obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+    
+    def mark_verified(self, request, queryset):
+        updated = queryset.update(status='verified', reviewed_by=request.user, reviewed_at=timezone.now())
+        self.message_user(request, f'{updated} reviews marked as verified.')
+    mark_verified.short_description = 'Mark selected as Verified'
+    
+    def mark_suspicious(self, request, queryset):
+        updated = queryset.update(status='suspicious', reviewed_by=request.user, reviewed_at=timezone.now())
+        self.message_user(request, f'{updated} reviews marked as suspicious.')
+    mark_suspicious.short_description = 'Mark selected as Suspicious'
+    
+    def mark_rejected(self, request, queryset):
+        updated = queryset.update(status='rejected', reviewed_by=request.user, reviewed_at=timezone.now())
+        self.message_user(request, f'{updated} reviews marked as rejected.')
+    mark_rejected.short_description = 'Mark selected as Rejected'
+    
+    def mark_cleared(self, request, queryset):
+        updated = queryset.update(status='cleared', reviewed_by=request.user, reviewed_at=timezone.now())
+        self.message_user(request, f'{updated} reviews marked as cleared.')
+    mark_cleared.short_description = 'Mark selected as Cleared'
+
+
+@admin.register(AuthenticityFeedback)
+class AuthenticityFeedbackAdmin(admin.ModelAdmin):
+    list_display = ('product_link', 'feedback_type', 'reporter_link', 'is_verified', 'created_at')
+    list_filter = ('feedback_type', 'is_verified', 'created_at')
+    search_fields = ('product__name', 'reporter__username', 'description')
+    readonly_fields = ('created_at', 'product_link', 'reporter_link', 'image_evidence_display')
+    fieldsets = (
+        ('Product & Reporter', {'fields': ('product_link', 'reporter_link', 'order_id')}),
+        ('Feedback', {'fields': ('feedback_type', 'description', 'image_evidence', 'image_evidence_display')}),
+        ('Status', {'fields': ('is_verified', 'created_at')}),
+    )
+    actions = ['mark_verified']
+    date_hierarchy = 'created_at'
+    
+    def product_link(self, obj):
+        link = reverse("admin:core_product_change", args=[obj.product.id])
+        return format_html('<a href="{}">{}</a>', link, obj.product.name)
+    product_link.short_description = 'Product'
+    
+    def reporter_link(self, obj):
+        if obj.reporter:
+            try:
+                link = reverse("admin:authapp_customuser_change", args=[obj.reporter.id])
+            except:
+                link = reverse("admin:auth_user_change", args=[obj.reporter.id])
+            return format_html('<a href="{}">{}</a>', link, obj.reporter.username)
+        return "Anonymous"
+    reporter_link.short_description = 'Reporter'
+    
+    def image_evidence_display(self, obj):
+        if obj.image_evidence:
+            return format_html('<img src="{}" width="200" />', obj.image_evidence.url)
+        return "No image"
+    image_evidence_display.short_description = 'Evidence Preview'
+    
+    def mark_verified(self, request, queryset):
+        updated = queryset.update(is_verified=True)
+        self.message_user(request, f'{updated} feedback items marked as verified.')
+    mark_verified.short_description = 'Mark selected as verified'
+
+
+@admin.register(VerificationProvider)
+class VerificationProviderAdmin(admin.ModelAdmin):
+    list_display = ('name', 'provider_type', 'is_active', 'created_at')
+    list_filter = ('provider_type', 'is_active')
+    search_fields = ('name', 'description')
+    fieldsets = (
+        ('Provider Info', {'fields': ('name', 'provider_type', 'description')}),
+        ('API Configuration', {'fields': ('api_endpoint', 'api_key', 'is_active')}),
+        ('Metadata', {'fields': ('created_at',)}),
+    )
+    readonly_fields = ('created_at',)
+
+
+@admin.register(VerificationRequest)
+class VerificationRequestAdmin(admin.ModelAdmin):
+    list_display = ('product_link', 'provider_link', 'status_badge', 'is_authentic', 'confidence_display', 'created_at')
+    list_filter = ('status', 'is_authentic', 'provider', 'created_at')
+    search_fields = ('product__name', 'provider__name')
+    readonly_fields = ('created_at', 'sent_at', 'completed_at', 'product_link', 'provider_link', 'request_data', 'response_data')
+    fieldsets = (
+        ('Request', {'fields': ('product_link', 'provider_link', 'status')}),
+        ('Data', {'fields': ('request_data', 'response_data')}),
+        ('Results', {'fields': ('is_authentic', 'confidence_score')}),
+        ('Timeline', {'fields': ('created_at', 'sent_at', 'completed_at')}),
+    )
+    date_hierarchy = 'created_at'
+    
+    def product_link(self, obj):
+        link = reverse("admin:core_product_change", args=[obj.product.id])
+        return format_html('<a href="{}">{}</a>', link, obj.product.name)
+    product_link.short_description = 'Product'
+    
+    def provider_link(self, obj):
+        link = reverse("admin:core_verificationprovider_change", args=[obj.provider.id])
+        return format_html('<a href="{}">{}</a>', link, obj.provider.name)
+    provider_link.short_description = 'Provider'
+    
+    def status_badge(self, obj):
+        colors = {
+            'pending': '#FFA500',
+            'sent': '#0099FF',
+            'verified': '#28A745',
+            'rejected': '#DC3545',
+            'error': '#999',
+        }
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            colors.get(obj.status, '#999'),
+            obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+    
+    def confidence_display(self, obj):
+        if obj.confidence_score is not None:
+            return f"{obj.confidence_score * 100:.1f}%"
+        return "N/A"
+    confidence_display.short_description = 'Confidence'
+
+
+@admin.register(AuthenticityScore)
+class AuthenticityScoreAdmin(admin.ModelAdmin):
+    list_display = ('product_link', 'overall_score_display', 'risk_level_badge', 'vendor_score', 'feedback_score', 'last_updated_at')
+    list_filter = ('last_updated_at',)
+    search_fields = ('product__name',)
+    readonly_fields = ('overall_score', 'last_updated_at', 'product_link')
+    fieldsets = (
+        ('Product', {'fields': ('product_link', 'product')}),
+        ('Component Scores', {
+            'fields': ('vendor_trust_score', 'buyer_feedback_score', 'admin_review_score', 'third_party_score'),
+            'description': 'Individual scores 0-100'
+        }),
+        ('Overall', {'fields': ('overall_score', 'update_reason')}),
+        ('Metadata', {'fields': ('last_updated_at',)}),
+    )
+    date_hierarchy = 'last_updated_at'
+    
+    def product_link(self, obj):
+        link = reverse("admin:core_product_change", args=[obj.product.id])
+        return format_html('<a href="{}">{}</a>', link, obj.product.name)
+    product_link.short_description = 'Product'
+    
+    def overall_score_display(self, obj):
+        color = '#28A745' if obj.overall_score >= 80 else '#FFC107' if obj.overall_score >= 60 else '#DC3545'
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 5px 10px; border-radius: 3px; font-weight: bold;">{:.1f}</span>',
+            color, obj.overall_score
+        )
+    overall_score_display.short_description = 'Overall Score'
+    
+    def risk_level_badge(self, obj):
+        risk = obj.get_risk_level()
+        colors = {'low': '#28A745', 'medium': '#FFC107', 'high': '#DC3545'}
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            colors[risk], risk.upper()
+        )
+    risk_level_badge.short_description = 'Risk Level'
+    
+    def vendor_score(self, obj):
+        return f"{obj.vendor_trust_score:.1f}"
+    vendor_score.short_description = 'Vendor Score'
+    
+    def feedback_score(self, obj):
+        return f"{obj.buyer_feedback_score:.1f}"
+    feedback_score.short_description = 'Feedback Score'

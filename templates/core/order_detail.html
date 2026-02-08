@@ -2,7 +2,7 @@
 {% load static i18n humanize %}
 {% load currency_filters %}
 
-{% block title %}{% trans "Order" %} #{{ order.order_id }} - NEXUS{% endblock %}
+{% block title %}{% trans "Order" %} #{{ order.order_id }} - GOWBUY{% endblock %}
 
 {% block extra_css %}
     {{ block.super }}
@@ -154,22 +154,22 @@
             border: 1px solid;
         }
         .alert-nexus h4 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
-        .alert-nexus-info {
+        .alert-gowbuy-info {
             color: #055160; background-color: #cff4fc; border-color: #b6effb;
         }
-        .alert-nexus-warning {
+        .alert-gowbuy-warning {
             color: #664d03; background-color: #fff3cd; border-color: #ffecb5;
         }
-        .alert-nexus-success {
+        .alert-gowbuy-success {
             color: #0f5132; background-color: #d1e7dd; border-color: #badbcc;
         }
-        [data-theme="dark"] .alert-nexus-info {
+        [data-theme="dark"] .alert-gowbuy-info {
             color: #6edff6; background-color: #032830; border-color: #032830;
         }
-        [data-theme="dark"] .alert-nexus-warning {
+        [data-theme="dark"] .alert-gowbuy-warning {
             color: #ffda6a; background-color: #332701; border-color: #332701;
         }
-        [data-theme="dark"] .alert-nexus-success {
+        [data-theme="dark"] .alert-gowbuy-success {
             color: #75b798; background-color: #052b19; border-color: #052b19;
         }
 
@@ -337,13 +337,13 @@
         {# --- Bank Transfer Instructions --- #}
         {% if order.status == 'AWAITING_BANK_TRANSFER' %}
             {% if order.transaction_id %}
-                <div class="alert-nexus alert-nexus-info mb-4">
+                <div class="alert-gowbuy alert-gowbuy-info mb-4">
                     <h4><i class="bi bi-hourglass-split me-2"></i> {% trans "Payment Under Review" %}</h4>
                     <p class="mb-0">{% trans "We have received your payment reference. Your payment is currently being verified by our team. You will be notified once it's confirmed." %}</p>
                     <p class="small text-muted mt-2 mb-0"><strong>{% trans "Your Reference:" %}</strong> {{ order.transaction_id }}</p>
                 </div>
             {% elif bank_transfer_info %}
-                <div class="alert-nexus alert-nexus-warning mb-4">
+                <div class="alert-gowbuy alert-gowbuy-warning mb-4">
                     <h4><i class="bi bi-bank me-2"></i> {% trans "Bank Transfer Instructions" %}</h4>
                     <div>
                         <p>{% trans "Please transfer the total amount to the following bank account:" %}</p>
@@ -376,7 +376,7 @@
                 <section id="payment-status" class="mb-4">
                     <h2 class="section-title">{% trans "Payment Status" %}</h2>
                     {% if order.status == 'AWAITING_ESCROW_PAYMENT' %}
-                        <div class="alert-nexus alert-nexus-info">
+                        <div class="alert-gowbuy alert-gowbuy-info">
                             <h4><i class="bi bi-credit-card-2-front-fill me-2"></i> {% trans "Complete Your Payment" %}</h4>
                             <p>{% trans "Your order is ready. Please proceed to our secure payment page to complete your purchase." %}</p>
                             <a href="{% url 'core:initiate_stripe_payment' order.id %}" class="btn btn-success w-100 mt-2">
@@ -384,12 +384,12 @@
                             </a>
                         </div>
                     {% elif order.status == 'AWAITING_DIRECT_PAYMENT' %}
-                        <div class="alert-nexus alert-nexus-info">
+                        <div class="alert-gowbuy alert-gowbuy-info">
                             <h4><i class="bi bi-people-fill me-2"></i> {% trans "Arrange Direct Payment" %}</h4>
                             <p>{% blocktrans %}Please contact the service provider(s) directly to arrange payment and delivery for items in this order.{% endblocktrans %}</p>
                         </div>
                     {% elif order.status == 'PROCESSING' or order.status == 'IN_PROGRESS' %}
-                        <div class="alert-nexus alert-nexus-success">
+                        <div class="alert-gowbuy alert-gowbuy-success">
                             <h4><i class="bi bi-check-circle-fill me-2"></i> {% trans "Payment Confirmed" %}</h4>
                             <p class="mb-0">{% trans "Your payment was successful. The order is now being processed by the vendor(s)." %}</p>
                         </div>

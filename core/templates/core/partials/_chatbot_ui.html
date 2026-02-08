@@ -3,28 +3,33 @@
 <style>
     #nexusChatbotContainer {
         position: fixed;
-        bottom: 20px;
+        bottom: 80px;
         right: 20px;
         z-index: 1050; /* Ensure it's above most other content */
         touch-action: none; /* Prevent scrolling while dragging */
     }
 
     #nexusChatbotToggleButton {
-        background-color: #232f3e; /* Dark Grey (Nav Bottom color) */
+        background: rgba(35, 47, 62, 0.7);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
         color: white;
-        border: none;
+        border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 50%;
         width: 60px;
         height: 60px;
         font-size: 28px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
+        transition: all 0.3s ease;
     }
      #nexusChatbotToggleButton:hover {
-        background-color: var(--bs-primary, #3d3e3f); /* Use your site's primary blue for hover */
+        background: rgba(37, 99, 235, 0.8);
+        transform: scale(1.05);
+        box-shadow: 0 8px 32px 0 rgba(37, 99, 235, 0.5);
      }
      #nexusChatbotToggleButton i {
         pointer-events: none; /* Ensure clicks pass through to the button */
@@ -38,7 +43,8 @@
         height: 14px;
         background-color: #dc3545; /* Bootstrap Danger Red */
         border-radius: 50%;
-        border: 2px solid #232f3e; /* Match button background to create a gap look */
+        border: 2px solid rgba(35, 47, 62, 0.7);
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.4);
         display: none; /* Hidden by default */
         z-index: 1052;
     }
@@ -48,14 +54,19 @@
         position: absolute; /* Relative to container */
         bottom: 80px; /* Above the toggle button */
         right: 0; /* Default alignment */
-        width: 370px; /* Slightly wider */
+        width: 370px; /* Default width */
+        min-width: 320px; /* Minimum width */
         max-width: 95vw;
-        height: 450px;
+        height: 450px; /* Default height */
+        min-height: 300px; /* Minimum height */
         max-height: 70vh;
-        background-color: #232f3e; /* Dark Grey Background */
+        background: rgba(35, 47, 62, 0.65);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         color: #ffffff;
-        border-radius: 8px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        border-radius: 12px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
         flex-direction: column;
         overflow: hidden;
         /* Animation Properties */
@@ -64,6 +75,32 @@
         opacity: 0;
         transform: translateY(20px);
         transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+    }
+    
+    /* Resize Handle */
+    .nexus-chat-resize-handle {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 20px;
+        height: 20px;
+        cursor: nwse-resize;
+        background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.3) 50%);
+        border-radius: 0 0 12px 0;
+        pointer-events: auto;
+        z-index: 1051;
+    }
+    
+    /* Light mode resize handle */
+    [data-theme="light"] .nexus-chat-resize-handle {
+        background: linear-gradient(135deg, transparent 50%, rgba(37, 99, 235, 0.3) 50%);
+    }
+    /* Light mode styling for chat window */
+    [data-theme="light"] #nexusChatWindow {
+        background: rgba(255, 255, 255, 0.75);
+        border: 1px solid rgba(200, 210, 220, 0.3);
+        color: #131921;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
     }
     #nexusChatWindow.active {
         visibility: visible;
@@ -81,18 +118,55 @@
         left: auto;
     }
 
+    /* Responsive sizing for larger screens */
+    @media (min-width: 769px) {
+        #nexusChatWindow {
+            width: 420px; /* Larger default for desktops */
+            height: 550px;
+        }
+    }
+
+    @media (min-width: 1200px) {
+        #nexusChatWindow {
+            width: 480px; /* Even larger for big screens */
+            height: 600px;
+            max-width: 40vw; /* Allow up to 40% of viewport width */
+        }
+    }
+
+    @media (min-width: 1600px) {
+        #nexusChatWindow {
+            width: 550px; /* Maximum for ultra-wide screens */
+            height: 650px;
+        }
+    }
+
     .nexus-chat-header {
-        background-color: #131921; /* Darker Grey (Nav Top color) */
+        background: rgba(19, 25, 33, 0.9);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
         padding: 10px 15px;
-        border-bottom: 1px solid #3a4553;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         display: flex;
         justify-content: space-between;
         align-items: center;
+        cursor: move; /* Indicate draggable header */
+    }
+    
+    /* Light mode header */
+    [data-theme="light"] .nexus-chat-header {
+        background: rgba(250, 250, 250, 0.95);
+        border-bottom: 1px solid rgba(200, 210, 220, 0.3);
     }
     .nexus-chat-header h5 {
         color: white;
         margin-bottom: 0;
         font-size: 1.1rem;
+    }
+    
+    /* Light mode header text */
+    [data-theme="light"] .nexus-chat-header h5 {
+        color: #131921;
     }
     .nexus-chat-header-actions { display: flex; gap: 10px; }
     .nexus-chat-header .btn-icon {
@@ -102,6 +176,11 @@
         font-size: 1.2rem;
         cursor: pointer;
     }
+    
+    /* Light mode header buttons */
+    [data-theme="light"] .nexus-chat-header .btn-icon {
+        color: #131921;
+    }
 
     .nexus-chat-messages {
         flex-grow: 1;
@@ -110,6 +189,11 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
+    }
+    
+    /* Light mode messages area */
+    [data-theme="light"] .nexus-chat-messages {
+        background: rgba(255, 255, 255, 0.5);
     }
 
     /* Avatar & Message Row */
@@ -156,6 +240,15 @@
     }
     .btn-feedback:hover { color: var(--bs-primary); }
     .btn-feedback.active { color: var(--bs-primary); }
+    
+    /* Light mode feedback buttons */
+    [data-theme="light"] .btn-feedback {
+        color: #95a5a6;
+    }
+    [data-theme="light"] .btn-feedback:hover,
+    [data-theme="light"] .btn-feedback.active {
+        color: var(--bs-primary);
+    }
 
     /* Styling for Markdown content */
     .nexus-chat-message.ai ul, .nexus-chat-message.ai ol {
@@ -181,17 +274,37 @@
     }
 
     .nexus-chat-message.user {
-        background-color: #ffffff; /* White for user */
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
         color: #131921; /* Dark text */
         align-self: flex-end;
         border-bottom-right-radius: 5px;
     }
+    
+    /* Light mode user messages */
+    [data-theme="light"] .nexus-chat-message.user {
+        background: rgba(37, 99, 235, 0.85);
+        border: 1px solid rgba(37, 99, 235, 0.3);
+        color: #ffffff;
+    }
 
     .nexus-chat-message.ai {
-        background-color: #37475a; /* Lighter Dark Grey for AI */
+        background: rgba(55, 71, 90, 0.8);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         color: #ffffff;
         align-self: flex-start; /* Fallback if not in row */
         border-bottom-left-radius: 5px;
+    }
+    
+    /* Light mode AI messages */
+    [data-theme="light"] .nexus-chat-message.ai {
+        background: rgba(230, 240, 250, 0.9);
+        border: 1px solid rgba(37, 99, 235, 0.2);
+        color: #131921;
     }
      .nexus-chat-message.error {
         background-color: var(--bs-danger-bg-subtle, #f8d7da);
@@ -428,6 +541,7 @@
                 <i class="bi bi-send-fill"></i>
             </button>
         </div>
+        <div class="nexus-chat-resize-handle" id="nexusChatResizeHandle" title="{% trans 'Drag to resize' %}"></div>
     </div>
 </div>
 
@@ -643,6 +757,50 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('touchmove', onDragMove, { passive: false });
     document.addEventListener('mouseup', onDragEnd);
     document.addEventListener('touchend', onDragEnd);
+
+    // --- Resize Logic ---
+    const resizeHandle = document.getElementById('nexusChatResizeHandle');
+    let isResizing = false;
+    let startResizeX, startResizeY, startWidth, startHeight;
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        isResizing = true;
+        startResizeX = e.clientX;
+        startResizeY = e.clientY;
+        startWidth = chatWindow.offsetWidth;
+        startHeight = chatWindow.offsetHeight;
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'nwse-resize';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+
+        const deltaX = e.clientX - startResizeX;
+        const deltaY = e.clientY - startResizeY;
+
+        let newWidth = startWidth + deltaX;
+        let newHeight = startHeight + deltaY;
+
+        // Apply min/max constraints
+        const minWidth = 320;
+        const maxWidth = window.innerWidth * 0.95;
+        const minHeight = 300;
+        const maxHeight = window.innerHeight * 0.7;
+
+        newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+        newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+
+        chatWindow.style.width = newWidth + 'px';
+        chatWindow.style.height = newHeight + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        isResizing = false;
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+    });
 
     toggleButton.addEventListener('click', (e) => {
         if (hasMoved) {

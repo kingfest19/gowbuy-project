@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% load i18n static %}
+{% load humanize %}
+
+{% block title %}{{ category.name }}{% endblock title %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    /* Hero Section */
+    .service-category-hero {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(236, 72, 153, 0.05)) !important;
+        border: 1px solid rgba(139, 92, 246, 0.2) !important;
+        border-radius: 24px !important;
+        padding: 3rem 2rem !important;
+        margin-bottom: 3rem !important;
+        text-align: center !important;
+    }
+    .service-category-hero h1 {
+        font-size: 2.5rem !important;
+        font-weight: 700 !important;
+        color: var(--text-main, #1a202c) !important;
+        margin-bottom: 1rem !important;
+        letter-spacing: -0.5px !important;
+    }
+    .service-category-hero .lead {
+        font-size: 1.15rem !important;
+        color: var(--text-muted, #6c757d) !important;
+        margin: 0 !important;
+        line-height: 1.6 !important;
+    }
+    
+    /* Service Card Styles */
+    .service-card {
+        background: rgba(255, 255, 255, 0.8) !important;
+        border: 1px solid rgba(148, 163, 184, 0.25) !important;
+        border-radius: 16px !important;
+        overflow: hidden !important;
+        height: 100% !important;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    .service-card:hover {
+        transform: translateY(-6px) !important;
+        box-shadow: 0 20px 40px rgba(139, 92, 246, 0.15) !important;
+        border-color: rgba(139, 92, 246, 0.4) !important;
+    }
+    .service-card img {
+        width: 100% !important;
+        height: 200px !important;
+        object-fit: cover !important;
+        background: linear-gradient(135deg, #f0f4ff, #f8f9fa) !important;
+        transition: transform 0.3s ease !important;
+    }
+    .service-card:hover img {
+        transform: scale(1.05) !important;
+    }
+    .service-card .card-body {
+        padding: 1.5rem !important;
+        display: flex !important;
+        flex-direction: column !important;
+        flex-grow: 1 !important;
+    }
+    .service-card h5 {
+        color: var(--text-main, #1a202c) !important;
+        font-weight: 600 !important;
+        font-size: 1.1rem !important;
+        margin-bottom: 0.75rem !important;
+        line-height: 1.4 !important;
+    }
+    .service-card h5 a {
+        color: inherit !important;
+        transition: color 0.2s !important;
+    }
+    .service-card h5 a:hover {
+        color: rgba(139, 92, 246, 1) !important;
+    }
+    .service-meta {
+        color: #495057 !important;
+        font-size: 0.9rem !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+    .service-meta i {
+        color: rgba(139, 92, 246, 0.7) !important;
+    }
+    .service-price {
+        color: #198754 !important;
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+        margin: 0.75rem 0 !important;
+    }
+    .service-price small {
+        color: #6c757d !important;
+        font-weight: 500 !important;
+    }
+    .btn-view-details {
+        margin-top: auto !important;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        padding: 0.6rem 1.2rem !important;
+        transition: all 0.2s !important;
+    }
+    .btn-view-details:hover {
+        transform: translateY(-2px) !important;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center !important;
+        padding: 4rem 2rem !important;
+    }
+    .empty-state i {
+        color: rgba(148, 163, 184, 0.5) !important;
+        margin-bottom: 1.5rem !important;
+    }
+    .empty-state p {
+        color: var(--text-muted, #6c757d) !important;
+        font-size: 1.1rem !important;
+    }
+    
+    /* Dark Mode */
+    [data-theme="dark"] .service-category-hero {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.18), rgba(236, 72, 153, 0.1)) !important;
+        border-color: rgba(139, 92, 246, 0.35) !important;
+    }
+    [data-theme="dark"] .service-category-hero h1 {
+        color: #f0f4ff !important;
+    }
+    [data-theme="dark"] .service-category-hero .lead {
+        color: #cbd5e1 !important;
+    }
+    [data-theme="dark"] .service-card {
+        background: rgba(17, 24, 39, 0.7) !important;
+        border-color: rgba(148, 163, 184, 0.2) !important;
+    }
+    [data-theme="dark"] .service-card:hover {
+        box-shadow: 0 20px 40px rgba(139, 92, 246, 0.25) !important;
+    }
+    [data-theme="dark"] .service-card img {
+        background: linear-gradient(135deg, #1e3a8a, #111827) !important;
+    }
+    [data-theme="dark"] .service-card h5 {
+        color: #f0f4ff !important;
+    }
+    [data-theme="dark"] .service-card h5 a {
+        color: #f0f4ff !important;
+    }
+    [data-theme="dark"] .service-card h5 a:hover {
+        color: rgba(168, 85, 247, 1) !important;
+    }
+    [data-theme="dark"] .service-meta {
+        color: #cbd5e1 !important;
+    }
+    [data-theme="dark"] .service-meta i {
+        color: rgba(168, 85, 247, 0.8) !important;
+    }
+    [data-theme="dark"] .service-price {
+        color: #4ade80 !important;
+    }
+    [data-theme="dark"] .service-price small {
+        color: #cbd5e1 !important;
+    }
+    [data-theme="dark"] .empty-state i {
+        color: rgba(148, 163, 184, 0.3) !important;
+    }
+    [data-theme="dark"] .empty-state p {
+        color: #cbd5e1 !important;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .service-category-hero {
+            padding: 2rem 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .service-category-hero h1 {
+            font-size: 2rem;
+        }
+        .service-category-hero .lead {
+            font-size: 1rem;
+        }
+    }
+    @media (max-width: 576px) {
+        .service-category-hero {
+            padding: 1.5rem 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 16px;
+        }
+        .service-category-hero h1 {
+            font-size: 1.75rem;
+        }
+        .service-card img {
+            height: 160px;
+        }
+        .service-card .card-body {
+            padding: 1rem;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<section class="container py-5">
+    <!-- Hero Section -->
+    <div class="service-category-hero">
+        <h1>{{ category.name }}</h1>
+        {% if category.description %}
+            <p class="lead mb-0">{{ category.description }}</p>
+        {% else %}
+            <p class="lead mb-0">{% trans "Explore our professional services in this category." %}</p>
+        {% endif %}
+    </div>
+
+    <!-- Services Grid -->
+    {% if services %}
+        <div class="row g-4">
+            {% for service in services %}
+                <div class="col-sm-6 col-lg-4">
+                    <div class="service-card">
+                        <!-- Service Image -->
+                        <a href="{{ service.get_absolute_url }}" class="text-decoration-none">
+                            {% if service.images.first.image.url %}
+                                <img src="{{ service.images.first.image.url }}" alt="{{ service.title }}" class="w-100">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}" class="w-100">
+                            {% endif %}
+                        </a>
+                        
+                        <!-- Card Body -->
+                        <div class="card-body">
+                            <!-- Service Title -->
+                            <h5 class="mb-2">
+                                <a href="{{ service.get_absolute_url }}" class="text-decoration-none">{{ service.title|truncatechars:45 }}</a>
+                            </h5>
+                            
+                            <!-- Provider Info -->
+                            <div class="service-meta">
+                                <i class="bi bi-person-fill"></i>
+                                <span>
+                                    {% if service.provider.service_provider_profile and service.provider.service_provider_profile.business_name %}
+                                        {{ service.provider.service_provider_profile.business_name }}
+                                    {% else %}
+                                        {{ service.provider.username }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            <!-- Rating -->
+                            {% if service.average_rating %}
+                                <div class="service-meta mb-2">
+                                    <i class="bi bi-star-fill" style="color: #fbbf24;"></i>
+                                    <span>{{ service.average_rating|floatformat:1 }} ({{ service.review_count }} {% trans "reviews" %})</span>
+                                </div>
+                            {% endif %}
+                            
+                            <!-- Price -->
+                            {% if service.packages.exists %}
+                                <div class="service-price">
+                                    <small>{% trans "From" %}</small><br>
+                                    GH₵ {{ service.packages.all.first.price|floatformat:2|intcomma }}
+                                </div>
+                            {% endif %}
+                            
+                            <!-- View Details Button -->
+                            <a href="{{ service.get_absolute_url }}" class="btn btn-primary btn-sm btn-view-details w-100">
+                                {% trans "View Details" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+            <nav class="mt-5" aria-label="Page navigation">
+                {% include "core/includes/pagination.html" %}
+            </nav>
+        {% endif %}
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <i class="fas fa-inbox fa-4x mb-3"></i>
+            <h4 class="mb-2">{% trans "No services available" %}</h4>
+            <p class="lead mb-0">{% trans "No services are currently available in this category. Check back soon!" %}</p>
+        </div>
+    {% endif %}
+</section>
+{% endblock content %}

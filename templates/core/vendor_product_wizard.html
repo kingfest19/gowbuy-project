@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% load static i18n crispy_forms_tags %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        .wizard-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--bg-surface);
+            padding: 2rem 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+            border: 1px solid var(--border-color);
+        }
+        .wizard-steps {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .wizard-step {
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-body);
+            font-size: 0.85rem;
+        }
+        .wizard-step.active {
+            background: #e8f1ff;
+            border-color: #0d6efd;
+            color: #0d6efd;
+            font-weight: 600;
+        }
+        fieldset {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 1.5rem;
+            background: var(--bg-surface);
+        }
+        legend {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .wizard-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .wizard-actions .btn {
+            min-width: 140px;
+        }
+        @media (max-width: 768px) {
+            .wizard-container { padding: 1.5rem 1rem; }
+            fieldset { padding: 1rem; }
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="wizard-container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h1 class="h4 mb-1">{{ form_title|default:_('Create Product') }}</h1>
+                <p class="text-muted mb-0">{% trans "Step-by-step product setup" %}</p>
+            </div>
+            <a href="{% url 'core:vendor_product_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>{% trans "Back to Products" %}
+            </a>
+        </div>
+
+        <div class="wizard-steps">
+            {% for step in wizard.steps.all %}
+                <span class="wizard-step {% if step == wizard.steps.current %}active{% endif %}">
+                    {{ forloop.counter }}. {{ step|capfirst|cut:"_" }}
+                </span>
+            {% endfor %}
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="wizard_current_step" value="{{ wizard.steps.current }}">
+            {{ wizard.form.media }}
+
+            {% if wizard.form.errors %}
+                <div class="alert alert-danger">
+                    <strong>{% trans "Please fix the errors below." %}</strong>
+                    {% if wizard.form.non_field_errors %}
+                        <div class="mt-2">{{ wizard.form.non_field_errors }}</div>
+                    {% endif %}
+                    <ul class="mb-0 mt-2">
+                        {% for field, errors in wizard.form.errors.items %}
+                            <li>
+                                <strong>{{ field|capfirst }}:</strong>
+                                {{ errors|striptags }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            {% if wizard.steps.current == 'type' %}
+                <fieldset>
+                    <legend>{% trans "Step 1: Choose Product Type" %}</legend>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>{% trans "Select physical or digital. This controls which steps you see next." %}
+                    </div>
+                    {{ wizard.form.product_type|as_crispy_field }}
+                </fieldset>
+            {% endif %}
+
+            {% if wizard.steps.current == 'basic' %}
+                <fieldset>
+                    <legend>{% trans "Step 2: Basic Information" %}</legend>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.name|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.category|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.brand|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.manufacturer|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.manufacturer_address|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.manufacturer_part_number|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.sku|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.made_in_label|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.origin_country|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.origin_city|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        {{ wizard.form.bullet_points|as_crispy_field }}
+                    </div>
+                    <div class="mb-3">
+                        {{ wizard.form.description|as_crispy_field }}
+                    </div>
+                    <div class="mb-3">
+                        {{ wizard.form.keywords_for_ai|as_crispy_field }}
+                    </div>
+                </fieldset>
+            {% endif %}
+
+            {% if wizard.steps.current == 'verify_category' %}
+                <fieldset>
+                    <legend>{% trans "Step 3: Verification Category" %}</legend>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        {% trans "The information you provide will be displayed to buyers for verification." %}
+                    </div>
+                    {{ wizard.form.verification_category|as_crispy_field }}
+                </fieldset>
+            {% endif %}
+
+            {% if wizard.steps.current == 'verify_details' %}
+                <fieldset>
+                    <legend>{% trans "Step 4: Verification Details" %}</legend>
+                    {% if verification_category == 'grocery' %}
+                        <div class="alert alert-info">{% trans "Provide barcode and food safety details." %}</div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ wizard.form.upc_ean_barcode|as_crispy_field }}</div>
+                            <div class="col-md-6 mb-3">{{ wizard.form.batch_lot_number|as_crispy_field }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ wizard.form.expiry_date|as_crispy_field }}</div>
+                        </div>
+                        <div class="mb-3">{{ wizard.form.allergen_information|as_crispy_field }}</div>
+                        <div class="mb-3">{{ wizard.form.storage_instructions|as_crispy_field }}</div>
+                    {% elif verification_category == 'electronics' %}
+                        <div class="alert alert-danger">{% trans "IMEI/Serial/Model numbers are required for electronics." %}</div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ wizard.form.device_identifier_type|as_crispy_field }}</div>
+                            <div class="col-md-6 mb-3">{{ wizard.form.device_identifier_value|as_crispy_field }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ wizard.form.model_number|as_crispy_field }}</div>
+                            <div class="col-md-6 mb-3">{{ wizard.form.manufacturing_date|as_crispy_field }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ wizard.form.certification_numbers|as_crispy_field }}</div>
+                            <div class="col-md-6 mb-3">{{ wizard.form.warranty_service_code|as_crispy_field }}</div>
+                        </div>
+                    {% elif verification_category == 'clothing' %}
+                        <div class="alert alert-info">{% trans "Provide barcode and label details for clothing." %}</div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ wizard.form.upc_ean_barcode|as_crispy_field }}</div>
+                            <div class="col-md-6 mb-3">{{ wizard.form.brand_authentication_code|as_crispy_field }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ wizard.form.size_variant|as_crispy_field }}</div>
+                            <div class="col-md-6 mb-3">{{ wizard.form.batch_lot_number|as_crispy_field }}</div>
+                        </div>
+                        <div class="mb-3">{{ wizard.form.material_composition|as_crispy_field }}</div>
+                        <div class="mb-3">{{ wizard.form.care_label_instructions|as_crispy_field }}</div>
+                    {% elif verification_category == 'handcraft' %}
+                        <div class="alert alert-info">{% trans "Tell buyers how and where this was made." %}</div>
+                        <div class="mb-3">{{ wizard.form.handmade_or_massproduced|as_crispy_field }}</div>
+                        <div class="mb-3">{{ wizard.form.manufacturing_process|as_crispy_field }}</div>
+                        <div class="mb-3">{{ wizard.form.sustainability|as_crispy_field }}</div>
+                    {% elif verification_category == 'luxury' %}
+                        <div class="alert alert-danger">{% trans "Authentication codes are required for luxury goods." %}</div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ wizard.form.brand_authentication_code|as_crispy_field }}</div>
+                            <div class="col-md-6 mb-3">{{ wizard.form.batch_lot_number|as_crispy_field }}</div>
+                        </div>
+                        <div class="mb-3">{{ wizard.form.certifications|as_crispy_field }}</div>
+                    {% else %}
+                        <div class="alert alert-info">{% trans "Provide any identifiers available." %}</div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ wizard.form.upc_ean_barcode|as_crispy_field }}</div>
+                            <div class="col-md-6 mb-3">{{ wizard.form.batch_lot_number|as_crispy_field }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ wizard.form.isbn|as_crispy_field }}</div>
+                            <div class="col-md-6 mb-3">{{ wizard.form.book_edition|as_crispy_field }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ wizard.form.publisher_name|as_crispy_field }}</div>
+                            <div class="col-md-6 mb-3">{{ wizard.form.print_date|as_crispy_field }}</div>
+                        </div>
+                    {% endif %}
+
+                    <div class="mt-4">
+                        <h6 class="mb-2">{% trans "Additional Verification (Optional)" %}</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ wizard.form.compliance_documents|as_crispy_field }}</div>
+                            <div class="col-md-6 mb-3">{{ wizard.form.safety_warnings|as_crispy_field }}</div>
+                        </div>
+                    </div>
+                </fieldset>
+            {% endif %}
+
+            {% if wizard.steps.current == 'pricing' %}
+                <fieldset>
+                    <legend>{% trans "Step 5: Pricing" %}</legend>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">{{ wizard.form.price|as_crispy_field }}</div>
+                        <div class="col-md-6 mb-3">{{ wizard.form.product_condition|as_crispy_field }}</div>
+                    </div>
+                    {% if product_type != 'digital' %}
+                        <div class="mb-3">{{ wizard.form.stock|as_crispy_field }}</div>
+                    {% endif %}
+                </fieldset>
+            {% endif %}
+
+            {% if wizard.steps.current == 'fulfillment' %}
+                <fieldset>
+                    <legend>{% trans "Step 6: Fulfillment & Delivery" %}</legend>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">{{ wizard.form.fulfillment_method|as_crispy_field }}</div>
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.vendor_delivery_fee|as_crispy_field }}
+                            {% if fulfillment_method == 'vendor' %}
+                                <small class="text-danger"><strong>*</strong> Required for vendor fulfillment</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if product_type == 'physical' %}
+                        <div class="alert alert-info">
+                            <small>{% trans "For physical products, the following fields are required:" %}</small>
+                        </div>
+                    {% endif %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.shipping_options|as_crispy_field }}
+                            {% if product_type == 'physical' %}
+                                <small class="text-danger"><strong>*</strong> Required for physical products</small>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.item_weight|as_crispy_field }}
+                            {% if product_type == 'physical' %}
+                                <small class="text-danger"><strong>*</strong> Required for physical products</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        {{ wizard.form.item_dimensions|as_crispy_field }}
+                        {% if product_type == 'physical' %}
+                            <small class="text-danger"><strong>*</strong> Required for physical products</small>
+                        {% endif %}
+                    </div>
+                </fieldset>
+            {% endif %}
+
+            {% if wizard.steps.current == 'media' %}
+                <fieldset>
+                    <legend>{% trans "Step 7: Media & Files" %}</legend>
+                    {% if product_type == 'digital' %}
+                        <div class="mb-3">{{ wizard.form.digital_file|as_crispy_field }}</div>
+                    {% endif %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ wizard.form.images|as_crispy_field }}
+                            <small class="text-danger"><strong>*</strong> Minimum 3 product images required</small>
+                        </div>
+                        <div class="col-md-6 mb-3">{{ wizard.form.videos|as_crispy_field }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">{{ wizard.form.three_d_model|as_crispy_field }}</div>
+                        <div class="col-md-6 mb-3">{{ wizard.form.ar_model|as_crispy_field }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">{{ wizard.form.enhance_image|as_crispy_field }}</div>
+                        <div class="col-md-6 mb-3">{{ wizard.form.remove_background|as_crispy_field }}</div>
+                    </div>
+                </fieldset>
+            {% endif %}
+
+            <div class="wizard-actions">
+                {% if wizard.steps.prev %}
+                    <button name="wizard_goto_step" type="submit" value="{{ wizard.steps.prev }}" class="btn btn-outline-secondary">
+                        {% trans "Back" %}
+                    </button>
+                {% else %}
+                    <span></span>
+                {% endif %}
+
+                {% if wizard.steps.next %}
+                    <button type="submit" class="btn btn-primary">{% trans "Continue" %}</button>
+                {% else %}
+                    <button type="submit" class="btn btn-primary">{% trans "Create Product" %}</button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}

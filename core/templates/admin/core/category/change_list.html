@@ -1,0 +1,13 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block object-tools %}
+  <div class="object-tools">
+    <ul class="object-tools">
+      <li>
+        <a href="./populate-subcategories/" class="addlink">Populate Subcategories</a>
+      </li>
+    </ul>
+  </div>
+  {{ block.super }}
+{% endblock %}

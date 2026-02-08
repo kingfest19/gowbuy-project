@@ -1,0 +1,26 @@
+{
+  "Electronics": {
+    "Phones": ["Smartphones", "Feature Phones"],
+    "Computers": ["Laptops", "Desktops", "Tablets"],
+    "Audio": ["Headphones", "Speakers"],
+    "TVs & Home Cinema": [],
+    "Cameras": ["DSLR", "Mirrorless", "Point & Shoot"],
+    "Accessories": ["Chargers", "Cables", "Cases"]
+  },
+  "Fashion": {
+    "Men's Clothing": ["Shirts", "Trousers", "Jackets"],
+    "Women's Clothing": ["Dresses", "Tops", "Skirts"],
+    "Kids": [],
+    "Shoes": [],
+    "Accessories": [],
+    "Jewellery": []
+  },
+  "Food": {
+    "Groceries": ["Canned Goods", "Dairy", "Bakery"],
+    "Beverages": ["Soft Drinks", "Juices", "Alcohol"],
+    "Snacks": ["Chips", "Confectionery"],
+    "Fresh Produce": [],
+    "Frozen Foods": [],
+    "Condiments": []
+  }
+}

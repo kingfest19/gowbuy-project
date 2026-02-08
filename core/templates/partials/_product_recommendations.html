@@ -15,7 +15,22 @@
                         {% endif %}
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title text-dark fs-6 mb-1">{{ rec_product.name|truncatewords:10 }}</h5>
-                            <p class="card-text small text-muted mb-2">{{ rec_product.category.name }}</p>
+                            <p class="card-text small text-muted mb-1">{{ rec_product.category.name }}
+                                {% if rec_product.vendor.is_verified %}<span class="badge bg-success ms-1" style="font-size: 0.55rem;"><i class="bi bi-check-circle-fill"></i></span>{% endif %}
+                            </p>
+                            {% if rec_product.origin_country %}
+                            <p class="card-text small text-muted mb-1">
+                                <i class="bi bi-geo-alt"></i> {{ rec_product.origin_country.name }}
+                            </p>
+                            {% endif %}
+                            {% if rec_product.review_count %}
+                            <p class="card-text small text-muted mb-1">
+                                <i class="bi bi-star-fill text-warning"></i>
+                                {{ rec_product.average_rating|floatformat:1 }} ({{ rec_product.review_count }} {% trans "reviews" %})
+                            </p>
+                            {% else %}
+                            <p class="card-text small text-muted mb-1">{% trans "No reviews yet" %}</p>
+                            {% endif %}
                             <p class="card-text product-price fw-bold text-dark mt-auto">GH₵ {{ rec_product.price|floatformat:2 }}</p>
                         </div>
                     </a>

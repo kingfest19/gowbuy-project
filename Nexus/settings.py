@@ -28,11 +28,11 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-lmut35poxhw^lr7p=b+w!o9j88cprqn2o^+h)8st^bawhavfe!')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'japz1)gr54xbt=6x5870ti&+r$_h#mdo7nepbl2*nen12()tev')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Set DEBUG to False in production. The '0' == '1' pattern is a common way to handle boolean env vars.
-DEBUG = os.environ.get('DEBUG', '0') == '1'
+DEBUG = os.environ.get('DEBUG', '1') == '1'
 
 ALLOWED_HOSTS = [
     '127.0.0.1', 'localhost', 'gowbuy-project.onrender.com',
@@ -87,6 +87,9 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'django_filters',
     'paypal.standard.ipn',
+    'modeltranslation',  # <<< Add modeltranslation for database field translation
+    'tinymce',
+    'django_bleach',
 
     # Allauth apps
     'allauth',
@@ -100,6 +103,27 @@ INSTALLED_APPS = [
     #  'allauth.socialaccount.providers.facebook',
     # 'allauth.socialaccount.providers.apple', # Removed Apple
 ]
+
+# TinyMCE configuration
+TINYMCE_DEFAULT_CONFIG = {
+    'height': 360,
+    'menubar': 'file edit view insert format tools table help',
+    'plugins': 'advlist autolink lists link image charmap print preview anchor '
+               'searchreplace visualblocks code fullscreen insertdatetime media table '
+               'paste code help wordcount',
+    'toolbar': 'undo redo | bold italic underline strikethrough | fontselect fontsizeselect formatselect | '
+               'alignleft aligncenter alignright alignjustify | outdent indent | '
+               'numlist bullist | forecolor backcolor removeformat | pagebreak | '
+               'charmap emoticons | fullscreen preview save print | insertfile image media template link anchor codesample | '
+               'ltr rtl',
+    'custom_undo_redo_levels': 10,
+}
+
+# Bleach (HTML sanitization) configuration
+BLEACH_ALLOWED_TAGS = ['p', 'b', 'i', 'u', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'br', 'h1', 'h2', 'h3']
+BLEACH_ALLOWED_ATTRIBUTES = {'a': ['href', 'title']}
+BLEACH_STRIP_TAGS = True
+BLEACH_STRIP_COMMENTS = True
 
 # PayPal settings
 PAYPAL_TEST = not (os.environ.get('PAYPAL_LIVE_MODE', 'False') == 'True') # False in production if PAYPAL_LIVE_MODE is 'True'
@@ -136,6 +160,34 @@ MIDDLEWARE = [
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True  # For Render/ngrok
 SECURE_SSL_REDIRECT = not DEBUG  # In production, force HTTPS
+
+# --- Security Headers and Session Settings ---
+# Only apply strict security settings in production (when DEBUG=False)
+if not DEBUG:
+    # HSTS (HTTP Strict Transport Security) - tells browsers to always use HTTPS
+    SECURE_HSTS_SECONDS = 31536000  # 1 year in seconds
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    
+    # Session security
+    SESSION_COOKIE_SECURE = True  # Only send cookie over HTTPS
+    SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access
+    SESSION_COOKIE_SAMESITE = 'Strict'  # CSRF protection
+    
+    # CSRF security
+    CSRF_COOKIE_SECURE = True  # Only send CSRF cookie over HTTPS
+    CSRF_COOKIE_HTTPONLY = True  # Prevent JavaScript access
+    CSRF_COOKIE_SAMESITE = 'Strict'  # CSRF protection
+else:
+    # Development settings - allow insecure cookies
+    SESSION_COOKIE_SECURE = False
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    
+    CSRF_COOKIE_SECURE = False
+    CSRF_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_SAMESITE = 'Lax'
+
 # --- END: Settings for running behind a reverse proxy like ngrok ---
 
 
@@ -158,6 +210,9 @@ TEMPLATES = [
                 'core.context_processors.unread_message_count', # <<< Add this for unread messages
                 # 'core.views.menu', # <<< THIS WAS THE PROBLEM
                 'core.context_processors.currency_context', # <<< Add currency context processor
+            ],
+            'builtins': [
+                'core.templatetags.core_extras',
             ],
         },
     },
@@ -248,8 +303,10 @@ LANGUAGE_CODE = 'en'
 # --- START: Internationalization Settings ---
 LANGUAGES = [
     ('en', _('English')),
+    ('ar', _('Arabic')),
     ('es', _('Spanish')),
-    ('fr', _('French')),
+    ('pt', _('Portuguese')),
+    ('zh-hans', _('Chinese Simplified')),
     # Add more languages here as ('code', _('Name'))
 ]
 

@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.urls import reverse_lazy
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
+from tinymce.widgets import TinyMCE
 import logging # <<< Add this import
 # Import models needed for forms
 from .utils import geocode_address # Import the new utility
@@ -16,9 +17,11 @@ from decimal import Decimal # Ensure Decimal is imported
 from .models import (
     VendorReview, ProductReview, Vendor, Promotion, AdCampaign, Product, Category, ServiceProviderProfile, PortfolioItem, ProductImage, ProductQuestion, ProductAnswer,
     ServiceCategory, Service, ServiceReview, ServicePackage, Address, PayoutRequest,
-    RiderProfile, RiderApplication, DeliveryTask, UserProfile, UserPreferences, ServiceAvailability
+    RiderProfile, RiderApplication, DeliveryTask, UserProfile, UserPreferences, ServiceAvailability,
+    AuthenticityFeedback,  # Phase 4: Authenticity Feedback
 )
 from django.contrib.auth import get_user_model
+from django_countries.widgets import CountrySelectWidget
 
 class VendorReviewForm(forms.ModelForm):
     """
@@ -487,6 +490,10 @@ class VendorProductForm(forms.ModelForm):
     """
     Form for vendors to add or edit their products.
     """
+    description = forms.CharField(
+        widget=TinyMCE(attrs={'cols': 80, 'rows': 20}),
+        help_text=_('Provide a detailed and compelling description of your product.')
+    )
     images = MultipleFileField(
         required=False,
         help_text=_('Upload one or more images. Hold Ctrl or Cmd to select multiple files.')
@@ -497,8 +504,9 @@ class VendorProductForm(forms.ModelForm):
         help_text=_('Optional: Upload one or more videos (MP4, WebM recommended).')
     )
     category = forms.ModelChoiceField(
-        queryset=Category.objects.filter(is_active=True),
-        widget=forms.Select(attrs={'class': 'form-select'})
+        queryset=Category.objects.all().order_by('name'),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        empty_label=_("Select a category...")
     )
     enhance_image = forms.BooleanField(required=False, label=_("Enhance with AI"), help_text=_("Enhance image quality using AI (Experimental)."))
     remove_background = forms.BooleanField(required=False, label=_("Remove Image Background"), help_text=_("Automatically remove the background from uploaded images. Ideal for creating a clean, professional look."))
@@ -507,40 +515,366 @@ class VendorProductForm(forms.ModelForm):
         model = Product
         fields = [
             'product_type', 'fulfillment_method', 'vendor_delivery_fee',
-            'category', 'name', 'description', 'keywords_for_ai', 'price', # Added keywords_for_ai
+            'category', 'name', 'brand', 'manufacturer', 'sku', 'bullet_points', 'manufacturer_part_number',
+            'origin_country', 'origin_city', 'manufacturer_address', 'made_in_label', 'manufacturing_process',
+            'proof_of_origin', 'sustainability', 'handmade_or_massproduced', 'certifications',
+            'variation_theme', 'variation_options',
+            'item_weight', 'item_dimensions', 'shipping_options',
+            'description', 'keywords_for_ai', 'price',
+            'product_condition',
+            'authenticity_status',
+            'upc_ean_barcode', 'manufacturing_date', 'batch_lot_number',
+            'device_identifier_type', 'device_identifier_value',
+            'model_number', 'certification_numbers', 'warranty_service_code',
+            'isbn', 'book_edition', 'publisher_name', 'print_date',
+            'expiry_date', 'storage_instructions', 'allergen_information',
+            'size_variant', 'material_composition', 'care_label_instructions', 'brand_authentication_code',
             'stock', 'digital_file', 'three_d_model', 'ar_model', 'enhance_image', 'remove_background',
             'is_active', 'is_featured',
+            'compliance_documents', 'safety_warnings',
+            'videos', 'images',
         ]
         widgets = {
             'fulfillment_method': forms.Select(attrs={'class': 'form-select'}),
             'vendor_delivery_fee': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': _('e.g., 5.00')}),
-            'product_type': forms.Select(attrs={'class': 'form-select'}),
+            'product_type': forms.RadioSelect(attrs={'class': 'form-check-input'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'brand': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Apple, Samsung')}),
+            'manufacturer': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Foxconn, Acme Inc.')}),
+            'sku': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., SKU-12345')}),
+            'bullet_points': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': _('Enter up to 5 features, one per line.')}),
+            'manufacturer_part_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., MPN-98765')}),
+            'origin_country': CountrySelectWidget(attrs={'class': 'form-select'}),
+            'origin_city': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Shenzhen, Bavaria')}),
+            'manufacturer_address': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 123 Factory Rd, City, Country')}),
+            'made_in_label': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Made in Germany')}),
+            'manufacturing_process': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': _('Describe the process (optional)')}),
+            'proof_of_origin': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'sustainability': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Fair Trade, Organic')}),
+            'handmade_or_massproduced': forms.Select(attrs={'class': 'form-select'}),
+            'certifications': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'variation_theme': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Size, Color')}),
+            'variation_options': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Red, Blue, Green')}),
+            'item_weight': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 1kg, 2 lbs')}),
+            'item_dimensions': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 10x20x30 cm')}),
+            'shipping_options': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Standard, Express')}),
             'description': forms.Textarea(attrs={'rows': 5, 'class': 'form-control'}),
-            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'keywords_for_ai': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., durable, eco-friendly, best gift')}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'product_condition': forms.Select(attrs={'class': 'form-select'}),
+            'authenticity_status': forms.Select(attrs={'class': 'form-select'}),
+            'device_identifier_type': forms.Select(attrs={'class': 'form-select'}),
+            'device_identifier_value': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 123456789012345')}),
+            'manufacturing_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'batch_lot_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., BATCH-2025-001')}),
+            'model_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., MODEL-XYZ-123')}),
+            'certification_numbers': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., FCC ID, CE Mark (comma-separated)')}),
+            'warranty_service_code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., WAR-123456')}),
+            'upc_ean_barcode': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 5901234123457')}),
+            'isbn': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 978-0-596-00712-6')}),
+            'book_edition': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., First Edition, 2nd Edition')}),
+            'publisher_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Penguin Books')}),
+            'print_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'expiry_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'storage_instructions': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': _('e.g., Keep refrigerated, Store in cool dry place')}),
+            'allergen_information': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': _('e.g., Contains peanuts, May contain tree nuts')}),
+            'size_variant': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., XL, 42, M')}),
+            'material_composition': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': _('e.g., 100% Cotton or 80% Polyester, 20% Spandex')}),
+            'care_label_instructions': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': _('e.g., Machine wash cold, Dry clean only')}),
+            'brand_authentication_code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., AUTH-2025-789456')}),
             'stock': forms.NumberInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'digital_file': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'three_d_model': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'ar_model': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'compliance_documents': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'safety_warnings': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': _('e.g., Choking hazard, Not for children under 3 years.')}),
         }
 
     def __init__(self, *args, **kwargs): # Ensure blank option for fulfillment_method
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        # Ensure current category remains selectable even if inactive
+        active_categories_qs = Category.objects.filter(is_active=True).exclude(name='Digital Products')
+        if self.instance and self.instance.pk and self.instance.category_id:
+            current_category_qs = Category.objects.filter(pk=self.instance.category_id)
+            self.fields['category'].queryset = (active_categories_qs | current_category_qs).distinct().order_by('name')
+        else:
+            self.fields['category'].queryset = active_categories_qs.order_by('name')
         self.fields['fulfillment_method'].choices = [('', _("Use Vendor Default"))] + list(Vendor.FULFILLMENT_CHOICES)
         # Set help_texts dynamically in __init__ to avoid circular import from reverse_lazy at class definition time.
         self.fields['fulfillment_method'].help_text = _("Choose how this specific product will be fulfilled. If left blank, your store's default fulfillment method will be used.")
-        self.fields['vendor_delivery_fee'].help_text = _("If you fulfill this product yourself ('Fulfilled by Vendor'), set your delivery fee here. Leave as 0.00 if delivery is free or included in product price, or if Nexus fulfills.")
+        self.fields['vendor_delivery_fee'].help_text = _("If you fulfill this product yourself ('Fulfilled by Vendor'), set your delivery fee here. Leave as 0.00 if delivery is free or included in product price, or if Gowbuy fulfills.")
         self.fields['keywords_for_ai'].help_text = _("Optional: Comma-separated keywords to guide AI description generation.")
+        self.fields['origin_country'].help_text = _("Mandatory for product to go live. You can save without it now and add it later before activating availability.")
+        self.fields['device_identifier_type'].help_text = _("For electronics: Select identifier type (IMEI, MAC, Serial, etc.). Helps verify origin and authenticity.")
+        self.fields['device_identifier_value'].help_text = _("Enter the unique identifier number. This will be verified for authenticity.")
+        self.fields['manufacturing_date'].help_text = _("When was this product manufactured? Helps verify origin and age.")
+        self.fields['batch_lot_number'].help_text = _("Production batch number. Essential for tracking counterfeits and recalls.")
+        self.fields['model_number'].help_text = _("The manufacturer's model identifier.")
+        self.fields['certification_numbers'].help_text = _("Regulatory certifications like FCC ID, CE Mark, RoHS. Use commas to separate multiple.")
+        self.fields['warranty_service_code'].help_text = _("Code that buyers can use to verify warranty with manufacturer.")
+        self.fields['upc_ean_barcode'].help_text = _("Universal Product Code or European Article Number for all products.")
+        self.fields['isbn'].help_text = _("ISBN for books. Format: 10 or 13 digits.")
+        self.fields['book_edition'].help_text = _("Edition information to identify exact version.")
+        self.fields['publisher_name'].help_text = _("Publisher name for book verification.")
+        self.fields['print_date'].help_text = _("When the book was printed.")
+        self.fields['expiry_date'].help_text = _("Expiration or best before date. Critical for food/beverage products.")
+        self.fields['storage_instructions'].help_text = _("How to properly store the product.")
+        self.fields['allergen_information'].help_text = _("Important for food safety. List all allergens present or that may be present.")
+        self.fields['size_variant'].help_text = _("Product size or variant.")
+        self.fields['material_composition'].help_text = _("Material percentages (e.g., 100% Cotton, 80% Polyester 20% Spandex).")
+        self.fields['care_label_instructions'].help_text = _("Washing, dry cleaning, and care instructions.")
+        self.fields['brand_authentication_code'].help_text = _("Hologram, label, or code for verifying authentic brand merchandise.")
         help_url = reverse_lazy('core:help_creating_3d_models')
         help_text_format = _("Upload a .glb or .gltf file for 3D/AR. <a href=\"{url}\" target=\"_blank\">Learn how to create 3D models with your phone.</a>")
         self.fields['three_d_model'].help_text = format_html(help_text_format, url=help_url)
         self.fields['ar_model'].help_text = _("Optional: Upload a .usdz file for the best AR experience on Apple devices.")
 
+        # Backend validation source of truth for product type
+        if self.data.get('product_type') == 'digital' or (self.instance.pk and self.instance.product_type == 'digital'):
+            physical_fields = [
+                'origin_country', 'origin_city', 'made_in_label',
+                'item_weight', 'item_dimensions', 'shipping_options'
+            ]
+            for field_name in physical_fields:
+                if field_name in self.fields:
+                    self.fields[field_name].required = False
+        else:
+            for field_name in ['origin_country', 'origin_city', 'made_in_label']:
+                if field_name in self.fields:
+                    self.fields[field_name].required = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        product_type = cleaned_data.get('product_type')
+
+        if product_type == 'digital':
+            has_file = cleaned_data.get('digital_file') or (self.instance.pk and self.instance.digital_file)
+            if not has_file:
+                self.add_error('digital_file', _('A file must be uploaded for a digital product.'))
+        elif product_type == 'physical':
+            if not cleaned_data.get('origin_country'):
+                self.add_error('origin_country', _('The product\'s country of origin is required.'))
+            if not cleaned_data.get('origin_city'):
+                self.add_error('origin_city', _('The product\'s city of origin is required.'))
+            if not cleaned_data.get('made_in_label'):
+                self.add_error('made_in_label', _('The "Made in" label is required.'))
+
+        return cleaned_data
+
 
 # --- End VendorProductForm ---
+
+# --- START: Vendor Product Wizard Step Forms ---
+
+class WizardModelForm(forms.ModelForm):
+    """
+    ModelForm base for wizard steps. Skips model-level validation that can
+    reference fields not present in the current step.
+    """
+    def _post_clean(self):
+        # Skip model instance validation (self.instance.full_clean())
+        # since we may not have all fields in a wizard step.
+        # Field-level validation has already run in full_clean()
+        pass
+
+
+
+class VendorProductTypeStepForm(forms.Form):
+    product_type = forms.ChoiceField(
+        choices=Product.PRODUCT_TYPE_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        required=True,
+        label=_('Product Type')
+    )
+
+
+class VendorProductBasicInfoStepForm(WizardModelForm):
+    description = forms.CharField(
+        widget=TinyMCE(attrs={'cols': 80, 'rows': 20}),
+        help_text=_('Provide a detailed and compelling description of your product.')
+    )
+
+    class Meta:
+        model = Product
+        fields = [
+            'name', 'category', 'brand', 'manufacturer', 'manufacturer_address',
+            'manufacturer_part_number', 'sku', 'origin_country', 'origin_city',
+            'made_in_label', 'bullet_points', 'description', 'keywords_for_ai'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'brand': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Apple, Samsung')}),
+            'manufacturer': forms.TextInput(attrs={'class': 'form-control'}),
+            'manufacturer_address': forms.TextInput(attrs={'class': 'form-control'}),
+            'manufacturer_part_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'sku': forms.TextInput(attrs={'class': 'form-control'}),
+            'origin_country': CountrySelectWidget(attrs={'class': 'form-select'}),
+            'origin_city': forms.TextInput(attrs={'class': 'form-control'}),
+            'made_in_label': forms.TextInput(attrs={'class': 'form-control'}),
+            'bullet_points': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'keywords_for_ai': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # In a wizard, fields should be required but we let the user navigate back without completing
+        # However, when they reach the last step, we'll do full validation
+        for field_name in ['origin_country', 'origin_city', 'made_in_label']:
+            if field_name in self.fields:
+                self.fields[field_name].required = True
+
+
+class VendorProductVerificationCategoryStepForm(forms.Form):
+    VERIFICATION_CATEGORY_CHOICES = [
+        ('grocery', _('Grocery / Food / Beverages')),
+        ('handcraft', _('Handicraft / Artisan / Handmade')),
+        ('clothing', _('Clothing / Fashion / Textiles')),
+        ('electronics', _('Electronics / Gadgets / Tech')),
+        ('luxury', _('Luxury / High-Value / Premium')),
+        ('other', _('Other / General Merchandise')),
+    ]
+
+    verification_category = forms.ChoiceField(
+        choices=VERIFICATION_CATEGORY_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        required=True,
+        label=_('What category does your product fall into?')
+    )
+
+
+class VendorProductVerificationDetailsStepForm(WizardModelForm):
+    class Meta:
+        model = Product
+        fields = [
+            'upc_ean_barcode', 'batch_lot_number', 'isbn', 'book_edition', 'publisher_name', 'print_date',
+            'expiry_date', 'allergen_information', 'storage_instructions',
+            'size_variant', 'material_composition', 'care_label_instructions',
+            'brand_authentication_code', 'handmade_or_massproduced', 'manufacturing_process', 'sustainability',
+            'device_identifier_type', 'device_identifier_value', 'model_number', 'manufacturing_date',
+            'certification_numbers', 'warranty_service_code', 'certifications', 'compliance_documents',
+            'safety_warnings'
+        ]
+        widgets = {
+            'upc_ean_barcode': forms.TextInput(attrs={'class': 'form-control'}),
+            'batch_lot_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'isbn': forms.TextInput(attrs={'class': 'form-control'}),
+            'book_edition': forms.TextInput(attrs={'class': 'form-control'}),
+            'publisher_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'print_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'expiry_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'allergen_information': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'storage_instructions': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'size_variant': forms.TextInput(attrs={'class': 'form-control'}),
+            'material_composition': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'care_label_instructions': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'brand_authentication_code': forms.TextInput(attrs={'class': 'form-control'}),
+            'handmade_or_massproduced': forms.Select(attrs={'class': 'form-select'}),
+            'manufacturing_process': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'sustainability': forms.TextInput(attrs={'class': 'form-control'}),
+            'device_identifier_type': forms.Select(attrs={'class': 'form-select'}),
+            'device_identifier_value': forms.TextInput(attrs={'class': 'form-control'}),
+            'model_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'manufacturing_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'certification_numbers': forms.TextInput(attrs={'class': 'form-control'}),
+            'warranty_service_code': forms.TextInput(attrs={'class': 'form-control'}),
+            'certifications': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'compliance_documents': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'safety_warnings': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+        }
+
+
+class VendorProductPricingStepForm(WizardModelForm):
+    class Meta:
+        model = Product
+        fields = ['price', 'product_condition', 'stock']
+        widgets = {
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'product_condition': forms.Select(attrs={'class': 'form-select'}),
+            'stock': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+
+
+class VendorProductFulfillmentStepForm(WizardModelForm):
+    class Meta:
+        model = Product
+        fields = ['fulfillment_method', 'vendor_delivery_fee', 'shipping_options', 'item_weight', 'item_dimensions']
+        widgets = {
+            'fulfillment_method': forms.Select(attrs={'class': 'form-select'}),
+            'vendor_delivery_fee': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'shipping_options': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Standard, Express, International')}),
+            'item_weight': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 1kg, 2 lbs')}),
+            'item_dimensions': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., 10x20x30 cm')}),
+        }
+    
+    def __init__(self, *args, product_type=None, fulfillment_method=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.product_type = product_type
+        self.fulfillment_method = fulfillment_method
+        
+        # For physical products, make shipping fields required
+        if product_type == 'physical':
+            self.fields['shipping_options'].required = True
+            self.fields['item_weight'].required = True
+            self.fields['item_dimensions'].required = True
+        else:
+            # For digital products, make these optional
+            self.fields['shipping_options'].required = False
+            self.fields['item_weight'].required = False
+            self.fields['item_dimensions'].required = False
+        
+        # If vendor fulfillment, delivery fee is required
+        if fulfillment_method == 'vendor':
+            self.fields['vendor_delivery_fee'].required = True
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # For physical products, validate required shipping fields
+        if self.product_type == 'physical':
+            if not cleaned_data.get('shipping_options'):
+                self.add_error('shipping_options', _('Shipping options are required for physical products.'))
+            if not cleaned_data.get('item_weight'):
+                self.add_error('item_weight', _('Item weight is required for physical products.'))
+            if not cleaned_data.get('item_dimensions'):
+                self.add_error('item_dimensions', _('Item dimensions are required for physical products.'))
+        
+        # For vendor fulfillment, validate delivery fee
+        if self.fulfillment_method == 'vendor':
+            if not cleaned_data.get('vendor_delivery_fee'):
+                self.add_error('vendor_delivery_fee', _('Delivery fee is required when using vendor fulfillment.'))
+        
+        return cleaned_data
+
+
+class VendorProductMediaStepForm(WizardModelForm):
+    images = MultipleFileField(required=True, label=_('Product Images'))
+    videos = MultipleFileField(required=False, label=_('Product Videos'))
+    enhance_image = forms.BooleanField(required=False, label=_('Enhance with AI'))
+    remove_background = forms.BooleanField(required=False, label=_('Remove Image Background'))
+
+    class Meta:
+        model = Product
+        fields = ['digital_file', 'three_d_model', 'ar_model']
+        widgets = {
+            'digital_file': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'three_d_model': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'ar_model': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        images = cleaned_data.get('images')
+        
+        # Ensure at least 3 images are provided
+        if not images or len(images) < 3:
+            raise forms.ValidationError(_("Please upload at least 3 product images."))
+        
+        return cleaned_data
+
+# --- END: Vendor Product Wizard Step Forms ---
 
 # --- Vendor Additional Information Form ---
 class VendorAdditionalInfoForm(forms.ModelForm):
@@ -1497,3 +1831,43 @@ class MessageForm(forms.ModelForm):
             'content': '' # Hide the label
         }
 # --- END: Message Form ---
+
+
+# --- Phase 4: Authenticity Feedback Form ---
+class AuthenticityFeedbackForm(forms.ModelForm):
+    """Form for buyers to report suspected fake/inauthentic products."""
+    
+    class Meta:
+        model = AuthenticityFeedback
+        fields = ['feedback_type', 'description', 'order_id', 'image_evidence']
+        widgets = {
+            'feedback_type': forms.Select(attrs={
+                'class': 'form-select',
+                'aria-label': _('Type of feedback')
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': _('Please provide details about the authenticity concern...'),
+                'aria-label': _('Description')
+            }),
+            'order_id': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': _('Optional: Your order ID'),
+                'aria-label': _('Order ID')
+            }),
+            'image_evidence': forms.ClearableFileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*',
+                'aria-label': _('Upload evidence photo')
+            }),
+        }
+        labels = {
+            'feedback_type': _('Type of Concern'),
+            'description': _('Describe the Issue'),
+            'order_id': _('Order ID (if applicable)'),
+            'image_evidence': _('Upload Photo Evidence'),
+        }
+        help_texts = {
+            'image_evidence': _('Upload a photo showing the issue (packaging, label, etc.)'),
+        }

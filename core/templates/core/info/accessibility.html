@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<section class="container py-5">
+    <h1 class="fw-bold mb-3">{% trans "Accessibility" %}</h1>
+    <p class="text-muted mb-4">{% trans "GOWBUY is committed to providing an accessible experience for all users." %}</p>
+    <p>{% trans "If you encounter any barriers, please let us know so we can improve." %}</p>
+    <p class="mt-4"><a href="{% url 'core:info_contact' %}" class="btn btn-outline-primary">{% trans "Report an Accessibility Issue" %}</a></p>
+</section>
+{% endblock content %}

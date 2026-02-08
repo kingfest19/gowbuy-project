@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .contact-hero {
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        border-radius: 20px;
+        padding: 2.5rem 1.5rem;
+    }
+    .contact-surface {
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 16px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+    .contact-card {
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 16px;
+        padding: 1.5rem;
+    }
+    .contact-muted {
+        color: var(--text-muted);
+    }
+    .contact-heading {
+        color: var(--text-main);
+    }
+    .contact-link {
+        color: var(--text-main);
+        text-decoration: none;
+    }
+    .contact-link:hover {
+        color: #8b5cf6;
+    }
+    [data-theme="dark"] .contact-hero {
+        background: rgba(59, 130, 246, 0.18);
+        border-color: rgba(59, 130, 246, 0.35);
+    }
+    [data-theme="dark"] .contact-surface {
+        background: rgba(17, 24, 39, 0.7);
+        border-color: rgba(148, 163, 184, 0.2);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+    [data-theme="dark"] .contact-card {
+        background: rgba(15, 23, 42, 0.7);
+        border-color: rgba(148, 163, 184, 0.2);
+    }
+    @media (max-width: 576px) {
+        .contact-hero {
+            padding: 2rem 1.25rem;
+        }
+        .contact-card {
+            padding: 1.25rem;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<section class="container py-5">
+    <div class="contact-hero text-center mb-5">
+        <h1 class="contact-heading mb-3">{% trans "Contact Us" %}</h1>
+        <p class="lead contact-muted mb-0">{% trans "Need help or have a question? We're here for you." %}</p>
+    </div>
+
+    <div class="contact-surface p-4 p-md-5">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="contact-card h-100">
+                    <h2 class="h5 contact-heading mb-3">{% trans "Support Options" %}</h2>
+                    <p class="contact-muted">{% trans "Find quick answers or submit a request and our team will respond as soon as possible." %}</p>
+                    <a class="btn btn-outline-primary" href="{% url 'help' %}">{% trans "Visit Help Center" %}</a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="contact-card h-100">
+                    <h2 class="h5 contact-heading mb-3">{% trans "Direct Contact" %}</h2>
+                    <p class="contact-muted mb-3">{% trans "Reach out via email for account, order, or partnership inquiries." %}</p>
+                    <div class="d-flex flex-column gap-2">
+                        <a class="contact-link" href="mailto:support@gowbuy.com">support@gowbuy.com</a>
+                        <span class="contact-muted">{% trans "Response time: within 24-48 hours" %}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}

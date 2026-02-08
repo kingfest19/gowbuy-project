@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% load static i18n humanize crispy_forms_tags %}
+{% load static i18n humanize crispy_forms_tags product_tags currency_filters bleach_tags %}
 {% load currency_filters %} {# <<< Load the new filters #}
 
-{% block title %}{{product.name}} - NEXUS{% endblock title %}
+{% block title %}{{product.name}} - GOWBUY{% endblock title %}
 
 {% block extra_css %}
 {# We are using Drift's CSS for the Amazon-style zoom #}
@@ -380,6 +380,144 @@
       height: 0.8rem;
   }
   /* --- END: AI Tool Button Styles --- */
+  
+  /* Related Products Styles */
+  .service-item-flat {
+      position: relative; /* Essential for stretched-link containment */
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1rem;
+      height: 100%;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+      color: var(--text-main);
+  }
+  .service-item-flat h5 a {
+      color: var(--text-main);
+      text-decoration: none;
+  }
+  .service-item-flat .provider-info {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+  }
+  .service-item-flat .service-description-flat {
+      color: var(--text-main);
+      font-size: 0.9rem;
+      opacity: 0.8;
+  }
+  .service-item-flat .service-price-flat {
+      font-weight: bold;
+      color: var(--accent-color);
+  }
+  .service-item-flat:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+      border-color: var(--accent-color);
+  }
+  .image-container {
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+  }
+  .image-container img {
+      width: 100%;
+      height: 200px;
+      object-fit: contain;
+      background-color: var(--bg-body);
+      padding: 0.5rem;
+      transition: transform 0.3s ease;
+  }
+  .hover-btns {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      gap: 0.5rem;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      z-index: 2;
+  }
+  .service-item-flat:hover .hover-btns {
+      opacity: 1;
+      visibility: visible;
+  }
+  .hover-btns .btn {
+      position: relative;
+      z-index: 3;
+  }
+  
+  /* Floating Compare Button */
+  .compare-floating-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 60px;
+      height: 60px;
+      background-color: var(--accent-color);
+      color: white;
+      border-radius: 50%;
+      display: none; /* Hidden by default */
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      z-index: 1050;
+      font-size: 1.5rem;
+      transition: transform 0.3s ease;
+      text-decoration: none;
+  }
+  .compare-floating-btn:hover {
+      transform: scale(1.1);
+      color: white;
+  }
+
+  /* Related Products Mobile Scroll */
+  @media (max-width: 768px) {
+      .related-products-container {
+          display: flex !important;
+          flex-wrap: nowrap !important;
+          overflow-x: auto !important;
+          gap: 1rem;
+          padding-bottom: 1rem;
+          -webkit-overflow-scrolling: touch;
+          scroll-snap-type: x mandatory;
+          margin-right: -0.75rem; /* Offset container padding */
+          margin-left: -0.75rem;
+          padding-left: 0.75rem;
+      }
+      .related-products-container > .col {
+          flex: 0 0 240px !important; /* Fixed width for mobile cards */
+          width: 240px !important;
+          max-width: 240px !important;
+          scroll-snap-align: start;
+      }
+      /* Hide scrollbar */
+      .related-products-container::-webkit-scrollbar { display: none; }
+      .related-products-container { -ms-overflow-style: none; scrollbar-width: none; }
+  }
+
+  /* Q&A Styling */
+  .qa-item {
+      background-color: var(--bg-body);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border-color);
+  }
+  .qa-question { font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.25rem; }
+  .qa-meta { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; }
+  .qa-answer {
+      background-color: var(--bg-surface);
+      border-left: 4px solid var(--accent-color);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin-top: 1rem;
+  }
+  .qa-answer-author { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
 
   /* Mobile Responsiveness */
   @media (max-width: 768px) {
@@ -402,6 +540,9 @@
       .btn-lg {
           padding: 0.5rem 1rem;
           font-size: 1rem;
+      }
+      .hover-btns {
+          display: none !important;
       }
   }
 </style>
@@ -485,8 +626,286 @@
           {% endif %}
       </p>
       {% endif %}
+      
+      {# --- Phase 4: Authenticity & Origin Badges --- #}
+      {% if product.is_physical_product %}
+      <div class="alert alert-info mb-3" role="alert">
+          <h6 class="alert-heading mb-2">
+              <i class="fas fa-shield-alt"></i> {% trans "Product Authenticity" %}
+          </h6>
+          <div class="row g-2">
+              {% if product.origin_country %}
+              <div class="col-auto">
+                  <span class="badge bg-primary">
+                      <i class="fas fa-globe"></i> 
+                      {% trans "Origin:" %} {{ product.get_origin_country_display }}
+                  </span>
+              </div>
+              {% endif %}
+              
+              {% if product.authenticity_status %}
+              <div class="col-auto">
+                  {% if product.authenticity_status == 'authentic' %}
+                      <span class="badge bg-success">
+                          <i class="fas fa-check-circle"></i> 
+                          {% trans "Authentic" %}
+                      </span>
+                  {% elif product.authenticity_status == 'refurbished' %}
+                      <span class="badge bg-warning">
+                          <i class="fas fa-tools"></i> 
+                          {% trans "Refurbished" %}
+                      </span>
+                  {% elif product.authenticity_status == 'replica' %}
+                      <span class="badge bg-danger">
+                          <i class="fas fa-times-circle"></i> 
+                          {% trans "Replica" %}
+                      </span>
+                  {% elif product.authenticity_status == 'unknown' %}
+                      <span class="badge bg-secondary">
+                          <i class="fas fa-question-circle"></i> 
+                          {% trans "Unverified" %}
+                      </span>
+                  {% endif %}
+              </div>
+              {% endif %}
+          </div>
+          
+          {% if product.device_identifier_type and product.device_identifier_value %}
+          <div class="mt-2">
+              <small class="text-muted">
+                  <i class="fas fa-fingerprint"></i> 
+                  <strong>{% trans "Device ID:" %}</strong> 
+                  {{ product.get_device_identifier_type_display }} - 
+                  <code>{{ product.device_identifier_value }}</code>
+              </small>
+          </div>
+          {% endif %}
+          
+          {% if product.manufacturing_date or product.batch_lot_number or product.model_number or product.certification_numbers or product.warranty_service_code %}
+          <div class="mt-2">
+              {% if product.manufacturing_date %}
+              <small class="text-muted d-block">
+                  <i class="fas fa-calendar"></i> {% trans "Made:" %} {{ product.manufacturing_date|date:"M d, Y" }}
+              </small>
+              {% endif %}
+              {% if product.batch_lot_number %}
+              <small class="text-muted d-block">
+                  <i class="fas fa-cubes"></i> {% trans "Batch:" %} <code>{{ product.batch_lot_number }}</code>
+              </small>
+              {% endif %}
+              {% if product.model_number %}
+              <small class="text-muted d-block">
+                  <i class="fas fa-cogs"></i> {% trans "Model:" %} <code>{{ product.model_number }}</code>
+              </small>
+              {% endif %}
+              {% if product.certification_numbers %}
+              <small class="text-muted d-block">
+                  <i class="fas fa-check-double"></i> {% trans "Certifications:" %} {{ product.certification_numbers }}
+              </small>
+              {% endif %}
+              {% if product.warranty_service_code %}
+              <small class="text-muted d-block">
+                  <i class="fas fa-shield-alt"></i> {% trans "Service Code:" %} <code>{{ product.warranty_service_code }}</code>
+              </small>
+              {% endif %}
+          </div>
+          {% endif %}
+          
+          {% if feedback_count > 0 %}
+          <small class="text-muted d-block mt-2">
+              <i class="fas fa-exclamation-triangle"></i>
+              {{ feedback_count }} {% trans "concern(s) reported" %}
+          </small>
+          {% endif %}
+      </div>
+      {% endif %}
+      {# --- END: Phase 4: Authenticity & Origin Badges --- #}
+      
+      {# --- Phase 5: Product Verification Details --- #}
+      {% if product.upc_ean_barcode or product.manufacturing_date or product.batch_lot_number or product.isbn or product.book_edition or product.publisher_name or product.print_date or product.expiry_date or product.storage_instructions or product.allergen_information or product.size_variant or product.material_composition or product.care_label_instructions or product.brand_authentication_code %}
+      <div class="mt-4">
+        <h5 class="mb-3">
+          <i class="fas fa-certificate"></i> {% trans "Product Verification & Authenticity" %}
+        </h5>
+        
+        {# Universal Verification (All Products) #}
+        {% if product.upc_ean_barcode or product.manufacturing_date or product.batch_lot_number %}
+        <div class="card mb-2 border-info">
+          <div class="card-header bg-info bg-opacity-10 border-info">
+            <h6 class="mb-0">
+              <i class="fas fa-barcode"></i> {% trans "Universal Verification" %}
+            </h6>
+          </div>
+          <div class="card-body">
+            {% if product.upc_ean_barcode %}
+            <div class="mb-2">
+              <small class="text-muted"><strong>{% trans "UPC/EAN Barcode:" %}</strong></small>
+              <div><code>{{ product.upc_ean_barcode }}</code></div>
+            </div>
+            {% endif %}
+            {% if product.manufacturing_date %}
+            <div class="mb-2">
+              <small class="text-muted"><strong>{% trans "Manufacturing Date:" %}</strong></small>
+              <div>{{ product.manufacturing_date|date:"F d, Y" }}</div>
+            </div>
+            {% endif %}
+            {% if product.batch_lot_number %}
+            <div class="mb-0">
+              <small class="text-muted"><strong>{% trans "Batch/Lot Number:" %}</strong></small>
+              <div><code>{{ product.batch_lot_number }}</code></div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+        
+        {# Electronics Verification #}
+        {% if product.device_identifier_type or product.device_identifier_value or product.model_number or product.certification_numbers or product.warranty_service_code %}
+        <div class="card mb-2 border-success">
+          <div class="card-header bg-success bg-opacity-10 border-success">
+            <h6 class="mb-0">
+              <i class="fas fa-microchip"></i> {% trans "Electronics Verification" %}
+            </h6>
+          </div>
+          <div class="card-body">
+            {% if product.device_identifier_type and product.device_identifier_value %}
+            <div class="mb-2">
+              <small class="text-muted"><strong>{{ product.get_device_identifier_type_display }}:</strong></small>
+              <div><code>{{ product.device_identifier_value }}</code></div>
+            </div>
+            {% endif %}
+            {% if product.model_number %}
+            <div class="mb-2">
+              <small class="text-muted"><strong>{% trans "Model Number:" %}</strong></small>
+              <div><code>{{ product.model_number }}</code></div>
+            </div>
+            {% endif %}
+            {% if product.certification_numbers %}
+            <div class="mb-2">
+              <small class="text-muted"><strong>{% trans "Certifications:" %}</strong></small>
+              <div>{{ product.certification_numbers }}</div>
+            </div>
+            {% endif %}
+            {% if product.warranty_service_code %}
+            <div class="mb-0">
+              <small class="text-muted"><strong>{% trans "Service Code:" %}</strong></small>
+              <div><code>{{ product.warranty_service_code }}</code></div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+        
+        {# Books Verification #}
+        {% if product.isbn or product.book_edition or product.publisher_name or product.print_date %}
+        <div class="card mb-2 border-primary">
+          <div class="card-header bg-primary bg-opacity-10 border-primary">
+            <h6 class="mb-0">
+              <i class="fas fa-book"></i> {% trans "Books Verification" %}
+            </h6>
+          </div>
+          <div class="card-body">
+            {% if product.isbn %}
+            <div class="mb-2">
+              <small class="text-muted"><strong>{% trans "ISBN:" %}</strong></small>
+              <div><code>{{ product.isbn }}</code></div>
+            </div>
+            {% endif %}
+            {% if product.book_edition %}
+            <div class="mb-2">
+              <small class="text-muted"><strong>{% trans "Edition:" %}</strong></small>
+              <div>{{ product.book_edition }}</div>
+            </div>
+            {% endif %}
+            {% if product.publisher_name %}
+            <div class="mb-2">
+              <small class="text-muted"><strong>{% trans "Publisher:" %}</strong></small>
+              <div>{{ product.publisher_name }}</div>
+            </div>
+            {% endif %}
+            {% if product.print_date %}
+            <div class="mb-0">
+              <small class="text-muted"><strong>{% trans "Print Date:" %}</strong></small>
+              <div>{{ product.print_date|date:"F d, Y" }}</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+        
+        {# Food/Beverage Verification #}
+        {% if product.expiry_date or product.storage_instructions or product.allergen_information %}
+        <div class="card mb-2 border-warning">
+          <div class="card-header bg-warning bg-opacity-10 border-warning">
+            <h6 class="mb-0">
+              <i class="fas fa-apple-alt"></i> {% trans "Food/Beverage Verification" %}
+            </h6>
+          </div>
+          <div class="card-body">
+            {% if product.expiry_date %}
+            <div class="mb-2">
+              <small class="text-muted"><strong>{% trans "Expiry Date:" %}</strong></small>
+              <div>{{ product.expiry_date|date:"F d, Y" }}</div>
+            </div>
+            {% endif %}
+            {% if product.allergen_information %}
+            <div class="mb-2">
+              <small class="text-muted"><strong>{% trans "Allergens:" %}</strong></small>
+              <div>{{ product.allergen_information }}</div>
+            </div>
+            {% endif %}
+            {% if product.storage_instructions %}
+            <div class="mb-0">
+              <small class="text-muted"><strong>{% trans "Storage Instructions:" %}</strong></small>
+              <div>{{ product.storage_instructions }}</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+        
+        {# Clothing Verification #}
+        {% if product.size_variant or product.material_composition or product.care_label_instructions or product.brand_authentication_code %}
+        <div class="card mb-2 border-secondary">
+          <div class="card-header bg-secondary bg-opacity-10 border-secondary">
+            <h6 class="mb-0">
+              <i class="fas fa-shirt"></i> {% trans "Clothing Verification" %}
+            </h6>
+          </div>
+          <div class="card-body">
+            {% if product.size_variant %}
+            <div class="mb-2">
+              <small class="text-muted"><strong>{% trans "Size:" %}</strong></small>
+              <div>{{ product.size_variant }}</div>
+            </div>
+            {% endif %}
+            {% if product.material_composition %}
+            <div class="mb-2">
+              <small class="text-muted"><strong>{% trans "Material:" %}</strong></small>
+              <div>{{ product.material_composition }}</div>
+            </div>
+            {% endif %}
+            {% if product.care_label_instructions %}
+            <div class="mb-2">
+              <small class="text-muted"><strong>{% trans "Care Instructions:" %}</strong></small>
+              <div>{{ product.care_label_instructions }}</div>
+            </div>
+            {% endif %}
+            {% if product.brand_authentication_code %}
+            <div class="mb-0">
+              <small class="text-muted"><strong>{% trans "Brand Auth Code:" %}</strong></small>
+              <div><code>{{ product.brand_authentication_code }}</code></div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+      {# --- END: Phase 5: Product Verification Details --- #}
+      
       <h2 class="mb-4">{% convert_price product.price %}</h2> {# <<< Use the tag #}
-      <p id="product-description">{{ product.description }}</p>
+      <div id="product-description">{{ product.description|bleach }}</div>
       <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
         <form action="{% url 'core:add_to_cart' product.id %}" method="post" class="flex-grow-1">
           {% csrf_token %}
@@ -526,6 +945,13 @@
         <li class="nav-item" role="presentation">
           <button class="nav-link" id="qa-tab" data-bs-toggle="tab" data-bs-target="#qa" type="button" role="tab" aria-controls="qa" aria-selected="false">{% trans "Questions & Answers" %}</button>
         </li>
+        {% if user_has_purchased_product %}
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="authenticity-tab" data-bs-toggle="tab" data-bs-target="#authenticity" type="button" role="tab" aria-controls="authenticity" aria-selected="false">
+            <i class="fas fa-shield-alt"></i> {% trans "Report Concern" %}
+          </button>
+        </li>
+        {% endif %}
       </ul>
       <div class="tab-content" id="myTabContent">
         <div class="tab-pane fade show active" id="specification" role="tabpanel" aria-labelledby="specification-tab">
@@ -594,7 +1020,11 @@
             <div class="col-md-5">
               <h4>{% trans "Write a Review" %}</h4>
               {% if user.is_authenticated %}
-                {% if user_has_reviewed_product %}
+                {% if not user_has_purchased_product %}
+                  <div class="alert alert-warning">
+                    <i class="fas fa-info-circle"></i> {% trans "You must have purchased and received this product to submit a review." %}
+                  </div>
+                {% elif user_has_reviewed_product %}
                   <div class="alert alert-info">{% trans "You have already submitted a review for this product." %}</div>
                 {% else %}
                   <form action="{% url 'core:submit_product_review' product.id %}" method="post" enctype="multipart/form-data">
@@ -646,52 +1076,135 @@
 
                     {# List of Questions and Answers #}
                     {% for question in questions %}
-                    <div class="d-flex mb-4">
-                        <div class="flex-shrink-0">
-                            <img src="{{ question.user.userprofile.get_profile_picture_url }}" alt="{{ question.user.username }}" class="rounded-circle" width="50" height="50" style="object-fit: cover;">
-                        </div>
-                        <div class="ms-3 flex-grow-1">
-                            <div class="fw-bold">{{ question.user.get_full_name|default:question.user.username }}</div>
-                            <p class="mb-1">{{ question.text|linebreaksbr }}</p>
-                            <small class="text-muted">{{ question.created_at|naturaltime }}</small>
-
-                            {# Answers to this question #}
-                            {% for answer in question.answers.all %}
-                            <div class="d-flex mt-3">
-                                <div class="flex-shrink-0">
-                                    <img src="{{ answer.user.userprofile.get_profile_picture_url }}" alt="{{ answer.user.username }}" class="rounded-circle" width="40" height="40" style="object-fit: cover;">
-                                </div>
-                                <div class="ms-3 flex-grow-1">
-                                    <div class="fw-bold">
-                                        {{ answer.user.get_full_name|default:answer.user.username }}
-                                        {% if product.vendor and answer.user == product.vendor.user %}
-                                            <span class="badge bg-success ms-1">{% trans "Vendor" %}</span>
-                                        {% endif %}
-                                    </div>
-                                    <p class="mb-1">{{ answer.text|linebreaksbr }}</p>
-                                    <small class="text-muted">{{ answer.created_at|naturaltime }}</small>
+                    <div class="qa-item">
+                        <div class="d-flex align-items-start">
+                            <div class="flex-shrink-0">
+                                <img src="{{ question.user.userprofile.get_profile_picture_url }}" alt="{{ question.user.username }}" class="rounded-circle" width="40" height="40" style="object-fit: cover;">
+                            </div>
+                            <div class="ms-3 flex-grow-1">
+                                <div class="qa-question">{{ question.text }}</div>
+                                <div class="qa-meta">
+                                    {% trans "Asked by" %} {{ question.user.get_full_name|default:question.user.username }} • {{ question.created_at|naturaltime }}
                                 </div>
                             </div>
-                            {% endfor %}
+                        </div>
 
-                            {# Answer this question form #}
-                            {% if user.is_authenticated %}
-                            <div class="mt-3">
-                                <form action="{% url 'core:add_product_answer' question.id %}" method="post" class="d-flex gap-2">
+                        {# Answers to this question #}
+                        {% for answer in question.answers.all %}
+                        <div class="qa-answer">
+                            <div class="qa-answer-author">
+                                <img src="{{ answer.user.userprofile.get_profile_picture_url }}" alt="{{ answer.user.username }}" class="rounded-circle" width="30" height="30" style="object-fit: cover;">
+                                <span>{{ answer.user.get_full_name|default:answer.user.username }}</span>
+                                {% if product.vendor and answer.user == product.vendor.user %}
+                                    <span class="badge bg-success" style="font-size: 0.7em;">{% trans "Vendor" %}</span>
+                                {% endif %}
+                                <span class="text-muted fw-normal ms-auto small">{{ answer.created_at|naturaltime }}</span>
+                            </div>
+                            <p class="mb-0">{{ answer.text|linebreaksbr }}</p>
+                        </div>
+                        {% endfor %}
+
+                        {# Answer this question form #}
+                        {% if user.is_authenticated %}
+                        <div class="mt-3 ps-3 border-start">
+                            <button class="btn btn-sm btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse" data-bs-target="#replyForm{{ question.id }}" aria-expanded="false">
+                                <i class="bi bi-reply"></i> {% trans "Reply" %}
+                            </button>
+                            <div class="collapse mt-2" id="replyForm{{ question.id }}">
+                                <form action="{% url 'core:add_product_answer' question.id %}" method="post">
                                     {% csrf_token %}
-                                    <div class="flex-grow-1">{{ answer_form.text }}</div>
-                                    <button type="submit" class="btn btn-sm btn-outline-primary">{% trans "Post Answer" %}</button>
+                                    <div class="mb-2">
+                                        {{ answer_form.text }}
+                                    </div>
+                                    <button type="submit" class="btn btn-sm btn-primary">{% trans "Post Answer" %}</button>
                                 </form>
                             </div>
-                            {% endif %}
                         </div>
+                        {% endif %}
                     </div>
                     {% empty %}
-                    <p class="text-muted">{% trans "No questions have been asked about this product yet. Be the first!" %}</p>
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-chat-square-dots fs-1 mb-3 d-block"></i>
+                        <p>{% trans "No questions have been asked about this product yet. Be the first!" %}</p>
+                    </div>
                     {% endfor %}
                 </div>
             </div>
         </div>
+
+        {# --- Phase 4: Authenticity Report Tab --- #}
+        {% if user_has_purchased_product %}
+        <div class="tab-pane fade" id="authenticity" role="tabpanel" aria-labelledby="authenticity-tab">
+            <div class="row mt-4">
+                <div class="col-md-10 mx-auto">
+                    <h4 class="mb-4">
+                        <i class="fas fa-shield-alt"></i> {% trans "Report Authenticity Concern" %}
+                    </h4>
+
+                    {% if user.is_authenticated %}
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-body">
+                            <p class="text-muted mb-3">
+                                {% trans "If you believe this product may be counterfeit, refurbished incorrectly, or has authenticity issues, please report it. Our team will investigate." %}
+                            </p>
+                            <form id="authenticity-feedback-form" method="post" action="{% url 'core:report_product_authenticity' product.id %}" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                {{ authenticity_feedback_form|crispy }}
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-warning">
+                                        <i class="fas fa-flag"></i> {% trans "Submit Report" %}
+                                    </button>
+                                    <button type="reset" class="btn btn-secondary">
+                                        {% trans "Clear" %}
+                                    </button>
+                                </div>
+                            </form>
+                            <div id="authenticity-feedback-status" role="alert"></div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <a href="{% url 'authapp:signin' %}?next={{ request.path }}">{% trans "Log in" %}</a> 
+                        {% trans "to report an authenticity concern." %}
+                    </div>
+                    {% endif %}
+
+                    {# Display Recent Verified Concerns #}
+                    {% if authenticity_feedback %}
+                    <div class="card mt-4">
+                        <div class="card-header bg-warning">
+                            <h5 class="mb-0">
+                                <i class="fas fa-exclamation-triangle"></i> 
+                                {% trans "Verified Concerns" %}
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% for feedback in authenticity_feedback %}
+                            <div class="mb-3 pb-3 border-bottom">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <span class="badge bg-warning">
+                                            {{ feedback.get_feedback_type_display }}
+                                        </span>
+                                        <small class="text-muted ms-2">{{ feedback.created_at|naturaltime }}</small>
+                                    </div>
+                                </div>
+                                <p class="mb-2 mt-2">{{ feedback.description }}</p>
+                                {% if feedback.image_evidence %}
+                                <img src="{{ feedback.image_evidence.url }}" alt="Evidence" style="max-width: 200px; max-height: 200px;" class="img-fluid rounded">
+                                {% endif %}
+                            </div>
+                            {% empty %}
+                            <p class="text-muted">{% trans "No verified concerns have been reported for this product." %}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {# --- END: Phase 4: Authenticity Report Tab --- #}
       </div>
     </div>
   </div>
@@ -725,29 +1238,71 @@
   <div class="row mt-5">
     <div class="col">
       <h2>{% trans "Related Products" %}</h2>
-      <div class="row row-cols-1 row-cols-md-3 g-4">
+      <div class="row row-cols-1 row-cols-md-3 g-4 related-products-container">
         {% for related_product in related_products %}
         <div class="col">
-          <div class="card h-100">
-            {% with related_image_obj=related_product.image %}
-              {% if related_product.image_enhanced %}
-              <img src="{{ related_product.image_enhanced.url }}" class="card-img-top" alt="{{ related_product.name }}">
-              {% elif related_image_obj and related_image_obj.image %}
-              <img src="{{ related_image_obj.image.url }}" class="card-img-top" alt="{{ related_product.name }}">
-              {% else %}
-              <img src="{% static 'assets/img/placeholder.png' %}" class="card-img-top" alt="{{ related_product.name }}">
-              {% endif %}
-            {% endwith %}
-            <div class="card-body d-flex flex-column">
-              <h5 class="card-title">{{ related_product.name }}</h5>
-              <p class="card-text">{{ currency_symbol|default:'£' }}{{ related_product.price }}</p>
-              <div class="d-flex gap-2 mt-auto">
-                  <a href="{{ related_product.get_absolute_url }}" class="btn btn-primary flex-grow-1">{% trans "View" %}</a>
-                  <form action="{% url 'core:add_to_cart' related_product.id %}" method="post" class="flex-grow-1">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-success w-100">{% trans "Buy" %}</button>
-                  </form>
+          <div class="service-item-flat">
+            <div class="image-container">
+              <a href="{{ related_product.get_absolute_url }}">
+                {% with related_image_obj=related_product.image %}
+                  {% if related_product.image_enhanced %}
+                  <img src="{{ related_product.image_enhanced.url }}" alt="{{ related_product.name }}">
+                  {% elif related_image_obj and related_image_obj.image %}
+                  <img src="{{ related_image_obj.image.url }}" alt="{{ related_product.name }}">
+                  {% else %}
+                  <img src="{% static 'assets/img/placeholder.png' %}" alt="{{ related_product.name }}">
+                  {% endif %}
+                {% endwith %}
+              </a>
+              <div class="hover-btns">
+                <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn" 
+                        title="{% trans 'Quick View' %}"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#quickViewModal"
+                        data-name="{{ related_product.name }}"
+                        data-price="{{ related_product.price }}"
+                        data-category="{{ related_product.category.name }}"
+                        data-description="{{ related_product.description|striptags|truncatewords:20 }}"
+                        data-url="{{ related_product.get_absolute_url }}"
+                        data-image="{% if related_product.images.first %}{{ related_product.images.first.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                        data-product-id="{{ related_product.id }}">
+                    <i class="bi bi-eye"></i> {% trans "Quick View" %}
+                </button>
+                <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ related_product.id }}">
+                    <i class="bi bi-arrow-left-right"></i>
+                </button>
               </div>
+            </div>
+            <h5 class="mb-1">
+              <a href="{{ related_product.get_absolute_url }}" class="stretched-link">{{ related_product.name|truncatechars:50 }}</a>
+            </h5>
+            <p class="provider-info mb-2">
+              <i class="bi bi-tag-fill"></i> {{ related_product.category.name }}
+              {% if related_product.vendor.is_verified %}<span class="badge bg-success ms-1" style="font-size: 0.65rem;"><i class="bi bi-check-circle-fill"></i></span>{% endif %}
+            </p>
+            {% if related_product.origin_country %}
+            <p class="provider-info mb-2">
+              <i class="bi bi-geo-alt"></i> {{ related_product.origin_country.name }}
+            </p>
+            {% endif %}
+            {% if related_product.review_count %}
+            <p class="provider-info mb-2">
+              <i class="bi bi-star-fill text-warning"></i>
+              {{ related_product.average_rating|floatformat:1 }} ({{ related_product.review_count }} {% trans "reviews" %})
+            </p>
+            {% else %}
+            <p class="provider-info mb-2">{% trans "No reviews yet" %}</p>
+            {% endif %}
+            <p class="service-description-flat mb-2">{{ related_product.description|truncatewords_html:12 }}</p>
+            <p class="service-price-flat mb-2">
+              {% convert_price related_product.price %}
+            </p>
+            <div class="d-flex gap-2 btn-details-flat w-100">
+              <a href="{{ related_product.get_absolute_url }}" class="btn btn-sm btn-outline-primary flex-grow-1">{% trans "View" %}</a>
+              <form action="{% url 'core:add_to_cart' related_product.id %}" method="post" class="flex-grow-1">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-success w-100">{% trans "Buy" %}</button>
+              </form>
             </div>
           </div>
         </div>
@@ -756,6 +1311,52 @@
     </div>
   </div>
   {% endif %}
+
+  <!-- Quick View Modal -->
+  <div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pb-5">
+                <div class="row">
+                    <div class="col-md-6 text-center">
+                        <div class="position-relative" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
+                            <div id="quickViewSpinner" class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <img id="quickViewImage" src="" class="img-fluid rounded" alt="Product Image" style="max-height: 400px; object-fit: contain; display: none;" onload="this.style.display='block'; document.getElementById('quickViewSpinner').style.display='none';">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h3 id="quickViewTitle" class="fw-bold"></h3>
+                        <p class="text-muted mb-2"><i class="bi bi-tag-fill"></i> <span id="quickViewCategory"></span></p>
+                        <h4 class="text-primary fw-bold mb-3" id="quickViewPrice"></h4>
+                        <p class="mb-4" id="quickViewDescription"></p>
+                        <form id="quickViewAddToCartForm" method="post" action="">
+                            {% csrf_token %}
+                            <div class="d-flex align-items-center mb-3">
+                                <label for="quickViewQuantity" class="me-2 fw-bold">{% trans "Qty:" %}</label>
+                                <input type="number" class="form-control" id="quickViewQuantity" name="quantity" value="1" min="1" style="width: 80px;">
+                            </div>
+                            <button type="submit" class="btn btn-success w-100"><i class="bi bi-cart-plus"></i> {% trans "Add to Cart" %}</button>
+                        </form>
+                        <a id="quickViewLink" href="#" class="btn btn-outline-primary w-100 mt-2">{% trans "View Full Details" %}</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- Floating Compare Button -->
+  <a href="#" id="compareFloatingBtn" class="compare-floating-btn" title="{% trans 'Compare Selected Items' %}">
+      <i class="bi bi-arrow-left-right"></i>
+      <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="compareFloatingBadge">
+          0
+      </span>
+  </a>
 </div>
 {% endblock content %}
 
@@ -873,6 +1474,157 @@
         });
       });
     }
+
+    {# --- Phase 4: Authenticity Feedback Form Handler --- #}
+    const authenticityForm = document.getElementById('authenticity-feedback-form');
+    if (authenticityForm) {
+      authenticityForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const statusDiv = document.getElementById('authenticity-feedback-status');
+        const submitButton = this.querySelector('button[type="submit"]');
+        const originalButtonText = submitButton.innerHTML;
+
+        // Show loading state
+        submitButton.disabled = true;
+        submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> {% trans "Submitting..." %}`;
+
+        fetch(this.action, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-CSRFToken': this.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            statusDiv.innerHTML = `
+              <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle"></i> ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            `;
+            // Reset form
+            authenticityForm.reset();
+            // Reload page after 2 seconds
+            setTimeout(() => location.reload(), 2000);
+          } else {
+            statusDiv.innerHTML = `
+              <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle"></i> ${data.message || '{% trans "An error occurred" %}'}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            `;
+          }
+        })
+        .catch(error => {
+          console.error('Error submitting authenticity feedback:', error);
+          statusDiv.innerHTML = `
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              <i class="fas fa-exclamation-circle"></i> {% trans "An unexpected error occurred." %}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          `;
+        })
+        .finally(() => {
+          // Restore button state
+          submitButton.disabled = false;
+          submitButton.innerHTML = originalButtonText;
+        });
+      });
+    }
+    {# --- END: Phase 4: Authenticity Feedback Form Handler --- #}
+
+    // Quick View Modal Logic
+    const quickViewModal = document.getElementById('quickViewModal');
+    if (quickViewModal) {
+        quickViewModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const name = button.getAttribute('data-name');
+            const price = button.getAttribute('data-price');
+            const image = button.getAttribute('data-image');
+            const url = button.getAttribute('data-url');
+            const category = button.getAttribute('data-category');
+            const description = button.getAttribute('data-description');
+            const productId = button.getAttribute('data-product-id');
+
+            document.getElementById('quickViewTitle').textContent = name;
+            // Note: Currency symbol is hardcoded here. Ideally should come from data attribute or context.
+            document.getElementById('quickViewPrice').textContent = 'GH₵ ' + parseFloat(price).toFixed(2);
+            document.getElementById('quickViewImage').src = image;
+            document.getElementById('quickViewLink').href = url;
+            document.getElementById('quickViewCategory').textContent = category;
+            document.getElementById('quickViewDescription').textContent = description;
+            
+            const addToCartForm = document.getElementById('quickViewAddToCartForm');
+            if (addToCartForm) {
+                addToCartForm.action = `/add-to-cart/${productId}/`;
+            }
+        });
+    }
+
+    // --- Compare Logic ---
+    const compareKey = 'nexus_compare_list';
+    
+    function getCompareList() {
+        return JSON.parse(localStorage.getItem(compareKey)) || [];
+    }
+
+    function saveCompareList(list) {
+        localStorage.setItem(compareKey, JSON.stringify(list));
+    }
+
+    function updateCompareUI() {
+        const list = getCompareList();
+        const floatBtn = document.getElementById('compareFloatingBtn');
+        const badge = document.getElementById('compareFloatingBadge');
+
+        if (list.length > 0) {
+            floatBtn.style.display = 'flex';
+            badge.textContent = list.length;
+            floatBtn.href = `/compare/?ids=${list.join(',')}`; 
+        } else {
+            floatBtn.style.display = 'none';
+        }
+        
+        // Update buttons state
+        document.querySelectorAll('.compare-btn').forEach(btn => {
+            const pid = btn.getAttribute('data-product-id');
+            if (list.includes(pid)) {
+                btn.classList.remove('btn-light');
+                btn.classList.add('btn-primary', 'text-white');
+            } else {
+                btn.classList.add('btn-light');
+                btn.classList.remove('btn-primary', 'text-white');
+            }
+        });
+    }
+
+    document.body.addEventListener('click', function(e) {
+        const btn = e.target.closest('.compare-btn');
+        if (btn) {
+            e.preventDefault();
+            const pid = btn.getAttribute('data-product-id');
+            let list = getCompareList();
+
+            if (list.includes(pid)) {
+                list = list.filter(id => id !== pid);
+            } else {
+                if (list.length >= 4) {
+                    alert("{% trans 'You can compare up to 4 products.' %}");
+                    return;
+                }
+                list.push(pid);
+            }
+            saveCompareList(list);
+            updateCompareUI();
+        }
+    });
+
+    updateCompareUI();
   });
 </script>
 {% endblock extra_js %}

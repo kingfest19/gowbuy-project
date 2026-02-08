@@ -148,3 +148,87 @@
         font-size: 0.9rem;
     }
 }
+
+/* --- Multi-level dropdown / accordion styles for category tree --- */
+.category-tree {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.category-item {
+    margin: 0.25rem 0;
+}
+
+.category-with-children {
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.category-toggle {
+    width: 100%;
+    text-align: left;
+    color: var(--color-text-base, #212529);
+    font-weight: 600;
+}
+
+.category-toggle .toggle-caret {
+    transition: transform 0.2s ease;
+}
+
+.subcategory-wrapper {
+    padding-left: 1rem;
+    margin-top: 0.5rem;
+    overflow: hidden; /* needed for slide animation */
+    max-height: 0;
+    transition: max-height 280ms ease;
+}
+
+.subcategory-wrapper.show {
+    /* allow enough room when expanded; JS will set inline max-height for precise animation */
+    max-height: 800px;
+}
+.category-toggle .toggle-caret { transition: transform 220ms ease; }
+.category-toggle.category-open .toggle-caret { transform: rotate(180deg); }.subcategory-wrapper .category-tree {
+    padding-left: 0.5rem;
+}
+
+/* Breadcrumb in picker */
+.picker-breadcrumb {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.picker-breadcrumb a {
+    color: var(--color-primary, #007bff);
+    text-decoration: none;
+}
+
+.picker-breadcrumb .crumb-sep {
+    color: var(--color-text-muted, #6c757d);
+}
+.category-leaf {
+    display: block;
+    padding: 0.25rem 0;
+    color: var(--color-text-muted, #6c757d);
+    text-decoration: none;
+}
+
+.category-leaf:hover {
+    color: var(--color-primary, #007bff);
+    text-decoration: underline;
+}
+
+/* Rotate caret when expanded */
+.category-open .toggle-caret {
+    transform: rotate(180deg);
+}
+
+/* Mobile touches: make the whole area tappable */
+@media (max-width: 768px) {
+    .category-toggle { font-size: 1.05rem; }
+    .category-leaf { font-size: 1rem; }
+}

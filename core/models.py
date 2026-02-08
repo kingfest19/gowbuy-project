@@ -7,10 +7,11 @@ from django.utils.text import slugify # To generate slugs automatically
 from django.utils import timezone # To record confirmation time
 from django.urls import reverse # To generate URLs for models
 from decimal import Decimal # For accurate price representation
-from django.db.models import Sum # For Sum aggregation
+from django.db.models import Sum, Avg, Count # For aggregations
 from django.core.validators import MinValueValidator, MaxValueValidator # For review ratings
 from django.utils.translation import gettext_lazy as _ # For verbose names in ProductImage
 import uuid # For generating order IDs
+from django_countries.fields import CountryField
 
 logger = logging.getLogger(__name__) # <<< Added logger instance
 
@@ -61,7 +62,7 @@ class Vendor(models.Model):
     Represents a seller in the marketplace.
     """
     FULFILLMENT_CHOICES = [
-        ('nexus', _('Fulfilled by Nexus')),
+        ('gowbuy', _('Fulfilled by Gowbuy')),
         ('vendor', _('Fulfilled by Vendor')),
     ]
     
@@ -164,7 +165,7 @@ class Vendor(models.Model):
     # --- END: Public Contact Information ---
     # --- Status Fields ---
     is_approved = models.BooleanField(default=False, help_text="Is this vendor approved to sell products?")
-    is_verified = models.BooleanField(default=False, help_text="Has this vendor been verified by NEXUS staff (e.g., identity checked)?")
+    is_verified = models.BooleanField(default=False, help_text="Has this vendor been verified by GOWBUY staff (e.g., identity checked)?")
     has_premium_3d_generation_access = models.BooleanField(
         default=False,
         verbose_name=_("Premium 3D Generation Access"),
@@ -283,6 +284,212 @@ class Product(models.Model):
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, help_text="Price in USD (or your base currency).")
 
+    # Country of origin for product (optional)
+    origin_country = CountryField(blank=True, null=True, db_index=True, verbose_name=_("Origin Country"), help_text=_("Country of origin for this product."))
+
+    # Suggested/inferred origin fields (non-destructive, auditable)
+    suggested_origin_country = CountryField(blank=True, null=True, db_index=True, verbose_name=_("Suggested Origin Country"), help_text=_("Origin country suggested by automated inference (admin review required)."))
+    origin_confidence = models.FloatField(blank=True, null=True, help_text=_("Confidence score for suggested origin in [0..1]."))
+    ORIGIN_INFERRED_BY_CHOICES = [
+        ('rule', 'Rule-based'),
+        ('ml', 'ML-model'),
+        ('manual', 'Manual'),
+    ]
+    origin_inferred_by = models.CharField(max_length=20, choices=ORIGIN_INFERRED_BY_CHOICES, blank=True, null=True)
+    origin_inference_metadata = models.JSONField(blank=True, null=True, help_text=_("JSON metadata/evidence for the suggestion (e.g., rules matched, features)."))
+    origin_inferred_at = models.DateTimeField(blank=True, null=True)
+    ORIGIN_INFERENCE_STATUS_CHOICES = [
+        ('suggested', 'Suggested'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+        ('none','None'),
+    ]
+    origin_inference_status = models.CharField(max_length=20, choices=ORIGIN_INFERENCE_STATUS_CHOICES, default='none', help_text=_("Status of the suggested origin."))
+
+    # Authenticity & Product Integrity
+    AUTHENTICITY_CHOICES = [
+        ('authentic', _('Authentic (Original)')),
+        ('refurbished', _('Refurbished')),
+        ('replica', _('Replica/Homage')),
+        ('unknown', _('Unknown')),
+    ]
+    authenticity_status = models.CharField(
+        max_length=20,
+        choices=AUTHENTICITY_CHOICES,
+        default='unknown',
+        blank=True,
+        verbose_name=_("Authenticity Status"),
+        help_text=_("Product authenticity status. For physical products: set by vendor or inferred by system.")
+    )
+    authenticity_verified_by = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name=_("Verified By"),
+        help_text=_("Who verified the authenticity: 'vendor', 'admin', 'ml', etc.")
+    )
+    authenticity_verified_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name=_("Verified At"),
+        help_text=_("Timestamp when authenticity was last verified/updated.")
+    )
+
+    # Device Identification (for electronics/gadgets)
+    DEVICE_IDENTIFIER_TYPE_CHOICES = [
+        ('imei', _('IMEI (Mobile phones, tablets with cellular)')),
+        ('mac', _('MAC Address (Wi-Fi devices, laptops)')),
+        ('serial', _('Serial Number (Laptops, consumer electronics)')),
+        ('meid', _('MEID (CDMA devices)')),
+        ('esn', _('ESN (Older CDMA devices)')),
+        ('device_id', _('Device ID (Manufacturer specific)')),
+        ('upc', _('UPC/EAN Barcode (Universal Product Code)')),
+        ('batch', _('Batch/Lot Number (Production batch tracking)')),
+        ('model', _('Model Number (Product model identifier)')),
+        ('none', _('Not Applicable')),
+    ]
+    device_identifier_type = models.CharField(
+        max_length=20,
+        choices=DEVICE_IDENTIFIER_TYPE_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name=_("Device Identifier Type"),
+        help_text=_("For electronic products: select the type of unique identifier.")
+    )
+    device_identifier_value = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Device Identifier Value"),
+        help_text=_("Enter the unique identifier number for verification.")
+    )
+
+    # Additional verification fields for authenticity
+    manufacturing_date = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name=_("Manufacturing Date"),
+        help_text=_("Date when the product was manufactured. Helps verify origin authenticity.")
+    )
+    batch_lot_number = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Batch/Lot Number"),
+        help_text=_("Production batch number for tracking and counterfeiting prevention.")
+    )
+    model_number = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Model Number"),
+        help_text=_("Manufacturer's model number for the product.")
+    )
+    certification_numbers = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name=_("Certification Numbers"),
+        help_text=_("Regulatory certifications (e.g., FCC, CE, RoHS). Comma-separated.")
+    )
+    warranty_service_code = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Warranty/Service Code"),
+        help_text=_("Code that can be verified with manufacturer for warranty and authenticity.")
+    )
+
+    # --- Universal Product Verification (for all categories) ---
+    upc_ean_barcode = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name=_("UPC/EAN Barcode"),
+        help_text=_("Universal Product Code or European Article Number for product identification.")
+    )
+
+    # --- Books-Specific Fields ---
+    isbn = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name=_("ISBN"),
+        help_text=_("International Standard Book Number for book identification.")
+    )
+    book_edition = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Book Edition"),
+        help_text=_("Edition information (e.g., First Edition, 2nd Edition).")
+    )
+    publisher_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name=_("Publisher"),
+        help_text=_("Name of the book publisher for verification.")
+    )
+    print_date = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name=_("Print Date"),
+        help_text=_("Date when the book was printed.")
+    )
+
+    # --- Food/Beverage-Specific Fields ---
+    expiry_date = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name=_("Expiry/Best Before Date"),
+        help_text=_("Expiration or best before date for food/beverage products.")
+    )
+    storage_instructions = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name=_("Storage Instructions"),
+        help_text=_("How to store the product (e.g., 'Keep refrigerated', 'Store in cool dry place').")
+    )
+    allergen_information = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name=_("Allergen Information"),
+        help_text=_("Contains/may contain allergens. Comma-separated list.")
+    )
+
+    # --- Clothing-Specific Fields ---
+    size_variant = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name=_("Size"),
+        help_text=_("Size variant (e.g., XL, 42, M, etc.).")
+    )
+    material_composition = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name=_("Material Composition"),
+        help_text=_("Material composition percentage (e.g., '100% Cotton', '80% Polyester, 20% Spandex').")
+    )
+    care_label_instructions = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name=_("Care Instructions"),
+        help_text=_("Washing and care instructions (e.g., 'Machine wash cold', 'Dry clean only').")
+    )
+    brand_authentication_code = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Brand Authentication Code"),
+        help_text=_("Code for verifying authentic brand merchandise.")
+    )
+
     product_type = models.CharField(max_length=10, choices=PRODUCT_TYPE_CHOICES, default='physical', help_text=_("Type of product"))
     stock = models.PositiveIntegerField(default=0, help_text=_("Number of physical items in stock. Not applicable for digital products."))
     digital_file = models.FileField(upload_to='products/digital/', blank=True, null=True, help_text=_("Upload the file for digital products."))
@@ -316,24 +523,113 @@ class Product(models.Model):
         help_text=_("Upload a .glb or .usdz file for the AR experience.")
     )
 
+    # --- Amazon-style and provenance fields ---
+    brand = models.CharField(max_length=255, blank=True, null=True, help_text=_('Brand name of the product.'))
+    manufacturer = models.CharField(max_length=255, blank=True, null=True, help_text=_('Manufacturer name.'))
+    sku = models.CharField(max_length=100, blank=True, null=True, help_text=_('Stock Keeping Unit (SKU) for inventory management.'))
+    bullet_points = models.TextField(blank=True, null=True, help_text=_('Key features (one per line, up to 5).'))
+    manufacturer_part_number = models.CharField(max_length=100, blank=True, null=True, help_text=_('Manufacturer part number.'))
+    origin_city = models.CharField(max_length=100, blank=True, null=True, help_text=_('City or region of origin.'))
+    manufacturer_address = models.CharField(max_length=255, blank=True, null=True, help_text=_('Full address of the manufacturer.'))
+    made_in_label = models.CharField(max_length=100, blank=True, null=True, help_text=_('Label to display as "Made in ...".'))
+    manufacturing_process = models.TextField(blank=True, null=True, help_text=_('Describe the manufacturing process (optional).'))
+    proof_of_origin = models.FileField(upload_to='products/proof_of_origin/', blank=True, null=True, help_text=_('Upload document or image as proof of origin.'))
+    sustainability = models.CharField(max_length=255, blank=True, null=True, help_text=_('Sustainability or ethical sourcing details.'))
+    handmade_or_massproduced = models.CharField(max_length=20, blank=True, null=True, choices=[('handmade', _('Handmade')), ('massproduced', _('Mass-produced'))], help_text=_('Is the product handmade or mass-produced?'))
+    certifications = models.FileField(upload_to='products/certifications/', blank=True, null=True, help_text=_('Upload certifications for origin or quality.'))
+    variation_theme = models.CharField(max_length=100, blank=True, null=True, help_text=_('Variation theme (e.g., Size, Color, Style).'))
+    variation_options = models.CharField(max_length=255, blank=True, null=True, help_text=_('Variation options (comma-separated, e.g., Red, Blue, Green).'))
+    item_weight = models.CharField(max_length=50, blank=True, null=True, help_text=_('Item weight (e.g., 1kg, 2 lbs).'))
+    item_dimensions = models.CharField(max_length=100, blank=True, null=True, help_text=_('Item dimensions (e.g., 10x20x30 cm).'))
+    shipping_options = models.CharField(max_length=255, blank=True, null=True, help_text=_('Shipping options (e.g., Standard, Express, International).'))
+    safety_warnings = models.TextField(blank=True, null=True, help_text=_('Safety warnings (required if applicable).'))
+    compliance_documents = models.FileField(upload_to='products/compliance/', blank=True, null=True, help_text=_('Upload compliance or legal documents.'))
+    
+    # Product condition (new, refurbished, used, etc.)
+    PRODUCT_CONDITION_CHOICES = [
+        ('new', _('New')),
+        ('refurbished', _('Refurbished')),
+        ('used_like_new', _('Used - Like New')),
+        ('used_very_good', _('Used - Very Good')),
+        ('used_good', _('Used - Good')),
+        ('used_acceptable', _('Used - Acceptable')),
+        ('collectible', _('Collectible')),
+    ]
+    product_condition = models.CharField(max_length=20, choices=PRODUCT_CONDITION_CHOICES, default='new', help_text=_('Product condition (new, refurbished, used, etc.).'))
+
+    # --- Artisan Product Verification Fields ---
+    ARTISAN_PRODUCT_TYPE_CHOICES = [
+        ('manufactured', _('Manufactured/Branded')),
+        ('handmade', _('Handmade/Artisan')),
+    ]
+    artisan_product_type = models.CharField(
+        max_length=20,
+        choices=ARTISAN_PRODUCT_TYPE_CHOICES,
+        default='manufactured',
+        verbose_name=_("Product Type"),
+        help_text=_("Is this a manufactured/branded product or handmade/artisan item?")
+    )
+
+    ACQUISITION_TYPE_CHOICES = [
+        ('i_created', _("I made/created this")),
+        ('purchased_new', _("Purchased new from manufacturer")),
+        ('purchased_used', _("Purchased used/secondhand")),
+        ('consignment', _("On consignment from creator")),
+        ('estate_auction', _("Estate sale/auction")),
+        ('inherited_gift', _("Inherited/gifted")),
+        ('verified_supplier', _("Sourced from verified supplier")),
+        ('other', _("Other (explain)")),
+    ]
+    acquisition_type = models.CharField(
+        max_length=50,
+        choices=ACQUISITION_TYPE_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name=_("Acquisition Type"),
+        help_text=_("For handmade items: Where did you acquire or source this product?")
+    )
+    acquisition_details = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_("Acquisition Details"),
+        help_text=_("Provide more details about how you acquired this product (especially for items > $500).")
+    )
+
     class Meta:
         ordering = ('-created_at', 'name',)
         indexes = [
             models.Index(fields=['slug', 'id']),
             models.Index(fields=['vendor', 'is_active']), # Index for vendor-specific product queries
+            models.Index(fields=['origin_country']), # Index for queries by country
         ]
         verbose_name = 'Product'
         verbose_name_plural = 'Products'
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            # Generate base slug from name
+            base_slug = slugify(self.name) if self.name else 'product'
+            if not base_slug:  # If slugify returns empty string
+                base_slug = 'product'
+            
+            self.slug = base_slug
             counter = 1
             original_slug = self.slug
-            # Ensure slug uniqueness (consider vendor context if needed)
-            while Product.objects.filter(slug=self.slug).exclude(pk=self.pk).exists():
+            max_attempts = 100
+            
+            # Ensure slug uniqueness - try with counter first
+            while Product.objects.filter(slug=self.slug).exclude(pk=self.pk).exists() and counter < max_attempts:
                 self.slug = f"{original_slug}-{counter}"
                 counter += 1
+            
+            # If still not unique after max_attempts, add UUID suffix
+            if Product.objects.filter(slug=self.slug).exclude(pk=self.pk).exists():
+                short_uuid = str(uuid.uuid4())[:8]
+                self.slug = f"{original_slug}-{short_uuid}"
+        
+        if not self.origin_country:
+            self.is_active = False
+        
         # Automatically set stock/shipping based on type?
         # if self.product_type == 'digital':
         #     self.stock = 0 # Or maybe 1 if using licenses? Or leave as is?
@@ -348,6 +644,53 @@ class Product(models.Model):
     @property
     def image(self):
         return self.images.first()
+
+    @property
+    def is_physical_product(self):
+        """Check if this is a physical product (not digital)."""
+        return self.product_type == 'physical'
+
+    def user_has_purchased(self, user):
+        """Check if a user has purchased and received this product."""
+        if not user or not user.is_authenticated:
+            return False
+        # Check if user has any completed/delivered orders containing this product
+        completed_statuses = [Order.Status.COMPLETED, Order.Status.DELIVERED, Order.Status.PENDING_PAYOUT]
+        return OrderItem.objects.filter(
+            product=self,
+            order__user=user,
+            order__status__in=completed_statuses
+        ).exists()
+
+    def apply_suggested_origin(self, accept_by=None):
+        """Apply the currently suggested origin to origin_country and record acceptance."""
+        if not self.suggested_origin_country:
+            return False
+        self.origin_country = self.suggested_origin_country
+        self.origin_inference_status = 'accepted'
+        self.origin_inferred_at = timezone.now()
+        # Persist changes
+        self.save(update_fields=['origin_country', 'origin_inference_status', 'origin_inferred_at'])
+        if accept_by:
+            try:
+                OriginLabel.objects.create(product=self, label_country=self.origin_country, labeler=accept_by, confidence=self.origin_confidence, note='Accepted suggestion', source='admin')
+            except Exception:
+                logger.exception('Failed to create OriginLabel on accept')
+        return True
+
+    def reject_suggested_origin(self, reject_by=None, note=None):
+        """Mark the currently suggested origin as rejected."""
+        if self.suggested_origin_country is None:
+            return False
+        self.origin_inference_status = 'rejected'
+        self.origin_inferred_at = timezone.now()
+        self.save(update_fields=['origin_inference_status', 'origin_inferred_at'])
+        if reject_by:
+            try:
+                OriginLabel.objects.create(product=self, label_country=None, labeler=reject_by, confidence=self.origin_confidence, note=note or 'Rejected suggestion', source='admin')
+            except Exception:
+                logger.exception('Failed to create OriginLabel on reject')
+        return True
 
     def get_specifications(self):
         return {
@@ -370,7 +713,7 @@ class Product(models.Model):
     def is_available(self):
         """Check if product is active AND its vendor is approved."""
         # Ensure vendor exists before checking approval
-        return self.is_active and self.vendor and self.vendor.is_approved
+        return self.is_active and self.origin_country and self.vendor and self.vendor.is_approved
     is_available.boolean = True
     is_available.short_description = 'Available?'
 
@@ -381,6 +724,288 @@ class Product(models.Model):
         return self.stock > 0
     is_in_stock.boolean = True
     is_in_stock.short_description = 'In Stock?'
+
+    @property
+    def average_rating(self):
+        """Average product rating (0 if no reviews)."""
+        return self.reviews.aggregate(avg=Avg('rating'))['avg'] or 0
+
+    @property
+    def review_count(self):
+        """Total number of product reviews."""
+        return self.reviews.count()
+
+    def clean(self):
+        """Validate product integrity for physical products."""
+        super().clean()
+        errors = {}
+        
+        # Physical products require origin and authenticity only when active
+        if self.product_type == 'physical' and self.is_active:
+            if not self.origin_country and not self.suggested_origin_country:
+                errors['origin_country'] = _("Physical products must have an origin country (set by vendor or system-generated).")
+            if not self.authenticity_status or self.authenticity_status == 'unknown':
+                errors['authenticity_status'] = _("Physical products must have a known authenticity status (authentic, refurbished, or replica).")
+        
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        """Auto-set defaults and validate before saving."""
+        # Auto-generate slug if not provided
+        if not self.slug:
+            self.slug = slugify(self.name)
+        
+        # For physical products, if authenticity is not set, try to infer or default to 'unknown'
+        if self.product_type == 'physical' and not self.authenticity_status:
+            self.authenticity_status = 'unknown'
+        
+        # If authenticity was just set by vendor (not auto), mark as vendor-verified
+        if self.authenticity_status and self.authenticity_status != 'unknown' and not self.authenticity_verified_by:
+            self.authenticity_verified_by = 'vendor'
+            self.authenticity_verified_at = timezone.now()
+        
+        super().save(*args, **kwargs)
+
+
+# --- OriginLabel Model ---
+class OriginLabel(models.Model):
+    """Human-provided origin labels for a product - audit trail for labels and suggestions."""
+    SOURCE_CHOICES = [
+        ('admin', 'Admin'),
+        ('import', 'Import'),
+        ('auto', 'Automatic'),
+    ]
+
+    product = models.ForeignKey('Product', related_name='origin_labels', on_delete=models.CASCADE)
+    label_country = CountryField(blank=True, null=True, help_text="Labeled origin country (can be null for 'unknown' or rejected label)")
+    labeler = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    confidence = models.FloatField(blank=True, null=True)
+    note = models.TextField(blank=True)
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='admin')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-created_at',)
+        verbose_name = 'Origin Label'
+        verbose_name_plural = 'Origin Labels'
+
+    def __str__(self):
+        return f"OriginLabel(product={self.product_id}, country={self.label_country}, source={self.source})"
+
+
+class OriginInferenceJob(models.Model):
+    """Tracks asynchronous origin inference jobs run via Celery."""
+
+    STATUS_PENDING = 'PENDING'
+    STATUS_STARTED = 'STARTED'
+    STATUS_SUCCESS = 'SUCCESS'
+    STATUS_FAILED = 'FAILED'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_STARTED, 'Started'),
+        (STATUS_SUCCESS, 'Success'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    params = models.JSONField(blank=True, null=True, help_text='Parameters used for the run (e.g., min_confidence)')
+    summary = models.JSONField(blank=True, null=True, help_text='Summary produced by the prediction run')
+    error = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ('-created_at',)
+        verbose_name = 'Origin Inference Job'
+        verbose_name_plural = 'Origin Inference Jobs'
+
+    def mark_started(self):
+        self.status = self.STATUS_STARTED
+        self.started_at = timezone.now()
+        self.save(update_fields=['status', 'started_at'])
+
+    def mark_success(self, summary=None):
+        self.status = self.STATUS_SUCCESS
+        self.finished_at = timezone.now()
+        self.summary = summary
+        self.save(update_fields=['status', 'finished_at', 'summary'])
+
+    def mark_failed(self, error):
+        self.status = self.STATUS_FAILED
+        self.finished_at = timezone.now()
+        self.error = str(error)
+        self.save(update_fields=['status', 'finished_at', 'error'])
+
+
+# --- Phase 4: Product Authenticity & Verification System ---
+
+class AuthenticityReview(models.Model):
+    """Tracks products flagged for authenticity review by admins."""
+    REVIEW_STATUS_CHOICES = [
+        ('pending', _('Pending Review')),
+        ('verified', _('Verified - Authentic')),
+        ('suspicious', _('Suspicious - Needs Investigation')),
+        ('rejected', _('Rejected - Not Authentic')),
+        ('cleared', _('Cleared - No Issues Found')),
+    ]
+    
+    product = models.ForeignKey(Product, related_name='authenticity_reviews', on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=REVIEW_STATUS_CHOICES, default='pending')
+    reason = models.TextField(blank=True, help_text=_("Reason for review or findings"))
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='authenticity_reviews_conducted')
+    flagged_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='authenticity_reviews_flagged')
+    flagged_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ('-flagged_at',)
+        verbose_name = 'Authenticity Review'
+        verbose_name_plural = 'Authenticity Reviews'
+    
+    def __str__(self):
+        return f"Review: {self.product.name} - {self.get_status_display()}"
+
+
+class AuthenticityFeedback(models.Model):
+    """Buyer-submitted reports of suspected fake/inauthentic products."""
+    FEEDBACK_TYPE_CHOICES = [
+        ('suspected_fake', _('Suspected Fake/Counterfeit')),
+        ('quality_mismatch', _('Quality Doesn\'t Match Description')),
+        ('wrong_origin', _('Origin Seems Incorrect')),
+        ('other', _('Other Authenticity Concern')),
+    ]
+    
+    product = models.ForeignKey(Product, related_name='authenticity_feedback', on_delete=models.CASCADE)
+    reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='authenticity_reports')
+    feedback_type = models.CharField(max_length=20, choices=FEEDBACK_TYPE_CHOICES)
+    description = models.TextField(help_text=_("Detailed description of the authenticity concern"))
+    order_id = models.CharField(max_length=100, blank=True, help_text=_("Order ID if purchased"))
+    image_evidence = models.ImageField(upload_to='authenticity_evidence/', blank=True, null=True, help_text=_("Photo evidence (e.g., packaging, label, etc.)"))
+    is_verified = models.BooleanField(default=False, help_text=_("Has this report been verified by admin?"))
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ('-created_at',)
+        verbose_name = 'Authenticity Feedback'
+        verbose_name_plural = 'Authenticity Feedback'
+    
+    def __str__(self):
+        return f"Feedback: {self.product.name} - {self.get_feedback_type_display()}"
+
+
+class VerificationProvider(models.Model):
+    """Represents a third-party authentication/verification service."""
+    PROVIDER_TYPE_CHOICES = [
+        ('stripe_radar', _('Stripe Radar')),
+        ('custom_api', _('Custom API')),
+        ('manual', _('Manual Third-party')),
+    ]
+    
+    name = models.CharField(max_length=100, unique=True, help_text=_("e.g., 'Authenticity Labs Inc'"))
+    provider_type = models.CharField(max_length=20, choices=PROVIDER_TYPE_CHOICES)
+    api_endpoint = models.URLField(blank=True, help_text=_("Webhook/API endpoint for verification requests"))
+    api_key = models.CharField(max_length=255, blank=True, help_text=_("Encrypted API key for authentication"))
+    is_active = models.BooleanField(default=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Verification Provider'
+        verbose_name_plural = 'Verification Providers'
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_provider_type_display()})"
+
+
+class VerificationRequest(models.Model):
+    """Tracks verification requests sent to third-party providers."""
+    REQUEST_STATUS_CHOICES = [
+        ('pending', _('Pending')),
+        ('sent', _('Sent to Provider')),
+        ('verified', _('Verified')),
+        ('rejected', _('Rejected')),
+        ('error', _('Error')),
+    ]
+    
+    product = models.ForeignKey(Product, related_name='verification_requests', on_delete=models.CASCADE)
+    provider = models.ForeignKey(VerificationProvider, on_delete=models.PROTECT)
+    status = models.CharField(max_length=20, choices=REQUEST_STATUS_CHOICES, default='pending')
+    request_data = models.JSONField(help_text=_("Data sent to provider"))
+    response_data = models.JSONField(blank=True, null=True, help_text=_("Response from provider"))
+    is_authentic = models.BooleanField(null=True, blank=True, help_text=_("Verification result: True=authentic, False=not authentic, None=pending"))
+    confidence_score = models.FloatField(null=True, blank=True, help_text=_("Confidence score 0-1 from provider"))
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ('-created_at',)
+        verbose_name = 'Verification Request'
+        verbose_name_plural = 'Verification Requests'
+    
+    def __str__(self):
+        return f"{self.product.name} - {self.provider.name} ({self.get_status_display()})"
+
+
+class AuthenticityScore(models.Model):
+    """Calculates composite authenticity score based on multiple factors."""
+    product = models.OneToOneField(Product, related_name='authenticity_score', on_delete=models.CASCADE)
+    
+    # Component scores (0-100)
+    vendor_trust_score = models.FloatField(default=50, help_text=_("Based on vendor history, returns, disputes"))
+    buyer_feedback_score = models.FloatField(default=50, help_text=_("Based on negative feedback count"))
+    admin_review_score = models.FloatField(default=50, help_text=_("Based on admin verification status"))
+    third_party_score = models.FloatField(default=50, help_text=_("Based on third-party verification results"))
+    
+    # Composite score (weighted average)
+    overall_score = models.FloatField(default=50, help_text=_("Weighted composite score 0-100"))
+    
+    # Metadata
+    last_updated_at = models.DateTimeField(auto_now=True)
+    update_reason = models.CharField(max_length=100, blank=True)
+    
+    class Meta:
+        verbose_name = 'Authenticity Score'
+        verbose_name_plural = 'Authenticity Scores'
+    
+    def calculate_overall_score(self):
+        """Calculate weighted authenticity score."""
+        # Weights: vendor(30%), buyer_feedback(20%), admin_review(30%), third_party(20%)
+        weights = {
+            'vendor': 0.30,
+            'feedback': 0.20,
+            'admin': 0.30,
+            'third_party': 0.20,
+        }
+        
+        self.overall_score = (
+            (self.vendor_trust_score * weights['vendor']) +
+            (self.buyer_feedback_score * weights['feedback']) +
+            (self.admin_review_score * weights['admin']) +
+            (self.third_party_score * weights['third_party'])
+        )
+        return self.overall_score
+    
+    def get_risk_level(self):
+        """Return risk level based on overall score."""
+        if self.overall_score >= 80:
+            return 'low'
+        elif self.overall_score >= 60:
+            return 'medium'
+        else:
+            return 'high'
+    
+    def save(self, *args, **kwargs):
+        self.calculate_overall_score()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.product.name} - Score: {self.overall_score:.1f}"
+
 
 # --- Address Model ---
 class Address(models.Model):
@@ -459,7 +1084,7 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.PENDING, db_index=True)
     # payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending', db_index=True) # Consider removing if status covers it
-    platform_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name=_("Platform (Nexus) Delivery Fee Component"))
+    platform_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name=_("Platform (Gowbuy) Delivery Fee Component"))
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name=_("Order Delivery Fee"))
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     currency = models.CharField(max_length=3, default='GHS', help_text=_("Currency of the order (e.g., GHS, USD)"))
@@ -502,7 +1127,7 @@ class Order(models.Model):
         import datetime
         now = datetime.datetime.now()
         random_part = uuid.uuid4().hex[:6].upper()
-        return f"NEXUS-{now.strftime('%Y%m%d')}-{random_part}"
+        return f"GOWBUY-{now.strftime('%Y%m%d')}-{random_part}"
     def calculate_total(self):
         total = sum(item.get_total_item_price() for item in self.items.all())
         # self.total_amount = total # Avoid saving here, calculate on demand or when finalizing
@@ -626,6 +1251,16 @@ class Service(models.Model):
 
     def get_absolute_url(self):
         return reverse('core:service_detail', kwargs={'slug': self.slug})
+
+    @property
+    def average_rating(self):
+        """Average service rating (0 if no reviews)."""
+        return self.reviews.aggregate(avg=Avg('rating'))['avg'] or 0
+
+    @property
+    def review_count(self):
+        """Total number of service reviews."""
+        return self.reviews.count()
 
 # --- START: ServicePackage Model (Moved Up) ---
 class ServicePackage(models.Model):
@@ -1983,7 +2618,7 @@ class Currency(models.Model):
 
 # --- START: SiteSettings Model ---
 class SiteSettings(models.Model):
-    site_name = models.CharField(max_length=100, default="NEXUS Marketplace")
+    site_name = models.CharField(max_length=100, default="GOWBUY Marketplace")
     # base_currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name='+', help_text="The primary currency for the site.")
     # default_language = models.CharField(max_length=10, choices=settings.LANGUAGES, default=settings.LANGUAGE_CODE)
     # contact_email = models.EmailField(blank=True)
@@ -2246,7 +2881,7 @@ class AffiliatePayout(models.Model):
 
 # --- START: Loyalty Program Models ---
 class LoyaltyProgram(models.Model):
-    name = models.CharField(max_length=100, default="NEXUS Rewards")
+    name = models.CharField(max_length=100, default="GOWBUY Rewards")
     # points_per_currency_spent = models.PositiveIntegerField(default=1, help_text="Points earned per unit of base currency spent.")
     # min_purchase_for_points = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     is_active = models.BooleanField(default=True)
@@ -2333,7 +2968,7 @@ class GiftCard(models.Model):
     def save(self, *args, **kwargs):
         if not self.code:
             import secrets
-            self.code = f"NEXUSGC-{secrets.token_hex(6).upper()}"
+            self.code = f"GOWBUYGC-{secrets.token_hex(6).upper()}"
         if self.pk is None: # On creation
             self.current_balance = self.initial_balance
         super().save(*args, **kwargs)

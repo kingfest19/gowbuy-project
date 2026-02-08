@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<section class="container py-5">
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4">
+        <div>
+            <h1 class="fw-bold mb-2">{% trans "GOWBUY Blog" %}</h1>
+            <p class="text-muted mb-0">{% trans "Latest updates, stories, and tips from the GOWBUY community." %}</p>
+        </div>
+        <a class="btn btn-outline-primary mt-3 mt-md-0" href="{% url 'core:info_blog' %}">{% trans "About the Blog" %}</a>
+    </div>
+
+    <div class="row g-4">
+        {% for post in posts %}
+            <div class="col-12 col-md-6 col-lg-4">
+                <article class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold mb-2">
+                            <a class="text-decoration-none" href="{{ post.get_absolute_url }}">{{ post.title }}</a>
+                        </h5>
+                        <div class="small text-muted mb-3">
+                            {% trans "By" %} {{ post.author }} · {{ post.publish_date|date:"M d, Y" }}
+                            {% if post.category %} · {{ post.category }}{% endif %}
+                        </div>
+                        <p class="card-text text-muted">{{ post.content|truncatewords:28 }}</p>
+                    </div>
+                    <div class="card-footer bg-transparent border-0">
+                        <a class="btn btn-sm btn-primary" href="{{ post.get_absolute_url }}">{% trans "Read more" %}</a>
+                    </div>
+                </article>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info mb-0">{% trans "No blog posts are available yet." %}</div>
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+        <nav class="mt-5" aria-label="Blog pagination">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">{% trans "Previous" %}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">{% trans "Previous" %}</span></li>
+                {% endif %}
+
+                <li class="page-item disabled"><span class="page-link">{% trans "Page" %} {{ page_obj.number }} {% trans "of" %} {{ page_obj.paginator.num_pages }}</span></li>
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">{% trans "Next" %}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">{% trans "Next" %}</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+</section>
+{% endblock content %}

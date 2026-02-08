@@ -69,6 +69,43 @@ def process_image_enhancement(self, image_id: int):
         # Re-raise the exception to let Celery handle the retry.
         raise
 
+
+def run_origin_inference_job_task(job_id: int, min_confidence: float = 0.5):
+    """Run origin inference for all products and record summary on OriginInferenceJob.
+
+    This is the pure function that performs the work and is easy to call from tests.
+    The Celery task wrapper delegates to this helper.
+    """
+    from .models import OriginInferenceJob
+    try:
+        job = OriginInferenceJob.objects.get(pk=job_id)
+    except OriginInferenceJob.DoesNotExist:
+        logger.error('OriginInferenceJob %s not found', job_id)
+        return {'error': 'job not found'}
+
+    try:
+        job.mark_started()
+        params = {'min_confidence': float(min_confidence)}
+        job.params = params
+        job.save(update_fields=['params'])
+
+        # Import here to avoid import-time circular imports when Django starts
+        from .ml.origin_trainer import predict_products
+        summary = predict_products(apply=True, min_confidence=params['min_confidence'])
+
+        job.mark_success(summary=summary)
+        return summary
+    except Exception as e:
+        logger.exception('Origin inference job %s failed', job_id)
+        job.mark_failed(error=str(e))
+        raise
+
+
+@shared_task(bind=True)
+def run_origin_inference_job(self, job_id: int, min_confidence: float = 0.5):
+    """Celery task wrapper that delegates to the pure function for easier testing."""
+    return run_origin_inference_job_task(job_id, min_confidence)
+
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=3, ignore_result=True)
 def process_background_removal(self, image_id: int):
     """

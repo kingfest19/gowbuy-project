@@ -1,15 +1,119 @@
-{% extends 'core/user_dashboard_base.html' %}
+{% extends 'base.html' %}
 {% load i18n static humanize %}
 
 {% block extra_css %}
 {{ block.super }}
 <style>
-    body {
-        background-color: #ebe8e8; /* Match home page background */
+    /* CSS Variables for Theming */
+    :root {
+        --bg-body: #ebe8e8;
+        --bg-surface: #ffffff;
+        --text-main: #323232ff;
+        --text-muted: #6c757d;
+        --border-color: #828282ff;
+        --color-primary: #0d6efd; /* Bootstrap primary */
+        --color-success: #198754; /* Bootstrap success */
+        --color-warning: #ffc107; /* Bootstrap warning */
+        --color-danger: #dc3545; /* Bootstrap danger */
+        --color-info: #0dcaf0; /* Bootstrap info */
+        --color-dark: #212529; /* Bootstrap dark */
+        --color-purple: #6f42c1; /* Specific purple color */
     }
+
+    /* Dark Mode Overrides */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --bg-body: #1a1a1a;
+            --bg-surface: #2c2c2c;
+            --text-main: #e0e0e0;
+            --text-muted: #b0b0b0;
+            --border-color: #444444;
+            /* Bootstrap colors might need adjustment or rely on a dark mode Bootstrap theme */
+            --color-primary: #6daffc;
+            --color-success: #6cce8c;
+            --color-warning: #ffe082;
+            --color-danger: #ef8a8a;
+            --color-info: #80deea;
+            --color-dark: #f8f9fa; /* Dark mode 'dark' should be light */
+        }
+    }
+
+    body {
+        background-color: var(--bg-body);
+    }
+
+    /* Layout structure copied from vendor_dashboard for consistency */
+    .dashboard-container {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        grid-template-rows: auto 1fr;
+        gap: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .dashboard-sidebar {
+        grid-row: 1 / -1;
+        grid-column: 1;
+        background-color: var(--sidebar-bg);
+        padding: 1.5rem;
+        border-radius: 12px;
+        position: sticky;
+        top: 2rem;
+        align-self: flex-start;
+        height: calc(100vh - 4rem);
+        overflow-y: auto;
+        border: 1px solid var(--sidebar-border);
+    }
+
+    .dashboard-main {
+        grid-column: 2;
+        grid-row: 2;
+        min-width: 0; /* Prevents grid/flex overflow issues */
+    }
+
+    .page-header {
+        grid-column: 2;
+        grid-row: 1;
+        padding: 1.5rem;
+        margin-bottom: 0;
+        border-radius: 8px;
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
+    }
+
+    /* General text visibility fixes */
+    h1, h2, h3, h4, h5, h6, address {
+        color: var(--text-main);
+    }
+    .text-muted, small, .text-muted small {
+        color: var(--text-muted) !important;
+    }
+    .nav-tabs .nav-link {
+        color: var(--text-muted);
+    }
+    .nav-tabs .nav-link.active {
+        color: var(--text-main);
+        background-color: var(--bg-surface);
+        border-color: var(--border-color) var(--border-color) var(--bg-surface);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .dashboard-section .btn-info {
+            background-color: var(--color-info);
+            border-color: var(--color-info);
+            color: #1a1a1a; /* Dark text for light button */
+        }
+        .dashboard-section .btn-success {
+            background-color: var(--color-success);
+            border-color: var(--color-success);
+            color: #1a1a1a;
+        }
+    }
+
     .dashboard-overview-card {
-        background-color: #fff;
-        border: 1px solid #828282ff;
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         padding: 1.5rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -27,11 +131,11 @@
     }
 
     .card, .dashboard-section {
-        background-color: #fff;
+        background-color: var(--bg-surface);
         padding: 1.5rem;
         border-radius: 8px;
         margin-bottom: 2rem;
-        border: 1px solid #828282ff;
+        border: 1px solid var(--border-color);
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
 
@@ -41,238 +145,408 @@
         object-fit: cover;
     }
     .text-purple {
-        color: #6f42c1;
+        color: var(--color-purple);
+    }
+
+    /* Mobile Responsiveness - Matching Vendor Dashboard Styling */
+    @media (max-width: 991.98px) {
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .page-header {
+            order: 1; /* Welcome message first */
+            padding: 1rem;
+        }
+
+        /* Accordion Sidebar for Mobile */
+        .dashboard-sidebar {
+            order: 2; /* Nav tabs second */
+            width: 100%;
+            height: auto;
+            position: static;
+            padding: 0;
+            margin-bottom: 0;
+            background-color: transparent;
+            border: none;
+            height: auto;
+            overflow-y: visible;
+        }
+
+        .dashboard-sidebar .list-group {
+            gap: 0.5rem;
+        }
+
+        .sidebar-heading {
+            display: flex !important;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1.25rem;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+        }
+        .sidebar-heading::after {
+            content: '\\f282'; /* Bootstrap Icons: chevron-down */
+            font-family: 'bootstrap-icons';
+            transition: transform 0.2s ease-in-out;
+        }
+        .sidebar-heading.open::after {
+            transform: rotate(180deg);
+        }
+
+        .dashboard-sidebar .list-group-item {
+            display: none; /* Hidden by default */
+            padding-left: 2rem; /* Indent sub-items */
+            border-radius: 8px;
+        }
+        .dashboard-sidebar .nav-link.active {
+            background-color: #323232ff;
+            color: #fff;
+            border-color: #323232ff;
+        }
+
+        /* When a heading is open, show its direct list-group-item siblings */
+        .sidebar-heading.open ~ .list-group-item {
+            display: block;
+        }
+        /* But hide them again if they are after another heading */
+        .sidebar-heading.open ~ .sidebar-heading ~ .list-group-item {
+            display: none;
+        }
+
+        .dashboard-main {
+            order: 3; /* Main content last */
+        }
+        
+        /* Adjust overview cards for mobile 2-column layout */
+        .dashboard-overview-card {
+            padding: 1rem;
+        }
+        .dashboard-overview-card .card-title {
+            font-size: 0.85rem;
+        }
+        .dashboard-overview-card .card-text {
+            font-size: 1.2rem;
+        }
+    }
+
+    /* Global Sidebar & List Group Styling for Dark Mode */
+    .list-group-item {
+        background-color: var(--bg-surface);
+        color: var(--text-main);
+        border-color: var(--border-color);
+    }
+    .list-group-item-action:hover, .list-group-item-action:focus {
+        background-color: var(--bg-body);
+        color: var(--text-main);
+    }
+    .card-header {
+        background-color: var(--bg-surface);
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-main);
+    }
+    /* Ensure links in sidebar are visible */
+    .list-group-item a {
+        color: var(--text-main);
+        text-decoration: none;
+    }
+    .list-group-item a:hover {
+        color: var(--color-primary);
     }
 </style>
 {% endblock extra_css %}
 
-{% block dashboard_content %}
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
-    <h1 class="mb-4">{% trans "Welcome," %} {{ profile_owner.first_name|default:profile_owner.username }}!</h1>
-
-    <!-- Start: Account Overview Section -->
-    <h2 class="h4 mb-3">{% trans "Account Overview" %}</h2>
-    <div class="row g-3 mb-4">
-        <div class="col-md-6 col-lg-3">
-            <div class="dashboard-overview-card">
-                <h5 class="card-title"><i class="fas fa-receipt me-2"></i>{% trans "My Orders" %}</h5>
-                <p class="card-text fs-4 fw-bold">{{ recent_orders.count }}</p>
-                <a href="{% url 'core:order_history' %}" class="btn btn-sm btn-outline-primary mt-1">{% trans "View History" %}</a>
-            </div>
-        </div>
-        <div class="col-md-6 col-lg-3">
-            <div class="dashboard-overview-card">
-                <h5 class="card-title"><i class="fas fa-heart me-2"></i>{% trans "Wishlist" %}</h5>
-                <p class="card-text fs-4 fw-bold">{{ wishlist_total_count }}</p>
-                <a href="{% url 'core:wishlist_detail' %}" class="btn btn-sm btn-outline-danger mt-1">{% trans "View Wishlist" %}</a>
-            </div>
-        </div>
-        <div class="col-md-6 col-lg-3">
-            <div class="dashboard-overview-card">
-                <h5 class="card-title"><i class="fas fa-star me-2"></i>{% trans "Reward Points" %}</h5>
-                <p class="card-text fs-4 fw-bold">{{ user_points_balance|default:0|intcomma }}</p>
-                <a href="{% url 'core:rewards_page' %}" class="btn btn-sm btn-outline-warning mt-1">{% trans "Redeem" %}</a>
-            </div>
-        </div>
-        <div class="col-md-6 col-lg-3">
-            <div class="dashboard-overview-card">
-                <h5 class="card-title"><i class="fas fa-user-check me-2"></i>{% trans "Profile Status" %}</h5>
-                <div class="progress mt-2 mb-2" role="progressbar" aria-label="Profile completeness" aria-valuenow="{{ profile_completeness }}" aria-valuemin="0" aria-valuemax="100" style="height: 10px;">
-                    <div class="progress-bar bg-success" style="width: {{ profile_completeness }}%"></div>
-                </div>
-                <p class="card-text fw-bold">{{ profile_completeness }}% {% trans "Complete" %}</p>
-                {% if profile_completeness < 100 %}
-                    <a href="{{ next_step_url|default:'#' }}" class="btn btn-sm btn-outline-success mt-1">{% trans "Next Step" %}: {{ next_step_text }}</a>
-                {% else %}
-                    <small class="text-muted">{% trans "Profile is complete!" %}</small>
-                {% endif %}
-            </div>
-        </div>
+{% block content %}
+<div class="container dashboard-container my-5">
+    <div class="page-header">
+        <h1 class="mb-0">{% trans "Welcome," %} {{ profile_owner.first_name|default:profile_owner.username }}!</h1>
     </div>
-    <!-- End: Account Overview Section -->
 
-    <!-- Start: Main Dashboard Content -->
-    <div class="row g-4">
-        <!-- Left Column -->
-        <div class="col-lg-8 d-flex flex-column gap-4">
-            <!-- Recent Orders -->
-            <div class="card p-0">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-shopping-basket me-2"></i>{% trans "Recent Orders" %}</h5>
-                    <a href="{% url 'core:order_history' %}" class="btn btn-sm btn-outline-secondary">{% trans "View All Orders" %}</a>
+    <aside class="dashboard-sidebar">
+        {% include 'core/_user_dashboard_sidebar.html' with active_page='dashboard' %}
+    </aside>
+
+    <main class="dashboard-main">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-                <div class="card-body p-0">
-                    {% if recent_orders %}
-                        <ul class="list-group list-group-flush">
-                            {% for order in recent_orders %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <a href="{% url 'core:order_detail' order_id=order.order_id %}">{% trans "Order" %} #{{ order.order_id }}</a>
-                                    <small class="text-muted">{{ order.created_at|naturaltime }}</small>
-                                    <span class="badge bg-{% if order.status == 'COMPLETED' %}success{% elif order.status == 'CANCELLED' %}danger{% else %}info{% endif %} rounded-pill">{{ order.get_status_display }}</span>
-                                </li>
-                            {% endfor %}
-                        </ul>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Start: Account Overview Section -->
+        <h2 class="h4 mb-3">{% trans "Account Overview" %}</h2>
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="dashboard-overview-card">
+                    <h5 class="card-title"><i class="fas fa-receipt me-2"></i>{% trans "My Orders" %}</h5>
+                    <p class="card-text fs-4 fw-bold">{{ recent_orders.count }}</p>
+                    <a href="{% url 'core:order_history' %}" class="btn btn-sm btn-outline-primary mt-1">{% trans "View History" %}</a>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="dashboard-overview-card">
+                    <h5 class="card-title"><i class="fas fa-heart me-2"></i>{% trans "Wishlist" %}</h5>
+                    <p class="card-text fs-4 fw-bold">{{ wishlist_total_count }}</p>
+                    <a href="{% url 'core:wishlist_detail' %}" class="btn btn-sm btn-outline-danger mt-1">{% trans "View Wishlist" %}</a>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="dashboard-overview-card">
+                    <h5 class="card-title"><i class="fas fa-star me-2"></i>{% trans "Reward Points" %}</h5>
+                    <p class="card-text fs-4 fw-bold">{{ user_points_balance|default:0|intcomma }}</p>
+                    <a href="{% url 'core:rewards_page' %}" class="btn btn-sm btn-outline-warning mt-1">{% trans "Redeem" %}</a>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="dashboard-overview-card">
+                    <h5 class="card-title"><i class="fas fa-user-check me-2"></i>{% trans "Profile Status" %}</h5>
+                    <div class="progress mt-2 mb-2" role="progressbar" aria-label="Profile completeness" aria-valuenow="{{ profile_completeness }}" aria-valuemin="0" aria-valuemax="100" style="height: 10px;">
+                        <div class="progress-bar bg-success" style="width: {{ profile_completeness }}%"></div>
+                    </div>
+                    <p class="card-text fw-bold">{{ profile_completeness }}% {% trans "Complete" %}</p>
+                    {% if profile_completeness < 100 %}
+                        <a href="{{ next_step_url|default:'#' }}" class="btn btn-sm btn-outline-success mt-1">{% trans "Next Step" %}: {{ next_step_text }}</a>
                     {% else %}
-                        <p class="text-muted p-3 mb-0">{% trans "You have no recent orders." %}</p>
+                        <small class="text-muted">{% trans "Profile is complete!" %}</small>
                     {% endif %}
                 </div>
             </div>
+        </div>
+        <!-- End: Account Overview Section -->
 
-            <!-- My Content & Activity -->
-            <div class="card p-0">
-                <div class="card-header">
-                    <ul class="nav nav-tabs card-header-tabs" id="activityTab" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews-content" type="button" role="tab" aria-controls="reviews-content" aria-selected="true">
-                                <i class="fas fa-star-half-alt me-2"></i>{% trans "Recent Reviews" %}
-                            </button>
+        <!-- Start: Main Dashboard Content -->
+        <div class="row g-4">
+            <!-- Left Column -->
+            <div class="col-lg-8 d-flex flex-column gap-4">
+                <!-- Recent Orders -->
+                <div class="card p-0">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-shopping-basket me-2"></i>{% trans "Recent Orders" %}</h5>
+                        <a href="{% url 'core:order_history' %}" class="btn btn-sm btn-outline-secondary">{% trans "View All Orders" %}</a>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if recent_orders %}
+                            <ul class="list-group list-group-flush">
+                                {% for order in recent_orders %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <a href="{% url 'core:order_detail' order_id=order.order_id %}">{% trans "Order" %} #{{ order.order_id }}</a>
+                                        <small class="text-muted">{{ order.created_at|naturaltime }}</small>
+                                        <span class="badge bg-{% if order.status == 'COMPLETED' %}success{% elif order.status == 'CANCELLED' %}danger{% else %}info{% endif %} rounded-pill">{{ order.get_status_display }}</span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted p-3 mb-0">{% trans "You have no recent orders." %}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- My Content & Activity -->
+                <div class="card p-0">
+                    <div class="card-header">
+                        <ul class="nav nav-tabs card-header-tabs" id="activityTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews-content" type="button" role="tab" aria-controls="reviews-content" aria-selected="true">
+                                    <i class="fas fa-star-half-alt me-2"></i>{% trans "Recent Reviews" %}
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="digital-tab" data-bs-toggle="tab" data-bs-target="#digital-content" type="button" role="tab" aria-controls="digital-content" aria-selected="false">
+                                    <i class="fas fa-download text-purple me-2"></i>{% trans "My Digital Library" %}
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body tab-content p-3" id="activityTabContent">
+                        <!-- Recent Reviews Tab Pane -->
+                        <div class="tab-pane fade show active" id="reviews-content" role="tabpanel" aria-labelledby="reviews-tab">
+                            {% if recent_reviews %}
+                                <ul class="list-group list-group-flush">
+                                    {% for review in recent_reviews %}
+                                        <li class="list-group-item px-0">
+                                            <strong>{% trans "Rating:" %}</strong> {{ review.rating }}/5 -
+                                            {% if review.review_type == 'product' %}<a href="{{ review.product.get_absolute_url }}">{{ review.product.name|truncatechars:25 }}</a>
+                                            {% elif review.review_type == 'vendor' %}<a href="{{ review.vendor.get_absolute_url }}">{{ review.vendor.name|truncatechars:25 }}</a>
+                                            {% elif review.review_type == 'service' %}<a href="{{ review.service.get_absolute_url }}">{{ review.service.title|truncatechars:25 }}</a>
+                                            {% endif %}
+                                            <p class="text-muted small mb-0">"{{ review.comment|default:review.review|truncatechars:50 }}"</p>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                                <a href="{% url 'core:customer_review_list' %}" class="btn btn-sm btn-outline-secondary mt-2">{% trans "View All Reviews" %}</a>
+                            {% else %}
+                                <p class="text-muted mb-0">{% trans "You have not submitted any reviews yet." %}</p>
+                            {% endif %}
+                        </div>
+                        <!-- Digital Library Tab Pane -->
+                        <div class="tab-pane fade" id="digital-content" role="tabpanel" aria-labelledby="digital-tab">
+                            {% if digital_products %}
+                                <ul class="list-group list-group-flush">
+                                    {% for item in digital_products %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                            <span>{{ item.product.name }}</span>
+                                            <a href="{% url 'core:download_digital_product' product_id=item.product.id %}" class="btn btn-sm btn-outline-success">{% trans "Download" %}</a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted mb-0">{% trans "You have not purchased any digital products." %}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-lg-4">
+                <!-- Account Info -->
+                <div class="dashboard-section text-center">
+                {% if user_profile.profile_picture %}
+                    <img src="{{ user_profile.profile_picture.url }}" alt="{% trans 'Profile Picture' %}" class="img-fluid rounded-circle profile-pic-wrapper mb-3">
+                {% else %}
+                    <div class="profile-pic-wrapper rounded-circle mb-3 d-flex align-items-center justify-content-center mx-auto" style="background-color: var(--bg-body); color: var(--text-muted); border: 1px solid var(--border-color);">
+                        <i class="fas fa-user fa-3x"></i>
+                    </div>
+                {% endif %}
+                    <h5 class="my-2">{{ profile_owner.get_full_name|default:profile_owner.username }}</h5>
+                    <p class="text-muted mb-1">{{ profile_owner.email }}</p>
+                    <p class="text-muted mb-3"><small>{% trans "Member Since:" %} {{ profile_owner.date_joined|date:"F Y" }}</small></p>
+                    <a href="{% url 'core:edit_user_profile' %}" class="btn btn-dark">{% trans "Edit Profile" %}</a>
+                </div>
+
+                <!-- Account & Security -->
+                <div class="dashboard-section">
+                    <div class="border-bottom pb-2 mb-3"><h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>{% trans "Account & Security" %}</h5></div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap px-0 gap-2">
+                            <span>{% trans "Email" %}</span>
+                            <div>
+                                {% if is_email_verified %}<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> {% trans "Verified" %}</span>
+                                {% else %}<span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle me-1"></i> {% trans "Not Verified" %}</span>{% endif %}
+                                <a href="{% url 'account_email' %}" class="btn btn-sm btn-outline-secondary ms-2">{% trans "Manage" %}</a>
+                            </div>
                         </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="digital-tab" data-bs-toggle="tab" data-bs-target="#digital-content" type="button" role="tab" aria-controls="digital-content" aria-selected="false">
-                                <i class="fas fa-download text-purple me-2"></i>{% trans "My Digital Library" %}
-                            </button>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>{% trans "Password" %}</span>
+                            <a href="{% url 'account_change_password' %}" class="btn btn-sm btn-outline-secondary">{% trans "Change" %}</a>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>{% trans "Two-Factor" %}</span>
+                            <a href="{% url 'mfa_index' %}" class="btn btn-sm btn-outline-secondary">{% trans "Manage" %}</a>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>{% trans "Login History" %}</span>
+                            <a href="{% url 'core:login_history' %}" class="btn btn-sm btn-outline-secondary">{% trans "View" %}</a>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>{% trans "Active Sessions" %}</span>
+                            <a href="{% url 'core:session_management' %}" class="btn btn-sm btn-outline-secondary">{% trans "Manage" %}</a>
                         </li>
                     </ul>
                 </div>
-                <div class="card-body tab-content p-3" id="activityTabContent">
-                    <!-- Recent Reviews Tab Pane -->
-                    <div class="tab-pane fade show active" id="reviews-content" role="tabpanel" aria-labelledby="reviews-tab">
-                        {% if recent_reviews %}
-                            <ul class="list-group list-group-flush">
-                                {% for review in recent_reviews %}
-                                    <li class="list-group-item px-0">
-                                        <strong>{% trans "Rating:" %}</strong> {{ review.rating }}/5 -
-                                        {% if review.review_type == 'product' %}<a href="{{ review.product.get_absolute_url }}">{{ review.product.name|truncatechars:25 }}</a>
-                                        {% elif review.review_type == 'vendor' %}<a href="{{ review.vendor.get_absolute_url }}">{{ review.vendor.name|truncatechars:25 }}</a>
-                                        {% elif review.review_type == 'service' %}<a href="{{ review.service.get_absolute_url }}">{{ review.service.title|truncatechars:25 }}</a>
-                                        {% endif %}
-                                        <p class="text-muted small mb-0">"{{ review.comment|default:review.review|truncatechars:50 }}"</p>
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                            <a href="{% url 'core:customer_review_list' %}" class="btn btn-sm btn-outline-secondary mt-2">{% trans "View All Reviews" %}</a>
-                        {% else %}
-                            <p class="text-muted mb-0">{% trans "You have not submitted any reviews yet." %}</p>
-                        {% endif %}
+
+                <!-- Address Book -->
+                <div class="dashboard-section">
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                        <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>{% trans "Address Book" %}</h5>
+                        <a href="{% url 'core:address_list' %}" class="btn btn-sm btn-outline-secondary">{% trans "Manage" %}</a>
                     </div>
-                    <!-- Digital Library Tab Pane -->
-                    <div class="tab-pane fade" id="digital-content" role="tabpanel" aria-labelledby="digital-tab">
-                        {% if digital_products %}
-                            <ul class="list-group list-group-flush">
-                                {% for item in digital_products %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                        <span>{{ item.product.name }}</span>
-                                        <a href="{% url 'core:download_digital_product' product_id=item.product.id %}" class="btn btn-sm btn-outline-success">{% trans "Download" %}</a>
-                                    </li>
-                                {% endfor %}
-                            </ul>
+                    <div class="pt-3">
+                        <h6>{% trans "Default Billing" %}</h6>
+                        {% if default_billing_address %}
+                            <address class="mb-2 small">
+                                <strong>{{ default_billing_address.get_full_name }}</strong><br>
+                                {{ default_billing_address.street_address }}, {{ default_billing_address.city }}
+                            </address>
                         {% else %}
-                            <p class="text-muted mb-0">{% trans "You have not purchased any digital products." %}</p>
+                            <p class="text-muted small">{% trans "No default billing address." %}</p>
+                        {% endif %}
+                        <hr>
+                        <h6>{% trans "Default Shipping" %}</h6>
+                        {% if default_shipping_address %}
+                             <address class="mb-0 small">
+                                <strong>{{ default_shipping_address.get_full_name }}</strong><br>
+                                {{ default_shipping_address.street_address }}, {{ default_shipping_address.city }}
+                            </address>
+                        {% else %}
+                            <p class="text-muted small">{% trans "No default shipping address." %}</p>
                         {% endif %}
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Right Column -->
-        <div class="col-lg-4">
-            <!-- Account Info -->
-            <div class="dashboard-section text-center">
-                <img src="{{ user_profile.get_profile_picture_url }}" alt="{% trans 'Profile Picture' %}" class="img-fluid rounded-circle profile-pic-wrapper mb-3">
-                <h5 class="my-2">{{ profile_owner.get_full_name|default:profile_owner.username }}</h5>
-                <p class="text-muted mb-1">{{ profile_owner.email }}</p>
-                <p class="text-muted mb-3"><small>{% trans "Member Since:" %} {{ profile_owner.date_joined|date:"F Y" }}</small></p>
-                <a href="{% url 'core:edit_user_profile' %}" class="btn btn-dark">{% trans "Edit Profile" %}</a>
-            </div>
-
-            <!-- Account & Security -->
-            <div class="dashboard-section">
-                <div class="border-bottom pb-2 mb-3"><h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>{% trans "Account & Security" %}</h5></div>
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span>{% trans "Email" %}</span>
-                        <div>
-                            {% if is_email_verified %}<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> {% trans "Verified" %}</span>
-                            {% else %}<span class="badge bg-warning"><i class="fas fa-exclamation-triangle me-1"></i> {% trans "Not Verified" %}</span>{% endif %}
-                            <a href="{% url 'account_email' %}" class="btn btn-sm btn-outline-secondary ms-2">{% trans "Manage" %}</a>
-                        </div>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span>{% trans "Password" %}</span>
-                        <a href="{% url 'account_change_password' %}" class="btn btn-sm btn-outline-secondary">{% trans "Change" %}</a>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span>{% trans "Two-Factor" %}</span>
-                        <a href="{% url 'mfa_index' %}" class="btn btn-sm btn-outline-secondary">{% trans "Manage" %}</a>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span>{% trans "Login History" %}</span>
-                        <a href="{% url 'core:login_history' %}" class="btn btn-sm btn-outline-secondary">{% trans "View" %}</a>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <span>{% trans "Active Sessions" %}</span>
-                        <a href="{% url 'core:session_management' %}" class="btn btn-sm btn-outline-secondary">{% trans "Manage" %}</a>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- Address Book -->
-            <div class="dashboard-section">
-                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                    <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>{% trans "Address Book" %}</h5>
-                    <a href="{% url 'core:address_list' %}" class="btn btn-sm btn-outline-secondary">{% trans "Manage" %}</a>
-                </div>
-                <div class="pt-3">
-                    <h6>{% trans "Default Billing" %}</h6>
-                    {% if default_billing_address %}
-                        <address class="mb-2 small">
-                            <strong>{{ default_billing_address.get_full_name }}</strong><br>
-                            {{ default_billing_address.street_address }}, {{ default_billing_address.city }}
-                        </address>
-                    {% else %}
-                        <p class="text-muted small">{% trans "No default billing address." %}</p>
+        <!-- Other Dashboards (Full Width) -->
+        {% if is_vendor or is_service_provider or is_rider %}
+        <div class="dashboard-section">
+            <div><h5 class="mb-0"><i class="fas fa-columns me-2"></i>{% trans "My Other Dashboards" %}</h5></div>
+            <div class="pt-2">
+                <p class="small text-muted">{% trans "Quickly switch to your other roles on NEXUS." %}</p>
+                <div class="d-flex flex-wrap gap-2">
+                    {% if is_vendor %}
+                        <a href="{% url 'core:vendor_dashboard' %}" class="btn btn-info"><i class="fas fa-store me-2"></i>{% trans "Vendor Dashboard" %}</a>
                     {% endif %}
-                    <hr>
-                    <h6>{% trans "Default Shipping" %}</h6>
-                    {% if default_shipping_address %}
-                         <address class="mb-0 small">
-                            <strong>{{ default_shipping_address.get_full_name }}</strong><br>
-                            {{ default_shipping_address.street_address }}, {{ default_shipping_address.city }}
-                        </address>
-                    {% else %}
-                        <p class="text-muted small">{% trans "No default shipping address." %}</p>
+                    {% if is_service_provider %}
+                        <a href="{% url 'core:service_provider_dashboard' %}" class="btn btn-success"><i class="fas fa-concierge-bell me-2"></i>{% trans "Provider Dashboard" %}</a>
+                    {% endif %}
+                    {% if is_rider %}
+                        <a href="{% url 'core:rider_dashboard' %}" class="btn btn-primary"><i class="fas fa-motorcycle me-2"></i>{% trans "Rider Dashboard" %}</a>
                     {% endif %}
                 </div>
             </div>
         </div>
-    </div>
+        {% endif %}
+    </main>
+</div>
+{% endblock content %}
 
-    <!-- Other Dashboards (Full Width) -->
-    {% if is_vendor or is_service_provider or is_rider %}
-    <div class="dashboard-section">
-        <div><h5 class="mb-0"><i class="fas fa-columns me-2"></i>{% trans "My Other Dashboards" %}</h5></div>
-        <div class="pt-2">
-            <p class="small text-muted">{% trans "Quickly switch to your other roles on NEXUS." %}</p>
-            <div class="d-flex flex-wrap gap-2">
-                {% if is_vendor %}
-                    <a href="{% url 'core:vendor_dashboard' %}" class="btn btn-info"><i class="fas fa-store me-2"></i>{% trans "Vendor Dashboard" %}</a>
-                {% endif %}
-                {% if is_service_provider %}
-                    <a href="{% url 'core:service_provider_dashboard' %}" class="btn btn-success"><i class="fas fa-concierge-bell me-2"></i>{% trans "Provider Dashboard" %}</a>
-                {% endif %}
-                {% if is_rider %}
-                    <a href="{% url 'core:rider_dashboard' %}" class="btn btn-primary"><i class="fas fa-motorcycle me-2"></i>{% trans "Rider Dashboard" %}</a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-{% endblock dashboard_content %}
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // This script is for mobile accordion sidebar functionality
+    if (window.innerWidth > 991) return;
+
+    const sidebar = document.querySelector('.dashboard-sidebar');
+    if (!sidebar) return;
+
+    const headings = sidebar.querySelectorAll('.sidebar-heading');
+    
+    headings.forEach(heading => {
+        heading.addEventListener('click', (e) => {
+            e.preventDefault();
+            const wasOpen = heading.classList.contains('open');
+            
+            // Close all other sections
+            headings.forEach(otherHeading => {
+                otherHeading.classList.remove('open');
+            });
+
+            // Re-open if it wasn't already open (accordion behavior)
+            if (!wasOpen) {
+                heading.classList.add('open');
+            }
+        });
+
+        // Auto-open the section that contains the active link
+        let nextElem = heading.nextElementSibling;
+        while (nextElem && !nextElem.classList.contains('sidebar-heading')) {
+            if (nextElem.classList.contains('active')) {
+                heading.classList.add('open');
+                break; // Found active link, no need to check further for this heading
+            }
+            nextElem = nextElem.nextElementSibling;
+        }
+    });
+});
+</script>
+{% endblock extra_js %}

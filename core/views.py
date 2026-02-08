@@ -25,6 +25,7 @@ from django import forms
 from django.contrib.sessions.models import Session # Added import
 from django.core.files.storage import FileSystemStorage, DefaultStorage
 from django.core.files.base import ContentFile # Added import
+from django.core.files import File
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden, HttpResponseRedirect, FileResponse, Http404
@@ -32,7 +33,7 @@ from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 from xhtml2pdf import pisa
 from formtools.wizard.views import SessionWizardView
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View, TemplateView, FormView
 from django.db import transaction
 from django.db.models import Q, Avg, Count, Sum, F, ExpressionWrapper, fields, Prefetch, Max, OuterRef, Subquery, Exists
@@ -40,6 +41,7 @@ from django.utils import timezone
 from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from django_countries import countries
 from channels.layers import get_channel_layer
 from django.core.cache import cache # Import the cache
 from asgiref.sync import async_to_sync
@@ -52,6 +54,17 @@ from authapp.models import CustomUser # <<< Import CustomUser from authapp
 import os
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db.models.functions import TruncDay, TruncMonth
+from .origin_verification_views import (
+    ajax_validate_product_origin,
+    ajax_get_origin_suggestions,
+    ajax_check_authenticity_risk,
+)
+from .artisan_verification_views import (
+    ajax_verify_artisan_product,
+    ajax_validate_acquisition_info,
+    ajax_get_acquisition_options,
+    ajax_get_vendor_tier_requirements,
+)
 from .models import ( # Ensure UserProfile is imported
     Product, Category, Cart, CartItem, Order, OrderItem, Address,
     Wishlist, ProductReview, Vendor, VendorReview, Promotion, AdCampaign,
@@ -78,6 +91,7 @@ from .models import ( # Ensure UserProfile is imported
     BoostPackage,
     Service, ServiceCategory, ServicePackage, ServiceReview, ServiceProviderProfile, PortfolioItem, ProductQuestion, ProductAnswer, Coupon,
     FraudReport, NewsletterSubscriber,
+    AuthenticityReview, AuthenticityFeedback, # Phase 4: Authenticity models
 )
 from .forms import ( # Ensure RiderApplication is imported if needed by forms, but it's a model
     AddressForm, ProductReviewForm, VendorReviewForm,
@@ -90,7 +104,10 @@ from .forms import ( # Ensure RiderApplication is imported if needed by forms, b
     BusinessDetailsForm,             # New multi-step forms
     IndividualDetailsForm,           # New multi-step forms
     VerificationConfirmationForm,    # New multi-step forms,
-    VendorProductForm, PromotionForm, AdCampaignForm,
+    VendorProductForm, PromotionForm, AdCampaignForm, AuthenticityFeedbackForm,
+    VendorProductTypeStepForm, VendorProductBasicInfoStepForm,
+    VendorProductVerificationCategoryStepForm, VendorProductVerificationDetailsStepForm,
+    VendorProductPricingStepForm, VendorProductFulfillmentStepForm, VendorProductMediaStepForm,
     # ... any other forms you have ...
     RiderProfileApplicationForm,RiderProfileUpdateForm, UserProfileForm, UserPreferencesForm,
 )
@@ -159,7 +176,7 @@ def vendor_email_packing_slip(request, pk):
     pdf_buffer.seek(0)
 
     subject = _("Packing Slip for Your Order #{order_id}").format(order_id=order.order_id)
-    body = _("Hello {vendor_name},\n\nPlease find the packing slip for order #{order_id} attached.\n\nThank you,\nThe NEXUS Team").format(vendor_name=vendor.name, order_id=order.order_id)
+    body = _("Hello {vendor_name},\n\nPlease find the packing slip for order #{order_id} attached.\n\nThank you,\nThe GOWBUY Team").format(vendor_name=vendor.name, order_id=order.order_id)
     email = EmailMessage(subject, body, settings.DEFAULT_FROM_EMAIL, [vendor.user.email])
     email.attach(f'packing_slip_{order.order_id}.pdf', pdf_buffer.getvalue(), 'application/pdf')
     email.send(fail_silently=False)
@@ -205,7 +222,7 @@ def _get_ai_review_summary(product: Product, reviews: list) -> str | None:
 
     reviews_str = "\n".join(review_texts)
 
-    prompt_for_summary = f"""You are an e-commerce assistant for NEXUS marketplace.
+    prompt_for_summary = f"""You are an e-commerce assistant for GOWBUY marketplace.
 A user is looking at the product "{product.name}".
 Based ONLY on the following customer reviews, provide a concise summary (around 50-70 words) highlighting the main positive and negative points.
 If there are no clear negative points, focus on the positives.
@@ -273,7 +290,7 @@ def _get_ai_recommendations(product: Product) -> list:
         candidate_list_str = "\n".join(
             [f"- {p.name} (Category: {p.category.name}, Price: {p.price})" for p in candidate_products]
         )
-        prompt_for_ai = f"""You are an expert e-commerce recommendation engine for an online marketplace called NEXUS.
+        prompt_for_ai = f"""You are an expert e-commerce recommendation engine for an online marketplace called GOWBUY.
 A user is currently viewing the following product:
 Product Name: "{product.name}"
 Category: "{product.category.name}"
@@ -358,7 +375,7 @@ class IsVendorMixin(UserPassesTestMixin):
         if not self.request.user.is_authenticated:
             return redirect(reverse('authapp:signin') + f'?next={self.request.path}') # Corrected redirect
         messages.info(self.request, _("You need to register as a vendor to access this page."))
-        return redirect('core:sell_on_nexus') # Changed from vendor_registration to sell_on_nexus
+        return redirect('core:sell_on_gowbuy') # Changed from vendor_registration to sell_on_gowbuy
 
 
 class IsServiceProviderMixin(UserPassesTestMixin):
@@ -431,6 +448,7 @@ class VendorDashboardView(LoginRequiredMixin, IsVendorMixin, TemplateView):
         total_products_count = Product.objects.filter(vendor=vendor).count()
         active_products_count = Product.objects.filter(vendor=vendor, is_active=True).count()
         low_stock_products = Product.objects.filter(vendor=vendor, stock__lte=5, stock__gt=0, is_active=True)
+        products_without_origin = Product.objects.filter(vendor=vendor, origin_country__isnull=True)
 
         # Recent Orders
         recent_orders = Order.objects.filter(items__product__vendor=vendor).distinct().order_by('-created_at')[:5]
@@ -452,6 +470,7 @@ class VendorDashboardView(LoginRequiredMixin, IsVendorMixin, TemplateView):
             'total_products_count': total_products_count,
             'active_products_count': active_products_count,
             'low_stock_products': low_stock_products,
+            'products_without_origin': products_without_origin,
             'recent_orders': recent_orders,
             'onboarding_steps': onboarding_steps,
             'onboarding_complete': onboarding_complete,
@@ -937,6 +956,15 @@ class VendorProductCreateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageM
     success_url = reverse_lazy('core:vendor_product_list')
     success_message = _("Product created successfully.")
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # For create forms with errors, show previously uploaded files if they exist
+        context['is_update_form'] = False
+        # Initialize empty lists - won't show on create form, but consistency
+        context['existing_images'] = []
+        context['existing_videos'] = []
+        return context
+
     def form_valid(self, form):
         # Save the product instance but don't commit to the database yet
         form.instance.vendor = self.request.user.vendor_profile
@@ -959,8 +987,437 @@ class VendorProductCreateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageM
                 logger.error(f"Celery broker connection failed for product {self.object.id}: {e}")
                 messages.warning(self.request, _("Product saved, but background image processing is temporarily unavailable."))
 
+        # Handle video uploads
+        videos = self.request.FILES.getlist('videos')
+        for video_file in videos:
+            ProductVideo.objects.create(product=self.object, video=video_file)
+
         messages.success(self.request, self.get_success_message(form.cleaned_data))
+
+        # Non-blocking suggestion: remind vendors to set origin if it's blank
+        if not (self.object.origin_country and str(self.object.origin_country).strip()):
+            messages.info(
+                self.request,
+                _("Tip: consider setting the product's origin country so it appears in 'Shop by Country'.")
+            )
+
         return HttpResponseRedirect(self.get_success_url())
+
+
+WIZARD_UPLOAD_DIR = os.path.join(settings.MEDIA_ROOT, 'tmp')
+os.makedirs(WIZARD_UPLOAD_DIR, exist_ok=True)
+
+
+class VendorProductWizardView(LoginRequiredMixin, IsVendorMixin, View):
+    """
+    Multi-step product creation wizard with proper session management.
+    Steps: 1) Type selection, 2) Basic info, 3) Pricing & inventory
+    """
+    template_name = 'core/vendor_product_wizard.html'
+    success_url = reverse_lazy('core:vendor_product_list')
+    
+    STEPS = ['type', 'basic', 'verify_category', 'verify_details', 'pricing', 'fulfillment', 'media']
+    
+    def get_session_key(self):
+        return 'vendor_product_wizard'
+    
+    def get_wizard_data(self):
+        """Get all wizard data from session."""
+        default = {
+            'current_step': 'type',
+            'completed_steps': [],
+            'form_data': {}
+        }
+        return self.request.session.get(self.get_session_key(), default)
+    
+    def save_wizard_data(self, data):
+        """Save wizard data to session."""
+        self.request.session[self.get_session_key()] = data
+        self.request.session.modified = True
+        logger.info(f"[WIZARD] Saved data. Current step: {data.get('current_step')}, Completed: {data.get('completed_steps')}")
+    
+    def clear_wizard_data(self):
+        """Clear wizard from session."""
+        if self.get_session_key() in self.request.session:
+            del self.request.session[self.get_session_key()]
+            self.request.session.modified = True
+
+    def _wizard_storage(self):
+        return FileSystemStorage(location=WIZARD_UPLOAD_DIR)
+
+    def _save_uploaded_file(self, uploaded_file):
+        storage = self._wizard_storage()
+        safe_name = os.path.basename(uploaded_file.name)
+        unique_name = f"wizard/{uuid.uuid4().hex}_{safe_name}"
+        return storage.save(unique_name, uploaded_file)
+    
+    def get_step_form(self, step, data=None, files=None):
+        """Get form instance for a specific step."""
+        if step == 'type':
+            return VendorProductTypeStepForm(data)
+        elif step == 'basic':
+            return VendorProductBasicInfoStepForm(data, files=files)
+        elif step == 'verify_category':
+            return VendorProductVerificationCategoryStepForm(data)
+        elif step == 'verify_details':
+            return VendorProductVerificationDetailsStepForm(data, files=files)
+        elif step == 'pricing':
+            return VendorProductPricingStepForm(data, files=files)
+        elif step == 'fulfillment':
+            # Get product type and fulfillment method from wizard data for conditional validation
+            wizard_data = self.get_wizard_data()
+            form_data = wizard_data.get('form_data', {})
+            product_type = form_data.get('type', {}).get('product_type')
+            fulfillment_method = data.get('fulfillment_method') if data else None
+            return VendorProductFulfillmentStepForm(data, files=files, product_type=product_type, fulfillment_method=fulfillment_method)
+        elif step == 'media':
+            return VendorProductMediaStepForm(data, files=files)
+        return None
+    
+    def get_next_step(self, current_step):
+        """Get the next step after current."""
+        try:
+            idx = self.STEPS.index(current_step)
+            if idx < len(self.STEPS) - 1:
+                return self.STEPS[idx + 1]
+        except (ValueError, IndexError):
+            pass
+        return None
+    
+    def get_previous_step(self, current_step):
+        """Get the previous step."""
+        try:
+            idx = self.STEPS.index(current_step)
+            if idx > 0:
+                return self.STEPS[idx - 1]
+        except (ValueError, IndexError):
+            pass
+        return None
+    
+    def get(self, request):
+        """Display current step."""
+        wizard_data = self.get_wizard_data()
+        current_step = wizard_data.get('current_step', 'type')
+        form_data = wizard_data.get('form_data', {})
+        
+        # Get saved data for this step
+        step_data = form_data.get(current_step, {})
+        form = self.get_step_form(current_step, data=None)
+        
+        # Pre-fill form with saved data
+        if step_data and form:
+            for field, value in step_data.items():
+                if field in form.fields:
+                    field_widget = getattr(form.fields[field], 'widget', None)
+                    if getattr(field_widget, 'input_type', None) == 'file':
+                        continue
+                    form.fields[field].initial = value
+        
+        logger.info(f"[WIZARD GET] Step: {current_step}, Has data: {bool(step_data)}")
+        
+        context = {
+            'wizard': {
+                'form': form,
+                'steps': {
+                    'current': current_step,
+                    'all': self.STEPS,
+                    'count': len(self.STEPS),
+                    'step0': self.STEPS.index(current_step),
+                    'step1': self.STEPS.index(current_step) + 1,
+                    'first': self.STEPS[0],
+                    'last': self.STEPS[-1],
+                    'prev': self.get_previous_step(current_step),
+                    'next': self.get_next_step(current_step),
+                },
+                'management_form': {
+                    'current_step': current_step,
+                }
+            },
+            'form': form,
+            'current_step': current_step,
+            'step_number': self.STEPS.index(current_step) + 1,
+            'total_steps': len(self.STEPS),
+            'form_title': _("Create Product"),
+            'is_update_form': False,
+        }
+        
+        # Add product type for conditional display
+        if 'type' in form_data:
+            context['product_type'] = form_data['type'].get('product_type')
+
+        if 'verify_category' in form_data:
+            context['verification_category'] = form_data['verify_category'].get('verification_category')
+        
+        # Add fulfillment method for conditional display
+        if 'fulfillment' in form_data:
+            context['fulfillment_method'] = form_data['fulfillment'].get('fulfillment_method')
+        
+        return render(request, self.template_name, context)
+    
+    def post(self, request):
+        """Handle form submission."""
+        wizard_data = self.get_wizard_data()
+        current_step = wizard_data.get('current_step', 'type')
+        form_data = wizard_data.get('form_data', {})
+        completed_steps = wizard_data.get('completed_steps', [])
+        
+        # Check for navigation buttons
+        if 'wizard_goto_step' in request.POST:
+            target_step = request.POST['wizard_goto_step']
+            if target_step in completed_steps or target_step == self.STEPS[0]:
+                wizard_data['current_step'] = target_step
+                self.save_wizard_data(wizard_data)
+                return redirect(request.path)
+        
+        # Validate current step form
+        form = self.get_step_form(current_step, data=request.POST, files=request.FILES)
+        
+        if form.is_valid():
+            logger.info(f"[WIZARD POST] Step {current_step} valid")
+
+            def _serialize_value(value):
+                if isinstance(value, Decimal):
+                    return str(value)
+                if hasattr(value, 'pk'):
+                    return value.pk
+                if hasattr(value, 'code'):
+                    return value.code
+                if hasattr(value, 'isoformat'):
+                    try:
+                        return value.isoformat()
+                    except Exception:
+                        pass
+                if isinstance(value, (list, tuple)):
+                    return [_serialize_value(item) for item in value]
+                if isinstance(value, dict):
+                    return {key: _serialize_value(val) for key, val in value.items()}
+                return value
+
+            # Save form data - convert model instances to IDs for JSON serialization
+            cleaned_data = {key: _serialize_value(value) for key, value in form.cleaned_data.items()}
+
+            # Persist uploaded files to temp storage and store paths
+            if form.files:
+                for field_name in form.files:
+                    file_list = form.files.getlist(field_name)
+                    saved_paths = [self._save_uploaded_file(f) for f in file_list]
+                    if not saved_paths:
+                        continue
+                    cleaned_data[field_name] = saved_paths if len(saved_paths) > 1 else saved_paths[0]
+
+            form_data[current_step] = cleaned_data
+            
+            # Mark step as completed
+            if current_step not in completed_steps:
+                completed_steps.append(current_step)
+            
+            # Check if this is the last step
+            if current_step == self.STEPS[-1]:
+                # Create the product
+                return self.create_product(request, form_data)
+            
+            # Move to next step
+            next_step = self.get_next_step(current_step)
+            wizard_data['current_step'] = next_step
+            wizard_data['form_data'] = form_data
+            wizard_data['completed_steps'] = completed_steps
+            
+            self.save_wizard_data(wizard_data)
+            logger.info(f"[WIZARD POST] Moving to step: {next_step}")
+            
+            return redirect(request.path)
+        
+        else:
+            # Form invalid - redisplay with errors
+            logger.error(f"[WIZARD POST] Step {current_step} invalid: {form.errors}")
+            
+            context = {
+                'wizard': {
+                    'form': form,
+                    'steps': {
+                        'current': current_step,
+                        'all': self.STEPS,
+                        'count': len(self.STEPS),
+                        'step0': self.STEPS.index(current_step),
+                        'step1': self.STEPS.index(current_step) + 1,
+                        'first': self.STEPS[0],
+                        'last': self.STEPS[-1],
+                        'prev': self.get_previous_step(current_step),
+                        'next': self.get_next_step(current_step),
+                    },
+                    'management_form': {
+                        'current_step': current_step,
+                    }
+                },
+                'form': form,
+                'current_step': current_step,
+                'step_number': self.STEPS.index(current_step) + 1,
+                'total_steps': len(self.STEPS),
+                'form_title': _("Create Product"),
+                'is_update_form': False,
+            }
+            
+            if 'type' in form_data:
+                context['product_type'] = form_data['type'].get('product_type')
+
+            if 'verify_category' in form_data:
+                context['verification_category'] = form_data['verify_category'].get('verification_category')
+            
+            return render(request, self.template_name, context)
+    
+    def create_product(self, request, form_data):
+        """Create product from all collected data."""
+        from django.db import transaction, IntegrityError
+        
+        try:
+            logger.info(f"[WIZARD CREATE] Creating product with data from {len(form_data)} steps")
+            
+            # Combine all form data
+            all_data = {}
+            for step_data in form_data.values():
+                all_data.update(step_data)
+
+            # Convert ISO date strings back to date objects where needed
+            date_fields = {
+                'print_date', 'expiry_date', 'manufacturing_date'
+            }
+            for field_name in date_fields:
+                if field_name in all_data and isinstance(all_data[field_name], str):
+                    try:
+                        all_data[field_name] = datetime.date.fromisoformat(all_data[field_name])
+                    except Exception:
+                        pass
+            
+            # Retrieve model instances from IDs
+            category = None
+            if 'category' in all_data and all_data['category']:
+                try:
+                    from .models import Category
+                    category = Category.objects.get(pk=all_data['category'])
+                except Category.DoesNotExist:
+                    pass
+            
+            # Create product
+            product = Product(
+                vendor=request.user.vendor_profile,
+                name=all_data.get('name', 'Unnamed Product'),
+                category=category,
+                product_type=all_data.get('product_type'),
+                brand=all_data.get('brand'),
+                manufacturer=all_data.get('manufacturer'),
+                manufacturer_address=all_data.get('manufacturer_address'),
+                manufacturer_part_number=all_data.get('manufacturer_part_number'),
+                sku=all_data.get('sku'),
+                origin_country=all_data.get('origin_country'),
+                origin_city=all_data.get('origin_city'),
+                made_in_label=all_data.get('made_in_label'),
+                upc_ean_barcode=all_data.get('upc_ean_barcode'),
+                batch_lot_number=all_data.get('batch_lot_number'),
+                isbn=all_data.get('isbn'),
+                book_edition=all_data.get('book_edition'),
+                publisher_name=all_data.get('publisher_name'),
+                print_date=all_data.get('print_date'),
+                expiry_date=all_data.get('expiry_date'),
+                allergen_information=all_data.get('allergen_information'),
+                storage_instructions=all_data.get('storage_instructions'),
+                size_variant=all_data.get('size_variant'),
+                material_composition=all_data.get('material_composition'),
+                care_label_instructions=all_data.get('care_label_instructions'),
+                brand_authentication_code=all_data.get('brand_authentication_code'),
+                handmade_or_massproduced=all_data.get('handmade_or_massproduced'),
+                manufacturing_process=all_data.get('manufacturing_process'),
+                sustainability=all_data.get('sustainability'),
+                device_identifier_type=all_data.get('device_identifier_type'),
+                device_identifier_value=all_data.get('device_identifier_value'),
+                model_number=all_data.get('model_number'),
+                manufacturing_date=all_data.get('manufacturing_date'),
+                certification_numbers=all_data.get('certification_numbers'),
+                warranty_service_code=all_data.get('warranty_service_code'),
+                safety_warnings=all_data.get('safety_warnings'),
+                description=all_data.get('description', ''),
+                bullet_points=all_data.get('bullet_points'),
+                keywords_for_ai=all_data.get('keywords_for_ai'),
+                price=all_data.get('price'),
+                stock=all_data.get('stock', 0),
+                product_condition=all_data.get('product_condition'),
+                fulfillment_method=all_data.get('fulfillment_method'),
+                vendor_delivery_fee=all_data.get('vendor_delivery_fee'),
+                shipping_options=all_data.get('shipping_options'),
+                item_weight=all_data.get('item_weight'),
+                item_dimensions=all_data.get('item_dimensions'),
+            )
+            
+            # Use transaction to ensure atomic creation
+            with transaction.atomic():
+                product.save()
+
+                storage = self._wizard_storage()
+
+                def _attach_file(field_name):
+                    file_path = all_data.get(field_name)
+                    if not file_path:
+                        return
+                    if isinstance(file_path, (list, tuple)):
+                        file_path = file_path[0]
+                    try:
+                        with storage.open(file_path, 'rb') as f:
+                            getattr(product, field_name).save(os.path.basename(file_path), File(f), save=False)
+                    except Exception as e:
+                        logger.warning(f"[WIZARD CREATE] Unable to attach file {field_name}: {e}")
+
+                for field_name in ['certifications', 'compliance_documents', 'digital_file', 'three_d_model', 'ar_model']:
+                    _attach_file(field_name)
+
+                product.save()
+
+                image_paths = all_data.get('images') or []
+                if isinstance(image_paths, str):
+                    image_paths = [image_paths]
+                for image_path in image_paths:
+                    try:
+                        with storage.open(image_path, 'rb') as f:
+                            ProductImage.objects.create(
+                                product=product,
+                                image=File(f, name=os.path.basename(image_path)),
+                                alt_text=f"Image for {product.name}"
+                            )
+                    except Exception as e:
+                        logger.warning(f"[WIZARD CREATE] Unable to attach image: {e}")
+
+                video_paths = all_data.get('videos') or []
+                if isinstance(video_paths, str):
+                    video_paths = [video_paths]
+                for video_path in video_paths:
+                    try:
+                        with storage.open(video_path, 'rb') as f:
+                            ProductVideo.objects.create(
+                                product=product,
+                                video=File(f, name=os.path.basename(video_path))
+                            )
+                    except Exception as e:
+                        logger.warning(f"[WIZARD CREATE] Unable to attach video: {e}")
+            
+            logger.info(f"[WIZARD CREATE] Product saved successfully! ID: {product.id}")
+            
+            # Clear wizard data
+            self.clear_wizard_data()
+            
+            messages.success(request, _("Product created successfully!"))
+            return redirect(self.success_url)
+        
+        except IntegrityError as e:
+            logger.error(f"[WIZARD CREATE] IntegrityError: {e}", exc_info=True)
+            error_msg = str(e)
+            if 'slug' in error_msg:
+                messages.error(request, _("A product with a similar name already exists. Please use a different product name or try again."))
+            else:
+                messages.error(request, _("Database error creating product. Please check your data and try again."))
+            return redirect(request.path)
+            
+        except Exception as e:
+            logger.error(f"[WIZARD CREATE] Error: {e}", exc_info=True)
+            messages.error(request, _("Error creating product: ") + str(e))
+            return redirect(request.path)
 
 
 class VendorProductUpdateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, UpdateView):
@@ -972,6 +1429,84 @@ class VendorProductUpdateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageM
 
     def get_queryset(self):
         return Product.objects.filter(vendor=self.request.user.vendor_profile)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_update_form'] = True
+        # Add existing images and videos to context
+        context['existing_images'] = self.object.images.all()
+        context['existing_videos'] = self.object.videos.all()
+        return context
+
+    def form_invalid(self, form):
+        """Handle form validation errors while preserving displayed images/videos."""
+        print(f"DEBUG: Form is INVALID. Errors: {form.errors}")
+        messages.error(self.request, _("There were errors with your submission. Please check the form."))
+        # When form is invalid, re-render with existing images/videos still visible
+        # This ensures they don't disappear if the vendor has a validation error
+        return super().form_invalid(form)
+
+    def form_valid(self, form):
+        print(f"DEBUG: Form is VALID - Starting form_valid method")
+        print(f"DEBUG: Form cleaned_data: {form.cleaned_data.keys()}")
+        
+        # Save the product instance
+        self.object = form.save()
+        print(f"DEBUG: Product saved. ID: {self.object.id}, Name: {self.object.name}, Origin: {self.object.origin_country}")
+
+        # Handle deletion of images
+        images_to_delete = self.request.POST.getlist('delete_images')
+        print(f"DEBUG: Images to delete: {images_to_delete}")
+        print(f"DEBUG: All POST data: {self.request.POST}")
+        if images_to_delete:
+            deleted_count = ProductImage.objects.filter(id__in=images_to_delete, product=self.object).delete()
+            print(f"DEBUG: Deleted {deleted_count} images")
+            messages.success(self.request, _(f"Deleted {deleted_count[0]} image(s)."))
+
+        # Handle deletion of videos
+        videos_to_delete = self.request.POST.getlist('delete_videos')
+        print(f"DEBUG: Videos to delete: {videos_to_delete}")
+        if videos_to_delete:
+            deleted_count = ProductVideo.objects.filter(id__in=videos_to_delete, product=self.object).delete()
+            print(f"DEBUG: Deleted {deleted_count} videos")
+            messages.success(self.request, _(f"Deleted {deleted_count[0]} video(s)."))
+
+        # Handle new image uploads
+        new_images = self.request.FILES.getlist('images')
+        print(f"DEBUG: New images to upload: {len(new_images)}")
+        if new_images:
+            for image_file in new_images:
+                ProductImage.objects.create(product=self.object, image=image_file, alt_text=f"Image for {self.object.name}")
+            messages.success(self.request, _(f"Uploaded {len(new_images)} new image(s)."))
+
+        # Handle new video uploads
+        new_videos = self.request.FILES.getlist('videos')
+        print(f"DEBUG: New videos to upload: {len(new_videos)}")
+        if new_videos:
+            for video_file in new_videos:
+                ProductVideo.objects.create(product=self.object, video=video_file)
+            messages.success(self.request, _(f"Uploaded {len(new_videos)} new video(s)."))
+
+        messages.success(self.request, self.get_success_message(form.cleaned_data))
+
+        # Non-blocking suggestion: remind vendors to set origin if it's blank
+        if not (self.object.origin_country and str(self.object.origin_country).strip()):
+            messages.info(
+                self.request,
+                _("Tip: consider setting the product's origin country so it appears in 'Shop by Country'.")
+            )
+
+        return HttpResponseRedirect(self.get_success_url())
+    
+    def post(self, request, *args, **kwargs):
+        """Override post to add debugging."""
+        print(f"DEBUG: POST request received for VendorProductUpdateView")
+        print(f"DEBUG: POST data keys: {list(request.POST.keys())}")
+        print(f"DEBUG: FILES data keys: {list(request.FILES.keys())}")
+        print(f"DEBUG: delete_images: {request.POST.getlist('delete_images')}")
+        print(f"DEBUG: delete_videos: {request.POST.getlist('delete_videos')}")
+        print(f"DEBUG: origin_country from POST: {request.POST.get('origin_country')}")
+        return super().post(request, *args, **kwargs)
 
 
 class VendorProductDeleteView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, DeleteView):
@@ -1178,12 +1713,12 @@ class VendorReviewReplyView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMix
 
 def home(request):
     # Example: Fetch some products and categories for the homepage
-    featured_products = Product.objects.filter(is_featured=True, is_active=True)[:8]
-    new_arrivals = Product.objects.filter(is_active=True).order_by('-created_at')[:8]
+    featured_products = Product.objects.filter(is_featured=True, is_active=True)[:16]
+    new_arrivals = Product.objects.filter(is_active=True).order_by('-created_at')[:20]
     top_categories = Category.objects.annotate(num_products=Count('products')).filter(num_products__gt=0, is_active=True).order_by('-num_products')[:6]
 
     # Example: Fetch some services
-    featured_services = Service.objects.filter(is_active=True, is_featured=True)[:4] # Assuming an 'is_featured' field
+    featured_services = Service.objects.filter(is_active=True, is_featured=True).select_related('provider', 'provider__service_provider_profile')[:4] # Assuming an 'is_featured' field
 
     # Example: Fetch some vendors
     top_vendors = Vendor.objects.filter(is_approved=True, is_verified=True).annotate(avg_rating=Avg('reviews__rating')).order_by('-avg_rating')[:4] # Assuming 'reviews' related_name
@@ -1198,14 +1733,31 @@ def home(request):
         active_boosts__expires_at__gt=now
     ).distinct().select_related('user', 'user__userprofile').order_by('?')[:4] # Show a few random featured riders
 
+    # Aggregate product counts by origin country (only active products)
+    country_counts = (
+        Product.objects.filter(is_active=True)
+        .exclude(origin_country__isnull=True)
+        .values('origin_country')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:8]
+    )
+
+    # Convert to list of dicts with human-readable name
+    top_countries = []
+    for entry in country_counts:
+        code = entry.get('origin_country') or ''
+        name = countries.name(code) if code else ''
+        top_countries.append({'code': code, 'name': name or code, 'count': entry.get('count', 0)})
+
     context = {
         'featured_products': featured_products,
         'new_arrivals': new_arrivals,
         'top_categories': top_categories,
         'featured_services': featured_services,
         'top_vendors': top_vendors,
-        'page_title': _("Welcome to NEXUS Marketplace"),
+        'page_title': _("Welcome to GOWBUY Marketplace"),
         'featured_rider_profiles': featured_rider_profiles,
+        'top_countries': top_countries,
     }
     return render(request, 'core/home.html', context)
 
@@ -1213,8 +1765,13 @@ def menu(request):
     """
     Displays a full menu of all product and service categories.
     """
+    # Eager-load three levels of subcategories to avoid N+1 queries when rendering nested trees
     product_categories = Category.objects.filter(is_active=True, parent__isnull=True).prefetch_related(
-        Prefetch('subcategories', queryset=Category.objects.filter(is_active=True).order_by('name'))
+        Prefetch('subcategories', queryset=Category.objects.filter(is_active=True).order_by('name').prefetch_related(
+            Prefetch('subcategories', queryset=Category.objects.filter(is_active=True).order_by('name').prefetch_related(
+                Prefetch('subcategories', queryset=Category.objects.filter(is_active=True).order_by('name'))
+            ))
+        ))
     )
     service_categories = ServiceCategory.objects.filter(is_active=True, parent__isnull=True).prefetch_related(
         Prefetch('subcategories', queryset=ServiceCategory.objects.filter(is_active=True).order_by('name'))
@@ -1227,12 +1784,12 @@ def menu(request):
     }
     return render(request, 'core/menu.html', context)
 
-def sell_on_nexus(request):
+def sell_on_gowbuy(request):
     """
-    Displays the 'Sell on Nexus' landing page.
+    Displays the 'Sell on Gowbuy' landing page.
     """
-    context = {'page_title': _("Sell on NEXUS")}
-    return render(request, 'core/sell_on_nexus.html', context)
+    context = {'page_title': _("Sell on GOWBUY")}
+    return render(request, 'core/sell_on_gowbuy.html', context)
 
 @login_required
 def vendor_registration_view(request):
@@ -1295,9 +1852,20 @@ class Creating3DModelsHelpView(TemplateView):
         context['page_title'] = _("How to Create 3D Models")
         return context
 
-# This alias is added to resolve an ImportError from a file not in context.
-# The traceback indicates `HelpPageView` is being imported from `core.views`.
-HelpPageView = Creating3DModelsHelpView
+class HelpCenterView(TemplateView):
+    """
+    Displays the Help Center page with FAQs.
+    """
+    template_name = 'core/help_page.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _("Help & Support")
+        context['faqs'] = FAQ.objects.filter(is_active=True)
+        return context
+
+# This alias is used by urls.py to render the support center page.
+HelpPageView = HelpCenterView
 
 
 class LegalDocumentView(TemplateView):
@@ -1350,6 +1918,73 @@ class ProductListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['filter'] = self.filterset
+        return context
+
+
+class OriginDetailView(ListView):
+    """Lists products for a specific origin country (SEO-friendly page).
+    Also provides categories and subcategories specific to that country and
+    top vendors and featured products for the country home page.
+    """
+    model = Product
+    template_name = 'core/origin_detail.html'
+    context_object_name = 'products'
+    paginate_by = 12
+
+    def get_queryset(self):
+        code = self.kwargs.get('country_code', '').strip().upper()
+        qs = Product.objects.filter(is_active=True, origin_country=code)
+        return qs.order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        code = self.kwargs.get('country_code', '').strip().upper()
+        context['country_code'] = code
+        try:
+            context['country_name'] = countries.name(code) if code else ''
+        except Exception:
+            context['country_name'] = code
+
+        # Categories (top-level) that have active products from this country
+        country_categories = (
+            Category.objects.filter(is_active=True, products__origin_country=code, products__is_active=True)
+            .annotate(product_count=Count('products', filter=Q(products__origin_country=code, products__is_active=True)))
+            .distinct()
+            .order_by('-product_count')
+        )
+
+        # For each category, get subcategories that also have products from this country
+        categories_with_subs = []
+        for cat in country_categories:
+            subs = (
+                cat.subcategories.filter(is_active=True, products__origin_country=code, products__is_active=True)
+                .annotate(product_count=Count('products', filter=Q(products__origin_country=code, products__is_active=True)))
+                .distinct().order_by('-product_count')
+            )
+            categories_with_subs.append({'category': cat, 'subcategories': subs})
+
+        # Top vendors in this country by number of products (limit 6)
+        top_vendors = (
+            Vendor.objects.filter(products__origin_country=code, products__is_active=True)
+            .annotate(product_count=Count('products', filter=Q(products__origin_country=code, products__is_active=True)))
+            .distinct().order_by('-product_count')[:6]
+        )
+
+        # Featured products from this country
+        featured_products = Product.objects.filter(is_active=True, origin_country=code, is_featured=True)[:8]
+
+        # Meta description: include top categories for SEO
+        top_cat_names = ', '.join([c.name for c in country_categories[:3]])
+        meta_description = f"Discover products from {context['country_name'] or code}. Top categories: {top_cat_names}. Buy directly from verified vendors on GOWBUY."
+
+        context.update({
+            'country_categories': country_categories,
+            'categories_with_subs': categories_with_subs,
+            'top_vendors': top_vendors,
+            'featured_products_by_country': featured_products,
+            'page_title': f"Products from {context['country_name'] or code}",
+            'meta_description': meta_description,
+        })
         return context
 
 class CategoryDetailView(ListView):
@@ -1565,6 +2200,14 @@ class ProductDetailView(DetailView):
         context['ai_review_summary'] = _get_ai_review_summary(product, list(context['reviews']))
         context['ai_recommended_products'] = _get_ai_recommendations(product)
         # --- END: Refactored AI Features ---
+
+        # --- Phase 4: Authenticity & Origin Information ---
+        context['authenticity_feedback_form'] = AuthenticityFeedbackForm()
+        context['authenticity_reviews'] = AuthenticityReview.objects.filter(product=product).order_by('-flagged_at')
+        context['authenticity_feedback'] = AuthenticityFeedback.objects.filter(product=product, is_verified=True).order_by('-created_at')[:5]
+        context['feedback_count'] = AuthenticityFeedback.objects.filter(product=product).count()
+        context['user_has_purchased_product'] = product.user_has_purchased(self.request.user)
+        # --- END: Phase 4: Authenticity & Origin Information ---
 
         return context
 
@@ -2419,7 +3062,7 @@ def place_order(request):
             shipping_address=shipping_address if requires_shipping else None,
             delivery_fee=Decimal('0.00'), # Initialize, will be updated after items
             total_amount=Decimal('0.00'),   # Initialize, will be updated after items
-            platform_delivery_fee=platform_calculated_delivery_fee, # Store the Nexus part
+            platform_delivery_fee=platform_calculated_delivery_fee, # Store the Gowbuy part
             promotion=promotion, # Link the promotion
             discount_amount=discount_amount, # Store the discount
             currency=currency_code, # Set currency based on session
@@ -2727,15 +3370,15 @@ class OrderDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         # --- Bank Transfer Info ---
         if order.status == 'AWAITING_BANK_TRANSFER':
             context['bank_transfer_info'] = {
-                'bank_name': 'NEXUS Corporate Bank',
-                'account_name': 'Nexus Marketplace Ltd.',
+                'bank_name': 'GOWBUY Corporate Bank',
+                'account_name': 'Gowbuy Marketplace Ltd.',
                 'account_number': '1234567890',
                 'sort_code': '00-11-22',
                 'reference': order.order_id
             }
 
         # --- Add Map Data for Customer ---
-        # Find a relevant delivery task for this order (e.g., the first Nexus-fulfilled one)
+        # Find a relevant delivery task for this order (e.g., the first Gowbuy-fulfilled one)
         delivery_task = order.delivery_tasks.filter(
             pickup_latitude__isnull=False,
             pickup_longitude__isnull=False,
@@ -2831,7 +3474,7 @@ def initiate_stripe_payment(request, order_id):
                     'currency': order.currency.lower(),
                     'product_data': {
                         'name': f'Order #{order.order_id}',
-                        'description': _('Payment for order on NEXUS Marketplace'),
+                        'description': _('Payment for order on GOWBUY Marketplace'),
                     },
                     'unit_amount': int(order.total_amount * 100), # Stripe expects amount in cents/pence
                 },
@@ -3062,7 +3705,7 @@ def download_invoice(request, order_id):
     # --- Email the invoice ---
     try:
         if request.user.email:
-            subject = _("Your NEXUS Invoice for Order #{}").format(order.order_id)
+            subject = _("Your GOWBUY Invoice for Order #{}").format(order.order_id)
             # Context for email template
             email_context = {
                 'user': request.user,
@@ -3226,7 +3869,7 @@ def initiate_paystack_payment(request, order_id):
         "email": request.user.email,
         "amount": amount_in_kobo,
         "currency": order.currency,
-        "reference": order.paystack_ref or f"NEXUS_ORD_{order.order_id}_{uuid.uuid4().hex[:6]}",
+        "reference": order.paystack_ref or f"GOWBUY_ORD_{order.order_id}_{uuid.uuid4().hex[:6]}",
         "callback_url": request.build_absolute_uri(reverse('core:paystack_callback')),
         "metadata": {
             "order_id": str(order.order_id),
@@ -3277,7 +3920,7 @@ def initiate_plan_payment(request, plan_id):
 
     url = "https://api.paystack.co/transaction/initialize"
     amount_in_kobo = int(plan.price * 100)
-    reference = f"NEXUS-PLAN-{plan.id}-{vendor.id}-{uuid.uuid4().hex[:6]}"
+    reference = f"GOWBUY-PLAN-{plan.id}-{vendor.id}-{uuid.uuid4().hex[:6]}"
 
     headers = {
         "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
@@ -3443,7 +4086,7 @@ def plan_payment_callback(request):
             plan_id = metadata.get("plan_id")
 
             if transaction.status == 'pending':
-                with db_transaction.atomic():
+                with transaction.atomic():
                     transaction.status = 'completed'
                     transaction.save(update_fields=['status'])
                     vendor = get_object_or_404(Vendor, id=vendor_id)
@@ -3570,8 +4213,8 @@ def user_profile_view(request):
     # In a real application, this would come from a Subscription model.
     # For demonstration, we'll create a dummy list.
     active_subscriptions = [
-        {'plan': {'name': 'Nexus Pro Monthly'}, 'expires_at': timezone.now() + timezone.timedelta(days=25)},
-        {'plan': {'name': 'Nexus Content Creator Tier'}, 'expires_at': timezone.now() + timezone.timedelta(days=150)},
+        {'plan': {'name': 'Gowbuy Pro Monthly'}, 'expires_at': timezone.now() + timezone.timedelta(days=25)},
+        {'plan': {'name': 'Gowbuy Content Creator Tier'}, 'expires_at': timezone.now() + timezone.timedelta(days=150)},
     ]
 
     # --- END: New context data ---
@@ -3652,7 +4295,7 @@ def change_password(request):
             update_session_auth_hash(request, user)
 
             # --- START: Send Password Change Notification ---
-            mail_subject = _('Your NEXUS Password Has Been Changed')
+            mail_subject = _('Your GOWBUY Password Has Been Changed')
             message = render_to_string('core/emails/password_change_notification.html', {
                 'user': user,
                 'change_time': timezone.now(),
@@ -4015,8 +4658,14 @@ def update_location(request):
 @require_POST
 def update_currency(request):
     currency_code = request.POST.get('currency_code')
-    # Basic validation list
-    if currency_code and currency_code in ['GBP', 'USD', 'EUR', 'GHS', 'NGN']:
+    # Comprehensive validation list with 37 global currencies
+    allowed_currencies = [
+        'GBP', 'USD', 'EUR', 'GHS', 'NGN', 'CAD', 'AUD', 'JPY', 'CNY', 'INR', 
+        'ZAR', 'KES', 'BRL', 'MXN', 'AED', 'SAR', 'CHF', 'SEK', 'NOK', 'DKK',
+        'PLN', 'TRY', 'RUB', 'THB', 'SGD', 'MYR', 'PHP', 'IDR', 'VND', 'EGP',
+        'MAD', 'NZD', 'HKD', 'KRW', 'ILS', 'CZK', 'HUF'
+    ]
+    if currency_code and currency_code in allowed_currencies:
         request.session['currency_code'] = currency_code
         messages.success(request, _(f"Currency updated to {currency_code}."))
     return redirect(request.META.get('HTTP_REFERER', 'core:home'))
@@ -4382,7 +5031,7 @@ def ajax_enhance_product_description(request):
             return JsonResponse({'error': 'Description is required.'}, status=400)
 
         prompt = f"""
-You are an expert e-commerce copywriter for a marketplace called NEXUS.
+You are an expert e-commerce copywriter for a marketplace called GOWBUY.
 Your task is to rewrite and enhance the following product description to be more engaging, persuasive, and SEO-friendly.
 
 Focus on highlighting the benefits for the customer. Use clear, concise language and break up the text with bullet points for readability.
@@ -4424,6 +5073,132 @@ def ajax_enhance_product_image(request):
 @csrf_exempt
 def ajax_remove_image_background(request):
     return JsonResponse({'error': 'Not implemented'}, status=501)
+
+@login_required
+def ajax_suggest_product_origin(request, pk):
+    """Provide an automated origin suggestion for a single product (AJAX).
+
+    - Only the product's vendor or staff can call this.
+    - Tries ML predictor first, falls back to rule-based heuristics when ML is unavailable.
+    Returns JSON: { suggested_country, confidence, method, explanation }
+    """
+    from django.shortcuts import get_object_or_404
+    from django.http import JsonResponse
+    from core.models import Product
+
+    product = get_object_or_404(Product, pk=pk)
+
+    # Permission check: vendor owns product or staff
+    user = request.user
+    if not (user.is_staff or (hasattr(user, 'vendor_profile') and product.vendor == user.vendor_profile)):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    # Try ML predictor
+    try:
+        from core.ml.origin_trainer import predict_products
+        summary = predict_products(queryset=Product.objects.filter(pk=pk), apply=False, min_confidence=0.0, limit=1)
+        samples = summary.get('samples', [])
+        if samples:
+            s = samples[0]
+            return JsonResponse({'suggested_country': s.get('predicted_country'), 'confidence': float(s.get('confidence', 0.0)), 'method': 'ml', 'explanation': 'ML model prediction'})
+    except Exception as e:
+        # ML unavailable or model not found — fallback to rule-based heuristics
+        logger.debug('ML suggestion failed or unavailable: %s', e)
+
+    # Rule-based fallback
+    try:
+        from core.management.commands.generate_origin_suggestions import COUNTRY_NAME_REGEX, find_country_code_by_name
+    except Exception:
+        COUNTRY_NAME_REGEX = None
+        find_country_code_by_name = None
+
+    suggestion = None
+    confidence = None
+    explanation = None
+
+    # Heuristic 1: 'made in X' in description
+    if product.description and COUNTRY_NAME_REGEX:
+        m = COUNTRY_NAME_REGEX.search(product.description)
+        if m and find_country_code_by_name:
+            name = m.group(1)
+            code = find_country_code_by_name(name)
+            if code:
+                suggestion = code
+                confidence = 0.95
+                explanation = f"matched 'made in' -> {name}"
+
+    # Heuristic 2: vendor location
+    if not suggestion and getattr(product, 'vendor', None):
+        v_country = getattr(product.vendor, 'location_country', None)
+        if v_country and find_country_code_by_name:
+            code = find_country_code_by_name(v_country) or v_country
+            suggestion = code
+            confidence = 0.6
+            explanation = 'vendor location'
+
+    # Heuristic 3: keywords_for_ai tokens
+    if not suggestion and product.keywords_for_ai and find_country_code_by_name:
+        for token in (t.strip() for t in product.keywords_for_ai.split(',')):
+            code = find_country_code_by_name(token)
+            if code:
+                suggestion = code
+                confidence = 0.7
+                explanation = f'keyword match: {token}'
+                break
+
+    if suggestion:
+        return JsonResponse({'suggested_country': suggestion, 'confidence': float(confidence or 0.0), 'method': 'rule', 'explanation': explanation})
+
+    return JsonResponse({'suggested_country': None, 'confidence': 0.0, 'method': None, 'explanation': 'no suggestion'})
+
+
+@require_POST
+@login_required
+def ajax_apply_product_origin(request, pk):
+    """Apply a chosen origin country to a product. Expects JSON: { country: 'US', confidence: 0.9, method: 'ml' }
+
+    Only the vendor owner or staff may apply.
+    """
+    import json
+    from django.shortcuts import get_object_or_404
+    from django.http import JsonResponse
+    from django.utils import timezone
+    from core.models import Product, OriginLabel
+
+    product = get_object_or_404(Product, pk=pk)
+    user = request.user
+    if not (user.is_staff or (hasattr(user, 'vendor_profile') and product.vendor == user.vendor_profile)):
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    try:
+        data = json.loads(request.body.decode('utf-8')) if request.body else {}
+    except Exception:
+        data = {}
+
+    country = data.get('country') or None
+    confidence = data.get('confidence')
+    method = data.get('method')
+
+    if not country:
+        return JsonResponse({'error': 'country is required'}, status=400)
+
+    # Apply the selection
+    product.origin_country = country
+    product.origin_inference_status = 'accepted'
+    if method in ('ml', 'rule'):
+        product.origin_inferred_by = method
+    else:
+        product.origin_inferred_by = 'manual'
+    product.origin_inferred_at = timezone.now()
+    product.save(update_fields=['origin_country', 'origin_inference_status', 'origin_inferred_by', 'origin_inferred_at'])
+
+    # Create an OriginLabel for audit trail
+    try:
+        OriginLabel.objects.create(product=product, label_country=country, labeler=user, confidence=confidence, note='Accepted suggestion via vendor UI', source='admin')
+    except Exception:
+        logger.exception('Failed to create OriginLabel on vendor apply')
+
+    return JsonResponse({'success': True, 'origin_country': country})
 
 @api_key_required
 def api_upload_3d_model(request, product_id):
@@ -5079,7 +5854,7 @@ def ajax_chatbot_message(request):
         knowledge_base = _get_chatbot_knowledge_base()
 
         # 2. Construct the Prompt for the AI
-        prompt = f"""You are NEXUS AI, a helpful and friendly e-commerce assistant for the NEXUS marketplace.
+        prompt = f"""You are GOWBUY AI, a helpful and friendly e-commerce assistant for the GOWBUY marketplace.
 Your goal is to assist users with their questions and help them find products or services.
 
 Today's Date: {timezone.now().strftime('%Y-%m-%d')}
@@ -5558,3 +6333,44 @@ def subscribe_newsletter(request):
             return JsonResponse({'status': 'info', 'message': 'You are already subscribed.'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': 'An error occurred. Please try again.'}, status=500)
+
+
+# --- Phase 4: Authenticity Feedback Endpoint ---
+@login_required
+@require_http_methods(["POST"])
+def report_product_authenticity(request, pk):
+    """AJAX endpoint for buyers to report suspected fake/inauthentic products."""
+    try:
+        product = Product.objects.get(pk=pk, is_active=True)
+    except Product.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Product not found.'}, status=404)
+    
+    form = AuthenticityFeedbackForm(request.POST, request.FILES)
+    if form.is_valid():
+        feedback = form.save(commit=False)
+        feedback.product = product
+        feedback.reporter = request.user
+        feedback.save()
+        
+        # Automatically create an AuthenticityReview for admin
+        AuthenticityReview.objects.get_or_create(
+            product=product,
+            status='pending',
+            defaults={
+                'flagged_by': request.user,
+                'reason': f"Buyer feedback: {feedback.get_feedback_type_display()}"
+            }
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': _('Thank you for reporting. Our team will review this shortly.'),
+            'feedback_id': feedback.id
+        })
+    else:
+        errors = form.errors.as_json()
+        return JsonResponse({
+            'status': 'error',
+            'message': _('Please fix the errors and try again.'),
+            'errors': json.loads(errors)
+        }, status=400)

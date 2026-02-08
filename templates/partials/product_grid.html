@@ -1,25 +1,51 @@
 {% load static %}
 {% load i18n %}
 {% load humanize %} {# Load humanize for formatting price #}
+{% load product_tags %}
+{% load currency_filters %}
 
 {% if products_list %}
     {% for product in products_list %}
     <div class="col">
-        <div class="card h-100 product-card">
-            {# Link to the product detail page #}
-            <a href="{{ product.get_absolute_url }}">
-                {# Display primary image or placeholder #}
-                {% if product.primary_image %}
-                    <img src="{{ product.primary_image.url }}" class="card-img-top product-card-img" alt="{{ product.name }}">
-                {% else %}
-                    <img src="{% static 'assets/placeholder_image.png' %}" class="card-img-top product-card-img" alt="{% trans 'No image available' %}">
-                {% endif %}
-            </a>
-            <div class="card-body d-flex flex-column">
-                <h5 class="card-title product-card-title"><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h5>
-                <p class="card-text product-card-vendor">{% trans "By" %} <a href="{{ product.vendor.get_absolute_url }}">{{ product.vendor.name }}</a></p>
-                <p class="card-text product-card-price mt-auto">GH₵ {{ product.price|floatformat:2|intcomma }}</p> {# Example price formatting #}
-                {# TODO: Add rating display, add to cart button etc. #}
+        <div class="service-item-flat">
+            <div class="image-container">
+                <a href="{{ product.get_absolute_url }}">
+                    {% if product.primary_image %}
+                        <img src="{{ product.primary_image.url }}" alt="{{ product.name }}">
+                    {% else %}
+                        <img src="{% static 'assets/placeholder_image.png' %}" alt="{% trans 'No image available' %}">
+                    {% endif %}
+                </a>
+            </div>
+            <h5 class="mb-1">
+                <a href="{{ product.get_absolute_url }}" class="stretched-link">{{ product.name|truncatechars:50 }}</a>
+            </h5>
+            <p class="provider-info mb-2">
+                {% trans "By" %} <a href="{{ product.vendor.get_absolute_url }}">{{ product.vendor.name }}</a>
+                {% if product.vendor.is_verified %}<span class="badge bg-success ms-1" title="{% trans 'Verified Vendor' %}" style="font-size: 0.65rem;"><i class="bi bi-check-circle-fill"></i></span>{% endif %}
+            </p>
+            {% if product.origin_country %}
+            <p class="provider-info mb-2 text-muted">
+                <i class="bi bi-geo-alt"></i> {% trans "Origin:" %} {{ product.origin_country.name }}
+            </p>
+            {% endif %}
+            {% if product.review_count %}
+            <p class="provider-info mb-2 text-muted">
+                <i class="bi bi-star-fill text-warning"></i>
+                {{ product.average_rating|floatformat:1 }} ({{ product.review_count }} {% trans "reviews" %})
+            </p>
+            {% else %}
+            <p class="provider-info mb-2 text-muted">{% trans "No reviews yet" %}</p>
+            {% endif %}
+            <p class="service-price-flat mb-2">
+                {% convert_price product.price %}
+            </p>
+            <div class="d-flex gap-2 btn-details-flat w-100">
+                <a href="{{ product.get_absolute_url }}" class="btn btn-sm btn-outline-primary flex-grow-1">{% trans "View" %}</a>
+                <form action="{% url 'core:add_to_cart' product.id %}" method="post" class="flex-grow-1">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100">{% trans "Buy" %}</button>
+                </form>
             </div>
         </div>
     </div>

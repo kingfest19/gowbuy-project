@@ -120,9 +120,9 @@
             </div>
             {% endif %}
 
-            {# --- Items Fulfilled by Nexus --- #}
-            {% with nexus_items=vendor_items|filtered_by_fulfillment:'nexus' %}
-                {% include "core/vendor/_order_items_table.html" with title=_("Items Fulfilled by Nexus") items=nexus_items %}
+            {# --- Items Fulfilled by Gowbuy --- #}
+            {% with gowbuy_items=vendor_items|filtered_by_fulfillment:'gowbuy' %}
+                {% include "core/vendor/_order_items_table.html" with title=_("Items Fulfilled by Gowbuy") items=gowbuy_items %}
             {% endwith %}
 
             {# --- Items Fulfilled by You (the Vendor) --- #}

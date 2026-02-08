@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static i18n %}
 
-{% block title %}{{ service.title }} | Nexus{% endblock title %}
+{% block title %}{{ service.title }} | Gowbuy{% endblock title %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'assets/css/product_detail.css' %}">
@@ -669,7 +669,7 @@
         shareBtn.addEventListener('click', async () => {
             const shareData = {
                 title: '{{ service.title|escapejs }}',
-                text: '{% trans "Check out this service on Nexus!" %}',
+                text: '{% trans "Check out this service on Gowbuy!" %}',
                 url: window.location.href
             };
             if (navigator.share) {

@@ -28,3 +28,17 @@ def get_embed_url(url):
         return f"https://player.vimeo.com/video/{match.group(5)}"
 
     return None # Not a recognized embeddable video URL
+
+
+@register.filter
+def country_flag(country_code):
+    """Return the emoji flag for a 2-letter ISO country code (e.g., 'GB' -> 🇬🇧)."""
+    if not country_code:
+        return ''
+    code = country_code.strip().upper()
+    if len(code) != 2 or not code.isalpha():
+        return ''
+    try:
+        return ''.join(chr(ord(char) + 127397) for char in code)
+    except Exception:
+        return ''

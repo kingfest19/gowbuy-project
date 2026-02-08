@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block page_title %}{% trans "Vendor Dashboard" %}{% endblock page_title %} - NEXUS</title>
+    <title>{% block page_title %}{% trans "Vendor Dashboard" %}{% endblock page_title %} - GOWBUY</title>
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -109,6 +109,17 @@
         </div>
 
         <div class="main-content">
+            <div class="alert alert-info d-flex align-items-start gap-2" role="status">
+                <span class="mt-1">ℹ️</span>
+                <div>
+                    <div class="fw-semibold">{% trans "Vendor reminders" %}</div>
+                    <ul class="mb-0 ps-3">
+                        <li>{% trans "If you don't know a product's origin, save it first and edit later to generate a suggestion." %}</li>
+                        <li>{% trans "Products won’t go live until availability is turned on." %}</li>
+                        <li>{% trans "Availability claims are verified immediately for accuracy." %}</li>
+                    </ul>
+                </div>
+            </div>
             {% block vendor_content %}
             <!-- Content from child templates will go here -->
             {% endblock vendor_content %}

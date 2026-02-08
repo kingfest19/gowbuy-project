@@ -1,0 +1,22 @@
+{# Recursive category tree partial: expects a `categories` iterable or a single `category` in context. #}
+<ul class="category-tree">
+    {% for category in categories %}
+    <li class="category-item">
+        {% with children=category.subcategories.all %}
+            {% if children.exists %}
+                <div class="category-with-children d-flex align-items-center">
+                    <button type="button" class="category-toggle btn btn-link p-0 d-flex align-items-center" aria-expanded="false" aria-controls="subcats-{{ category.id }}">
+                        <span class="me-2">{{ category.name }}</span>
+                        <i class="fas fa-chevron-down ms-auto toggle-caret"></i>
+                    </button>
+                </div>
+                <div id="subcats-{{ category.id }}" class="subcategory-wrapper collapse">
+                    {% include 'core/_category_tree.html' with categories=children %}
+                </div>
+            {% else %}
+                <a href="{{ category.get_absolute_url }}" class="category-leaf">{{ category.name }}</a>
+            {% endif %}
+        {% endwith %}
+    </li>
+    {% endfor %}
+</ul>

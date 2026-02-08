@@ -1,148 +1,161 @@
-/* --- Footer CSS Rules --- */
+/* --- Footer CSS Rules - Modern Glassmorphism --- */
 /* Assumes :root variables from home.css are available */
 
 footer {
     display: flex;
     flex-direction: column;
-    /* Stack sections vertically */
     align-items: center;
-    /* Center content */
-    background: var(--color-background-dark, #2c3e50);
-    /* Use theme variable or fallback */
-    color: #ccc;
-    /* Lighter base text */
-    padding: var(--spacing-xl, 2rem) var(--spacing-md, 1rem) var(--spacing-md, 1rem) var(--spacing-md, 1rem);
-    /* More top padding */
-    margin-top: var(--spacing-xl, 2rem);
-    /* Add space above footer */
-    border-top: 5px solid var(--color-border-dark, #495057);
-    /* Top border */
+    background: rgba(17, 24, 39, 0.85) !important;
+    backdrop-filter: blur(14px) !important;
+    color: #e5e7eb;
+    padding: 3rem 1.5rem 1.5rem;
+    margin-top: 3rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.2);
 }
 
-footer .footer-logo {
-    /* Added class to the <a> tag around the logo */
+[data-theme="light"] footer {
+    background: rgba(241, 245, 249, 0.85) !important;
+    color: #334155;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+footer .footer-logo-area {
     display: inline-block;
-    /* Allow margin auto to work if needed */
-    margin-bottom: var(--spacing-lg, 1.5rem);
+    margin-bottom: 1.5rem;
 }
 
-footer .footer-logo img {
-    /* Target logo specifically */
-    width: 100px;
-    filter: brightness(0) invert(0.9);
-    /* Make logo light grey */
-    opacity: 0.9;
-    transition: opacity var(--transition-speed-normal, 0.3s) var(--transition-timing, ease-in-out);
+footer .footer-logo-area img {
+    width: 60px !important;
+    height: auto !important;
+    max-width: 60px !important;
+    transition: opacity 0.3s ease, transform 0.3s ease;
     display: block;
-    /* Ensure block display */
+    opacity: 0.9;
 }
 
-footer .footer-logo:hover img {
+footer .footer-logo-area:hover img {
     opacity: 1;
+    transform: scale(1.05);
+}
+
+[data-theme="dark"] footer .footer-logo-area img {
+    filter: brightness(0) invert(0.95);
+}
+
+[data-theme="light"] footer .footer-logo-area img {
+    filter: none;
 }
 
 .footer-links {
     display: flex;
     flex-wrap: wrap;
-    /* Allow columns to wrap */
     justify-content: center;
-    /* Center columns */
-    gap: var(--spacing-lg, 1.5rem) var(--spacing-xl, 2rem);
-    /* Row and column gap */
+    gap: 2rem 3rem;
     width: 100%;
-    max-width: 1100px;
-    /* Wider max-width */
-    margin-bottom: var(--spacing-xl, 2rem);
+    max-width: 1200px;
+    margin-bottom: 2.5rem;
     text-align: left;
-    /* Align text left in columns by default */
 }
 
 .footer-column {
     flex: 1;
-    /* Allow columns to grow */
-    min-width: 180px;
-    /* Wider min-width */
+    min-width: 200px;
 }
 
 .footer-column h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--color-text-light, #fff);
-    /* White heading */
-    margin-bottom: var(--spacing-md, 1rem);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin-bottom: 1rem;
     position: relative;
-    padding-bottom: var(--spacing-xs, 0.25rem);
+    padding-bottom: 0.5rem;
+    letter-spacing: 0.5px;
 }
 
-/* Underline effect for headings */
+[data-theme="light"] .footer-column h4 {
+    color: #0f172a;
+}
+
 .footer-column h4::after {
     content: '';
     position: absolute;
     bottom: 0;
     left: 0;
-    width: 30px;
-    /* Short underline */
-    height: 2px;
-    background-color: var(--color-accent, #f1c40f);
-    /* Use theme variable or fallback */
+    width: 40px;
+    height: 3px;
+    background: linear-gradient(90deg, rgba(37, 99, 235, 0.8), rgba(59, 130, 246, 0.5));
+    border-radius: 2px;
 }
 
 .footer-column ul {
     list-style: none;
     padding: 0;
     margin: 0;
-    /* Ensure no default margin */
 }
 
 .footer-column ul li {
-    margin-bottom: var(--spacing-sm, 0.5rem);
+    margin-bottom: 0.6rem;
 }
 
 .footer-column ul li a {
-    color: #ccc;
-    /* Inherit footer base color */
-    font-size: 0.9rem;
+    color: #cbd5e1;
+    font-size: 0.95rem;
     text-decoration: none;
-    transition: color var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out),
-        padding-left var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out);
+    transition: all 0.2s ease;
+    display: inline-block;
+}
+
+[data-theme="light"] .footer-column ul li a {
+    color: #475569;
 }
 
 .footer-column ul li a:hover {
-    color: var(--color-text-light, #fff);
-    padding-left: var(--spacing-xs, 0.25rem);
-    /* Indent slightly on hover */
-    text-decoration: underline;
-    /* Add underline on hover */
+    color: #60a5fa;
+    padding-left: 0.5rem;
+    text-decoration: none;
+}
+
+[data-theme="light"] .footer-column ul li a:hover {
+    color: #2563eb;
 }
 
 .footer-bottom {
-    border-top: 1px solid var(--color-border-dark, #495057);
-    /* Separator line */
-    padding-top: var(--spacing-lg, 1.5rem);
-    /* Increased padding */
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 1.5rem;
     width: 100%;
-    max-width: 1100px;
-    /* Match width of links section */
+    max-width: 1200px;
     text-align: center;
-    font-size: 0.8rem;
-    color: #aaa;
-    /* Dimmer color */
+    font-size: 0.85rem;
+    color: #94a3b8;
+}
+
+[data-theme="light"] .footer-bottom {
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    color: #64748b;
 }
 
 .footer-bottom p {
-    margin-bottom: var(--spacing-xs, 0.25rem);
+    margin-bottom: 0.5rem;
 }
 
 .footer-bottom a {
-    color: #bbb;
-    /* Slightly brighter link */
+    color: #94a3b8;
     text-decoration: none;
-    transition: color var(--transition-speed-fast, 0.15s) var(--transition-timing, ease-in-out);
+    transition: color 0.2s ease;
+}
+
+[data-theme="light"] .footer-bottom a {
+    color: #64748b;
 }
 
 .footer-bottom a:hover {
-    color: var(--color-text-light, #fff);
+    color: #60a5fa;
     text-decoration: underline;
+}
+
+[data-theme="light"] .footer-bottom a:hover {
+    color: #2563eb;
 }
 
 

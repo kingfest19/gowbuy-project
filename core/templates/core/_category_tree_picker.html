@@ -1,0 +1,24 @@
+{# Category picker version of the recursive tree. Renders clickable items with data attributes. Accepts optional `picker_prefix` to namespace IDs. #}
+{% with prefix=picker_prefix|default:'' %}
+<ul class="category-tree picker-tree">
+    {% for category in categories %}
+    <li class="category-item">
+        {% with children=category.subcategories.all %}
+            {% if children.exists %}
+                <div class="category-with-children d-flex align-items-center">
+                    <button type="button" class="category-toggle btn btn-link p-0 d-flex align-items-center" aria-expanded="false" aria-controls="{{ prefix }}picker-subcats-{{ category.id }}">
+                        <span class="me-2 picker-label" data-category-id="{{ category.id }}" data-category-name="{{ category.name }}">{{ category.name }}</span>
+                        <i class="fas fa-chevron-down ms-auto toggle-caret"></i>
+                    </button>
+                </div>
+                <div id="{{ prefix }}picker-subcats-{{ category.id }}" class="subcategory-wrapper collapse">
+                    {% include 'core/_category_tree_picker.html' with categories=children picker_prefix=prefix %}
+                </div>
+            {% else %}
+                <a href="#" class="category-leaf picker-select" data-category-id="{{ category.id }}" data-category-name="{{ category.name }}">{{ category.name }}</a>
+            {% endif %}
+        {% endwith %}
+    </li>
+    {% endfor %}
+</ul>
+{% endwith %}

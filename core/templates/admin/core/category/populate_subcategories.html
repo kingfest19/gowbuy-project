@@ -1,0 +1,25 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <h1>{{ title }}</h1>
+  <form method="post" enctype="multipart/form-data" class="form-inline">
+    {% csrf_token %}
+    <div style="margin-bottom: 1em;">
+      <label><input type="checkbox" name="create_top" /> Create missing top-level categories</label>
+      &nbsp;&nbsp;
+      <label><input type="checkbox" name="force" /> Force (overwrite existing with same slug/name)</label>
+      &nbsp;&nbsp;
+      <label>Upload JSON mapping: <input type="file" name="mapping_file" accept="application/json"/></label>
+    </div>
+    <div style="margin-bottom: 1em;">
+      <button type="submit" name="preview" class="default">Preview</button>
+      <button type="submit" name="apply" class="default">Apply</button>
+    </div>
+  </form>
+
+  {% if output %}
+    <h2>Command output</h2>
+    <pre style="background:#f7f7f7;border:1px solid #ddd;padding:1em;white-space:pre-wrap;">{{ output }}</pre>
+  {% endif %}
+{% endblock %}

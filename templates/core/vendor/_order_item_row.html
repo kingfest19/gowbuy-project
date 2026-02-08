@@ -16,7 +16,7 @@
         <td class="text-end">{{ currency_symbol }}{{ item.price|floatformat:2 }}</td>
         <td class="text-end">{{ currency_symbol }}{{ item.get_total_item_price|floatformat:2 }}</td>
         <td>
-            <span class="badge {% if item.fulfillment_method == 'nexus' %}bg-primary{% else %}bg-secondary{% endif %}">
+            <span class="badge {% if item.fulfillment_method == 'gowbuy' %}bg-primary{% else %}bg-secondary{% endif %}">
                 {{ item.get_fulfillment_method_display }}
             </span>
         </td>
