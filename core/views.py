@@ -1717,6 +1717,9 @@ def home(request):
     new_arrivals = Product.objects.filter(is_active=True).order_by('-created_at')[:20]
     top_categories = Category.objects.annotate(num_products=Count('products')).filter(num_products__gt=0, is_active=True).order_by('-num_products')[:6]
 
+    # Get a featured product as deal of the day (pick one with good image)
+    deal_of_day = Product.objects.filter(is_active=True, is_featured=True).select_related('vendor').order_by('?').first()
+
     # Example: Fetch some services
     featured_services = Service.objects.filter(is_active=True, is_featured=True).select_related('provider', 'provider__service_provider_profile')[:4] # Assuming an 'is_featured' field
 
@@ -1758,6 +1761,7 @@ def home(request):
         'page_title': _("Welcome to GOWBUY Marketplace"),
         'featured_rider_profiles': featured_rider_profiles,
         'top_countries': top_countries,
+        'deal_of_day': deal_of_day,
     }
     return render(request, 'core/home.html', context)
 

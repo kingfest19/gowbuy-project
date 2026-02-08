@@ -1749,12 +1749,29 @@
 
                 let authHtml = '';
                 {% if user.is_authenticated %}
-                    // Build the authenticated user menu with all items from desktop modal
-                    let userMenuItems = '';
-                    userMenuItems += createLink("{% trans 'My Profile' %}", "{% url 'core:user_profile' %}", icons.profile);
-                    userMenuItems += createLink("{% trans 'Offer a Service' %}", "{% url 'core:service_create' %}", icons.offerService);
-                    userMenuItems += createLink("{% trans 'Your Orders' %}", "{% url 'core:order_history' %}", icons.orders);
-                // Build Programs & Features section with conditional service provider check
+                let userMenuItems = '';
+                userMenuItems += createLink("{% trans 'My Profile' %}", "{% url 'core:user_profile' %}", icons.profile);
+                userMenuItems += createLink("{% trans 'Offer a Service' %}", "{% url 'core:service_create' %}", icons.offerService);
+                userMenuItems += createLink("{% trans 'Your Orders' %}", "{% url 'core:order_history' %}", icons.orders);
+                userMenuItems += createLink("{% trans 'Recent Comparisons' %}", "{% url 'core:recent_comparisons' %}", icons.comparisons);
+                userMenuItems += createLink("{% trans 'My Messages' %}", "{% url 'core:customer_message_list' %}", icons.messages);
+                userMenuItems += createLink("{% trans 'My Notifications' %}", "{% url 'core:customer_notification_list' %}", icons.notifications);
+                {% if user.is_service_provider or user.service_provider_profile %}
+                userMenuItems += createLink("{% trans 'Service Hub' %}", "{% url 'core:service_provider_dashboard' %}", icons.serviceHub);
+                {% else %}
+                userMenuItems += createLink("{% trans 'Become a Service Provider' %}", "{% url 'core:become_service_provider' %}", icons.becomeServiceProvider);
+                {% endif %}
+                {% if user.vendor_profile %}
+                userMenuItems += createLink("{% trans 'Vendor Dashboard' %}", "{% url 'core:vendor_dashboard' %}", icons.vendorDashboard);
+                {% endif %}
+                userMenuItems += '<li class="mb-3"><button onclick="toggleTheme()" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5 border-0 bg-transparent p-0 w-100 text-start py-2">' + icons.moon + '<span>{% trans "Toggle Theme" %}</span></button></li>';
+                userMenuItems += '<li class="mb-0"><hr class="my-2"></li>';
+                userMenuItems += createLogoutLink("{% trans 'Sign Out' %}", "{% url 'logout' %}", icons.signout);
+                authHtml = `<div class="mb-4"><div class="d-flex align-items-center px-2 mb-3"><img src="https://ui-avatars.com/api/?name={{ user.username }}&background=random&color=fff&size=128" alt="Avatar" class="rounded-circle me-3 shadow-sm" style="width: 50px; height: 50px;"><h5 class="fw-bold m-0">{% trans "Hello, " %}{{ user.username }}</h5></div><h5 class="fw-bold mb-3 px-2">{% trans "My Account" %}</h5><ul class="list-unstyled m-0 px-2">${userMenuItems}</ul></div>`;
+                {% else %}
+                authHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Hello, Sign in" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{% trans 'Sign In' %}", "{% url 'signin' %}", icons.signin)}${createLink("{% trans 'Sign Up' %}", "{% url 'signup' %}", icons.signup)}</ul></div>`;
+                {% endif %}
+
                 let programsMenuItems = '';
                 programsMenuItems += createLink("{% trans 'Daily Offers' %}", "{% url 'core:daily_offers' %}", icons.tag);
                 {% if user.is_authenticated %}
@@ -1769,28 +1786,7 @@
                 programsMenuItems += createLink("{% trans 'Services' %}", "{% url 'core:service_list' %}", icons.services);
                 programsMenuItems += createLink("{% trans 'Become Rider' %}", "{% url 'core:become_rider_info_page' %}", icons.rider);
                 programsMenuItems += createLink("{% trans 'Support Center' %}", "{% url 'help' %}", icons.support);
-                let programsHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Programs & Features" %}</h5><ul class="list-unstyled m-0 px-2">${programsMenuItems
-                    userMenuItems += createLink("{% trans 'Recent Comparisons' %}", "{% url 'core:recent_comparisons' %}", icons.comparisons);
-                    userMenuItems += createLink("{% trans 'My Messages' %}", "{% url 'core:customer_message_list' %}", icons.messages);
-                    userMenuItems += createLink("{% trans 'My Notifications' %}", "{% url 'core:customer_notification_list' %}", icons.notifications);
-                    {% if user.is_service_provider or user.service_provider_profile %}
-                    userMenuItems += createLink("{% trans 'Service Hub' %}", "{% url 'core:service_provider_dashboard' %}", icons.serviceHub);
-                    {% else %}
-                    userMenuItems += createLink("{% trans 'Become a Service Provider' %}", "{% url 'core:become_service_provider' %}", icons.becomeServiceProvider);
-                    {% endif %}
-                    {% if user.vendor_profile %}
-                    userMenuItems += createLink("{% trans 'Vendor Dashboard' %}", "{% url 'core:vendor_dashboard' %}", icons.vendorDashboard);
-                    {% endif %}
-                    userMenuItems += '<li class="mb-3"><button onclick="toggleTheme()" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5 border-0 bg-transparent p-0 w-100 text-start py-2">' + icons.moon + '<span>{% trans "Toggle Theme" %}</span></button></li>';
-                    userMenuItems += '<li class="mb-0"><hr class="my-2"></li>';
-                    userMenuItems += createLogoutLink("{% trans 'Sign Out' %}", "{% url 'logout' %}", icons.signout);
-                    
-                    authHtml = `<div class="mb-4"><div class="d-flex align-items-center px-2 mb-3"><img src="https://ui-avatars.com/api/?name={{ user.username }}&background=random&color=fff&size=128" alt="Avatar" class="rounded-circle me-3 shadow-sm" style="width: 50px; height: 50px;"><h5 class="fw-bold m-0">{% trans "Hello, " %}{{ user.username }}</h5></div><ul class="list-unstyled m-0 px-2">${userMenuItems}</ul></div>`;
-                {% else %}
-                    authHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Hello, Sign in" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{% trans 'Sign In' %}", "{% url 'signin' %}", icons.signin)}${createLink("{% trans 'Sign Up' %}", "{% url 'signup' %}", icons.signup)}</ul></div>`;
-                {% endif %}
-
-                let programsHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Programs & Features" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{% trans 'Daily Offers' %}", "{% url 'core:daily_offers' %}", icons.tag)}${createLink("{% trans 'Sell on GOWBUY' %}", "{% url 'core:sell_on_gowbuy' %}", icons.store)}${createLink("{% trans 'Services' %}", "{% url 'core:service_list' %}", icons.services)}${createLink("{% trans 'Become Rider' %}", "{% url 'core:become_rider_info_page' %}", icons.rider)}${createLink("{% trans 'Support Center' %}", "{% url 'help' %}", icons.support)}</ul></div>`;
+                let programsHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Programs & Features" %}</h5><ul class="list-unstyled m-0 px-2">${programsMenuItems}</ul></div>`;
                 let settingsHtml = `<div class="mb-4"><h5 class="fw-bold mb-3 px-2">{% trans "Settings" %}</h5><ul class="list-unstyled m-0 px-2">${createLink("{{ LANGUAGE_CODE|language_name_local|title }}", "javascript:void(0)", icons.globe, 'data-bs-toggle="modal" data-bs-target="#languageModal"')}${createLink("{{ request.session.delivery_location|default:'United States'|escapejs }}", "javascript:void(0)", icons.flag, 'data-bs-toggle="modal" data-bs-target="#locationModal"')}<li class="mb-3"><button onclick="toggleTheme()" class="text-decoration-none text-dark d-flex align-items-center gap-3 fs-5 border-0 bg-transparent p-0 w-100 text-start py-2"><span class="mobile-menu-icon">${icons.moon}</span><span>{% trans "Toggle Theme" %}</span></button></li></ul></div>`;
 
                 menuContainer.innerHTML = authHtml + '<hr class="my-3">' + programsHtml + '<hr class="my-3">' + settingsHtml;
