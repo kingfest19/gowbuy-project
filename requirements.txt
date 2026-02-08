@@ -30,11 +30,14 @@ django-allauth==65.10.0
 django-cloudinary-storage==0.3.0
 django-crispy-forms==2.4
 django-filter==25.1
+django-bleach==3.1.0
+django-countries==8.2.0
 django-formtools==2.5.1
 django-jazzmin==3.0.1
 django-paypal==2.1
 django-ratelimit==4.1.0
 django-redis==6.0.0
+django-tinymce==5.0.0
 djlint==1.36.4
 EditorConfig==0.17.1
 fido2==2.0.0
@@ -126,3 +129,7 @@ wcwidth==0.2.13
 webencodings==0.5.1
 whitenoise==6.11.0
 xhtml2pdf==0.2.17
+# Optional ML dependencies for origin inference trainer
+lightgbm
+scikit-learn
+joblib
