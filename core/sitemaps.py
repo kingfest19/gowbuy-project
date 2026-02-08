@@ -76,3 +76,17 @@ class VendorSitemap(Sitemap):
 
     def lastmod(self, obj):
         return getattr(obj, 'updated_at', obj.created_at)
+
+
+class OriginSitemap(Sitemap):
+    changefreq = 'weekly'
+    priority = 0.6
+
+    def items(self):
+        # Return a list of country codes that have active products
+        qs = Product.objects.filter(is_active=True).exclude(origin_country__isnull=True).values_list('origin_country', flat=True).distinct()
+        return list(qs)
+
+    def location(self, item):
+        # item is country code
+        return reverse('core:origin_detail', kwargs={'country_code': item})
