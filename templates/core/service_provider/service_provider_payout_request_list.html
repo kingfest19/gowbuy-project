@@ -232,7 +232,7 @@
                     </tbody>
                 </table>
             </div>
-            {% include "core/snippets/pagination_snippet.html" with page_obj=payout_requests %}
+            {% include "core/pagination_snippet.html" with page_obj=payout_requests %}
             {% else %}
             <div class="alert alert-info mt-4" role="alert">
                 {% trans "You have no payout requests yet." %}

@@ -176,6 +176,32 @@
             border-color: #474747;
         }
 
+        .form-container .btn-outline-warning {
+            color: #ffc107;
+            border-color: #ffc107;
+            font-weight: 500;
+        }
+
+        .form-container .btn-outline-warning:hover {
+            background-color: #ffc107;
+            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3);
+        }
+
+        .form-container .btn-outline-info {
+            color: #0dcaf0;
+            border-color: #0dcaf0;
+            font-weight: 500;
+        }
+
+        .form-container .btn-outline-info:hover {
+            background-color: #0dcaf0;
+            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(13, 202, 240, 0.3);
+        }
+
         /* Add transitions to main action buttons */
         .btn-outline-secondary:hover {
             background-color: #474747;
@@ -954,7 +980,7 @@
                         {% if is_update_form %}{% translate "Save Changes" %}{% else %}{% translate "Create Product" %}{% endif %}
                     </button>
                 </div>
-            </div>
+            </div> {# End of form-body #}
         </form>
     </div>
 </div>

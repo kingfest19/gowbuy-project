@@ -426,7 +426,7 @@
 
         {% if is_paginated %}
         <div class="mt-4 d-none d-lg-block">
-            {% include "core/snippets/pagination_snippet.html" with page_obj=page_obj %}
+            {% include "core/pagination_snippet.html" with page_obj=page_obj %}
         </div>
         <div class="mt-4 d-lg-none">
             {% if page_obj.has_next %}
