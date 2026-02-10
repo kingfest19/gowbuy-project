@@ -26,6 +26,7 @@ from django.contrib.sessions.models import Session # Added import
 from django.core.files.storage import FileSystemStorage, DefaultStorage
 from django.core.files.base import ContentFile # Added import
 from django.core.files import File
+from django.forms.models import model_to_dict
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden, HttpResponseRedirect, FileResponse, Http404
@@ -107,7 +108,7 @@ from .forms import ( # Ensure RiderApplication is imported if needed by forms, b
     VendorProductForm, PromotionForm, AdCampaignForm, AuthenticityFeedbackForm,
     VendorProductTypeStepForm, VendorProductBasicInfoStepForm,
     VendorProductVerificationCategoryStepForm, VendorProductVerificationDetailsStepForm,
-    VendorProductPricingStepForm, VendorProductFulfillmentStepForm, VendorProductMediaStepForm,
+    VendorProductPricingStepForm, VendorProductFulfillmentStepForm, VendorProductMediaStepForm, VendorProductMediaUpdateStepForm,
     # ... any other forms you have ...
     RiderProfileApplicationForm,RiderProfileUpdateForm, UserProfileForm, UserPreferencesForm,
 )
@@ -1024,6 +1025,17 @@ class VendorProductWizardView(LoginRequiredMixin, IsVendorMixin, View):
     success_url = reverse_lazy('core:vendor_product_list')
     
     STEPS = ['type', 'basic', 'verify_category', 'verify_details', 'pricing', 'fulfillment', 'media']
+
+    def _get_product_type(self, wizard_data=None):
+        data = wizard_data or self.get_wizard_data()
+        form_data = data.get('form_data', {})
+        return form_data.get('type', {}).get('product_type')
+
+    def get_allowed_steps(self, wizard_data=None):
+        product_type = self._get_product_type(wizard_data)
+        if product_type == 'digital':
+            return ['type', 'basic', 'pricing', 'media']
+        return self.STEPS
     
     def get_session_key(self):
         return 'vendor_product_wizard'
@@ -1063,7 +1075,10 @@ class VendorProductWizardView(LoginRequiredMixin, IsVendorMixin, View):
         if step == 'type':
             return VendorProductTypeStepForm(data)
         elif step == 'basic':
-            return VendorProductBasicInfoStepForm(data, files=files)
+            wizard_data = self.get_wizard_data()
+            form_data = wizard_data.get('form_data', {})
+            product_type = form_data.get('type', {}).get('product_type')
+            return VendorProductBasicInfoStepForm(data, files=files, product_type=product_type)
         elif step == 'verify_category':
             return VendorProductVerificationCategoryStepForm(data)
         elif step == 'verify_details':
@@ -1084,9 +1099,10 @@ class VendorProductWizardView(LoginRequiredMixin, IsVendorMixin, View):
     def get_next_step(self, current_step):
         """Get the next step after current."""
         try:
-            idx = self.STEPS.index(current_step)
-            if idx < len(self.STEPS) - 1:
-                return self.STEPS[idx + 1]
+            steps = self.get_allowed_steps()
+            idx = steps.index(current_step)
+            if idx < len(steps) - 1:
+                return steps[idx + 1]
         except (ValueError, IndexError):
             pass
         return None
@@ -1094,17 +1110,23 @@ class VendorProductWizardView(LoginRequiredMixin, IsVendorMixin, View):
     def get_previous_step(self, current_step):
         """Get the previous step."""
         try:
-            idx = self.STEPS.index(current_step)
+            steps = self.get_allowed_steps()
+            idx = steps.index(current_step)
             if idx > 0:
-                return self.STEPS[idx - 1]
+                return steps[idx - 1]
         except (ValueError, IndexError):
             pass
         return None
     
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         """Display current step."""
         wizard_data = self.get_wizard_data()
-        current_step = wizard_data.get('current_step', 'type')
+        allowed_steps = self.get_allowed_steps(wizard_data)
+        current_step = wizard_data.get('current_step', allowed_steps[0])
+        if current_step not in allowed_steps:
+            current_step = allowed_steps[0]
+            wizard_data['current_step'] = current_step
+            self.save_wizard_data(wizard_data)
         form_data = wizard_data.get('form_data', {})
         
         # Get saved data for this step
@@ -1127,12 +1149,12 @@ class VendorProductWizardView(LoginRequiredMixin, IsVendorMixin, View):
                 'form': form,
                 'steps': {
                     'current': current_step,
-                    'all': self.STEPS,
-                    'count': len(self.STEPS),
-                    'step0': self.STEPS.index(current_step),
-                    'step1': self.STEPS.index(current_step) + 1,
-                    'first': self.STEPS[0],
-                    'last': self.STEPS[-1],
+                    'all': allowed_steps,
+                    'count': len(allowed_steps),
+                    'step0': allowed_steps.index(current_step),
+                    'step1': allowed_steps.index(current_step) + 1,
+                    'first': allowed_steps[0],
+                    'last': allowed_steps[-1],
                     'prev': self.get_previous_step(current_step),
                     'next': self.get_next_step(current_step),
                 },
@@ -1142,8 +1164,8 @@ class VendorProductWizardView(LoginRequiredMixin, IsVendorMixin, View):
             },
             'form': form,
             'current_step': current_step,
-            'step_number': self.STEPS.index(current_step) + 1,
-            'total_steps': len(self.STEPS),
+            'step_number': allowed_steps.index(current_step) + 1,
+            'total_steps': len(allowed_steps),
             'form_title': _("Create Product"),
             'is_update_form': False,
         }
@@ -1164,14 +1186,23 @@ class VendorProductWizardView(LoginRequiredMixin, IsVendorMixin, View):
     def post(self, request):
         """Handle form submission."""
         wizard_data = self.get_wizard_data()
-        current_step = wizard_data.get('current_step', 'type')
+        allowed_steps = self.get_allowed_steps(wizard_data)
+        current_step = wizard_data.get('current_step', allowed_steps[0])
+        if current_step not in allowed_steps:
+            current_step = allowed_steps[0]
+            wizard_data['current_step'] = current_step
         form_data = wizard_data.get('form_data', {})
         completed_steps = wizard_data.get('completed_steps', [])
+
+        if 'wizard_restart' in request.POST:
+            self.clear_wizard_data()
+            messages.info(request, _("Wizard progress reset."))
+            return redirect(request.path)
         
         # Check for navigation buttons
         if 'wizard_goto_step' in request.POST:
             target_step = request.POST['wizard_goto_step']
-            if target_step in completed_steps or target_step == self.STEPS[0]:
+            if target_step in allowed_steps and (target_step in completed_steps or target_step == allowed_steps[0]):
                 wizard_data['current_step'] = target_step
                 self.save_wizard_data(wizard_data)
                 return redirect(request.path)
@@ -1218,13 +1249,32 @@ class VendorProductWizardView(LoginRequiredMixin, IsVendorMixin, View):
             if current_step not in completed_steps:
                 completed_steps.append(current_step)
             
+            # Save & Continue Later
+            if 'save_draft' in request.POST:
+                wizard_data['current_step'] = current_step
+                wizard_data['form_data'] = form_data
+                wizard_data['completed_steps'] = completed_steps
+                self.save_wizard_data(wizard_data)
+                messages.success(request, _("Progress saved. You can continue later."))
+                return redirect(self.success_url)
+
+            # Recompute allowed steps after saving current step
+            wizard_data['form_data'] = form_data
+            allowed_steps = self.get_allowed_steps(wizard_data)
+
             # Check if this is the last step
-            if current_step == self.STEPS[-1]:
+            if current_step == allowed_steps[-1]:
                 # Create the product
                 return self.create_product(request, form_data)
             
             # Move to next step
-            next_step = self.get_next_step(current_step)
+            next_step = None
+            try:
+                idx = allowed_steps.index(current_step)
+                if idx < len(allowed_steps) - 1:
+                    next_step = allowed_steps[idx + 1]
+            except (ValueError, IndexError):
+                next_step = None
             wizard_data['current_step'] = next_step
             wizard_data['form_data'] = form_data
             wizard_data['completed_steps'] = completed_steps
@@ -1243,12 +1293,12 @@ class VendorProductWizardView(LoginRequiredMixin, IsVendorMixin, View):
                     'form': form,
                     'steps': {
                         'current': current_step,
-                        'all': self.STEPS,
-                        'count': len(self.STEPS),
-                        'step0': self.STEPS.index(current_step),
-                        'step1': self.STEPS.index(current_step) + 1,
-                        'first': self.STEPS[0],
-                        'last': self.STEPS[-1],
+                        'all': allowed_steps,
+                        'count': len(allowed_steps),
+                        'step0': allowed_steps.index(current_step),
+                        'step1': allowed_steps.index(current_step) + 1,
+                        'first': allowed_steps[0],
+                        'last': allowed_steps[-1],
                         'prev': self.get_previous_step(current_step),
                         'next': self.get_next_step(current_step),
                     },
@@ -1258,8 +1308,8 @@ class VendorProductWizardView(LoginRequiredMixin, IsVendorMixin, View):
                 },
                 'form': form,
                 'current_step': current_step,
-                'step_number': self.STEPS.index(current_step) + 1,
-                'total_steps': len(self.STEPS),
+                'step_number': allowed_steps.index(current_step) + 1,
+                'total_steps': len(allowed_steps),
                 'form_title': _("Create Product"),
                 'is_update_form': False,
             }
@@ -1425,6 +1475,272 @@ class VendorProductWizardView(LoginRequiredMixin, IsVendorMixin, View):
             logger.error(f"[WIZARD CREATE] Error: {e}", exc_info=True)
             messages.error(request, _("Error creating product: ") + str(e))
             return redirect(request.path)
+
+
+class VendorProductWizardUpdateView(VendorProductWizardView):
+    success_url = reverse_lazy('core:vendor_product_list')
+
+    def dispatch(self, request, *args, **kwargs):
+        self.product = get_object_or_404(Product, pk=kwargs['pk'], vendor=request.user.vendor_profile)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_session_key(self):
+        return f'vendor_product_wizard_update_{self.product.pk}'
+
+    def _infer_verification_category(self):
+        if self.product.device_identifier_type or self.product.warranty_service_code:
+            return 'electronics'
+        if self.product.allergen_information or self.product.expiry_date:
+            return 'grocery'
+        if self.product.handmade_or_massproduced:
+            return 'handcraft'
+        if self.product.material_composition:
+            return 'clothing'
+        if self.product.brand_authentication_code:
+            return 'luxury'
+        if self.product.isbn or self.product.publisher_name or self.product.upc_ean_barcode:
+            return 'other'
+        return 'other'
+
+    def _prefill_wizard_data(self, wizard_data):
+        if wizard_data.get('completed_steps'):
+            return wizard_data
+
+        def _serialize_value(value):
+            if isinstance(value, Decimal):
+                return str(value)
+            if hasattr(value, 'pk'):
+                return value.pk
+            if hasattr(value, 'code'):
+                return value.code
+            if hasattr(value, 'isoformat'):
+                try:
+                    return value.isoformat()
+                except Exception:
+                    pass
+            if isinstance(value, (list, tuple)):
+                return [_serialize_value(item) for item in value]
+            if isinstance(value, dict):
+                return {key: _serialize_value(val) for key, val in value.items()}
+            return value
+
+        def _serialize_dict(data):
+            return {key: _serialize_value(val) for key, val in (data or {}).items()}
+
+        verify_fields = [
+            field for field in VendorProductVerificationDetailsStepForm.Meta.fields
+            if field not in {'certifications', 'compliance_documents'}
+        ]
+
+        wizard_data['form_data'] = {
+            'type': _serialize_dict({'product_type': self.product.product_type}),
+            'basic': _serialize_dict(model_to_dict(self.product, fields=VendorProductBasicInfoStepForm.Meta.fields)),
+            'verify_category': _serialize_dict({'verification_category': self._infer_verification_category()}),
+            'verify_details': _serialize_dict(model_to_dict(self.product, fields=verify_fields)),
+            'pricing': _serialize_dict(model_to_dict(self.product, fields=VendorProductPricingStepForm.Meta.fields)),
+            'fulfillment': _serialize_dict(model_to_dict(self.product, fields=VendorProductFulfillmentStepForm.Meta.fields)),
+        }
+        wizard_data['prefilled_from_product'] = True
+        wizard_data.setdefault('completed_steps', [])
+        wizard_data.setdefault('current_step', 'type')
+        return wizard_data
+
+    def get_wizard_data(self):
+        wizard_data = super().get_wizard_data()
+        wizard_data = self._prefill_wizard_data(wizard_data)
+        self.save_wizard_data(wizard_data)
+        return wizard_data
+
+    def get_step_form(self, step, data=None, files=None):
+        if step == 'media':
+            return VendorProductMediaUpdateStepForm(
+                data,
+                files=files,
+                existing_images_count=self.product.images.count(),
+            )
+        if step == 'basic':
+            wizard_data = self.get_wizard_data()
+            form_data = wizard_data.get('form_data', {})
+            product_type = form_data.get('type', {}).get('product_type')
+            return VendorProductBasicInfoStepForm(data, files=files, product_type=product_type)
+        return super().get_step_form(step, data=data, files=files)
+
+    def get(self, request, *args, **kwargs):
+        wizard_data = self.get_wizard_data()
+        allowed_steps = self.get_allowed_steps(wizard_data)
+        current_step = wizard_data.get('current_step', allowed_steps[0])
+        if current_step not in allowed_steps:
+            current_step = allowed_steps[0]
+            wizard_data['current_step'] = current_step
+            self.save_wizard_data(wizard_data)
+        form_data = wizard_data.get('form_data', {})
+
+        step_data = form_data.get(current_step, {})
+        form = self.get_step_form(current_step, data=None)
+
+        if step_data and form:
+            for field, value in step_data.items():
+                if field in form.fields:
+                    field_widget = getattr(form.fields[field], 'widget', None)
+                    if getattr(field_widget, 'input_type', None) == 'file':
+                        continue
+                    form.fields[field].initial = value
+
+        context = {
+            'wizard': {
+                'form': form,
+                'steps': {
+                    'current': current_step,
+                    'all': allowed_steps,
+                    'count': len(allowed_steps),
+                    'step0': allowed_steps.index(current_step),
+                    'step1': allowed_steps.index(current_step) + 1,
+                    'first': allowed_steps[0],
+                    'last': allowed_steps[-1],
+                    'prev': self.get_previous_step(current_step),
+                    'next': self.get_next_step(current_step),
+                },
+                'management_form': {
+                    'current_step': current_step,
+                }
+            },
+            'form': form,
+            'current_step': current_step,
+            'step_number': allowed_steps.index(current_step) + 1,
+            'total_steps': len(allowed_steps),
+            'form_title': _("Edit Product"),
+            'is_update_form': True,
+        }
+
+        if 'type' in form_data:
+            context['product_type'] = form_data['type'].get('product_type')
+
+        if 'verify_category' in form_data:
+            context['verification_category'] = form_data['verify_category'].get('verification_category')
+
+        if 'fulfillment' in form_data:
+            context['fulfillment_method'] = form_data['fulfillment'].get('fulfillment_method')
+
+        # Add existing media files for display and reference
+        context['existing_images'] = self.product.images.all()
+        context['existing_videos'] = self.product.videos.all()
+
+        return render(request, self.template_name, context)
+
+    def create_product(self, request, form_data):
+        """Update product from wizard data."""
+        try:
+            all_data = {}
+            for step_data in form_data.values():
+                all_data.update(step_data)
+
+            date_fields = {'print_date', 'expiry_date', 'manufacturing_date'}
+            for field_name in date_fields:
+                if field_name in all_data and isinstance(all_data[field_name], str):
+                    try:
+                        all_data[field_name] = datetime.date.fromisoformat(all_data[field_name])
+                    except Exception:
+                        pass
+
+            category = None
+            if 'category' in all_data and all_data['category']:
+                try:
+                    category = Category.objects.get(pk=all_data['category'])
+                except Category.DoesNotExist:
+                    category = None
+
+            update_fields = [
+                'product_type', 'name', 'brand', 'manufacturer', 'manufacturer_address',
+                'manufacturer_part_number', 'sku', 'origin_country', 'origin_city',
+                'made_in_label', 'upc_ean_barcode', 'batch_lot_number', 'isbn',
+                'book_edition', 'publisher_name', 'print_date', 'expiry_date',
+                'allergen_information', 'storage_instructions', 'size_variant',
+                'material_composition', 'care_label_instructions', 'brand_authentication_code',
+                'handmade_or_massproduced', 'manufacturing_process', 'sustainability',
+                'device_identifier_type', 'device_identifier_value', 'model_number',
+                'manufacturing_date', 'certification_numbers', 'warranty_service_code',
+                'safety_warnings', 'description', 'bullet_points', 'keywords_for_ai',
+                'price', 'stock', 'product_condition', 'fulfillment_method',
+                'vendor_delivery_fee', 'shipping_options', 'item_weight', 'item_dimensions',
+            ]
+
+            if category is not None:
+                self.product.category = category
+
+            for field_name in update_fields:
+                if field_name in all_data:
+                    setattr(self.product, field_name, all_data.get(field_name))
+
+            with transaction.atomic():
+                self.product.save()
+
+                storage = self._wizard_storage()
+
+                def _attach_file(field_name):
+                    file_path = all_data.get(field_name)
+                    if not file_path:
+                        return
+                    if isinstance(file_path, (list, tuple)):
+                        file_path = file_path[0]
+                    try:
+                        with storage.open(file_path, 'rb') as f:
+                            getattr(self.product, field_name).save(os.path.basename(file_path), File(f), save=False)
+                    except Exception as e:
+                        logger.warning(f"[WIZARD UPDATE] Unable to attach file {field_name}: {e}")
+
+                for field_name in ['certifications', 'compliance_documents', 'digital_file', 'three_d_model', 'ar_model']:
+                    _attach_file(field_name)
+
+                self.product.save()
+
+                # Handle image deletions
+                images_to_delete = request.POST.getlist('delete_images')
+                if images_to_delete:
+                    ProductImage.objects.filter(id__in=images_to_delete, product=self.product).delete()
+
+                # Handle video deletions
+                videos_to_delete = request.POST.getlist('delete_videos')
+                if videos_to_delete:
+                    ProductVideo.objects.filter(id__in=videos_to_delete, product=self.product).delete()
+
+                image_paths = all_data.get('images') or []
+                if isinstance(image_paths, str):
+                    image_paths = [image_paths]
+                for image_path in image_paths:
+                    try:
+                        with storage.open(image_path, 'rb') as f:
+                            ProductImage.objects.create(
+                                product=self.product,
+                                image=File(f, name=os.path.basename(image_path)),
+                                alt_text=f"Image for {self.product.name}"
+                            )
+                    except Exception as e:
+                        logger.warning(f"[WIZARD UPDATE] Unable to attach image: {e}")
+
+                video_paths = all_data.get('videos') or []
+                if isinstance(video_paths, str):
+                    video_paths = [video_paths]
+                for video_path in video_paths:
+                    try:
+                        with storage.open(video_path, 'rb') as f:
+                            ProductVideo.objects.create(
+                                product=self.product,
+                                video=File(f, name=os.path.basename(video_path))
+                            )
+                    except Exception as e:
+                        logger.warning(f"[WIZARD UPDATE] Unable to attach video: {e}")
+
+            self.clear_wizard_data()
+            messages.success(request, _("Product updated successfully!"))
+            return redirect(self.success_url)
+
+        except Exception as e:
+            logger.error(f"[WIZARD UPDATE] Error: {e}", exc_info=True)
+            messages.error(request, _("Error updating product: ") + str(e))
+            return redirect(request.path)
+
+    def post(self, request, *args, **kwargs):
+        return super().post(request)
 
 
 class VendorProductUpdateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, UpdateView):

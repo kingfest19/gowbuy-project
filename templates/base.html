@@ -7,7 +7,11 @@
 <html lang="{{ current_language|default:"en" }}"> {# <<< Make lang dynamic, default to 'en' if not set #}
 <head lang="{{ LANGUAGE_CODE|default:"en" }}"> {# Use LANGUAGE_CODE here #}
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#8b5cf6" />
     {# Default title, can be overridden by child templates using {% block title %} #}
     <title>{% block title %}GOWBUY{% endblock title %}</title>
     {% block extra_head %}{% endblock extra_head %}
@@ -635,6 +639,252 @@
         .search-button,
         .mic-button {
             border-radius: 999px !important;
+        }
+
+        /* Mobile Font Size Optimization - Increase readability on small screens */
+        @media (max-width: 768px) {
+            /* Body and general text */
+            body {
+                font-size: 16px !important;
+            }
+
+            /* Headings */
+            h1 {
+                font-size: 1.75rem !important;
+            }
+
+            h2 {
+                font-size: 1.5rem !important;
+            }
+
+            h3 {
+                font-size: 1.25rem !important;
+            }
+
+            h4 {
+                font-size: 1.1rem !important;
+            }
+
+            h5 {
+                font-size: 1rem !important;
+            }
+
+            h6 {
+                font-size: 0.95rem !important;
+            }
+
+            /* Paragraphs and text */
+            p, span, a, label, li {
+                font-size: 15px !important;
+                line-height: 1.6 !important;
+            }
+
+            /* Form elements */
+            .form-control,
+            .form-select,
+            input[type="text"],
+            input[type="email"],
+            input[type="password"],
+            input[type="number"],
+            textarea,
+            select {
+                font-size: 16px !important;
+                padding: 0.5rem 0.75rem !important;
+            }
+
+            /* Buttons */
+            .btn,
+            button,
+            input[type="submit"],
+            input[type="button"] {
+                font-size: 15px !important;
+                padding: 0.5rem 1rem !important;
+            }
+
+            .btn-lg {
+                font-size: 16px !important;
+                padding: 0.75rem 1.5rem !important;
+            }
+
+            .btn-sm {
+                font-size: 14px !important;
+            }
+
+            /* Navigation and menus */
+            .navbar,
+            nav {
+                font-size: 15px !important;
+            }
+
+            .nav-link,
+            .navbar-brand {
+                font-size: 15px !important;
+            }
+
+            /* Cards and containers */
+            .card-title {
+                font-size: 1.1rem !important;
+            }
+
+            .card-text {
+                font-size: 15px !important;
+            }
+
+            /* Footer */
+            footer,
+            .footer-column ul li a {
+                font-size: 14px !important;
+            }
+
+            .footer-column h4 {
+                font-size: 1rem !important;
+            }
+
+            /* Tables */
+            table,
+            tbody,
+            thead,
+            tr,
+            td,
+            th {
+                font-size: 14px !important;
+            }
+
+            /* Alerts and badges */
+            .alert {
+                font-size: 15px !important;
+                padding: 0.75rem 1rem !important;
+            }
+
+            .badge {
+                font-size: 13px !important;
+            }
+
+            /* Modal and offcanvas */
+            .modal-title,
+            .offcanvas-title {
+                font-size: 1.25rem !important;
+            }
+
+            .modal-body,
+            .offcanvas-body {
+                font-size: 15px !important;
+            }
+
+            /* Breadcrumb */
+            .breadcrumb {
+                font-size: 14px !important;
+            }
+
+            /* Small text and help text */
+            small,
+            .small,
+            .form-text {
+                font-size: 13px !important;
+            }
+
+            /* Improve touch targets */
+            .btn,
+            a,
+            button,
+            input[type="button"],
+            input[type="submit"],
+            input[type="checkbox"],
+            input[type="radio"] {
+                min-height: 44px !important;
+                min-width: 44px !important;
+            }
+
+            /* List items */
+            .list-group-item {
+                font-size: 15px !important;
+                padding: 0.75rem 1rem !important;
+            }
+
+            /* Dropdown menus */
+            .dropdown-menu {
+                font-size: 15px !important;
+            }
+
+            .dropdown-item {
+                padding: 0.5rem 1rem !important;
+            }
+
+            /* Pagination */
+            .pagination {
+                gap: 0.25rem !important;
+            }
+
+            .page-link {
+                font-size: 14px !important;
+                padding: 0.5rem 0.75rem !important;
+            }
+
+            /* Miscellaneous high-impact elements */
+            legend {
+                font-size: 1.1rem !important;
+            }
+
+            .lead {
+                font-size: 1.1rem !important;
+            }
+        }
+
+        /* Extra small devices (phones) - further optimization */
+        @media (max-width: 480px) {
+            body {
+                font-size: 15px !important;
+            }
+
+            h1 {
+                font-size: 1.5rem !important;
+            }
+
+            h2 {
+                font-size: 1.25rem !important;
+            }
+
+            h3 {
+                font-size: 1.1rem !important;
+            }
+
+            p, span, a, label, li {
+                font-size: 14px !important;
+            }
+
+            .form-control,
+            .form-select,
+            input[type="text"],
+            input[type="email"],
+            input[type="password"],
+            input[type="number"],
+            textarea,
+            select {
+                font-size: 16px !important;
+            }
+
+            .btn,
+            button {
+                font-size: 14px !important;
+                padding: 0.5rem 0.875rem !important;
+            }
+
+            .card-title {
+                font-size: 1rem !important;
+            }
+
+            .alert {
+                font-size: 14px !important;
+            }
+
+            table,
+            tbody,
+            thead,
+            tr,
+            td,
+            th {
+                font-size: 13px !important;
+            }
         }
     </style>
 </head>
@@ -1375,8 +1625,24 @@
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const navbar = document.querySelector('nav');
+            const mobileBottomNav = document.querySelector('.mobile-bottom-nav');
             let lastScrollTop = 0;
             let ticking = false;
+
+            // Check if running on mobile
+            const isMobile = window.matchMedia("(max-width: 768px)").matches;
+            
+            // Detect search engine browsers
+            function isSearchEngineBrowser() {
+                const ua = navigator.userAgent.toLowerCase();
+                const searchEngines = ['googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider', 'yandexbot', 'exabot', 'facebookexternalhit', 'twitterbot', 'linkedinbot', 'whatsapp'];
+                return searchEngines.some(engine => ua.includes(engine));
+            }
+
+            // Hide mobile bottom nav for search engines on mobile
+            if (isMobile && mobileBottomNav && isSearchEngineBrowser()) {
+                mobileBottomNav.style.display = 'none';
+            }
 
             if (navbar) {
                 window.addEventListener('scroll', function() {
@@ -1389,6 +1655,17 @@
                                 navbar.classList.add('nav-collapsed');
                             } else {
                                 navbar.classList.remove('nav-collapsed');
+                            }
+                            
+                            // Mobile bottom nav hide on scroll down, show on scroll up
+                            if (mobileBottomNav && isMobile && !isSearchEngineBrowser()) {
+                                if (scrollTop > lastScrollTop && scrollTop > 100) {
+                                    // Scrolling down - hide bottom nav
+                                    mobileBottomNav.classList.add('hidden');
+                                } else if (scrollTop < lastScrollTop) {
+                                    // Scrolling up - show bottom nav
+                                    mobileBottomNav.classList.remove('hidden');
+                                }
                             }
                             
                             lastScrollTop = scrollTop;

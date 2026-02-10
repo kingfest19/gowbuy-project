@@ -20,6 +20,8 @@
             --input-text: #495057;
             --fieldset-bg: #ffffff;
             --card-bg: #ffffff;
+            --form-gradient: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 50%, #c4b5fd 100%);
+            --form-shadow: 0 10px 30px rgba(139, 92, 246, 0.15);
         }
 
         [data-theme="dark"] {
@@ -36,6 +38,8 @@
             --input-text: #e0e0e0;
             --fieldset-bg: #2c2c2c;
             --card-bg: #2c2c2c;
+            --form-gradient: linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #a78bfa 100%);
+            --form-shadow: 0 10px 30px rgba(76, 29, 149, 0.4);
         }
 
         body {
@@ -57,9 +61,18 @@
             background-color: var(--bg-surface);
             padding: 2rem 2.5rem;
             border-radius: 12px;
-            box-shadow: 0 6px 20px var(--card-shadow);
+            box-shadow: var(--form-shadow);
             border: 1px solid var(--border-color);
             font-family: "Outfit", sans-serif; /* Consistent font from theme */
+        }
+        
+        /* Extra small devices */
+        @media (max-width: 576px) {
+            .form-container {
+                padding: 1rem 0.5rem;
+                margin: 0.25rem;
+                border-radius: 8px;
+            }
         }
 
         .page-header {
@@ -68,17 +81,20 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 1rem;
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid var(--border-color);
+            padding: 1.25rem 1.5rem;
+            margin: -0.5rem -0.5rem 2rem -0.5rem;
+            border-radius: 12px;
+            background: var(--form-gradient);
+            color: #fff;
         }
 
         .page-header h1 {
             font-family: "Poppins", sans-serif; /* Consistent font from theme */
             font-weight: 700;
-            color: var(--text-main);
+            color: #fff;
             margin-bottom: 0;
         }
+        .page-header p { color: #f5f3ff; }
 
         .media-manager-card {
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
@@ -174,6 +190,41 @@
             background-color: #474747;
             color: #ffffffff;
             border-color: #474747;
+            padding: 0.5rem 0.85rem;
+            font-size: 0.9rem;
+            line-height: 1.2;
+        }
+        
+        /* Verification radio button styling */
+        .btn-group-vertical .btn.btn-outline-secondary {
+            text-align: left;
+            white-space: normal;
+            word-break: break-word;
+            padding: 0.6rem 0.75rem;
+            font-size: 0.85rem;
+            line-height: 1.2;
+            min-height: auto;
+        }
+        
+        .btn-group-vertical .btn.btn-outline-secondary strong {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+            font-size: 0.85rem;
+        }
+        
+        .btn-group-vertical .btn.btn-outline-secondary small {
+            display: block;
+            font-size: 0.75rem;
+            opacity: 0.8;
+            line-height: 1.1;
+        }
+        
+        .btn-group-vertical .btn.btn-outline-secondary i {
+            margin-right: 0.5rem;
+            margin-left: -0.2rem;
+            min-width: 1rem;
+            font-size: 0.9rem;
         }
 
         .form-container .btn-outline-warning {
@@ -271,18 +322,252 @@
         /* Mobile Responsiveness */
         @media (max-width: 768px) {
             .form-container {
-                padding: 1.5rem 1rem;
-                margin: 0 10px;
+                padding: 1rem 0.75rem;
+                margin: 0.5rem;
+                max-width: 100%;
             }
             fieldset {
-                padding: 1rem;
+                padding: 0.75rem;
+                margin-bottom: 1rem;
             }
             .page-header {
                 flex-direction: column;
                 align-items: flex-start;
+                padding: 1rem 1rem;
+                margin: -0.5rem -0.5rem 1.5rem -0.5rem;
+                gap: 0.75rem;
+            }
+            .page-header h1 {
+                font-size: 1.5rem;
             }
             .page-header .btn {
                 width: 100%;
+                font-size: 0.875rem;
+                padding: 0.4rem 0.8rem;
+            }
+            
+            .page-header .btn.btn-lg {
+                font-size: 0.875rem;
+                padding: 0.4rem 0.8rem;
+            }
+            
+            /* Mobile optimizations for verification assessment radio buttons */
+            .btn-group-vertical {
+                gap: 0.35rem;
+            }
+            
+            .btn-group-vertical .btn {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.8rem;
+                border-radius: 4px;
+                line-height: 1.1;
+            }
+            
+            .btn-group-vertical .btn strong {
+                display: block;
+                font-size: 0.8rem;
+                font-weight: 600;
+                margin-bottom: 0.15rem;
+            }
+            
+            .btn-group-vertical .btn small {
+                font-size: 0.65rem;
+                line-height: 1;
+            }
+            
+            .btn-group-vertical .btn i {
+                font-size: 0.85rem;
+                margin-right: 0.35rem;
+            }
+            
+            /* Form labels on mobile */
+            .form-label {
+                font-size: 0.9rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            /* Stack button groups vertically on mobile */
+            .btn-group-horizontal {
+                flex-direction: column;
+            }
+            
+            /* Product type cards on mobile */
+            .product-type-card {
+                padding: 0.5rem !important;
+                border-radius: 6px;
+            }
+            
+            .product-type-card .form-check {
+                margin-bottom: 0;
+            }
+            
+            .product-type-card .form-check-input {
+                width: 16px;
+                height: 16px;
+            }
+            
+            .product-type-card .form-check-label {
+                font-size: 0.85rem;
+                padding-left: 0.35rem;
+            }
+            
+            .product-type-card h6 {
+                font-size: 0.9rem;
+                margin-bottom: 0.2rem !important;
+            }
+            
+            .product-type-card small {
+                font-size: 0.7rem;
+            }
+            
+            .product-type-card i {
+                font-size: 1.2rem !important;
+                margin-right: 0.5rem !important;
+            }
+            
+            .product-type-card .d-flex {
+                align-items: center;
+            }
+            
+            /* Form controls on mobile */
+            .form-container .form-control,
+            .form-container .form-select {
+                font-size: 1rem;
+                padding: 0.5rem 0.75rem;
+            }
+            
+            /* All buttons on mobile - more compact */
+            .form-container .btn,
+            .btn {
+                padding: 0.4rem 0.75rem;
+                font-size: 0.85rem;
+            }
+            
+            .form-container .btn-primary,
+            .form-container .btn-outline-info,
+            .form-container .btn-outline-warning {
+                padding: 0.4rem 0.75rem;
+                font-size: 0.85rem;
+            }
+            
+            /* Reduce icon sizes on mobile */
+            .btn i,
+            fieldset legend i {
+                font-size: 0.95rem;
+            }
+            
+            /* Better spacing for stacked elements */
+            .row {
+                row-gap: 1rem;
+            }
+            
+            .col-md-6 {
+                margin-bottom: 0.5rem;
+            }
+            
+            /* Table responsiveness */
+            table {
+                font-size: 0.875rem;
+            }
+            
+            .table th,
+            .table td {
+                padding: 0.5rem 0.35rem;
+            }
+        }
+        
+        /* Extra small devices (< 576px) */
+        @media (max-width: 576px) {
+            .btn-group-vertical .btn {
+                padding: 0.3rem 0.5rem;
+                font-size: 0.75rem;
+                border-radius: 3px;
+                line-height: 1;
+            }
+            
+            .btn-group-vertical .btn strong {
+                font-size: 0.75rem;
+                margin-bottom: 0.1rem;
+            }
+            
+            .btn-group-vertical .btn small {
+                font-size: 0.6rem;
+                line-height: 0.9;
+            }
+            
+            .btn-group-vertical .btn i {
+                font-size: 0.8rem;
+                margin-right: 0.25rem;
+            }
+            
+            fieldset {
+                padding: 0.5rem;
+                margin-bottom: 0.75rem;
+            }
+            
+            fieldset legend {
+                font-size: 0.95rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .page-header {
+                padding: 0.75rem 0.75rem;
+                margin: -0.5rem -0.5rem 1rem -0.5rem;
+            }
+            
+            .page-header h1 {
+                font-size: 1.25rem;
+            }
+            
+            .form-label {
+                font-size: 0.85rem;
+            }
+            
+            .alert {
+                padding: 0.6rem;
+                margin-bottom: 0.75rem;
+                font-size: 0.8rem;
+            }
+            
+            .alert strong {
+                font-size: 0.8rem;
+            }
+            
+            /* Extra compact product type cards on small devices */
+            .product-type-card {
+                padding: 0.35rem !important;
+            }
+            
+            .product-type-card i {
+                font-size: 1rem !important;
+                margin-right: 0.3rem !important;
+            }
+            
+            .product-type-card h6 {
+                font-size: 0.8rem;
+                margin-bottom: 0.1rem !important;
+            }
+            
+            .product-type-card small {
+                font-size: 0.65rem;
+            }
+            
+            .product-type-card .form-check-label {
+                font-size: 0.8rem;
+                padding-left: 0.2rem;
+            }
+            
+            /* Extra small - all buttons */
+            .btn, 
+            .form-container .btn {
+                padding: 0.3rem 0.6rem !important;
+                font-size: 0.75rem !important;
+            }
+            
+            .page-header .btn,
+            .page-header .btn-lg {
+                padding: 0.3rem 0.6rem !important;
+                font-size: 0.75rem !important;
             }
         }
     </style>
@@ -1088,12 +1373,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function toggleProductSections() {
         const selectedType = document.querySelector('input[name="product_type"]:checked');
-        console.log('Selected type:', selectedType ? selectedType.value : 'none');
+        console.log('toggleProductSections called');
+        console.log('Selected type:', selectedType ? selectedType.value : 'NONE');
+        
+        if (!physicalSection || !digitalSection) {
+            console.error('Missing sections - physical:', !!physicalSection, 'digital:', !!digitalSection);
+            return;
+        }
         
         if (selectedType && selectedType.value === 'digital') {
             console.log('Switching to DIGITAL');
             physicalSection.style.display = 'none';
+            setInputsState(physicalSection, false); // Disable inputs in hidden section
             digitalSection.style.display = 'block';
+            setInputsState(digitalSection, true); // Enable inputs in visible section
             digitalCard.classList.add('border-primary', 'border-2');
             physicalCard.classList.remove('border-primary', 'border-2');
             filterCategoriesForDigital();
@@ -1102,9 +1395,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (stockHelpDigital) stockHelpDigital.style.display = 'block';
             if (stockOptionalBadge) stockOptionalBadge.style.display = 'inline-block';
         } else {
-            console.log('Switching to PHYSICAL');
+            console.log('Switching to PHYSICAL (or default)');
             physicalSection.style.display = 'block';
+            setInputsState(physicalSection, true); // Enable inputs in visible section
             digitalSection.style.display = 'none';
+            setInputsState(digitalSection, false); // Disable inputs in hidden section
             physicalCard.classList.add('border-primary', 'border-2');
             digitalCard.classList.remove('border-primary', 'border-2');
             filterCategoriesForPhysical();
@@ -1113,6 +1408,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (stockHelpDigital) stockHelpDigital.style.display = 'none';
             if (stockOptionalBadge) stockOptionalBadge.style.display = 'none';
         }
+        
+        console.log('After toggle - Physical display:', physicalSection.style.display);
+        console.log('After toggle - Digital display:', digitalSection.style.display);
     }
 
     // Category filtering based on product type
@@ -1191,32 +1489,72 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add click handlers to cards for better UX
     if (physicalCard) {
         physicalCard.addEventListener('click', function(e) {
-            e.preventDefault();
+            // Don't prevent default if clicking on an actual input/label
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
+                e.preventDefault();
+            }
             e.stopPropagation();
-            // Try finding by ID first, then by value
+            
+            // Try multiple selectors to find the physical radio
             let radio = document.getElementById('id_product_type_0');
             if (!radio) {
-                radio = document.querySelector('input[name="product_type"][value="physical"]');
+                // Try finding by value attribute
+                const radios = document.querySelectorAll('input[name="product_type"]');
+                for (let r of radios) {
+                    if (r.value === 'physical') {
+                        radio = r;
+                        break;
+                    }
+                }
             }
+            if (!radio && productTypeRadios.length > 0) {
+                // Assume first radio is physical
+                radio = productTypeRadios[0];
+            }
+            
             if (radio) {
+                console.log('Setting physical radio to checked');
                 radio.checked = true;
                 radio.dispatchEvent(new Event('change', { bubbles: true }));
+                toggleProductSections(); // Force update
+            } else {
+                console.error('Could not find physical product radio button');
             }
         });
     }
     
     if (digitalCard) {
         digitalCard.addEventListener('click', function(e) {
-            e.preventDefault();
+            // Don't prevent default if clicking on an actual input/label
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
+                e.preventDefault();
+            }
             e.stopPropagation();
-            // Try finding by ID first, then by value
+            
+            // Try multiple selectors to find the digital radio
             let radio = document.getElementById('id_product_type_1');
             if (!radio) {
-                radio = document.querySelector('input[name="product_type"][value="digital"]');
+                // Try finding by value attribute
+                const radios = document.querySelectorAll('input[name="product_type"]');
+                for (let r of radios) {
+                    if (r.value === 'digital') {
+                        radio = r;
+                        break;
+                    }
+                }
             }
+            if (!radio && productTypeRadios.length > 1) {
+                // Assume second radio is digital
+                radio = productTypeRadios[1];
+            }
+            
             if (radio) {
+                console.log('Setting digital radio to checked');
                 radio.checked = true;
                 radio.dispatchEvent(new Event('change', { bubbles: true }));
+                toggleProductSections(); // Force update
+            } else {
+                console.error('Could not find digital product radio button');
             }
         });
     }
@@ -1231,7 +1569,25 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize on page load
     console.log('Initializing product type toggle');
+    console.log('Product Type Radios found:', productTypeRadios.length);
+    console.log('Physical section:', physicalSection ? 'found' : 'NOT FOUND');
+    console.log('Digital section:', digitalSection ? 'found' : 'NOT FOUND');
+    
+    // Check which radio is initially checked
+    const initiallyChecked = document.querySelector('input[name="product_type"]:checked');
+    console.log('Initially checked radio:', initiallyChecked ? initiallyChecked.value : 'NONE');
+    
     toggleProductSections();
+    
+    // Debug: Check button visibility
+    const actionButtons = document.querySelector('.d-grid.gap-2.d-md-flex');
+    if (actionButtons) {
+        console.log('Action buttons container found');
+        console.log('Action buttons display:', window.getComputedStyle(actionButtons).display);
+        console.log('Action buttons visibility:', window.getComputedStyle(actionButtons).visibility);
+    } else {
+        console.error('Action buttons container NOT FOUND');
+    }
 
     // AI Description Enhancement
     const enhanceBtn = document.getElementById('enhance-description-btn');
@@ -1609,6 +1965,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!container) return;
         const inputs = container.querySelectorAll('input, select, textarea');
         inputs.forEach(input => {
+            // Do not disable the verification assessment radios, as they control other fields.
+            if (input.classList.contains('verification-assessment-radio')) {
+                return;
+            }
             input.disabled = !enabled;
         });
     }

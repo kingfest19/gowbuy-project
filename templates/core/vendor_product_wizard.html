@@ -3,15 +3,44 @@
 
 {% block extra_css %}
     {{ block.super }}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
+        :root {
+            --form-gradient: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 50%, #c4b5fd 100%);
+            --form-surface: #ffffff;
+            --form-text: #1f2937;
+            --form-border: #e5e7eb;
+            --form-shadow: 0 10px 30px rgba(139, 92, 246, 0.15);
+        }
+
+        [data-theme="dark"] {
+            --form-gradient: linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #a78bfa 100%);
+            --form-surface: #1f1b2e;
+            --form-text: #f5f3ff;
+            --form-border: #3b2f5c;
+            --form-shadow: 0 10px 30px rgba(76, 29, 149, 0.4);
+        }
+
         .wizard-container {
             max-width: 900px;
             margin: 0 auto;
-            background-color: var(--bg-surface);
+            background-color: var(--form-surface);
             padding: 2rem 2.5rem;
             border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
-            border: 1px solid var(--border-color);
+            box-shadow: var(--form-shadow);
+            border: 1px solid var(--form-border);
+        }
+        .wizard-header {
+            background: var(--form-gradient);
+            color: #fff;
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            margin: -0.5rem -0.5rem 1.5rem -0.5rem;
+        }
+        .wizard-header h1,
+        .wizard-header p {
+            color: #fff;
         }
         .wizard-steps {
             display: flex;
@@ -33,16 +62,20 @@
             font-weight: 600;
         }
         fieldset {
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--form-border);
             border-radius: 10px;
             padding: 1.5rem 2rem;
             margin-bottom: 1.5rem;
-            background: var(--bg-surface);
+            background: rgba(255, 255, 255, 0.8);
+        }
+        [data-theme="dark"] fieldset {
+            background: rgba(31, 27, 46, 0.9);
         }
         legend {
             font-size: 1.1rem;
             font-weight: 600;
             margin-bottom: 1rem;
+            color: var(--form-text);
         }
         .wizard-actions {
             display: flex;
@@ -147,14 +180,20 @@
                             {{ wizard.form.made_in_label|as_crispy_field }}
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            {{ wizard.form.origin_country|as_crispy_field }}
+                    {% if product_type != 'digital' %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ wizard.form.origin_country|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ wizard.form.origin_city|as_crispy_field }}
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            {{ wizard.form.origin_city|as_crispy_field }}
+                    {% else %}
+                        <div class="alert alert-info">
+                            <small>{% trans "Origin fields are not required for digital products." %}</small>
                         </div>
-                    </div>
+                    {% endif %}
                     <div class="mb-3">
                         {{ wizard.form.bullet_points|as_crispy_field }}
                     </div>
@@ -274,38 +313,38 @@
                     <legend>{% trans "Step 6: Fulfillment & Delivery" %}</legend>
                     <div class="row">
                         <div class="col-md-6 mb-3">{{ wizard.form.fulfillment_method|as_crispy_field }}</div>
-                        <div class="col-md-6 mb-3">
-                            {{ wizard.form.vendor_delivery_fee|as_crispy_field }}
-                            {% if fulfillment_method == 'vendor' %}
-                                <small class="text-danger"><strong>*</strong> Required for vendor fulfillment</small>
-                            {% endif %}
-                        </div>
+                        {% if product_type == 'physical' %}
+                            <div class="col-md-6 mb-3">
+                                {{ wizard.form.vendor_delivery_fee|as_crispy_field }}
+                                {% if fulfillment_method == 'vendor' %}
+                                    <small class="text-danger"><strong>*</strong> Required for vendor fulfillment</small>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     </div>
                     {% if product_type == 'physical' %}
                         <div class="alert alert-info">
                             <small>{% trans "For physical products, the following fields are required:" %}</small>
                         </div>
-                    {% endif %}
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            {{ wizard.form.shipping_options|as_crispy_field }}
-                            {% if product_type == 'physical' %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ wizard.form.shipping_options|as_crispy_field }}
                                 <small class="text-danger"><strong>*</strong> Required for physical products</small>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            {{ wizard.form.item_weight|as_crispy_field }}
-                            {% if product_type == 'physical' %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ wizard.form.item_weight|as_crispy_field }}
                                 <small class="text-danger"><strong>*</strong> Required for physical products</small>
-                            {% endif %}
+                            </div>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        {{ wizard.form.item_dimensions|as_crispy_field }}
-                        {% if product_type == 'physical' %}
+                        <div class="mb-3">
+                            {{ wizard.form.item_dimensions|as_crispy_field }}
                             <small class="text-danger"><strong>*</strong> Required for physical products</small>
-                        {% endif %}
-                    </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <small>{% trans "No shipping details are required for digital products." %}</small>
+                        </div>
+                    {% endif %}
                 </fieldset>
             {% endif %}
 
@@ -315,6 +354,54 @@
                     {% if product_type == 'digital' %}
                         <div class="mb-3">{{ wizard.form.digital_file|as_crispy_field }}</div>
                     {% endif %}
+                    
+                    <!-- Existing Images Display -->
+                    {% if existing_images %}
+                        <div class="mb-4">
+                            <h6>{% trans "Current Images" %}</h6>
+                            <div class="row">
+                            {% for img in existing_images %}
+                                <div class="col-6 col-sm-4 col-md-3 col-lg-2 mb-4">
+                                    <div class="card h-100 media-manager-card text-center shadow-sm">
+                                        <a href="{{ img.image.url }}" data-bs-toggle="tooltip" title="{% trans 'View full image' %}" target="_blank">
+                                            <img src="{{ img.image.url }}" alt="{{ img.alt_text|default:'Product image' }}" class="card-img-top" style="height: 120px; object-fit: cover;">
+                                        </a>
+                                        <div class="card-footer p-2">
+                                            <div class="form-check form-switch d-flex justify-content-center align-items-center">
+                                                <input class="form-check-input image-delete-checkbox" type="checkbox" role="switch" name="delete_images" value="{{ img.id }}" id="delete_image_{{ img.id }}">
+                                                <label class="form-check-label small ms-2" for="delete_image_{{ img.id }}">
+                                                    {% trans "Delete" %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Existing Videos Display -->
+                    {% if existing_videos %}
+                        <div class="mb-4">
+                            <h6>{% trans "Current Videos" %}</h6>
+                            <ul class="list-group">
+                            {% for vid in existing_videos %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-video me-2 text-muted"></i>
+                                        <a href="{{ vid.video.url }}" target="_blank" title="{{ vid.video.name }}">{{ vid.video.name|truncatechars:40 }}</a>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input video-delete-checkbox" type="checkbox" role="switch" name="delete_videos" value="{{ vid.id }}" id="delete_video_{{ vid.id }}">
+                                        <label class="form-check-label small" for="delete_video_{{ vid.id }}">{% trans "Delete" %}</label>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             {{ wizard.form.images|as_crispy_field }}
@@ -334,19 +421,29 @@
             {% endif %}
 
             <div class="wizard-actions">
-                {% if wizard.steps.prev %}
-                    <button name="wizard_goto_step" type="submit" value="{{ wizard.steps.prev }}" class="btn btn-outline-secondary">
-                        {% trans "Back" %}
+                <div class="d-flex gap-2">
+                    {% if wizard.steps.prev %}
+                        <button name="wizard_goto_step" type="submit" value="{{ wizard.steps.prev }}" class="btn btn-outline-secondary">
+                            {% trans "Back" %}
+                        </button>
+                    {% endif %}
+                    <button type="submit" name="wizard_restart" value="1" class="btn btn-outline-warning">
+                        <i class="fas fa-redo me-1"></i>{% trans "Restart" %}
                     </button>
-                {% else %}
-                    <span></span>
-                {% endif %}
+                </div>
 
-                {% if wizard.steps.next %}
-                    <button type="submit" class="btn btn-primary">{% trans "Continue" %}</button>
-                {% else %}
-                    <button type="submit" class="btn btn-primary">{% trans "Create Product" %}</button>
-                {% endif %}
+                <div class="d-flex gap-2">
+                    <button type="submit" name="save_draft" value="true" class="btn btn-outline-info">
+                        <i class="fas fa-clock me-1"></i>{% trans "Save & Continue Later" %}
+                    </button>
+                    {% if wizard.steps.next %}
+                        <button type="submit" class="btn btn-primary">{% trans "Continue" %}</button>
+                    {% else %}
+                        <button type="submit" class="btn btn-primary">
+                            {% if is_update_form %}{% trans "Save Changes" %}{% else %}{% trans "Create Product" %}{% endif %}
+                        </button>
+                    {% endif %}
+                </div>
             </div>
         </form>
     </div>

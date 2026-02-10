@@ -115,7 +115,7 @@ urlpatterns = [
     # --- Vendor Products ---
     path('dashboard/products/', views.VendorProductListView.as_view(), name='vendor_product_list'),
     path('dashboard/products/create/', views.VendorProductWizardView.as_view(), name='vendor_product_create'),
-    path('dashboard/products/<int:pk>/update/', views.VendorProductUpdateView.as_view(), name='vendor_product_update'),
+    path('dashboard/products/<int:pk>/update/', views.VendorProductWizardUpdateView.as_view(), name='vendor_product_update'),
     path('dashboard/products/<int:pk>/delete/', views.VendorProductDeleteView.as_view(), name='vendor_product_delete'), # Corrected
 
 

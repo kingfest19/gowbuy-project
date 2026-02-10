@@ -6,6 +6,7 @@ from crispy_forms.layout import Layout, Submit, Row, Column, Fieldset, HTML, Fie
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
 from django.utils import timezone
+from django.db.models import Q
 from django.urls import reverse_lazy
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -718,13 +719,25 @@ class VendorProductBasicInfoStepForm(WizardModelForm):
             'keywords_for_ai': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, product_type=None, **kwargs):
         super().__init__(*args, **kwargs)
+
+        if 'category' in self.fields:
+            if product_type == 'digital':
+                self.fields['category'].queryset = Category.objects.filter(
+                    is_active=True
+                ).filter(
+                    Q(name__icontains='digital') |
+                    Q(parent__name__icontains='digital')
+                )
+            else:
+                self.fields['category'].queryset = Category.objects.filter(is_active=True)
+
         # In a wizard, fields should be required but we let the user navigate back without completing
         # However, when they reach the last step, we'll do full validation
         for field_name in ['origin_country', 'origin_city', 'made_in_label']:
             if field_name in self.fields:
-                self.fields[field_name].required = True
+                self.fields[field_name].required = (product_type != 'digital')
 
 
 class VendorProductVerificationCategoryStepForm(forms.Form):
@@ -872,6 +885,26 @@ class VendorProductMediaStepForm(WizardModelForm):
         if not images or len(images) < 3:
             raise forms.ValidationError(_("Please upload at least 3 product images."))
         
+        return cleaned_data
+
+
+class VendorProductMediaUpdateStepForm(VendorProductMediaStepForm):
+    def __init__(self, *args, existing_images_count=0, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.existing_images_count = existing_images_count
+        if 'images' in self.fields:
+            self.fields['images'].required = False
+
+    def clean(self):
+        cleaned_data = super(VendorProductMediaStepForm, self).clean()
+        images = cleaned_data.get('images') or []
+
+        new_count = len(images) if isinstance(images, (list, tuple)) else (1 if images else 0)
+        total_images = self.existing_images_count + new_count
+
+        if total_images < 3:
+            self.add_error('images', _("Please upload at least 3 product images (existing + new)."))
+
         return cleaned_data
 
 # --- END: Vendor Product Wizard Step Forms ---

@@ -111,9 +111,9 @@
         }
         
         .service-item-flat:hover, .vendor-item-flat:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 30px rgba(139, 92, 246, 0.15);
-            border-color: rgba(139, 92, 246, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+            border-color: var(--color-primary, #007bff);
         }
         
         [data-theme="dark"] .service-item-flat,
@@ -125,7 +125,7 @@
         [data-theme="dark"] .service-item-flat:hover,
         [data-theme="dark"] .vendor-item-flat:hover {
             background-color: rgba(30, 41, 59, 0.8);
-            box-shadow: 0 12px 30px rgba(139, 92, 246, 0.2);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
         }
         
         .service-item-flat img, .vendor-item-flat img {
@@ -159,7 +159,7 @@
         }
         
         .service-item-flat h5 a:hover, .vendor-item-flat h5 a:hover {
-            color: rgba(139, 92, 246, 1);
+            color: var(--color-primary, #007bff);
         }
         
         [data-theme="dark"] .service-item-flat h5 a,
@@ -180,7 +180,7 @@
         }
         
         .provider-info i {
-            color: rgba(139, 92, 246, 0.7);
+            color: var(--color-primary, #007bff);
             font-size: 0.8rem;
         }
         
@@ -221,39 +221,39 @@
         
         /* Category Section */
         .country-section {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(236, 72, 153, 0.03)) !important;
-            border: 1px solid rgba(139, 92, 246, 0.15) !important;
-            border-radius: 16px !important;
-            padding: 2.5rem !important;
+            background-color: var(--color-background-light, #fff) !important;
+            border: 1px solid var(--color-border-light, #dee2e6) !important;
+            border-radius: 12px !important;
+            padding: 2rem !important;
         }
         
         [data-theme="dark"] .country-section {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(236, 72, 153, 0.08)) !important;
-            border-color: rgba(139, 92, 246, 0.25) !important;
+            background-color: var(--color-background-medium, #1f2937) !important;
+            border-color: var(--color-border, #374151) !important;
         }
         
         .category-card {
             padding: 1.5rem;
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(148, 163, 184, 0.25);
-            border-radius: 12px;
-            transition: all 0.3s ease;
+            background-color: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            transition: all 0.2s ease;
             cursor: pointer;
         }
         
         .category-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.15);
-            border-color: rgba(139, 92, 246, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: var(--color-primary, #007bff);
         }
         
         [data-theme="dark"] .category-card {
-            background: rgba(17, 24, 39, 0.7);
-            border-color: rgba(148, 163, 184, 0.2);
+            background-color: #1f2937;
+            border-color: #374151;
         }
         
         [data-theme="dark"] .category-card:hover {
-            background: rgba(30, 41, 59, 0.8);
+            background-color: #374151;
         }
         
         .category-card h5 {
@@ -285,7 +285,7 @@
             padding-bottom: 1rem;
             scroll-behavior: smooth;
             scrollbar-width: thin;
-            scrollbar-color: rgba(139, 92, 246, 0.4) transparent;
+            scrollbar-color: var(--color-primary, #007bff) transparent;
         }
         
         .horizontal-scroll-wrapper::-webkit-scrollbar {
@@ -295,17 +295,17 @@
         }
         
         [data-theme="dark"] .horizontal-scroll-wrapper::-webkit-scrollbar {
-            background: rgba(17, 24, 39, 0.5);
+            background: #1f2937;
         }
         
         .horizontal-scroll-wrapper::-webkit-scrollbar-thumb {
-            background: rgba(139, 92, 246, 0.4);
+            background: var(--color-primary, #007bff);
             border-radius: 10px;
             transition: background 0.2s;
         }
         
         .horizontal-scroll-wrapper::-webkit-scrollbar-thumb:hover {
-            background: rgba(139, 92, 246, 0.6);
+            background: var(--color-primary-dark, #0056b3);
         }
 
         .horizontal-scroll-item {
