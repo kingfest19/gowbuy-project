@@ -105,6 +105,7 @@ INSTALLED_APPS = [
 ]
 
 # TinyMCE configuration
+TINYMCE_JS_URL = 'https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js'  # Use jsDelivr CDN (no API key required)
 TINYMCE_DEFAULT_CONFIG = {
     'height': 360,
     'menubar': 'file edit view insert format tools table help',
