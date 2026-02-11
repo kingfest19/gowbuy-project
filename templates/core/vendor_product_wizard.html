@@ -582,23 +582,37 @@
                 font-size: 0.85rem;
             }
             
+            .form-check-input {
+                width: 1rem;
+                height: 1rem;
+            }
+            
+            .form-check-label {
+                font-size: 0.85rem;
+            }
+            
             .btn {
-                padding: 0.5rem 1rem;
-                font-size: 0.9rem;
+                padding: 0.4rem 0.7rem;
+                font-size: 0.8rem;
             }
             
             .wizard-actions {
-                flex-direction: column;
-                gap: 0.75rem;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                justify-content: space-between;
             }
             
             .wizard-actions > div {
-                width: 100%;
+                width: auto;
+                flex: 0 1 auto;
             }
             
             .wizard-actions .btn {
-                width: 100%;
+                width: auto;
                 min-width: auto;
+                padding: 0.4rem 0.7rem;
+                font-size: 0.8rem;
             }
         }
         
@@ -647,13 +661,60 @@
                 font-size: 0.8rem;
             }
             
+            .form-check-input {
+                width: 0.9rem;
+                height: 0.9rem;
+            }
+            
+            .form-check-label {
+                font-size: 0.8rem;
+            }
+            
             .btn {
-                padding: 0.45rem 0.85rem;
-                font-size: 0.85rem;
+                padding: 0.35rem 0.6rem;
+                font-size: 0.75rem;
+            }
+            
+            .wizard-actions .btn {
+                padding: 0.35rem 0.6rem;
+                font-size: 0.75rem;
+            }
+            
+            .wizard-actions {
+                gap: 0.4rem;
             }
             
             .media-manager-card img {
                 height: 100px !important;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            .btn {
+                padding: 0.3rem 0.5rem;
+                font-size: 0.7rem;
+            }
+            
+            .wizard-actions .btn {
+                padding: 0.3rem 0.5rem;
+                font-size: 0.7rem;
+            }
+            
+            .wizard-actions {
+                gap: 0.3rem;
+            }
+            
+            .wizard-header h1 {
+                font-size: 1rem;
+            }
+            
+            .wizard-step {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.7rem;
+            }
+            
+            .btn i {
+                font-size: 0.65rem;
             }
         }
     </style>

@@ -110,6 +110,29 @@
     .auth-footer a:hover {
         text-decoration: underline;
     }
+    
+    /* Password Toggle Styling */
+    .password-wrapper {
+        position: relative;
+    }
+    .password-toggle {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: var(--text-muted);
+        font-size: 1.1rem;
+        z-index: 10;
+        padding: 5px;
+        transition: color 0.2s;
+    }
+    .password-toggle:hover {
+        color: var(--text-main);
+    }
+    .password-field {
+        padding-right: 45px !important;
+    }
 </style>
 {% endblock extra_css %}
 
@@ -186,3 +209,44 @@
     </div>
 </div>
 {% endblock content %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Find all password input fields
+        const passwordInputs = document.querySelectorAll('input[type="password"]');
+        
+        passwordInputs.forEach(function(input) {
+            // Add class for padding
+            input.classList.add('password-field');
+            
+            // Create wrapper div
+            const wrapper = document.createElement('div');
+            wrapper.classList.add('password-wrapper');
+            input.parentNode.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+            
+            // Create toggle icon
+            const toggleIcon = document.createElement('i');
+            toggleIcon.classList.add('bi', 'bi-eye-fill', 'password-toggle');
+            toggleIcon.setAttribute('title', 'Toggle password visibility');
+            
+            // Insert icon after input
+            wrapper.appendChild(toggleIcon);
+            
+            // Toggle functionality
+            toggleIcon.addEventListener('click', function() {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    toggleIcon.classList.remove('bi-eye-fill');
+                    toggleIcon.classList.add('bi-eye-slash-fill');
+                } else {
+                    input.type = 'password';
+                    toggleIcon.classList.remove('bi-eye-slash-fill');
+                    toggleIcon.classList.add('bi-eye-fill');
+                }
+            });
+        });
+    });
+</script>
+{% endblock extra_js %}
