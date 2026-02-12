@@ -497,6 +497,7 @@ class Product(models.Model):
     fulfillment_method = models.CharField(max_length=10, choices=Vendor.FULFILLMENT_CHOICES, blank=True, null=True, verbose_name=_("Product Fulfillment Method"), help_text=_("Leave blank to use vendor's default setting."))
 
     is_active = models.BooleanField(default=True, db_index=True, help_text="Is the product available for purchase (requires vendor approval too)?")
+    is_deleted = models.BooleanField(default=False, db_index=True, help_text="Soft delete flag for vendor products.")
     # requires_shipping = models.BooleanField(default=True, help_text="Does this product require shipping? (Auto-set based on type)") # Consider adding this later
     is_featured = models.BooleanField(default=False, db_index=True, help_text="Should this product be featured (e.g., on homepage)?")
     created_at = models.DateTimeField(auto_now_add=True)

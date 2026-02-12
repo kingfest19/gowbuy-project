@@ -117,6 +117,9 @@ urlpatterns = [
     path('dashboard/products/create/', views.VendorProductWizardView.as_view(), name='vendor_product_create'),
     path('dashboard/products/<int:pk>/update/', views.VendorProductWizardUpdateView.as_view(), name='vendor_product_update'),
     path('dashboard/products/<int:pk>/delete/', views.VendorProductDeleteView.as_view(), name='vendor_product_delete'), # Corrected
+    path('dashboard/products/<int:pk>/restore/', views.vendor_restore_product, name='vendor_product_restore'),
+    path('dashboard/products/bulk-delete/', views.vendor_bulk_delete_products, name='vendor_bulk_delete_products'),
+    path('dashboard/products/bulk-update/', views.vendor_bulk_update_products, name='vendor_bulk_update_products'),
 
 
     # Vendor pages

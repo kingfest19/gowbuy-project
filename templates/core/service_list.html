@@ -29,13 +29,82 @@
     {{ block.super }}
     <link rel="stylesheet" href="{% static 'assets/css/service_marketplace.css' %}">
     <style>
+        /* Modern Glassmorphism Service List Styling */
+        
+        /* Box Model Reset */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        
+        /* Page Background */
+        body {
+            background: #ffffff;
+            min-height: 100vh;
+            transition: background 0.3s ease;
+            position: relative;
+            overflow-x: clip;
+        }
+        
+        html {
+            font-size: 16px;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        
+        [data-theme="dark"] body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+        
+        /* Container Enhancement */
+        .container, .container-fluid {
+            position: relative;
+            z-index: 1;
+            max-width: 100%;
+        }
+        
+        .container {
+            width: 100%;
+            padding-right: 15px;
+            padding-left: 15px;
+            margin-right: auto;
+            margin-left: auto;
+        }
+        
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 1320px;
+            }
+        }
+        
         .service-hero-section {
             position: relative; 
-            z-index: 10;
+            z-index: 2;
             background: linear-gradient(135deg, var(--bg-surface, #ffffff) 0%, var(--bg-body, #f8f9fa) 100%);
             padding: 3rem 0;
             margin-bottom: 2rem;
             border-bottom: 1px solid var(--border-color, #dee2e6);
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Card Animation */
+        .service-item-flat {
+            animation: fadeIn 0.5s ease-out;
         }
 
         /* Enhanced Service Card Styling */
@@ -54,16 +123,84 @@
         }
         .service-item-flat:hover {
             transform: translateY(-5px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
             border-color: var(--color-primary, #0d6efd);
         }
+        
+        /* Image Container with Hover Effects */
+        .image-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
         .service-item-flat img {
             height: 200px;
             width: 100%;
             object-fit: cover;
             border-radius: 0.5rem;
-            margin-bottom: 1rem;
             background-color: var(--bg-body, #f8f9fa);
+            transition: transform 0.3s ease;
+        }
+        
+        .image-container:hover img {
+            transform: scale(1.05);
+        }
+        
+        .image-container a::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0);
+            transition: background 0.3s ease;
+            z-index: 1;
+        }
+        
+        .image-container:hover a::before {
+            background: rgba(0, 0, 0, 0.4);
+        }
+        
+        .hover-btns {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex !important;
+            gap: 0.5rem;
+            z-index: 5;
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .image-container:hover .hover-btns {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .hover-btn {
+            border: none;
+            border-radius: 20px;
+            padding: 0.6rem 1.2rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 0.95) !important;
+            color: #333 !important;
+            font-size: 0.85rem;
+        }
+        
+        .hover-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .hover-btn i {
+            margin-right: 0.3rem;
         }
         
         /* Typography & Content */
@@ -181,6 +318,17 @@
             scroll-snap-align: start;
         }
 
+        /* Desktop Display Control */
+        .display-4 {
+            font-size: 2.5rem !important;
+        }
+        
+        @media (min-width: 1200px) {
+            .display-4 {
+                font-size: 3rem !important;
+            }
+        }
+
         /* Mobile Responsiveness (Matching Homepage Cards) */
         @media (max-width: 768px) {
             .service-hero-section {
@@ -195,10 +343,15 @@
                 padding: 0.75rem;
                 border-radius: 0.5rem;
             }
+            
+            .image-container {
+                margin-bottom: 0.5rem;
+            }
+            
             .service-item-flat img {
                 height: 140px !important; /* Smaller image */
-                margin-bottom: 0.5rem !important;
             }
+            
             .service-item-flat h5 {
                 font-size: 0.9rem;
                 margin-bottom: 0.25rem !important;
@@ -227,6 +380,11 @@
                 font-size: 0.85rem;
                 width: 100%;
             }
+            
+            .hover-btns {
+                display: flex !important;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
 
             /* Grid Adjustments */
             .row.g-4 {
@@ -252,6 +410,11 @@
             .horizontal-scroll-item {
                 width: 160px;
             }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
 
         @media (min-width: 992px) {
@@ -264,8 +427,48 @@
 
         /* Light/Dark Mode Enhancements */
         .section-title {
-            color: var(--text-main, #212529);
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 2rem;
+            position: relative;
+            padding-bottom: 1rem;
+            display: inline-block;
         }
+        
+        [data-theme="dark"] .section-title {
+            background: linear-gradient(135deg, #f0f4ff 0%, #ffffff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 2px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header .section-title {
+            margin-bottom: 0;
+        }
+        
         .list-group-item {
             background: var(--bg-surface, #ffffff);
             color: var(--text-main, #212529);
@@ -301,11 +504,18 @@
             border-color: rgba(148, 163, 184, 0.2);
             box-shadow: 0 10px 24px rgba(0,0,0,0.35);
         }
+        [data-theme="dark"] .service-item-flat:hover {
+            box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+        }
         [data-theme="dark"] .service-item-flat h5 a {
             color: var(--text-main, #ffffff);
         }
         [data-theme="dark"] .service-item-flat .service-description-flat {
             color: var(--text-muted, #aab7c4);
+        }
+        [data-theme="dark"] .hover-btn {
+            background: rgba(30, 30, 46, 0.95) !important;
+            color: #f0f4ff !important;
         }
         [data-theme="dark"] .category-card-service {
             background: rgba(15, 23, 42, 0.7);
@@ -398,18 +608,27 @@
     <!-- Featured Services Section -->
     {% if featured_services %}
     <section class="mb-5">
-        <h2 class="section-title">{% trans "Featured Services" %}</h2>
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Featured Services" %}</h2>
+        </div>
         <div class="horizontal-scroll-wrapper">
             {% for service in featured_services %}
             <div class="horizontal-scroll-item">
                 <div class="service-item-flat">
-                    <a href="{{ service.get_absolute_url }}">
-                        {% if service.images.first.image.url %}
-                            <img src="{{ service.images.first.image.url }}" alt="{{ service.title }}">
-                        {% else %}
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
-                        {% endif %}
-                    </a>
+                    <div class="image-container">
+                        <a href="{{ service.get_absolute_url }}">
+                            {% if service.images.first.image.url %}
+                                <img src="{{ service.images.first.image.url }}" alt="{{ service.title }}">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                            {% endif %}
+                        </a>
+                        <div class="hover-btns">
+                            <a href="{{ service.get_absolute_url }}" class="btn btn-sm hover-btn">
+                                <i class="bi bi-eye"></i> {% trans "View" %}
+                            </a>
+                        </div>
+                    </div>
                     <h5 class="mb-1">
                         <a href="{{ service.get_absolute_url }}" class="text-decoration-none stretched-link">{{ service.title|truncatechars:50 }}</a>
                     </h5>
@@ -444,7 +663,9 @@
  <!-- Popular Service Categories Section -->
     {% if top_service_categories %}
     <section class="mb-5">
-        <h2 class="section-title">{% trans "Popular Service Categories" %}</h2>
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Popular Service Categories" %}</h2>
+        </div>
         <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3">
             {% for category in top_service_categories %}
             <div class="col">
@@ -467,18 +688,27 @@
     <!-- Recently Viewed Services Section -->
     {% if recently_viewed_services %}
     <section class="mb-5">
-        <h2 class="section-title">{% trans "Recently Viewed" %}</h2>
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Recently Viewed" %}</h2>
+        </div>
         <div class="horizontal-scroll-wrapper">
             {% for service in recently_viewed_services %}
             <div class="horizontal-scroll-item">
                 <div class="service-item-flat">
-                    <a href="{{ service.get_absolute_url }}">
-                        {% if service.images.first.image.url %}
-                            <img src="{{ service.images.first.image.url }}" alt="{{ service.title }}">
-                        {% else %}
-                            <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
-                        {% endif %}
-                    </a>
+                    <div class="image-container">
+                        <a href="{{ service.get_absolute_url }}">
+                            {% if service.images.first.image.url %}
+                                <img src="{{ service.images.first.image.url }}" alt="{{ service.title }}">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                            {% endif %}
+                        </a>
+                        <div class="hover-btns">
+                            <a href="{{ service.get_absolute_url }}" class="btn btn-sm hover-btn">
+                                <i class="bi bi-eye"></i> {% trans "View" %}
+                            </a>
+                        </div>
+                    </div>
                     <h5 class="mb-1">
                         <a href="{{ service.get_absolute_url }}" class="text-decoration-none stretched-link">{{ service.title|truncatechars:50 }}</a>
                     </h5>
@@ -593,13 +823,20 @@
                         {% for service in services %}
                         <div class="col">
                             <div class="service-item-flat">
-                                <a href="{{ service.get_absolute_url }}">
-                                    {% if service.images.first.image.url %}
-                                        <img src="{{ service.images.first.image.url }}" alt="{{ service.title }}">
-                                    {% else %}
-                                        <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
-                                    {% endif %}
-                                </a>
+                                <div class="image-container">
+                                    <a href="{{ service.get_absolute_url }}">
+                                        {% if service.images.first.image.url %}
+                                            <img src="{{ service.images.first.image.url }}" alt="{{ service.title }}">
+                                        {% else %}
+                                            <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                                        {% endif %}
+                                    </a>
+                                    <div class="hover-btns">
+                                        <a href="{{ service.get_absolute_url }}" class="btn btn-sm hover-btn">
+                                            <i class="bi bi-eye"></i> {% trans "View" %}
+                                        </a>
+                                    </div>
+                                </div>
                                 <h5 class="mb-1">
                                     <a href="{{ service.get_absolute_url }}" class="text-decoration-none stretched-link">{{ service.title|truncatechars:50 }}</a>
                                 </h5>

@@ -1,9 +1,10 @@
 # c:\Users\Hp\Desktop\Nexus\core\views.py
 import logging
 import json, datetime
+import csv
 from kombu.exceptions import OperationalError # Import OperationalError to handle broker connection issues
 import random # For selecting random spotlights
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.core.mail import EmailMessage
 from typing import Optional
 from django.contrib.syndication.views import Feed
@@ -38,6 +39,7 @@ from django.views.decorators.http import require_POST, require_http_methods
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, View, TemplateView, FormView
 from django.db import transaction
 from django.db.models import Q, Avg, Count, Sum, F, ExpressionWrapper, fields, Prefetch, Max, OuterRef, Subquery, Exists
+from django.utils.dateparse import parse_date
 from django.utils import timezone
 from django.utils import translation
 from django.utils.translation import gettext_lazy as _
@@ -946,8 +948,251 @@ class VendorProductListView(LoginRequiredMixin, IsVendorMixin, ListView):
     context_object_name = 'products'
     paginate_by = 10
 
+    def get(self, request, *args, **kwargs):
+        if request.GET.get('export') == 'csv':
+            return self.export_csv()
+        return super().get(request, *args, **kwargs)
+
+    def _get_filtered_queryset(self):
+        queryset = Product.objects.filter(vendor=self.request.user.vendor_profile)
+
+        # Handle search query
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(name__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(sku__icontains=search_query) |
+                Q(category__name__icontains=search_query)
+            )
+
+        # Handle category filter
+        category_id = self.request.GET.get('category', '').strip()
+        if category_id:
+            queryset = queryset.filter(category_id=category_id)
+
+        # Handle product type filter
+        product_type = self.request.GET.get('product_type', '').strip()
+        if product_type in ['physical', 'digital']:
+            queryset = queryset.filter(product_type=product_type)
+
+        # Handle active status filter
+        status = self.request.GET.get('status', '').strip()
+        if status == 'deleted':
+            queryset = queryset.filter(is_deleted=True)
+        else:
+            queryset = queryset.filter(is_deleted=False)
+            if status == 'active':
+                queryset = queryset.filter(is_active=True)
+            elif status == 'inactive':
+                queryset = queryset.filter(is_active=False)
+
+        # Handle price range filter
+        min_price = self.request.GET.get('min_price', '').strip()
+        max_price = self.request.GET.get('max_price', '').strip()
+        if min_price:
+            try:
+                queryset = queryset.filter(price__gte=Decimal(min_price))
+            except (ValueError, InvalidOperation):
+                pass
+        if max_price:
+            try:
+                queryset = queryset.filter(price__lte=Decimal(max_price))
+            except (ValueError, InvalidOperation):
+                pass
+
+        # Handle date range filter
+        start_date = parse_date(self.request.GET.get('start_date', '').strip())
+        end_date = parse_date(self.request.GET.get('end_date', '').strip())
+        if start_date:
+            queryset = queryset.filter(created_at__date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(created_at__date__lte=end_date)
+
+        # Handle stock status filter
+        stock_status = self.request.GET.get('stock_status', '').strip()
+        if stock_status == 'low':
+            # Low stock: products with stock between 1 and 10 (or your threshold)
+            queryset = queryset.filter(product_type='physical', stock__gt=0, stock__lte=10)
+        elif stock_status == 'out':
+            # Out of stock: products with 0 stock
+            queryset = queryset.filter(product_type='physical', stock=0)
+        # If stock_status is empty or 'all', don't filter by stock (show all products)
+
+        # Handle sorting
+        sort_by = self.request.GET.get('sort', '').strip()
+        if sort_by == 'date_asc':
+            queryset = queryset.order_by('created_at')
+        elif sort_by == 'date_desc':
+            queryset = queryset.order_by('-created_at')
+        elif sort_by == 'price_asc':
+            queryset = queryset.order_by('price')
+        elif sort_by == 'price_desc':
+            queryset = queryset.order_by('-price')
+        elif sort_by == 'name_asc':
+            queryset = queryset.order_by('name')
+        elif sort_by == 'name_desc':
+            queryset = queryset.order_by('-name')
+        elif sort_by == 'stock_asc':
+            queryset = queryset.order_by('stock')
+        elif sort_by == 'stock_desc':
+            queryset = queryset.order_by('-stock')
+        else:
+            # Default sorting (newest first)
+            queryset = queryset.order_by('-created_at')
+
+        return queryset
+
     def get_queryset(self):
-        return Product.objects.filter(vendor=self.request.user.vendor_profile).order_by('-created_at')
+        queryset = self._get_filtered_queryset()
+        paid_statuses = [
+            Order.Status.DELIVERED,
+            Order.Status.COMPLETED,
+            Order.Status.PENDING_PAYOUT,
+        ]
+
+        revenue_expression = ExpressionWrapper(
+            F('order_items__price') * F('order_items__quantity'),
+            output_field=fields.DecimalField(max_digits=12, decimal_places=2),
+        )
+
+        return queryset.annotate(
+            units_sold=Sum(
+                'order_items__quantity',
+                filter=Q(order_items__order__status__in=paid_statuses)
+            ),
+            revenue=Sum(
+                revenue_expression,
+                filter=Q(order_items__order__status__in=paid_statuses)
+            ),
+            last_sold_at=Max(
+                'order_items__order__created_at',
+                filter=Q(order_items__order__status__in=paid_statuses)
+            ),
+        )
+
+    def export_csv(self):
+        queryset = self.get_queryset()
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="vendor_products.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            'Name',
+            'SKU',
+            'Category',
+            'Price',
+            'Stock',
+            'Product Type',
+            'Active',
+            'Units Sold',
+            'Revenue',
+            'Date Added',
+        ])
+
+        for product in queryset:
+            writer.writerow([
+                product.name,
+                product.sku or '',
+                product.category.name if product.category else '',
+                product.price,
+                product.stock,
+                product.product_type,
+                'Yes' if product.is_active else 'No',
+                product.units_sold or 0,
+                product.revenue or Decimal('0.00'),
+                product.created_at.strftime('%Y-%m-%d') if product.created_at else '',
+            ])
+
+        return response
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        vendor = self.request.user.vendor_profile
+
+        # Get all vendor products for statistics (unfiltered)
+        all_products = Product.objects.filter(vendor=vendor, is_deleted=False)
+        deleted_products = Product.objects.filter(vendor=vendor, is_deleted=True)
+
+        # Calculate statistics
+        context['total_products'] = all_products.count()
+        context['total_products_all'] = all_products.count() + deleted_products.count()
+        context['low_stock_count'] = all_products.filter(product_type='physical', stock__gt=0, stock__lte=10).count()
+        context['out_of_stock_count'] = all_products.filter(product_type='physical', stock=0).count()
+        context['active_products_count'] = all_products.filter(is_active=True).count()
+        context['inactive_products_count'] = all_products.filter(is_active=False).count()
+        context['deleted_products_count'] = deleted_products.count()
+
+        inventory_value_expression = ExpressionWrapper(
+            F('price') * F('stock'),
+            output_field=fields.DecimalField(max_digits=12, decimal_places=2),
+        )
+        inventory_value = all_products.filter(product_type='physical').aggregate(
+            total_value=Sum(inventory_value_expression)
+        )['total_value'] or Decimal('0.00')
+        context['inventory_value'] = inventory_value
+
+        # Sales totals (completed/delivered/pending payout)
+        paid_statuses = [
+            Order.Status.DELIVERED,
+            Order.Status.COMPLETED,
+            Order.Status.PENDING_PAYOUT,
+        ]
+        order_items = OrderItem.objects.filter(
+            product__vendor=vendor,
+            order__status__in=paid_statuses
+        )
+        context['total_units_sold'] = order_items.aggregate(
+            total=Sum('quantity')
+        )['total'] or 0
+        revenue_expression = ExpressionWrapper(
+            F('price') * F('quantity'),
+            output_field=fields.DecimalField(max_digits=12, decimal_places=2),
+        )
+        context['total_revenue'] = order_items.aggregate(
+            total=Sum(revenue_expression)
+        )['total'] or Decimal('0.00')
+
+        # Get categories for filter dropdown
+        context['categories'] = Category.objects.filter(
+            products__vendor=vendor
+        ).distinct().order_by('name')
+
+        # Get filter parameters
+        context['search_query'] = self.request.GET.get('q', '')
+        context['current_stock_status'] = self.request.GET.get('stock_status', '')
+        context['current_sort'] = self.request.GET.get('sort', '') or 'date_desc'
+        context['current_category'] = self.request.GET.get('category', '')
+        context['current_product_type'] = self.request.GET.get('product_type', '')
+        context['current_status'] = self.request.GET.get('status', '')
+        context['current_min_price'] = self.request.GET.get('min_price', '')
+        context['current_max_price'] = self.request.GET.get('max_price', '')
+        context['current_start_date'] = self.request.GET.get('start_date', '')
+        context['current_end_date'] = self.request.GET.get('end_date', '')
+
+        context['page_title'] = _('My Products')
+        context['vendor'] = vendor
+
+        # Product type choices
+        context['product_type_choices'] = [
+            ('', _('All Types')),
+            ('physical', _('Physical')),
+            ('digital', _('Digital')),
+        ]
+
+        # Status choices
+        context['status_choices'] = [
+            ('', _('All Status')),
+            ('active', _('Active')),
+            ('inactive', _('Inactive')),
+            ('deleted', _('Deleted')),
+        ]
+
+        # Results count
+        paginator = context.get('paginator')
+        context['filtered_count'] = paginator.count if paginator else 0
+
+        return context
 
 
 class VendorProductCreateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, CreateView):
@@ -1840,6 +2085,129 @@ class VendorProductDeleteView(LoginRequiredMixin, IsVendorMixin, SuccessMessageM
 
     def get_queryset(self):
         return Product.objects.filter(vendor=self.request.user.vendor_profile)
+
+    def delete(self, request, *args, **kwargs):
+        product = self.get_object()
+        product.is_deleted = True
+        product.is_active = False
+        product.save(update_fields=['is_deleted', 'is_active'])
+        messages.success(request, self.success_message)
+        return HttpResponseRedirect(self.success_url)
+
+
+@login_required
+@require_http_methods(['POST'])
+def vendor_bulk_delete_products(request):
+    """Handle bulk deletion of products via AJAX."""
+    if not hasattr(request.user, 'vendor_profile'):
+        return HttpResponseForbidden(json.dumps({'error': 'Not a vendor'}), content_type='application/json')
+    
+    try:
+        data = json.loads(request.body)
+        product_ids = data.get('product_ids', [])
+        
+        if not product_ids:
+            return JsonResponse({'error': 'No products selected'}, status=400)
+        
+        # Soft delete only products belonging to this vendor
+        deleted_count = Product.objects.filter(
+            pk__in=product_ids,
+            vendor=request.user.vendor_profile
+        ).update(is_deleted=True, is_active=False)
+        
+        messages.success(request, _('%(count)d product(s) deleted successfully.') % {'count': deleted_count})
+        
+        return JsonResponse({'success': True, 'deleted': deleted_count})
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(['POST'])
+def vendor_bulk_update_products(request):
+    """Handle bulk updates (status, category, price) for vendor products via AJAX."""
+    if not hasattr(request.user, 'vendor_profile'):
+        return HttpResponseForbidden(json.dumps({'error': 'Not a vendor'}), content_type='application/json')
+
+    try:
+        data = json.loads(request.body)
+        product_ids = data.get('product_ids', [])
+        action = data.get('action')
+        value = data.get('value')
+
+        if not product_ids:
+            return JsonResponse({'error': 'No products selected'}, status=400)
+
+        queryset = Product.objects.filter(
+            pk__in=product_ids,
+            vendor=request.user.vendor_profile,
+            is_deleted=False
+        )
+
+        if action == 'set_active':
+            updated_count = queryset.update(is_active=True)
+        elif action == 'set_inactive':
+            updated_count = queryset.update(is_active=False)
+        elif action == 'set_category':
+            if not value:
+                return JsonResponse({'error': 'Category is required'}, status=400)
+            try:
+                category = Category.objects.get(pk=value)
+            except Category.DoesNotExist:
+                return JsonResponse({'error': 'Invalid category'}, status=400)
+            updated_count = queryset.update(category=category)
+        elif action in ['increase_price', 'decrease_price']:
+            if value is None or value == '':
+                return JsonResponse({'error': 'Percent value is required'}, status=400)
+            try:
+                percent = Decimal(str(value))
+            except (ValueError, InvalidOperation):
+                return JsonResponse({'error': 'Invalid percent value'}, status=400)
+            if percent <= 0:
+                return JsonResponse({'error': 'Percent must be greater than 0'}, status=400)
+
+            multiplier = Decimal('1.0') + (percent / Decimal('100.0'))
+            if action == 'decrease_price':
+                multiplier = Decimal('1.0') - (percent / Decimal('100.0'))
+                if multiplier <= 0:
+                    return JsonResponse({'error': 'Percent too large'}, status=400)
+
+            price_expression = ExpressionWrapper(
+                F('price') * multiplier,
+                output_field=fields.DecimalField(max_digits=10, decimal_places=2),
+            )
+            updated_count = queryset.update(price=price_expression)
+        else:
+            return JsonResponse({'error': 'Invalid action'}, status=400)
+
+        messages.success(request, _('%(count)d product(s) updated successfully.') % {'count': updated_count})
+        return JsonResponse({'success': True, 'updated': updated_count})
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(['POST'])
+def vendor_restore_product(request, pk):
+    """Restore a soft-deleted vendor product."""
+    if not hasattr(request.user, 'vendor_profile'):
+        return HttpResponseForbidden(json.dumps({'error': 'Not a vendor'}), content_type='application/json')
+
+    product = get_object_or_404(
+        Product,
+        pk=pk,
+        vendor=request.user.vendor_profile,
+        is_deleted=True
+    )
+    product.is_deleted = False
+    product.is_active = True
+    product.save(update_fields=['is_deleted', 'is_active'])
+    messages.success(request, _("Product restored successfully."))
+    return redirect('core:vendor_product_list')
 
 
 class VendorPayoutListView(LoginRequiredMixin, IsVendorMixin, ListView):
@@ -5615,7 +5983,9 @@ class ServiceDetailView(DetailView):
         context['related_services'] = Service.objects.filter(
             category=service.category,
             is_active=True
-        ).exclude(id=service.id)[:4]
+        ).exclude(id=service.id).select_related(
+            'provider', 'provider__service_provider_profile'
+        ).prefetch_related('images', 'packages')[:4]
         context['availability_slots'] = ServiceAvailability.objects.filter(
             service=service,
             is_booked=False,
@@ -5625,8 +5995,21 @@ class ServiceDetailView(DetailView):
         
         if self.request.user.is_authenticated:
             context['in_wishlist'] = Wishlist.objects.filter(user=self.request.user, services=service).exists()
+            # Check if user has completed a booking for this service
+            context['has_completed_booking'] = ServiceBooking.objects.filter(
+                user=self.request.user,
+                service_package__service=service,
+                status='COMPLETED'
+            ).exists()
+            # Check if user has already reviewed this service
+            context['has_reviewed'] = ServiceReview.objects.filter(
+                user=self.request.user,
+                service=service
+            ).exists()
         else:
             context['in_wishlist'] = False
+            context['has_completed_booking'] = False
+            context['has_reviewed'] = False
             
         return context
 

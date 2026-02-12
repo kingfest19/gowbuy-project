@@ -37,13 +37,24 @@
     <style>
         /* Modern Glassmorphism Home Page Styling */
         
+        /* Box Model Reset */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        
         /* Page Background - Match Signin/Signup Style */
         body {
             background: #ffffff;
             min-height: 100vh;
             transition: background 0.3s ease;
             position: relative;
-            overflow-x: hidden;
+            overflow-x: clip;
+        }
+        
+        html {
+            font-size: 16px;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
         }
         
         [data-theme="dark"] body {
@@ -91,12 +102,27 @@
         .container, .container-fluid {
             position: relative;
             z-index: 1;
+            max-width: 100%;
+        }
+        
+        .container {
+            width: 100%;
+            padding-right: 15px;
+            padding-left: 15px;
+            margin-right: auto;
+            margin-left: auto;
+        }
+        
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 1320px;
+            }
         }
         
         /* Hero Section */
         .service-hero-section {
             position: relative; 
-            z-index: 10;
+            z-index: 2;
             padding: 3rem 0;
             animation: fadeIn 0.8s ease-out;
         }
@@ -233,6 +259,22 @@
             background: linear-gradient(90deg, #667eea, #764ba2);
             border-radius: 2px;
         }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header .section-title {
+            margin-bottom: 0;
+        }
+
+        .section-header .btn {
+            flex-shrink: 0;
+        }
         
         /* Modern Search Input Styling */
         .input-group-lg .form-control {
@@ -365,11 +407,12 @@
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
         
         [data-theme="dark"] .deal-of-day-card:hover {
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(102, 126, 234, 0.3) inset;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 20px rgba(102, 126, 234, 0.6);
+            border: 2px solid rgba(102, 126, 234, 0.8);
         }
         
         .deal-badge {
@@ -463,7 +506,7 @@
         .service-item-flat:hover, .vendor-item-flat:hover {
             transform: translateY(-8px);
             box-shadow: 0 16px 48px rgba(102, 126, 234, 0.2);
-            border-color: #667eea;
+            border: 2px solid #667eea;
         }
         
         [data-theme="dark"] .service-item-flat,
@@ -471,15 +514,15 @@
             background: rgba(30, 30, 46, 0.9);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
         
         [data-theme="dark"] .service-item-flat:hover,
         [data-theme="dark"] .vendor-item-flat:hover {
             background: rgba(40, 40, 60, 0.9);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(102, 126, 234, 0.3) inset;
-            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 20px rgba(102, 126, 234, 0.6);
+            border: 2px solid rgba(102, 126, 234, 0.8);
             transform: translateY(-8px);
         }
         
@@ -590,7 +633,7 @@
             backdrop-filter: blur(20px) !important;
             -webkit-backdrop-filter: blur(20px) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
         }
         
         .category-card {
@@ -608,7 +651,7 @@
         .category-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
-            border-color: #667eea;
+            border: 2px solid #667eea;
             background: rgba(255, 255, 255, 1);
         }
         
@@ -622,8 +665,8 @@
         
         [data-theme="dark"] .category-card:hover {
             background: rgba(40, 40, 60, 0.9);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(102, 126, 234, 0.3) inset;
-            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(102, 126, 234, 0.5);
+            border: 2px solid rgba(102, 126, 234, 0.8);
         }
         
         .category-card h5 {
@@ -707,7 +750,7 @@
             bottom: 0;
             background: rgba(0, 0, 0, 0);
             transition: background 0.3s ease;
-            z-index: 5;
+            z-index: 1;
         }
         
         .image-container:hover a::before {
@@ -721,7 +764,7 @@
             transform: translate(-50%, -50%);
             display: flex !important;
             gap: 0.5rem;
-            z-index: 15;
+            z-index: 5;
             transition: all 0.3s ease;
             opacity: 0;
             visibility: hidden;
@@ -752,6 +795,17 @@
         
         .hover-btn i {
             margin-right: 0.3rem;
+        }
+
+        /* Desktop Display Control */
+        .display-4 {
+            font-size: 2.5rem !important;
+        }
+        
+        @media (min-width: 1200px) {
+            .display-4 {
+                font-size: 3rem !important;
+            }
         }
 
         /* Responsive Design */
@@ -837,6 +891,11 @@
         }
         
         @media (max-width: 576px) {
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
             .carousel-item img {
                 height: 180px;
             }
@@ -965,7 +1024,7 @@
     <!-- Featured Products Section -->
     {% if featured_products %}
     <section class="mb-5">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="section-header">
             <h2 class="section-title">{% trans "Featured Products" %}</h2>
             <a href="{% url 'core:product_list' %}" class="btn btn-sm btn-outline-secondary">{% trans "View all" %}</a>
         </div>
@@ -1142,7 +1201,7 @@
     <!-- New Arrivals Section -->
     {% if new_arrivals %}
     <section class="mb-5">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="section-header">
             <h2 class="section-title">{% trans "New Arrivals" %}</h2>
             <a href="{% url 'core:product_list' %}" class="btn btn-sm btn-outline-secondary">{% trans "View all" %}</a>
         </div>
@@ -1281,7 +1340,9 @@
     <!-- Featured Services Section -->
     {% if featured_services %}
     <section class="mb-5">
-        <h2 class="section-title">{% trans "Featured Services" %}</h2>
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Featured Services" %}</h2>
+        </div>
         <div class="horizontal-scroll-wrapper">
             {% for service in featured_services %}
             <div class="horizontal-scroll-item">
@@ -1326,7 +1387,9 @@
     <!-- Top Rated Vendors Section -->
     {% if top_vendors %}
     <section class="mb-5">
-        <h2 class="section-title">{% trans "Top Rated Vendors" %}</h2>
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Top Rated Vendors" %}</h2>
+        </div>
         <div class="horizontal-scroll-wrapper">
             {% for vendor in top_vendors %}
             <div class="horizontal-scroll-item">
@@ -1373,7 +1436,7 @@
             backdrop-filter: blur(20px) !important;
             -webkit-backdrop-filter: blur(20px) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
         }
 
         .seller-card {
@@ -1394,7 +1457,7 @@
         .seller-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
-            border-color: #667eea;
+            border: 2px solid #667eea;
         }
         
         [data-theme="dark"] .seller-card {
@@ -1402,13 +1465,13 @@
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
         
         [data-theme="dark"] .seller-card:hover {
             background: rgba(40, 40, 60, 0.9);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(102, 126, 234, 0.3) inset;
-            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(102, 126, 234, 0.5);
+            border: 2px solid rgba(102, 126, 234, 0.8);
         }
         }
 

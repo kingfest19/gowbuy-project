@@ -5,16 +5,76 @@
 
 {% block extra_css %}
 <style>
+    /* Box Model & Viewport Reset */
+    *, *::before, *::after {
+        box-sizing: border-box;
+    }
+
+    html {
+        font-size: 16px;
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+    }
+
+    body {
+        background: #ffffff;
+        min-height: 100vh;
+        transition: background 0.3s ease;
+        position: relative;
+        overflow-x: clip;
+    }
+
+    [data-theme="dark"] body {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    }
+
+    /* CSS Variables for Color Theming */
+    :root {
+        --bg-surface: rgba(255, 255, 255, 0.95);
+        --text-main: #323232ff;
+        --text-muted: #6c757d;
+        --border-color: rgba(102, 126, 234, 0.15);
+        --card-shadow: 0 8px 32px rgba(102, 126, 234, 0.1);
+        --color-primary: #667eea;
+        --accent-color: #667eea;
+    }
+
+    [data-theme="dark"] {
+        --bg-surface: rgba(30, 30, 46, 0.9);
+        --text-main: #f0f4ff;
+        --text-muted: #cbd5e1;
+        --border-color: rgba(255, 255, 255, 0.1);
+        --card-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        --color-primary: #667eea;
+        --accent-color: #667eea;
+    }
+
+    .text-muted {
+        color: var(--text-muted) !important;
+    }
+
+    /* Vendor Header Card with Glassmorphism */
     .vendor-header-card {
-        background-color: var(--bg-surface);
-        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(102, 126, 234, 0.15);
         border-radius: 16px;
         padding: 2.5rem;
         margin-bottom: 2.5rem;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.1);
         position: relative;
         overflow: hidden;
     }
+
+    [data-theme="dark"] .vendor-header-card {
+        background: rgba(30, 30, 46, 0.9);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
     .vendor-header-card::before {
         content: '';
         position: absolute;
@@ -22,7 +82,7 @@
         left: 0;
         width: 100%;
         height: 6px;
-        background: linear-gradient(90deg, var(--accent-color), #00d2ff);
+        background: linear-gradient(90deg, #667eea, #764ba2);
     }
     .vendor-logo-large {
         width: 140px;
@@ -33,25 +93,54 @@
         box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         background-color: #fff;
     }
+    /* Vendor Stat Box with Glassmorphism */
     .vendor-stat-box {
-        background-color: var(--bg-body);
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(102, 126, 234, 0.15);
         border-radius: 12px;
         padding: 1rem 1.5rem;
         text-align: center;
-        border: 1px solid var(--border-color);
-        transition: transform 0.2s;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         min-width: 100px;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.08);
     }
+
     .vendor-stat-box:hover {
-        transform: translateY(-3px);
-        border-color: var(--accent-color);
+        transform: translateY(-4px);
+        box-shadow: 0 16px 40px rgba(102, 126, 234, 0.15);
+        border: 1px solid rgba(102, 126, 234, 0.3);
     }
+
+    [data-theme="dark"] .vendor-stat-box {
+        background: rgba(30, 30, 46, 0.8);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    [data-theme="dark"] .vendor-stat-box:hover {
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
     .vendor-stat-box h5 {
         font-size: 1.5rem;
         font-weight: 800;
         margin-bottom: 0;
-        color: var(--text-main);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
+
+    [data-theme="dark"] .vendor-stat-box h5 {
+        background: linear-gradient(135deg, #cbd5e1 0%, #f0f4ff 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
     .vendor-stat-box small {
         color: var(--text-muted);
         font-weight: 600;
@@ -60,39 +149,65 @@
         letter-spacing: 0.5px;
     }
     
-    /* Product Card Styles (matching home.html/product_detail.html) */
+    /* Product Card with Glassmorphism */
     .product-card {
-        background-color: var(--bg-surface);
-        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(102, 126, 234, 0.15);
         border-radius: 12px;
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         height: 100%;
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.08);
     }
+
     .product-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
-        border-color: var(--accent-color);
+        transform: translateY(-8px);
+        box-shadow: 0 16px 48px rgba(102, 126, 234, 0.15);
+        border: 1px solid rgba(102, 126, 234, 0.3);
     }
+
+    [data-theme="dark"] .product-card {
+        background: rgba(30, 30, 46, 0.9);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    [data-theme="dark"] .product-card:hover {
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
     .product-card img {
         height: 220px;
         object-fit: contain;
         padding: 1.5rem;
-        background-color: #fff; /* Keep white for product images */
-        border-bottom: 1px solid var(--border-color);
+        background-color: #fff;
+        border-bottom: 1px solid rgba(102, 126, 234, 0.1);
         transition: transform 0.3s ease;
     }
+
+    [data-theme="dark"] .product-card img {
+        background-color: rgba(30, 30, 46, 0.7);
+        border-bottom-color: rgba(255, 255, 255, 0.08);
+    }
+
     .product-card:hover img {
         transform: scale(1.05);
     }
+
     .product-card .card-body {
         padding: 1.25rem;
         display: flex;
         flex-direction: column;
         flex-grow: 1;
     }
+
     .product-card .card-title {
         font-size: 1.05rem;
         font-weight: 600;
@@ -100,14 +215,15 @@
         margin-bottom: 0.5rem;
         line-height: 1.4;
     }
+
     .product-card .card-text {
-        color: var(--accent-color);
+        color: #667eea;
         font-weight: 700;
         font-size: 1.2rem;
         margin-bottom: 1rem;
     }
     
-    /* Social Buttons */
+    /* Social Buttons with Glassmorphism */
     .social-btn {
         width: 36px;
         height: 36px;
@@ -115,67 +231,170 @@
         align-items: center;
         justify-content: center;
         border-radius: 50%;
-        background-color: var(--bg-body);
-        color: var(--text-muted);
-        transition: all 0.2s;
-        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        color: #667eea;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(102, 126, 234, 0.2);
         text-decoration: none;
     }
+
     .social-btn:hover {
-        background-color: var(--accent-color);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: #fff;
-        border-color: var(--accent-color);
-        transform: translateY(-2px);
+        border-color: transparent;
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
 
-    /* Tabs */
+    [data-theme="dark"] .social-btn {
+        background: rgba(30, 30, 46, 0.8);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Modern Tabs */
     .nav-tabs {
-        border-bottom: 2px solid var(--border-color);
+        border-bottom: 2px solid rgba(102, 126, 234, 0.2);
         margin-bottom: 2rem;
         gap: 1rem;
     }
+
     .nav-tabs .nav-link {
         border: none;
         color: var(--text-muted);
-        font-weight: 600;
-        padding: 0.75rem 0;
+        font-weight: 700;
+        padding: 0.75rem 1rem;
         background: transparent;
         position: relative;
-        transition: color 0.3s;
+        transition: all 0.3s ease;
+        border-radius: 8px 8px 0 0;
     }
+
     .nav-tabs .nav-link:hover {
         color: var(--text-main);
+        background: rgba(102, 126, 234, 0.05);
     }
+
     .nav-tabs .nav-link.active {
-        color: var(--accent-color);
-        background: transparent;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: #667eea;
     }
+
     .nav-tabs .nav-link.active::after {
         content: '';
         position: absolute;
         bottom: -2px;
         left: 0;
         width: 100%;
-        height: 2px;
-        background-color: var(--accent-color);
+        height: 3px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
         border-radius: 2px;
     }
+
+    [data-theme="dark"] .nav-tabs .nav-link.active {
+        background: linear-gradient(135deg, #cbd5e1 0%, #f0f4ff 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
     .tab-content {
         padding: 2rem 0;
     }
 
+    .tab-content .card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(102, 126, 234, 0.15);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.08);
+    }
+
+    [data-theme="dark"] .tab-content .card {
+        background: rgba(30, 30, 46, 0.9);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Button Styling */
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        transition: all 0.3s ease;
+        font-weight: 600;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-outline-primary {
+        border: 2px solid #667eea;
+        color: #667eea;
+        transition: all 0.3s ease;
+        font-weight: 600;
+    }
+
+    .btn-outline-primary:hover {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: none;
+        transition: all 0.3s ease;
+        font-weight: 600;
+    }
+
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
     /* Mobile Grid Adjustments */
+    @media (max-width: 768px) {
+        .vendor-stat-box {
+            min-width: auto;
+            flex: 1;
+        }
+
+        .tab-content {
+            padding: 1rem 0;
+        }
+    }
+
     @media (max-width: 576px) {
+        .vendor-header-card {
+            padding: 1.5rem;
+        }
+
         .product-card img {
             height: 150px;
             padding: 0.5rem;
         }
+
         .product-card .card-body {
             padding: 0.75rem;
         }
+
         .product-card .card-title {
             font-size: 0.9rem;
         }
+
         .product-card .card-text {
             font-size: 1rem;
             margin-bottom: 0.5rem;
