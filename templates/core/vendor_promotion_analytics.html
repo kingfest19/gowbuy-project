@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Promotion Analytics" %} - {{ vendor.name }}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        /* CSS Variables */
+        :root {
+            --bg-body: #ffffff;
+            --bg-surface: #f8f9fa;
+            --text-main: #1a2533;
+            --text-muted: #6c757d;
+            --border-color: #e9ecef;
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --card-shadow: 0 8px 32px rgba(102, 126, 234, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #0f1419;
+            --bg-surface: rgba(30, 30, 46, 0.9);
+            --text-main: #f0f4ff;
+            --text-muted: #cbd5e1;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --card-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+        }
+
+        .analytics-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: var(--bg-surface);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(20px);
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .page-header h1 {
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 0;
+            font-size: 1.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .page-header h1 i {
+            color: var(--accent-color);
+            font-size: 1.85rem;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.75rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+            border-color: var(--accent-color);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-color) 0%, var(--accent-secondary) 100%);
+        }
+
+        .metric-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent-color);
+        }
+
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 0.75rem;
+        }
+
+        .metric-change {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .metric-change.positive {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #059669;
+        }
+
+        .metric-change.negative {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #dc3545;
+        }
+
+        /* Dashboard Sections */
+        .dashboard-section {
+            background: var(--bg-body);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-title i {
+            color: var(--accent-color);
+            font-size: 1.5rem;
+        }
+
+        /* Chart Placeholder */
+        .chart-placeholder {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .chart-placeholder i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        /* Table */
+        .performance-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .performance-table thead th {
+            background-color: var(--bg-surface);
+            color: var(--text-muted);
+            font-weight: 700;
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 2px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+        }
+
+        .performance-table tbody td {
+            padding: 1.25rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        .performance-table tbody tr:hover {
+            background-color: var(--bg-surface);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .analytics-container {
+                padding: 1.5rem;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .dashboard-section {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="container-fluid mt-5 mb-5">
+    <div class="analytics-container">
+        <div class="page-header">
+            <div>
+                <h1><i class="bi bi-graph-up"></i>{% trans "Promotion Analytics" %}</h1>
+                <p class="text-muted mb-0">{% trans "Real-time performance metrics and insights for your promotions" %}</p>
+            </div>
+            <a href="{% url 'core:vendor_promotion_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>{% trans "Back to Promotions" %}
+            </a>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon">📊</div>
+                <div class="metric-label">{% trans "Total Revenue Generated" %}</div>
+                <div class="metric-value">GH₵ 12,450</div>
+                <span class="metric-change positive">📈 +28% this month</span>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">🎯</div>
+                <div class="metric-label">{% trans "Conversion Rate" %}</div>
+                <div class="metric-value">3.8%</div>
+                <span class="metric-change positive">📈 +0.5% vs last month</span>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">🔄</div>
+                <div class="metric-label">{% trans "Redemption Rate" %}</div>
+                <div class="metric-value">42.3%</div>
+                <span class="metric-change positive">✓ Above industry avg (35%)</span>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">💰</div>
+                <div class="metric-label">{% trans "Average Order Value" %}</div>
+                <div class="metric-value">GH₵ 85.50</div>
+                <span class="metric-change positive">📈 +12% from promotions</span>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">😞</div>
+                <div class="metric-label">{% trans "Profit Impact" %}</div>
+                <div class="metric-value">+18%</div>
+                <span class="metric-change positive">✓ Increased profitability</span>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon">🎁</div>
+                <div class="metric-label">{% trans "Customer Acquisition Cost" %}</div>
+                <div class="metric-value">GH₵ 4.20</div>
+                <span class="metric-change positive">✓ Down 15% vs baseline</span>
+            </div>
+        </div>
+
+        <!-- Performance Charts -->
+        <div class="dashboard-section">
+            <div class="section-title">
+                <i class="bi bi-graph-down-arrow"></i>{% trans "Promotion Performance Trend" %}
+            </div>
+            <div class="chart-placeholder">
+                <i class="bi bi-bar-chart-fill"></i>
+                <p>{% trans "Chart showing promotion redemptions over time" %}</p>
+                <small style="color: var(--text-muted);">Chart powered by Chart.js integration coming soon</small>
+            </div>
+        </div>
+
+        <!-- Revenue Breakdown -->
+        <div class="dashboard-section">
+            <div class="section-title">
+                <i class="bi bi-pie-chart-fill"></i>{% trans "Revenue Breakdown by Promotion Type" %}
+            </div>
+            <div class="chart-placeholder">
+                <i class="bi bi-pie-chart"></i>
+                <p>{% trans "Visual breakdown of revenue generated by each promotion" %}</p>
+            </div>
+        </div>
+
+        <!-- Top Performing Promotions -->
+        <div class="dashboard-section">
+            <div class="section-title">
+                <i class="bi bi-star-fill"></i>{% trans "Top Performing Promotions" %}
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="performance-table">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Promotion" %}</th>
+                            <th>{% trans "Discount" %}</th>
+                            <th>{% trans "Redeemed" %}</th>
+                            <th>{% trans "Revenue" %}</th>
+                            <th>{% trans "ROI" %}</th>
+                            <th>{% trans "Status" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>New Customer Welcome 20%</strong></td>
+                            <td>20%</td>
+                            <td>234 / 500</td>
+                            <td class="text-success"><strong>GH₵ 4,200</strong></td>
+                            <td><span class="metric-change positive">📈 245%</span></td>
+                            <td><span class="badge bg-success">Active</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Flash Sale - 48 Hours</strong></td>
+                            <td>30%</td>
+                            <td>156 / 300</td>
+                            <td class="text-success"><strong>GH₵ 3,100</strong></td>
+                            <td><span class="metric-change positive">📈 310%</span></td>
+                            <td><span class="badge bg-secondary">Ended</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>VIP Member Exclusive 15%</strong></td>
+                            <td>15%</td>
+                            <td>89 / 150</td>
+                            <td class="text-success"><strong>GH₵ 2,850</strong></td>
+                            <td><span class="metric-change positive">📈 198%</span></td>
+                            <td><span class="badge bg-success">Active</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>First-Time Buyer Coupon</strong></td>
+                            <td>GH₵10</td>
+                            <td>67 / 200</td>
+                            <td class="text-success"><strong>GH₵ 1,900</strong></td>
+                            <td><span class="metric-change negative">📉 45%</span></td>
+                            <td><span class="badge bg-secondary">Paused</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Smart Recommendations -->
+        <div class="dashboard-section">
+            <div class="section-title">
+                <i class="bi bi-lightbulb-fill"></i>{% trans "Recommendations to Maximize Revenue" %}
+            </div>
+            <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+                <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.05)); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 10px;">
+                    <div style="display: flex; gap: 1rem;">
+                        <div style="font-size: 1.75rem;">✅</div>
+                        <div>
+                            <h6 style="color: var(--text-main); font-weight: 700; margin-bottom: 0.5rem;">{% trans "Continue High Performers" %}</h6>
+                            <p style="color: var(--text-muted); margin-bottom: 0; font-size: 0.9rem;">{% trans "Your 20-30% discounts are showing 300%+ ROI. Extend their duration or increase limits." %}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(251, 191, 36, 0.05)); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 10px;">
+                    <div style="display: flex; gap: 1rem;">
+                        <div style="font-size: 1.75rem;">⚠️</div>
+                        <div>
+                            <h6 style="color: var(--text-main); font-weight: 700; margin-bottom: 0.5rem;">{% trans "Optimize Low Performers" %}</h6>
+                            <p style="color: var(--text-muted); margin-bottom: 0; font-size: 0.9rem;">{% trans "Fixed amount discounts showing 45% ROI. Try percentage-based or increase discount value." %}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(37, 99, 235, 0.05)); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 10px;">
+                    <div style="display: flex; gap: 1rem;">
+                        <div style="font-size: 1.75rem;">🎯</div>
+                        <div>
+                            <h6 style="color: var(--text-main); font-weight: 700; margin-bottom: 0.5rem;">{% trans "Test Weekend Promotions" %}</h6>
+                            <p style="color: var(--text-muted); margin-bottom: 0; font-size: 0.9rem;">{% trans "Weekend campaigns show 40% higher engagement. Schedule promotions for Friday-Sunday." %}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(168, 85, 247, 0.05), rgba(139, 92, 246, 0.05)); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 10px;">
+                    <div style="display: flex; gap: 1rem;">
+                        <div style="font-size: 1.75rem;">🎁</div>
+                        <div>
+                            <h6 style="color: var(--text-main); font-weight: 700; margin-bottom: 0.5rem;">{% trans "Create New Customer Campaign" %}</h6>
+                            <p style="color: var(--text-muted); margin-bottom: 0; font-size: 0.9rem;">{% trans "No new customer exclusives active. Design special onboarding offers for first-time buyers." %}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(220, 38, 38, 0.05)); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px;">
+                    <div style="display: flex; gap: 1rem;">
+                        <div style="font-size: 1.75rem;">📈</div>
+                        <div>
+                            <h6 style="color: var(--text-main); font-weight: 700; margin-bottom: 0.5rem;">{% trans "Increase Loyalty Program" %}</h6>
+                            <p style="color: var(--text-muted); margin-bottom: 0; font-size: 0.9rem;">{% trans "VIP members show 198% ROI. Create exclusive tier-based promotions for repeat customers." %}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding: 1.25rem; background: linear-gradient(135deg, rgba(14, 165, 233, 0.05), rgba(6, 182, 212, 0.05)); border: 1px solid rgba(14, 165, 233, 0.2); border-radius: 10px;">
+                    <div style="display: flex; gap: 1rem;">
+                        <div style="font-size: 1.75rem;">🔄</div>
+                        <div>
+                            <h6 style="color: var(--text-main); font-weight: 700; margin-bottom: 0.5rem;">{% trans "Test A/B Variants" %}</h6>
+                            <p style="color: var(--text-muted); margin-bottom: 0; font-size: 0.9rem;">{% trans "Try discounted variants to find optimal price points. Run simultaneous tests." %}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

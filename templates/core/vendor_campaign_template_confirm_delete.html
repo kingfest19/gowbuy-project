@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Delete Campaign Template" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --accent-color: #667eea;
+        --secondary-color: #764ba2;
+        --danger-color: #ef4444;
+        --dark-bg: #1e1e2e;
+        --dark-card: #2d2d44;
+        --dark-border: #3d3d54;
+        --light-text: #e0e0e0;
+    }
+
+    [data-theme="dark"] {
+        --bg-color: var(--dark-bg);
+        --card-bg: var(--dark-card);
+        --border-color: var(--dark-border);
+        --text-color: var(--light-text);
+    }
+
+    body {
+        background-color: var(--bg-color, #f8f9fa);
+        color: var(--text-color, #333);
+    }
+
+    .confirm-card {
+        max-width: 900px;
+        margin: 3rem auto;
+        padding: 2rem;
+        background-color: var(--card-bg, white);
+        border-radius: 12px;
+        border: 1px solid var(--border-color, #e5e7eb);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-danger-custom {
+        background-color: var(--danger-color);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .btn-outline {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background-color: transparent;
+        color: var(--accent-color);
+        border: 2px solid var(--accent-color);
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="confirm-card">
+    <div style="text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+        <h2 style="margin: 0 0 1rem 0;">{% trans "Delete Template?" %}</h2>
+        <p style="color: var(--muted-color); margin: 0 0 1.5rem 0;">
+            {% blocktrans with name=object.name %}Are you sure you want to delete the template "{{ name }}"?{% endblocktrans %}<br>
+            {% trans "This action cannot be undone." %}
+        </p>
+
+        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn-danger-custom">
+                    {% trans "Yes, Delete Template" %}
+                </button>
+            </form>
+            <a href="{% url 'core:vendor_campaign_template_list' %}" class="btn-outline">
+                {% trans "Cancel" %}
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock content %}

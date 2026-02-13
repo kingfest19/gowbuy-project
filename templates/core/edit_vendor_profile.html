@@ -121,6 +121,133 @@
                 width: 100%;
             }
         }
+
+        /* Dark Mode Styling */
+        [data-theme="dark"] .form-container {
+            background-color: rgba(30, 30, 46, 0.9);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        [data-theme="dark"] fieldset {
+            background-color: rgba(50, 50, 70, 0.6);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="dark"] legend {
+            color: #f0f4ff;
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select {
+            background-color: rgba(30, 30, 46, 0.8);
+            color: #f0f4ff;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        [data-theme="dark"] .form-control:focus,
+        [data-theme="dark"] .form-select:focus {
+            background-color: rgba(30, 30, 46, 0.8);
+            color: #f0f4ff;
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.2);
+        }
+
+        [data-theme="dark"] .form-label {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .form-text {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 0.8;
+            cursor: pointer;
+        }
+
+        [data-theme="dark"] .dropdown-menu {
+            background-color: rgba(30, 30, 46, 0.95);
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        [data-theme="dark"] .dropdown-item {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .dropdown-item:hover,
+        [data-theme="dark"] .dropdown-item:focus {
+            background-color: rgba(102, 126, 234, 0.2);
+            color: #ffffff;
+        }
+
+        [data-theme="dark"] .dropdown-item.active,
+        [data-theme="dark"] .dropdown-item:active {
+            background-color: rgba(102, 126, 234, 0.3);
+            color: #ffffff;
+        }
+
+        [data-theme="dark"] .dropdown-divider {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="dark"] .page-header {
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="dark"] .page-header h1,
+        [data-theme="dark"] .page-header p {
+            color: #f0f4ff;
+        }
+
+        [data-theme="dark"] .text-muted {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        [data-theme="dark"] p {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .invalid-feedback {
+            color: #ff6b6b;
+        }
+
+        [data-theme="dark"] .alert {
+            background-color: rgba(30, 30, 46, 0.8);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .btn-close {
+            filter: invert(1);
+            opacity: 0.7;
+        }
+
+        /* Advanced Stats Cards Dark Mode */
+        [data-theme="dark"] .stats-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08)) !important;
+            border-color: rgba(102, 126, 234, 0.2) !important;
+        }
+
+        [data-theme="dark"] .stats-card p {
+            color: #e2e8f0;
+        }
+
+        /* Color Picker Dark Mode */
+        [data-theme="dark"] input[type="color"] {
+            background-color: rgba(30, 30, 46, 0.8);
+            border-color: rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            min-height: 45px;
+            cursor: pointer;
+        }
+
+        /* Info Banner Dark Mode */
+        [data-theme="dark"] [style*="background-color: rgba(102, 126, 234"] {
+            background-color: rgba(102, 126, 234, 0.12) !important;
+        }
     </style>
 {% endblock extra_css %}
 
@@ -294,6 +421,114 @@
                                 {% if form.linkedin_url.errors %}<div class="invalid-feedback d-block">{% for error in form.linkedin_url.errors %}{{ error }}{% endfor %}</div>{% endif %}
                             </div>
                         </div>
+                        </fieldset>
+
+                        <fieldset>
+                        <legend>{% trans "Store Performance & Verification" %}</legend>
+                        <p class="text-muted small mb-3">{% trans "View your store's performance metrics and verification status." %}</p>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="stats-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border-radius: 10px; padding: 1.5rem; border: 1px solid rgba(102, 126, 234, 0.2);">
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <div style="font-size: 2rem;">⭐</div>
+                                        <div>
+                                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">{% trans "Average Rating" %}</p>
+                                            <p style="margin: 0; font-size: 1.5rem; font-weight: 700;">{{ vendor.average_rating|default:"N/A" }}</p>
+                                            <p style="margin: 0; font-size: 0.75rem; opacity: 0.6;">{{ vendor.total_reviews|default:0 }} {% trans "reviews" %}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="stats-card" style="background: linear-gradient(135deg, rgba(51, 215, 96, 0.1), rgba(34, 177, 76, 0.1)); border-radius: 10px; padding: 1.5rem; border: 1px solid rgba(51, 215, 96, 0.2);">
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <div style="font-size: 2rem;">✅</div>
+                                        <div>
+                                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">{% trans "Completion Rate" %}</p>
+                                            <p style="margin: 0; font-size: 1.5rem; font-weight: 700;">{{ vendor.order_completion_rate|default:"N/A" }}</p>
+                                            <p style="margin: 0; font-size: 0.75rem; opacity: 0.6;">{% trans "of orders completed" %}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="stats-card" style="background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(251, 140, 0, 0.1)); border-radius: 10px; padding: 1.5rem; border: 1px solid rgba(255, 193, 7, 0.2);">
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <div style="font-size: 2rem;">⏱️</div>
+                                        <div>
+                                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">{% trans "Response Time" %}</p>
+                                            <p style="margin: 0; font-size: 1.5rem; font-weight: 700;">{{ vendor.avg_response_time|default:"N/A" }}</p>
+                                            <p style="margin: 0; font-size: 0.75rem; opacity: 0.6;">{% trans "average hours" %}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="stats-card" style="background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(229, 57, 53, 0.1)); border-radius: 10px; padding: 1.5rem; border: 1px solid rgba(244, 67, 54, 0.2);">
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <div style="font-size: 2rem;">🔒</div>
+                                        <div>
+                                            <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">{% trans "Verification Status" %}</p>
+                                            <p style="margin: 0; font-size: 1.5rem; font-weight: 700;">{% if vendor.is_verified %}{% trans "Verified" %}{% else %}{% trans "Pending" %}{% endif %}</p>
+                                            <p style="margin: 0; font-size: 0.75rem; opacity: 0.6;">{{ vendor.verified_date|default:"Not verified yet" }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        </fieldset>
+
+                        <fieldset>
+                        <legend>{% trans "Store Customization" %}</legend>
+                        <p class="text-muted small mb-3">{% trans "Customize how your store appears to customers." %}</p>
+                        {% if form.primary_brand_color %}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.primary_brand_color.id_for_label }}" class="form-label">{{ form.primary_brand_color.label }}</label>
+                                {{ form.primary_brand_color }}
+                                {% if form.primary_brand_color.help_text %}<div class="form-text">{{ form.primary_brand_color.help_text|safe }}</div>{% endif %}
+                                {% if form.primary_brand_color.errors %}<div class="invalid-feedback d-block">{% for error in form.primary_brand_color.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.secondary_accent_color.id_for_label }}" class="form-label">{{ form.secondary_accent_color.label }}</label>
+                                {{ form.secondary_accent_color }}
+                                {% if form.secondary_accent_color.help_text %}<div class="form-text">{{ form.secondary_accent_color.help_text|safe }}</div>{% endif %}
+                                {% if form.secondary_accent_color.errors %}<div class="invalid-feedback d-block">{% for error in form.secondary_accent_color.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if form.store_banner_image %}
+                        <div class="mb-3">
+                            <label for="{{ form.store_banner_image.id_for_label }}" class="form-label">{{ form.store_banner_image.label }}</label>
+                            {% if vendor.store_banner_image %}<p class="text-muted small">{% trans "Current banner:" %} <a href="{{ vendor.store_banner_image.url }}" target="_blank">{% trans "View image" %}</a></p>{% endif %}
+                            {{ form.store_banner_image }}
+                            {% if form.store_banner_image.help_text %}<div class="form-text">{{ form.store_banner_image.help_text|safe }}</div>{% endif %}
+                            {% if form.store_banner_image.errors %}<div class="invalid-feedback d-block">{% for error in form.store_banner_image.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                        </div>
+                        {% endif %}
+                        {% if form.featured_products %}
+                        <div class="mb-3">
+                            <label for="{{ form.featured_products.id_for_label }}" class="form-label">{{ form.featured_products.label }}</label>
+                            {{ form.featured_products }}
+                            {% if form.featured_products.help_text %}<div class="form-text">{{ form.featured_products.help_text|safe }}</div>{% endif %}
+                            {% if form.featured_products.errors %}<div class="invalid-feedback d-block">{% for error in form.featured_products.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                        </div>
+                        {% endif %}
+                        {% if form.display_preference %}
+                        <div class="mb-3">
+                            <label for="{{ form.display_preference.id_for_label }}" class="form-label">{{ form.display_preference.label }}</label>
+                            {{ form.display_preference }}
+                            {% if form.display_preference.help_text %}<div class="form-text">{{ form.display_preference.help_text|safe }}</div>{% endif %}
+                            {% if form.display_preference.errors %}<div class="invalid-feedback d-block">{% for error in form.display_preference.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                        </div>
+                        {% endif %}
+                        {% if not form.primary_brand_color and not form.store_banner_image and not form.featured_products and not form.display_preference %}
+                        <div style="padding: 1.5rem; background-color: rgba(102, 126, 234, 0.08); border-radius: 8px; border-left: 4px solid #667eea;">
+                            <p style="margin: 0; color: #667eea; font-weight: 500;">💡 {% trans "Customization fields will be available when you save your profile." %}</p>
+                        </div>
+                        {% endif %}
                         </fieldset>
 
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">

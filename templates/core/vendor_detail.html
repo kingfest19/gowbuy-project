@@ -365,6 +365,35 @@
         box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     }
 
+    /* Policy Cards Dark Mode Styling */
+    [data-theme="dark"] .card {
+        background-color: rgba(30, 30, 46, 0.9) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    [data-theme="dark"] .card h6 {
+        color: #f0f4ff !important;
+    }
+
+    [data-theme="dark"] .card .card-text,
+    [data-theme="dark"] .card .list-unstyled {
+        color: #cbd5e1 !important;
+    }
+
+    [data-theme="dark"] .card strong {
+        color: #f0f4ff !important;
+    }
+
+    [data-theme="dark"] .alert-info {
+        background-color: rgba(59, 130, 246, 0.1) !important;
+        border-color: rgba(59, 130, 246, 0.3) !important;
+        color: #cbd5e1 !important;
+    }
+
+    [data-theme="dark"] .alert-info i {
+        color: #3b82f6 !important;
+    }
+
     /* Mobile Grid Adjustments */
     @media (max-width: 768px) {
         .vendor-stat-box {
@@ -544,24 +573,161 @@
 
         <!-- Policies Tab -->
         <div class="tab-pane fade" id="policies" role="tabpanel">
-            <div class="row g-4">
+            <!-- Shipping Information Section -->
+            <div class="row g-4 mb-4">
+                <div class="col-12">
+                    <h5 class="mb-3"><i class="bi bi-truck me-2" style="font-size: 1.3rem; color: #667eea;"></i>{% trans "Shipping Information" %}</h5>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                {% if vendor.shipping_policy %}
                 <div class="col-md-6">
-                    <div class="card h-100 border-0 shadow-sm">
+                    <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05)); border: 1px solid rgba(102, 126, 234, 0.2);">
                         <div class="card-body">
-                            <h5 class="card-title"><i class="bi bi-truck me-2"></i>{% trans "Shipping Policy" %}</h5>
-                            <p class="card-text">{{ vendor.shipping_policy|default:"No specific shipping policy provided."|linebreaks }}</p>
+                            <h6 class="card-title mb-3" style="color: #667eea; font-weight: 600;">📋 {% trans "Policy Details" %}</h6>
+                            <p class="card-text small">{{ vendor.shipping_policy|default:"No specific shipping policy provided."|linebreaks }}</p>
                         </div>
                     </div>
                 </div>
+                {% endif %}
+
                 <div class="col-md-6">
-                    <div class="card h-100 border-0 shadow-sm">
+                    <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05)); border: 1px solid rgba(102, 126, 234, 0.2);">
                         <div class="card-body">
-                            <h5 class="card-title"><i class="bi bi-arrow-counterclockwise me-2"></i>{% trans "Return Policy" %}</h5>
-                            <p class="card-text">{{ vendor.return_policy|default:"No specific return policy provided."|linebreaks }}</p>
+                            <h6 class="card-title mb-3" style="color: #667eea; font-weight: 600;">⏱️ {% trans "Delivery Times" %}</h6>
+                            <ul class="list-unstyled small mb-0">
+                                <li class="mb-2"><strong>{% trans "Standard:" %}</strong> {{ vendor.shipping_standard_days|default:"3-5 business days" }}</li>
+                                <li class="mb-2"><strong>{% trans "Express:" %}</strong> {{ vendor.shipping_express_days|default:"1-2 business days" }}</li>
+                                {% if vendor.free_shipping_threshold %}
+                                <li><strong>{% trans "Free Shipping:" %}</strong> {% trans "Orders over" %} {{ vendor.free_shipping_threshold }}</li>
+                                {% endif %}
+                            </ul>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(33, 150, 243, 0.05), rgba(21, 101, 192, 0.05)); border: 1px solid rgba(33, 150, 243, 0.2);">
+                        <div class="card-body">
+                            <h6 class="card-title small mb-3" style="color: #2196f3; font-weight: 600;">🌍 {% trans "Shipping Coverage" %}</h6>
+                            <p class="mb-0 small">
+                                {% if vendor.international_shipping == "yes" %}
+                                    ✅ {% trans "International Shipping" %}
+                                {% elif vendor.international_shipping == "selected" %}
+                                    ✅ {% trans "Selected Countries" %}
+                                {% else %}
+                                    📍 {% trans "Domestic Only" %}
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.05), rgba(56, 142, 60, 0.05)); border: 1px solid rgba(76, 175, 80, 0.2);">
+                        <div class="card-body">
+                            <h6 class="card-title small mb-3" style="color: #4caf50; font-weight: 600;">🚚 {% trans "Carriers" %}</h6>
+                            <p class="mb-0 small">
+                                {% if vendor.primary_carrier %}
+                                    <strong>{{ vendor.get_primary_carrier_display|default:vendor.primary_carrier }}</strong>
+                                {% else %}
+                                    {% trans "Multiple carriers" %}
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(255, 152, 0, 0.05), rgba(245, 127, 23, 0.05)); border: 1px solid rgba(255, 152, 0, 0.2);">
+                        <div class="card-body">
+                            <h6 class="card-title small mb-3" style="color: #ff9800; font-weight: 600;">📊 {% trans "Shipping Performance" %}</h6>
+                            <p class="mb-0 small">
+                                ✓ {% trans "Avg delivery on time" %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Return & Exchange Policy Section -->
+            <div class="row g-4 mb-4">
+                <div class="col-12">
+                    <h5 class="mb-3"><i class="bi bi-arrow-counterclockwise me-2" style="font-size: 1.3rem; color: #ff9800;"></i>{% trans "Return & Exchange Policy" %}</h5>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(255, 152, 0, 0.05), rgba(245, 127, 23, 0.05)); border: 1px solid rgba(255, 152, 0, 0.2);">
+                        <div class="card-body">
+                            <h6 class="card-title mb-3" style="color: #ff9800; font-weight: 600;">✅ {% trans "Return Policy" %}</h6>
+                            <p class="card-text small">{{ vendor.return_policy|default:"No specific return policy provided."|linebreaks }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(244, 67, 54, 0.05), rgba(229, 57, 53, 0.05)); border: 1px solid rgba(244, 67, 54, 0.2);">
+                        <div class="card-body">
+                            <h6 class="card-title mb-3" style="color: #f44336; font-weight: 600;">💰 {% trans "Return Terms" %}</h6>
+                            <ul class="list-unstyled small mb-0">
+                                {% if vendor.return_window %}
+                                <li class="mb-2"><strong>{% trans "Return Window:" %}</strong> {{ vendor.return_window }} {% trans "days" %}</li>
+                                {% endif %}
+                                {% if vendor.return_shipping_cost %}
+                                <li class="mb-2"><strong>{% trans "Return Shipping:" %}</strong> 
+                                    {% if vendor.return_shipping_cost == "customer" %}
+                                        {% trans "Customer pays" %}
+                                    {% elif vendor.return_shipping_cost == "vendor" %}
+                                        {% trans "We pay" %}
+                                    {% else %}
+                                        {% trans "Conditional" %}
+                                    {% endif %}
+                                </li>
+                                {% endif %}
+                                {% if vendor.restocking_fee %}
+                                <li><strong>{% trans "Restocking Fee:" %}</strong> {{ vendor.restocking_fee }}%</li>
+                                {% else %}
+                                <li>✅ {% trans "No restocking fees" %}</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if vendor.return_conditions %}
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05)); border: 1px solid rgba(102, 126, 234, 0.2);">
+                        <div class="card-body">
+                            <h6 class="card-title mb-3" style="color: #667eea; font-weight: 600;">📝 {% trans "Return Conditions" %}</h6>
+                            <p class="card-text small">{{ vendor.return_conditions|default:"-"|linebreaks }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Exchange Availability -->
+            {% if vendor.exchange_allowed != None %}
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <div class="alert alert-info mb-0" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>
+                        {% if vendor.exchange_allowed %}
+                            ✅ {% trans "This vendor accepts product exchanges as an alternative to refunds." %}
+                        {% else %}
+                            ℹ️ {% trans "This vendor does not offer direct exchanges. Please use our return process for replacements." %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

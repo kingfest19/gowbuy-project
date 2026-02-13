@@ -6,50 +6,437 @@
 {% block extra_css %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
+        /* CSS Variables for Color Theming */
+        :root {
+            --bg-body: #ffffff;
+            --bg-surface: #f8f9fa;
+            --text-main: #1a2533;
+            --text-muted: #6c757d;
+            --border-color: #dee2e6;
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --card-shadow: 0 8px 32px rgba(102, 126, 234, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #0f1419;
+            --bg-surface: rgba(30, 30, 46, 0.9);
+            --text-main: #f0f4ff;
+            --text-muted: #cbd5e1;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --card-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
         /* Base container and header styles */
         .form-container {
             max-width: 800px;
             margin: 2rem auto;
-            background-color: #ebe8e8;
-            padding: 2rem 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
-            border: 1px solid #959aa0;
+            background: var(--bg-surface);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
+
+        .page-header {
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
         .page-header h1 {
             font-family: "Poppins", sans-serif;
             font-weight: 700;
-            color: #1a2533;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+            margin-bottom: 0;
+            font-size: 0.95rem;
         }
 
         /* --- Stepper Progress Bar --- */
-        .stepper { display: flex; align-items: flex-start; justify-content: space-between; position: relative; margin-bottom: 3rem; }
-        .stepper-line { position: absolute; top: 19px; left: 0; right: 0; height: 2px; background-color: #dee2e6; z-index: 0; margin: 0 15%; }
-        .stepper-line-progress { height: 100%; background-color: #474747; transition: width 0.4s ease; }
-        .stepper-item { display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 1; width: 33.33%; color: #6c757d; }
-        .stepper-item-icon { width: 40px; height: 40px; border-radius: 50%; background-color: #fff; border: 2px solid #adb5bd; color: #adb5bd; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; transition: all 0.4s ease; margin-bottom: 0.5rem; }
-        .stepper-item-label { font-size: 0.9rem; font-weight: 500; transition: color 0.4s ease; }
-        .stepper-item.completed .stepper-item-icon, .stepper-item.active .stepper-item-icon { border-color: #474747; background-color: #474747; color: #fff; }
-        .stepper-item.completed .stepper-item-label { color: #495057; }
-        .stepper-item.active .stepper-item-label { color: #1a2533; font-weight: 700; }
+        .stepper {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            position: relative;
+            margin-bottom: 3.5rem;
+            padding: 2rem 0;
+        }
+
+        .stepper-line {
+            position: absolute;
+            top: 24px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: var(--border-color);
+            z-index: 0;
+            margin: 0 15%;
+            border-radius: 2px;
+        }
+
+        .stepper-line-progress {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-color) 0%, var(--accent-secondary) 100%);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 2px;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
+        }
+
+        .stepper-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            width: 33.33%;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .stepper-item-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--bg-body);
+            border: 2.5px solid var(--border-color);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 0.75rem;
+            position: relative;
+        }
+
+        .stepper-item-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: color 0.4s ease;
+            text-transform: capitalize;
+            letter-spacing: 0.3px;
+        }
+
+        .stepper-item.completed .stepper-item-icon {
+            border-color: var(--success-color);
+            background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .stepper-item.active .stepper-item-icon {
+            border-color: var(--accent-color);
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-secondary) 100%);
+            color: #fff;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            transform: scale(1.1);
+        }
+
+        .stepper-item.completed .stepper-item-label {
+            color: var(--text-muted);
+        }
+
+        .stepper-item.active .stepper-item-label {
+            color: var(--text-main);
+            font-weight: 700;
+        }
 
         /* --- Fieldset/Legend Styling --- */
-        fieldset { background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 10px; padding: 2.5rem 2rem 1.5rem; margin-bottom: 2rem; position: relative; box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
-        legend { position: absolute; top: -1rem; left: 1.5rem; font-family: "Poppins", sans-serif; font-size: 1.1rem; font-weight: 600; color: #1a2533; padding: 0.3rem 1rem; width: auto; float: none; margin-bottom: 0; border: 1px solid #dee2e6; border-radius: 8px; background-color: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        fieldset {
+            background-color: var(--bg-body);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 3.5rem 2rem 1.5rem;
+            margin-bottom: 2rem;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] fieldset {
+            background-color: rgba(30, 30, 46, 0.8);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        legend {
+            position: absolute;
+            top: -1.2rem;
+            left: 1.5rem;
+            font-family: "Poppins", sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+            padding: 0.4rem 1.2rem;
+            width: auto;
+            float: none;
+            margin-bottom: 0;
+            border: 2px solid var(--accent-color);
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--bg-body) 0%, var(--bg-surface) 100%);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            text-transform: capitalize;
+            letter-spacing: 0.3px;
+        }
+
+        /* Form Controls Styling */
+        .form-label {
+            font-weight: 600;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: capitalize;
+            letter-spacing: 0.3px;
+        }
+
+        .form-control,
+        .form-select {
+            background-color: var(--bg-surface);
+            color: var(--text-main);
+            border: 1.5px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            background-color: var(--bg-surface);
+            color: var(--text-main);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            outline: none;
+        }
+
+        .form-control::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select {
+            background-color: rgba(30, 30, 46, 0.9);
+            color: #f0f4ff;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        [data-theme="dark"] .form-control::placeholder {
+            color: #cbd5e1;
+            opacity: 1;
+        }
+
+        [data-theme="dark"] .form-control:focus,
+        [data-theme="dark"] .form-select:focus {
+            background-color: rgba(30, 30, 46, 0.9);
+            color: #f0f4ff;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.2);
+        }
+
+        /* Form Help Text */
+        .form-text {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.4rem;
+        }
+
+        /* Crispy Forms Row Styling */
+        .form-row {
+            margin-bottom: 1.5rem;
+        }
 
         /* Button styles */
-        .btn-primary { background-color: #474747; border-color: #474747; }
-        .btn-primary:hover { background-color: #383838; border-color: #383838; }
-        .btn-secondary { background-color: #6c757d; border-color: #6c757d; }
+        .btn {
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 0.65rem 1.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-secondary) 100%);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+            color: #fff;
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: var(--text-muted);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(108, 117, 125, 0.3);
+        }
+
+        [data-theme="dark"] .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        [data-theme="dark"] .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Button Container */
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 2.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .button-group span {
+            min-width: 120px;
+        }
+
+        /* Error Messages */
+        .errorlist {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0;
+        }
+
+        .errorlist li {
+            color: #dc3545;
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+            padding: 0.4rem 0.8rem;
+            background-color: rgba(220, 53, 69, 0.1);
+            border-left: 3px solid #dc3545;
+            border-radius: 2px;
+        }
+
+        [data-theme="dark"] .errorlist li {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            border-left-color: #ef4444;
+        }
+
+        /* Alerts */
+        .alert {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 8px;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .form-container {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .stepper {
+                margin-bottom: 2.5rem;
+                padding: 1.5rem 0;
+            }
+
+            .stepper-item-icon {
+                width: 45px;
+                height: 45px;
+                font-size: 1rem;
+            }
+
+            .stepper-item-label {
+                font-size: 0.8rem;
+            }
+
+            fieldset {
+                padding: 2rem 1.5rem 1rem;
+            }
+
+            legend {
+                font-size: 1rem;
+                padding: 0.3rem 1rem;
+                left: 1rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .button-group span {
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .form-container {
+                margin: 0.5rem;
+                padding: 1.25rem;
+            }
+
+            .stepper-line {
+                margin: 0 10%;
+            }
+
+            .button-group {
+                margin-top: 2rem;
+            }
+        }
     </style>
 {% endblock extra_css %}
 
 {% block content %}
 <div class="container mt-5 mb-5">
     <div class="form-container">
-        <div class="page-header mb-4">
-            <h1>{% trans "Vendor Verification" %}</h1>
-            <p class="text-muted">
+        <div class="page-header">
+            <h1><i class="bi bi-shield-check me-2" style="color: var(--accent-color);"></i>{% trans "Vendor Verification" %}</h1>
+            <p>
                 {% blocktrans with step=wizard.steps.step1 count=wizard.steps.count step_name=wizard.steps.current|capfirst %}
                     Step {{ step }} of {{ count }}: {{ step_name }}
                 {% endblocktrans %}
@@ -85,14 +472,18 @@
                 {{ wizard.form|crispy }}
             </fieldset>
 
-            <div class="d-flex justify-content-between mt-4">
+            <div class="button-group">
                 {% if wizard.steps.prev %}
-                    <button name="wizard_goto_step" type="submit" value="{{ wizard.steps.prev }}" class="btn btn-secondary">&larr; {% trans "Previous Step" %}</button>
+                    <button name="wizard_goto_step" type="submit" value="{{ wizard.steps.prev }}" class="btn btn-secondary">
+                        <i class="bi bi-chevron-left me-1"></i>{% trans "Previous Step" %}
+                    </button>
                 {% else %}
-                    <span></span> {# Placeholder to keep next button on the right #}
+                    <span></span>
                 {% endif %}
                 
-                <button type="submit" class="btn btn-primary">{% trans "Next Step" %} &rarr;</button>
+                <button type="submit" class="btn btn-primary">
+                    {% trans "Next Step" %}<i class="bi bi-chevron-right ms-1"></i>
+                </button>
             </div>
         </form>
     </div>

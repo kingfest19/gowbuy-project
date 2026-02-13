@@ -1,0 +1,654 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+{% load query_params %}
+
+{% block title %}{% trans "Campaign Analytics - " %}{{ campaign.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --accent-color: #667eea;
+        --secondary-color: #764ba2;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --info-color: #3b82f6;
+        --dark-bg: #1e1e2e;
+        --dark-card: #2d2d44;
+        --dark-border: #3d3d54;
+        --light-text: #e0e0e0;
+        --muted-text: #a0a0a0;
+    }
+
+    [data-theme="dark"] {
+        --bg-color: var(--dark-bg);
+        --card-bg: var(--dark-card);
+        --border-color: var(--dark-border);
+        --text-color: var(--light-text);
+        --muted-color: var(--muted-text);
+    }
+
+    body {
+        background-color: var(--bg-color, #f8f9fa);
+        color: var(--text-color, #333);
+    }
+
+    .analytics-shell {
+        max-width: 1200px;
+        margin: 2.5rem auto;
+        padding: 0 1rem;
+    }
+
+    .analytics-header {
+        background: linear-gradient(135deg, var(--accent-color) 0%, var(--secondary-color) 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+    }
+
+    .analytics-header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 600;
+    }
+
+    .campaign-status {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-top: 0.5rem;
+        border: 1px solid transparent;
+    }
+
+    .status-active {
+        background-color: rgba(16, 185, 129, 0.18);
+        color: #0f766e;
+        border-color: rgba(16, 185, 129, 0.5);
+    }
+
+    .status-paused {
+        background-color: rgba(245, 158, 11, 0.2);
+        color: #b45309;
+        border-color: rgba(245, 158, 11, 0.45);
+    }
+
+    .status-ended {
+        background-color: rgba(239, 68, 68, 0.18);
+        color: #b91c1c;
+        border-color: rgba(239, 68, 68, 0.45);
+    }
+
+    [data-theme="dark"] .status-active {
+        color: #34d399;
+        background-color: rgba(16, 185, 129, 0.22);
+        border-color: rgba(52, 211, 153, 0.4);
+    }
+
+    [data-theme="dark"] .status-paused {
+        color: #fbbf24;
+        background-color: rgba(245, 158, 11, 0.22);
+        border-color: rgba(251, 191, 36, 0.4);
+    }
+
+    [data-theme="dark"] .status-ended {
+        color: #fca5a5;
+        background-color: rgba(239, 68, 68, 0.22);
+        border-color: rgba(252, 165, 165, 0.4);
+    }
+
+    .metric-card {
+        background-color: var(--card-bg, white);
+        border: 1px solid var(--border-color, #e5e7eb);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .metric-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .metric-label {
+        font-size: 0.875rem;
+        color: var(--muted-color, #6b7280);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.75rem;
+        background: rgba(102, 126, 234, 0.12);
+    }
+
+    .metric-icon svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .metric-card.metric-blue .metric-icon {
+        background: rgba(59, 130, 246, 0.16);
+    }
+
+    .metric-card.metric-green .metric-icon {
+        background: rgba(16, 185, 129, 0.16);
+    }
+
+    .metric-card.metric-amber .metric-icon {
+        background: rgba(245, 158, 11, 0.18);
+    }
+
+    .metric-card.metric-purple .metric-icon {
+        background: rgba(118, 75, 162, 0.18);
+    }
+
+    .metric-value {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: var(--accent-color);
+        margin-bottom: 0.25rem;
+    }
+
+    .metric-change {
+        font-size: 0.75rem;
+        color: var(--muted-color);
+    }
+
+    .metric-change.positive {
+        color: var(--success-color);
+    }
+
+    .metric-change.negative {
+        color: var(--danger-color);
+    }
+
+    .performance-grade {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        font-size: 1.5rem;
+        font-weight: 700;
+        background-color: rgba(102, 126, 234, 0.1);
+        color: var(--accent-color);
+        border: 2px solid var(--accent-color);
+    }
+
+    .grade-a { background-color: rgba(16, 185, 129, 0.1); color: var(--success-color); border-color: var(--success-color); }
+    .grade-b { background-color: rgba(59, 130, 246, 0.1); color: var(--info-color); border-color: var(--info-color); }
+    .grade-c { background-color: rgba(245, 158, 11, 0.1); color: var(--warning-color); border-color: var(--warning-color); }
+    .grade-d { background-color: rgba(249, 115, 22, 0.1); color: #f97316; border-color: #f97316; }
+    .grade-f { background-color: rgba(239, 68, 68, 0.1); color: var(--danger-color); border-color: var(--danger-color); }
+
+    .health-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .health-healthy {
+        background-color: rgba(16, 185, 129, 0.1);
+        color: var(--success-color);
+    }
+
+    .health-warning {
+        background-color: rgba(245, 158, 11, 0.1);
+        color: var(--warning-color);
+    }
+
+    .health-critical {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: var(--danger-color);
+    }
+
+    .progress-bar-container {
+        background-color: rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        height: 12px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent-color) 0%, var(--secondary-color) 100%);
+        transition: width 0.3s ease;
+        border-radius: 10px;
+    }
+
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 2rem 0 1rem 0;
+        color: var(--text-color, #1f2937);
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--border-color, #e5e7eb);
+    }
+
+    .budget-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .budget-item {
+        padding: 1rem;
+        background-color: rgba(102, 126, 234, 0.05);
+        border-radius: 8px;
+        border-left: 3px solid var(--accent-color);
+    }
+
+    .budget-item .label {
+        font-size: 0.75rem;
+        color: var(--muted-color);
+        text-transform: uppercase;
+    }
+
+    .budget-item .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--accent-color);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-custom {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: none;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        background-color: var(--accent-color);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #5568d3;
+        transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+        background-color: var(--warning-color);
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #d97706;
+        transform: translateY(-2px);
+    }
+
+    .btn-danger {
+        background-color: var(--danger-color);
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background-color: #dc2626;
+        transform: translateY(-2px);
+    }
+
+    .chart-placeholder {
+        min-height: 300px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted-color);
+        border: 1px dashed var(--border-color);
+    }
+
+    .campaign-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .analytics-header {
+            padding: 1.5rem;
+        }
+
+        .analytics-header h1 {
+            font-size: 1.4rem;
+        }
+
+        .analytics-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .campaign-details {
+            grid-template-columns: 1fr;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="analytics-shell">
+    <div class="analytics-header">
+        <h1>{{ campaign.name }}</h1>
+        <div>
+            <span class="campaign-status {% if campaign.paused %}status-paused{% elif campaign.is_campaign_active %}status-active{% else %}status-ended{% endif %}">
+                {% if campaign.paused %}
+                    ⏸ {% trans "Paused" %}
+                {% elif campaign.is_campaign_active %}
+                    ✓ {% trans "Active" %}
+                {% else %}
+                    ✕ {% trans "Ended" %}
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+<!-- Performance Metrics -->
+<div class="analytics-grid">
+    <div class="metric-card metric-blue">
+        <span class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+        </span>
+        <div class="metric-label">{% trans "Impressions" %}</div>
+        <div class="metric-value">{{ campaign.impressions|default:"0" }}</div>
+        <div class="metric-change">
+            {% if campaign.impressions > 0 %}
+                <span class="positive">↑ Higher than average</span>
+            {% else %}
+                <span>No impressions yet</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="metric-card metric-purple">
+        <span class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#764ba2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12h18"></path>
+                <path d="M13 5l7 7-7 7"></path>
+            </svg>
+        </span>
+        <div class="metric-label">{% trans "Clicks" %}</div>
+        <div class="metric-value">{{ campaign.clicks|default:"0" }}</div>
+        <div class="metric-change">
+            {% if campaign.ctr > 2 %}
+                <span class="positive">✓ Good CTR</span>
+            {% elif campaign.ctr > 0 %}
+                <span>{{ campaign.ctr|floatformat:2 }}% CTR</span>
+            {% else %}
+                <span>No clicks yet</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="metric-card metric-green">
+        <span class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2l3 7h7l-5.5 4 2.5 7-7-4.5L5 20l2.5-7L2 9h7z"></path>
+            </svg>
+        </span>
+        <div class="metric-label">{% trans "Conversions" %}</div>
+        <div class="metric-value">{{ campaign.conversions|default:"0" }}</div>
+        <div class="metric-change">
+            {% if campaign.conversion_rate > 0 %}
+                {{ campaign.conversion_rate|floatformat:2 }}% {% trans "conversion rate" %}
+            {% else %}
+                <span>{% trans "No conversions yet" %}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="metric-card metric-amber">
+        <span class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18"></path>
+                <path d="M7 14l4-4 3 3 5-6"></path>
+            </svg>
+        </span>
+        <div class="metric-label">{% trans "CTR (Click-Through Rate)" %}</div>
+        <div class="metric-value">{{ campaign.ctr|default:"0"|floatformat:2 }}%</div>
+        <div class="metric-change">
+            {% if campaign.ctr >= 2 %}
+                <span class="positive">✓ {% trans "Above average" %}</span>
+            {% elif campaign.ctr > 0 %}
+                <span>{% trans "Average performance" %}</span>
+            {% else %}
+                <span>{% trans "No data yet" %}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="metric-card metric-blue">
+        <span class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12h18"></path>
+                <path d="M12 3v18"></path>
+            </svg>
+        </span>
+        <div class="metric-label">{% trans "Conversion Rate" %}</div>
+        <div class="metric-value">{{ campaign.conversion_rate|default:"0"|floatformat:2 }}%</div>
+        <div class="metric-change">
+            {% if campaign.conversion_rate > 2 %}
+                <span class="positive">✓ {% trans "Strong" %}</span>
+            {% elif campaign.conversion_rate > 0 %}
+                <span>{% trans "Needs improvement" %}</span>
+            {% else %}
+                <span>{% trans "No data yet" %}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="metric-card metric-green">
+        <span class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1v22"></path>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H15a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+        </span>
+        <div class="metric-label">{% trans "ROI" %}</div>
+        <div class="metric-value">
+            {% if campaign.roi %}
+                {{ campaign.roi|floatformat:1 }}%
+            {% else %}
+                —
+            {% endif %}
+        </div>
+        <div class="metric-change">
+            {% if campaign.roi and campaign.roi > 0 %}
+                <span class="positive">✓ {% trans "Profitable" %}</span>
+            {% elif campaign.roi %}
+                <span class="negative">✗ {% trans "Loss" %}</span>
+            {% else %}
+                <span>{% trans "No budget data" %}</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Performance Grade & Health -->
+<h2 class="section-title">{% trans "Performance Assessment" %}</h2>
+<div class="metric-card">
+    <div style="display: flex; align-items: center; gap: 2rem;">
+        <div>
+            <div class="performance-grade grade-{{ campaign.performance_score|lower }}">
+                {{ campaign.performance_score }}
+            </div>
+        </div>
+        <div style="flex: 1;">
+            <h3 style="margin: 0 0 0.5rem 0;">{% trans "Performance Grade" %}</h3>
+            <p style="margin: 0; color: var(--muted-color);">
+                {% if campaign.performance_score == 'A' %}
+                    {% trans "Excellent performance! Your campaign is outperforming benchmarks." %}
+                {% elif campaign.performance_score == 'B' %}
+                    {% trans "Good performance. Your campaign is performing well." %}
+                {% elif campaign.performance_score == 'C' %}
+                    {% trans "Average performance. Room for improvement." %}
+                {% elif campaign.performance_score == 'D' %}
+                    {% trans "Poor performance. Consider optimization." %}
+                {% else %}
+                    {% trans "Critical performance. Immediate attention needed." %}
+                {% endif %}
+            </p>
+        </div>
+        <div style="text-align: center;">
+            <div class="health-badge health-{{ campaign.health_status }}">
+                {% if campaign.health_status == 'healthy' %}
+                    ✓ {% trans "Healthy" %}
+                {% elif campaign.health_status == 'warning' %}
+                    ⚠ {% trans "Warning" %}
+                {% else %}
+                    ✕ {% trans "Critical" %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Budget Management -->
+{% if campaign.budget %}
+<h2 class="section-title">{% trans "Budget" %}</h2>
+<div class="metric-card">
+    <div class="budget-info">
+        <div class="budget-item">
+            <div class="label">{% trans "Total Budget" %}</div>
+            <div class="value">${{ campaign.budget|floatformat:2 }}</div>
+        </div>
+        <div class="budget-item">
+            <div class="label">{% trans "Spent" %}</div>
+            <div class="value">${{ campaign.spent|default:"0"|floatformat:2 }}</div>
+        </div>
+        <div class="budget-item">
+            <div class="label">{% trans "Remaining" %}</div>
+            <div class="value" style="{% if campaign.get_budget_remaining < 0 %}color: var(--danger-color){% endif %}">
+                ${{ campaign.get_budget_remaining|floatformat:2 }}
+            </div>
+        </div>
+        <div class="budget-item">
+            <div class="label">{% trans "Spent %" %}</div>
+            <div class="value">{{ campaign.get_budget_percentage|floatformat:1 }}%</div>
+        </div>
+    </div>
+
+    <div style="margin-top: 1.5rem;">
+        <div style="font-size: 0.875rem; color: var(--muted-color); margin-bottom: 0.5rem;">{% trans "Budget Usage" %}</div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" style="width: {{ campaign.get_budget_percentage|floatformat:0 }}%;"></div>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--muted-color); margin-top: 0.5rem;">
+            {% trans "Average daily spend: " %} ${{ avg_daily_spend|floatformat:2 }}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Campaign Details -->
+<h2 class="section-title">{% trans "Campaign Details" %}</h2>
+<div class="campaign-details">
+    <div class="metric-card">
+        <div class="metric-label">{% trans "Placement" %}</div>
+        <div style="color: var(--text-color); font-size: 1rem; font-weight: 500;">
+            {{ campaign.get_placement_display }}
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">{% trans "Product" %}</div>
+        <div style="color: var(--text-color); font-size: 1rem; font-weight: 500;">
+            {% if campaign.promoted_product %}
+                {{ campaign.promoted_product.name }}
+            {% else %}
+                {% trans "Store Promotion" %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">{% trans "Time Remaining" %}</div>
+        <div style="color: var(--text-color); font-size: 1rem; font-weight: 500;">
+            {% if campaign.is_campaign_active %}
+                {{ time_remaining }}
+            {% else %}
+                {% trans "Campaign Ended" %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">{% trans "Period" %}</div>
+        <div style="color: var(--text-color); font-size: 0.9rem; font-weight: 500;">
+            {{ campaign.start_date|date:"M d, Y H:i" }}<br>
+            {% trans "to" %}<br>
+            {{ campaign.end_date|date:"M d, Y H:i" }}
+        </div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="action-buttons">
+    <a href="{% url 'core:vendor_campaign_list' %}" class="btn-custom btn-primary">
+        ← {% trans "Back to Campaigns" %}
+    </a>
+    <a href="{% url 'core:vendor_campaign_edit' campaign.pk %}" class="btn-custom btn-secondary">
+        ✎ {% trans "Edit Campaign" %}
+    </a>
+    {% if not campaign.paused %}
+        <form method="post" action="{% url 'core:vendor_campaign_pause' campaign.pk %}" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn-custom btn-secondary">
+                ⏸ {% trans "Pause Campaign" %}
+            </button>
+        </form>
+    {% else %}
+        <form method="post" action="{% url 'core:vendor_campaign_pause' campaign.pk %}" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn-custom btn-secondary">
+                ▶ {% trans "Resume Campaign" %}
+            </button>
+        </form>
+    {% endif %}
+    </div>
+</div>
+
+{% endblock %}

@@ -8,15 +8,49 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
+        /* CSS Variables for Color Theming */
+        :root {
+            --bg-body: #ffffff;
+            --bg-surface: #f8f9fa;
+            --text-main: #1a2533;
+            --text-muted: #6c757d;
+            --border-color: #e9ecef;
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --card-shadow: 0 8px 32px rgba(102, 126, 234, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #0f1419;
+            --bg-surface: rgba(30, 30, 46, 0.9);
+            --text-main: #f0f4ff;
+            --text-muted: #cbd5e1;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --card-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
         .form-container {
-            max-width: 900px; /* Adjusted for a form view */
-            margin: 0 auto;
-            background-color:  #ebe8e8;
-            padding: 2rem 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
-            border: 1px solid #959aa0;
-            font-family: "Outfit", sans-serif; /* Consistent font from theme */
+            max-width: 900px;
+            margin: 2rem auto;
+            background-color: var(--bg-surface);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
         }
 
         .page-header {
@@ -27,23 +61,36 @@
             gap: 1rem;
             padding-bottom: 1.5rem;
             margin-bottom: 2rem;
-            border-bottom: 2px solid #f0f2f5;
+            border-bottom: 2px solid var(--border-color);
         }
 
         .page-header h1 {
-            font-family: "Poppins", sans-serif; /* Consistent font from theme */
             font-weight: 700;
-            color: #1a2533;
+            color: var(--text-main);
             margin-bottom: 0;
+            font-size: 1.5rem;
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+            margin: 0.5rem 0 0 0;
+        }
+
+        .page-header div {
+            flex: 1;
         }
 
         fieldset {
-            background-color: #ffffff;
-            border: 1px solid #dee2e6;
-            border-radius: 10px;
-            padding: 1.5rem 2rem;
+            background: linear-gradient(135deg, var(--bg-body), rgba(102, 126, 234, 0.01));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.75rem 2rem;
             margin-bottom: 2rem;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+        }
+
+        [data-theme="dark"] fieldset {
+            background: linear-gradient(135deg, rgba(30, 30, 46, 0.5), rgba(102, 126, 234, 0.03));
         }
 
         fieldset:last-of-type {
@@ -51,67 +98,275 @@
         }
 
         legend {
-            font-family: "Poppins", sans-serif; /* Consistent font from theme */
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #1a2533;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
             padding: 0;
             width: 100%;
             float: left;
             margin-bottom: 1.5rem;
             padding-bottom: 0.75rem;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 2px solid var(--border-color);
         }
 
-        .form-container .form-control,
-        .form-container .form-select {
-            border: 1px solid #ced4da;
-            transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
-        }
-        .form-container .form-control:focus,
-        .form-container .form-select:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        legend i {
+            color: var(--accent-color);
+            margin-right: 0.5rem;
         }
 
-        .form-label {
+        .form-control,
+        .form-select {
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border-color: var(--border-color);
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--accent-color);
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.15);
+        }
+
+        [data-theme="dark"] .form-control:focus,
+        [data-theme="dark"] .form-select:focus {
+            background-color: rgba(255, 255, 255, 0.12);
+        }
+
+        label {
             font-weight: 500;
-            color: #495057;
-            font-size: 0.9rem;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
         }
 
-        .form-container .btn-primary {
-            background-color: #474747;
-            border-color: #474747;
-            font-weight: 500;
+        [data-theme="dark"] label,
+        [data-theme="dark"] .form-label,
+        [data-theme="dark"] .form-check-label {
+            color: var(--text-main);
         }
-        .form-container .btn-primary:hover {
-            background-color: #383838;
-            border-color: #383838;
+
+        [data-theme="dark"] .form-select option,
+        [data-theme="dark"] select.form-select option {
+            background-color: #1f2430;
+            color: #f0f4ff;
+        }
+
+        .form-text {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+
+        .form-check-input {
+            border-color: var(--border-color);
+            background-color: var(--bg-body);
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] .form-check-input {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: var(--border-color);
+        }
+
+        .form-check-input:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .form-check-input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.15);
+        }
+
+        .alert {
+            border-radius: 8px;
+            border: 1px solid;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-secondary);
+            border-color: var(--accent-secondary);
             transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 12px 24px rgba(102, 126, 234, 0.3);
         }
-        .form-container .btn-outline-secondary {
-            background-color: #474747;
-            color: #ffffffff;
-            border-color: #474747;
+
+        .btn-outline-secondary {
+            background-color: transparent;
+            border-color: var(--border-color);
+            color: var(--text-main);
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
+
         .btn-outline-secondary:hover {
-            background-color: #474747;
-            color: #fff;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .button-group a {
+            flex: 1;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+
+        .helper-box {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.06));
+            border: 1px solid rgba(102, 126, 234, 0.25);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .preview-card {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: var(--bg-body);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .preview-media {
+            height: 180px;
+            background: rgba(102, 126, 234, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .preview-body {
+            padding: 1rem 1.25rem;
+        }
+
+        .preview-title {
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .preview-cta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--accent-color);
+            color: white;
+            padding: 0.4rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            gap: 0.5rem 1rem;
+        }
+
+        .variant-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
+
+        .variant-card {
+            border: 1px dashed var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            background: rgba(102, 126, 234, 0.03);
+        }
+
+        .muted {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 1.5rem 1rem;
+                margin: 1rem;
+            }
+
+            .page-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .page-header div {
+                width: 100%;
+            }
+
+            .page-header a {
+                width: 100%;
+                text-align: center;
+            }
+
+            fieldset {
+                padding: 1.25rem 1rem;
+            }
+
+            legend {
+                font-size: 1rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .row {
+                --bs-gutter-x: 0;
+            }
+
+            .col-md-6 {
+                width: 100%;
+            }
         }
     </style>
 {% endblock extra_css %}
 
 {% block content %}
-<div class="container mt-5 mb-5">
+<div class="container-fluid mt-5 mb-5">
     <div class="form-container">
         <div class="page-header">
             <div>
-                <h1>{{ form_title }}</h1>
-                <p class="text-muted mb-0">{% trans "Manage your ad campaign details below." %}</p>
+                <h1><i class="bi bi-megaphone me-2" style="color: var(--accent-color);"></i>{{ form_title }}</h1>
             </div>
             <a href="{% url 'core:vendor_campaign_list' %}" class="btn btn-lg btn-outline-secondary">
                 <i class="bi bi-arrow-left me-2"></i>{% trans "Back to Campaigns" %}
@@ -124,32 +379,332 @@
             {% csrf_token %}
 
             {% if form.non_field_errors %}
-                <div class="alert alert-danger">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <strong>{% trans "Error!" %}</strong>
                     {% for error in form.non_field_errors %}
                         <p class="mb-0">{{ error }}</p>
                     {% endfor %}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             {% endif %}
 
+            {% if not form.instance.pk %}
             <fieldset>
-                <legend>{% trans "Campaign Details" %}</legend>
+                <legend><i class="bi bi-layers"></i>{% trans "Template" %}</legend>
+                <div class="row align-items-end">
+                    <div class="col-md-8 mb-3">{{ form.template|as_crispy_field }}</div>
+                    <div class="col-md-4 mb-3">
+                        <button type="submit" id="applyTemplateBtn" class="btn btn-outline-secondary w-100" formaction="{% url 'core:vendor_campaign_create' %}" formmethod="get">
+                            <i class="bi bi-magic me-2"></i>{% trans "Apply Template" %}
+                        </button>
+                    </div>
+                </div>
+                <div class="muted">
+                    {% trans "Applying a template reloads the form with suggested defaults." %}
+                    <a href="{% url 'core:vendor_campaign_template_list' %}" class="ms-2">{% trans "Manage templates" %}</a>
+                </div>
+            </fieldset>
+            {% endif %}
+
+            <fieldset>
+                <legend><i class="bi bi-info-circle"></i>{% trans "Campaign Details" %}</legend>
                 <div class="row">
                     <div class="col-md-6 mb-3">{{ form.name|as_crispy_field }}</div>
                     <div class="col-md-6 mb-3">{{ form.placement|as_crispy_field }}</div>
                 </div>
-                <div class="mb-3">{{ form.promoted_product|as_crispy_field }}</div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">{{ form.promoted_product|as_crispy_field }}</div>
+                    <div class="col-md-6 mb-3">{{ form.budget|as_crispy_field }}</div>
+                </div>
+                <div id="budgetHelper" class="helper-box">
+                    <strong>{% trans "Budget Helper" %}</strong>
+                    <div class="mt-2">
+                        <span id="budgetRange">{% trans "Set a budget to see daily spend guidance." %}</span>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend><i class="bi bi-brush"></i>{% trans "Creative" %}</legend>
+                <div class="row">
+                    <div class="col-lg-7">
+                        <div class="mb-3">{{ form.base_headline|as_crispy_field }}</div>
+                        <div class="mb-3">{{ form.base_description|as_crispy_field }}</div>
+                        <div class="mb-3">{{ form.base_image_url|as_crispy_field }}</div>
+                        <div class="mb-3">{{ form.base_cta|as_crispy_field }}</div>
+                    </div>
+                    <div class="col-lg-5">
+                        <div class="preview-card" id="creativePreview">
+                            <div class="preview-media" id="previewMedia">{% trans "Image Preview" %}</div>
+                            <div class="preview-body">
+                                <div class="preview-title" id="previewHeadline">{% trans "Your headline will appear here" %}</div>
+                                <div class="muted" id="previewDescription">{% trans "Add a short description to see a preview." %}</div>
+                                <div class="mt-3">
+                                    <span class="preview-cta" id="previewCta">{% trans "Shop Now" %}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend><i class="bi bi-people"></i>{% trans "Audience Targeting" %}</legend>
+                <div class="row">
+                    <div class="col-md-6 mb-3">{{ form.audience_location|as_crispy_field }}</div>
+                    <div class="col-md-6 mb-3">{{ form.audience_device|as_crispy_field }}</div>
+                </div>
+                <div class="mb-3">{{ form.audience_interests|as_crispy_field }}</div>
+                <div class="row">
+                    <div class="col-md-3 mb-3">{{ form.audience_age_min|as_crispy_field }}</div>
+                    <div class="col-md-3 mb-3">{{ form.audience_age_max|as_crispy_field }}</div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend><i class="bi bi-calendar"></i>{% trans "Schedule" %}</legend>
                 <div class="row">
                     <div class="col-md-6 mb-3">{{ form.start_date|as_crispy_field }}</div>
                     <div class="col-md-6 mb-3">{{ form.end_date|as_crispy_field }}</div>
                 </div>
+                <div class="mb-3">
+                    <label class="form-label">{% trans "Run Days" %}</label>
+                    <div class="checkbox-grid">
+                        {% for checkbox in form.schedule_days %}
+                            <label class="form-check-label">
+                                {{ checkbox.tag }} {{ checkbox.choice_label }}
+                            </label>
+                        {% endfor %}
+                    </div>
+                    <div class="form-text">{{ form.schedule_days.help_text }}</div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">{{ form.schedule_start_time|as_crispy_field }}</div>
+                    <div class="col-md-6 mb-3">{{ form.schedule_end_time|as_crispy_field }}</div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend><i class="bi bi-bullseye"></i>{% trans "Performance Goals" %}</legend>
+                <div class="row">
+                    <div class="col-md-6 mb-3">{{ form.goal_type|as_crispy_field }}</div>
+                    <div class="col-md-6 mb-3">{{ form.goal_value|as_crispy_field }}</div>
+                </div>
+                <div class="helper-box">
+                    <strong>{% trans "Goal Tip" %}</strong>
+                    <div class="mt-2">{% trans "Set a realistic goal based on historical performance." %}</div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend><i class="bi bi-link-45deg"></i>{% trans "Tracking (UTM Builder)" %}</legend>
+                <div class="row">
+                    <div class="col-md-4 mb-3">{{ form.utm_source|as_crispy_field }}</div>
+                    <div class="col-md-4 mb-3">{{ form.utm_medium|as_crispy_field }}</div>
+                    <div class="col-md-4 mb-3">{{ form.utm_campaign|as_crispy_field }}</div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">{{ form.utm_content|as_crispy_field }}</div>
+                    <div class="col-md-6 mb-3">{{ form.utm_term|as_crispy_field }}</div>
+                </div>
+                <div class="helper-box">
+                    <strong>{% trans "UTM Preview" %}</strong>
+                    <div class="mt-2" style="word-break: break-all;">
+                        <code id="utmPreview">utm_source=&amp;utm_medium=&amp;utm_campaign=</code>
+                    </div>
+                    <div class="mt-2" style="display: flex; align-items: center; gap: 0.75rem;">
+                        <button type="button" id="copyUtmBtn" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-clipboard me-2"></i>{% trans "Copy UTM" %}
+                        </button>
+                        <span id="copyUtmStatus" class="muted"></span>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend><i class="bi bi-sliders"></i>{% trans "A/B Creative Variants" %}</legend>
+                <div class="variant-grid">
+                    <div class="variant-card">
+                        <div class="mb-2"><strong>{% trans "Variant A" %}</strong></div>
+                        <div class="mb-2">{{ form.variant_a_headline|as_crispy_field }}</div>
+                        <div class="mb-2">{{ form.variant_a_image_url|as_crispy_field }}</div>
+                        <div class="mb-2">{{ form.variant_a_weight|as_crispy_field }}</div>
+                    </div>
+                    <div class="variant-card">
+                        <div class="mb-2"><strong>{% trans "Variant B" %}</strong></div>
+                        <div class="mb-2">{{ form.variant_b_headline|as_crispy_field }}</div>
+                        <div class="mb-2">{{ form.variant_b_image_url|as_crispy_field }}</div>
+                        <div class="mb-2">{{ form.variant_b_weight|as_crispy_field }}</div>
+                    </div>
+                    <div class="variant-card">
+                        <div class="mb-2"><strong>{% trans "Variant C" %}</strong></div>
+                        <div class="mb-2">{{ form.variant_c_headline|as_crispy_field }}</div>
+                        <div class="mb-2">{{ form.variant_c_image_url|as_crispy_field }}</div>
+                        <div class="mb-2">{{ form.variant_c_weight|as_crispy_field }}</div>
+                    </div>
+                    <div class="variant-card">
+                        <div class="mb-2"><strong>{% trans "Variant D" %}</strong></div>
+                        <div class="mb-2">{{ form.variant_d_headline|as_crispy_field }}</div>
+                        <div class="mb-2">{{ form.variant_d_image_url|as_crispy_field }}</div>
+                        <div class="mb-2">{{ form.variant_d_weight|as_crispy_field }}</div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend><i class="bi bi-plug"></i>{% trans "Integrations" %}</legend>
+                <div class="row">
+                    <div class="col-md-4 mb-3">{{ form.email_enabled|as_crispy_field }}</div>
+                    <div class="col-md-4 mb-3">{{ form.sms_enabled|as_crispy_field }}</div>
+                    <div class="col-md-4 mb-3">{{ form.social_enabled|as_crispy_field }}</div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend><i class="bi bi-toggle-on"></i>{% trans "Status" %}</legend>
                 <div class="mb-3">{{ form.is_active|as_crispy_field }}</div>
             </fieldset>
 
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                <a href="{% url 'core:vendor_campaign_list' %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
-                <button type="submit" class="btn btn-primary">{% if form.instance.pk %}{% trans "Save Changes" %}{% else %}{% trans "Create Campaign" %}{% endif %}</button>
+            <div class="button-group">
+                <a href="{% url 'core:vendor_campaign_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-2"></i>{% trans "Cancel" %}
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    {% if form.instance.pk %}
+                        <i class="bi bi-check-circle me-2"></i>{% trans "Save Changes" %}
+                    {% else %}
+                        <i class="bi bi-plus-circle me-2"></i>{% trans "Create Campaign" %}
+                    {% endif %}
+                </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const applyTemplateBtn = document.getElementById('applyTemplateBtn');
+    const templateSelect = document.getElementById('id_template');
+
+    if (applyTemplateBtn && templateSelect) {
+        applyTemplateBtn.addEventListener('click', function () {
+            const templateId = templateSelect.value;
+            if (templateId) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('template_id', templateId);
+                window.location.href = url.toString();
+            }
+        });
+    }
+
+    const headline = document.getElementById('id_base_headline');
+    const description = document.getElementById('id_base_description');
+    const imageUrl = document.getElementById('id_base_image_url');
+    const cta = document.getElementById('id_base_cta');
+    const previewHeadline = document.getElementById('previewHeadline');
+    const previewDescription = document.getElementById('previewDescription');
+    const previewCta = document.getElementById('previewCta');
+    const previewMedia = document.getElementById('previewMedia');
+
+    function updatePreview() {
+        if (previewHeadline) {
+            previewHeadline.textContent = headline && headline.value ? headline.value : 'Your headline will appear here';
+        }
+        if (previewDescription) {
+            previewDescription.textContent = description && description.value ? description.value : 'Add a short description to see a preview.';
+        }
+        if (previewCta) {
+            previewCta.textContent = cta && cta.value ? cta.value : 'Shop Now';
+        }
+        if (previewMedia) {
+            if (imageUrl && imageUrl.value) {
+                previewMedia.style.backgroundImage = `url('${imageUrl.value}')`;
+                previewMedia.style.backgroundSize = 'cover';
+                previewMedia.style.backgroundPosition = 'center';
+                previewMedia.textContent = '';
+            } else {
+                previewMedia.style.backgroundImage = 'none';
+                previewMedia.textContent = 'Image Preview';
+            }
+        }
+    }
+
+    [headline, description, imageUrl, cta].forEach((el) => {
+        if (el) {
+            el.addEventListener('input', updatePreview);
+        }
+    });
+    updatePreview();
+
+    const budget = document.getElementById('id_budget');
+    const startDate = document.getElementById('id_start_date');
+    const endDate = document.getElementById('id_end_date');
+    const budgetRange = document.getElementById('budgetRange');
+
+    function updateBudgetHelper() {
+        if (!budgetRange) {
+            return;
+        }
+        const budgetValue = parseFloat(budget && budget.value ? budget.value : '0');
+        const start = startDate && startDate.value ? new Date(startDate.value) : null;
+        const end = endDate && endDate.value ? new Date(endDate.value) : null;
+        if (!budgetValue || !start || !end || isNaN(start) || isNaN(end) || end <= start) {
+            budgetRange.textContent = 'Set a budget and valid date range to see daily spend guidance.';
+            return;
+        }
+        const diffMs = end - start;
+        const days = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+        const perDay = (budgetValue / days).toFixed(2);
+        budgetRange.textContent = `Campaign length: ${days} days. Estimated daily spend: $${perDay}.`;
+    }
+
+    [budget, startDate, endDate].forEach((el) => {
+        if (el) {
+            el.addEventListener('input', updateBudgetHelper);
+        }
+    });
+    updateBudgetHelper();
+
+    const utmFields = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
+        .map((name) => document.getElementById(`id_${name}`));
+    const utmPreview = document.getElementById('utmPreview');
+    const copyUtmBtn = document.getElementById('copyUtmBtn');
+    const copyUtmStatus = document.getElementById('copyUtmStatus');
+
+    function updateUtmPreview() {
+        if (!utmPreview) {
+            return;
+        }
+        const params = [];
+        ['source', 'medium', 'campaign', 'content', 'term'].forEach((key, index) => {
+            const field = utmFields[index];
+            const value = field && field.value ? field.value.trim() : '';
+            params.push(`utm_${key}=${encodeURIComponent(value)}`);
+        });
+        utmPreview.textContent = params.join('&');
+    }
+
+    utmFields.forEach((field) => {
+        if (field) {
+            field.addEventListener('input', updateUtmPreview);
+        }
+    });
+    updateUtmPreview();
+
+    if (copyUtmBtn && utmPreview) {
+        copyUtmBtn.addEventListener('click', async function () {
+            try {
+                await navigator.clipboard.writeText(utmPreview.textContent || '');
+                if (copyUtmStatus) {
+                    copyUtmStatus.textContent = 'Copied!';
+                }
+            } catch (err) {
+                if (copyUtmStatus) {
+                    copyUtmStatus.textContent = 'Copy failed';
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Generate Bulk Promotion Codes" %} - {{ vendor.name }}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        /* CSS Variables for Color Theming */
+        :root {
+            --bg-body: #ffffff;
+            --bg-surface: #f8f9fa;
+            --text-main: #1a2533;
+            --text-muted: #6c757d;
+            --border-color: #e9ecef;
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --card-shadow: 0 8px 32px rgba(102, 126, 234, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #0f1419;
+            --bg-surface: rgba(30, 30, 46, 0.9);
+            --text-main: #f0f4ff;
+            --text-muted: #cbd5e1;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --card-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .generator-container {
+            max-width: 800px;
+            margin: 3rem auto;
+            background-color: var(--bg-surface);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .generator-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .generator-header h1 {
+            margin: 0;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .generator-header i {
+            font-size: 2rem;
+            color: var(--accent-color);
+        }
+
+        .generator-header p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .form-section {
+            margin-bottom: 2rem;
+        }
+
+        .form-section-title {
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        [data-theme="dark"] label {
+            color: var(--text-main);
+        }
+
+        [data-theme="dark"] .form-control::placeholder {
+            color: var(--text-muted);
+        }
+
+        [data-theme="dark"] .form-select {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .form-control {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .form-control:focus {
+            background-color: rgba(255, 255, 255, 0.12);
+            border-color: var(--accent-color);
+            color: var(--text-main);
+        }
+
+        [data-theme="dark"] .form-select:focus {
+            background-color: rgba(255, 255, 255, 0.12);
+            border-color: var(--accent-color);
+            color: var(--text-main);
+        }
+
+        .form-text {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+
+        [data-theme="dark"] .form-text {
+            color: var(--text-muted);
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .radio-item:hover {
+            background-color: rgba(102, 126, 234, 0.05);
+            border-color: var(--accent-color);
+        }
+
+        [data-theme="dark"] .radio-item {
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .radio-item label {
+            color: var(--text-main);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-secondary);
+            border-color: var(--accent-secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-main);
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--bg-body);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .info-box {
+            background-color: rgba(102, 126, 234, 0.1);
+            border-left: 4px solid var(--accent-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        [data-theme="dark"] .info-box {
+            background-color: rgba(102, 126, 234, 0.15);
+        }
+
+        .info-box i {
+            color: var(--accent-color);
+            margin-right: 0.5rem;
+        }
+
+        .info-box p {
+            margin: 0;
+            color: var(--text-main);
+            font-size: 0.9rem;
+        }
+
+        .errorlist {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .errorlist li {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid var(--danger-color);
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+            color: var(--danger-color);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 576px) {
+            .generator-container {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+
+            .generator-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn-primary, .btn-secondary {
+                width: 100%;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="generator-container">
+    <div class="generator-header">
+        <i class="bi bi-lightning-fill"></i>
+        <div>
+            <h1>{% trans "Generate Bulk Codes" %}</h1>
+            <p>{% trans "Create multiple promotion codes at once for quick distribution." %}</p>
+        </div>
+    </div>
+
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ form.non_field_errors }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endif %}
+
+    <div class="info-box">
+        <i class="bi bi-info-circle"></i>
+        <p>{% trans "Generate up to 10,000 unique codes instantly. Each code is guaranteed to be unique and can be linked to a promotion." %}</p>
+    </div>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <!-- Promotion Section -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <i class="bi bi-tag me-2"></i>{% trans "Promotion" %}
+            </div>
+            <div class="form-group">
+                {{ form.promotion.label_tag }}
+                {{ form.promotion }}
+                {% if form.promotion.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.promotion.errors }}
+                    </div>
+                {% endif %}
+                <small class="form-text">{{ form.promotion.help_text }}</small>
+            </div>
+        </div>
+
+        <!-- Code Generation Section -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <i class="bi bi-gear me-2"></i>{% trans "Generation Settings" %}
+            </div>
+
+            <!-- Quantity -->
+            <div class="form-group">
+                {{ form.quantity.label_tag }}
+                {{ form.quantity }}
+                {% if form.quantity.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.quantity.errors }}
+                    </div>
+                {% endif %}
+                <small class="form-text">{{ form.quantity.help_text }}</small>
+            </div>
+
+            <!-- Prefix -->
+            <div class="form-group">
+                {{ form.prefix.label_tag }}
+                {{ form.prefix }}
+                {% if form.prefix.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.prefix.errors }}
+                    </div>
+                {% endif %}
+                <small class="form-text">{{ form.prefix.help_text }}</small>
+            </div>
+
+            <!-- Code Type -->
+            <div class="form-group">
+                <label>{{ form.code_type.label }}</label>
+                <div class="radio-group">
+                    {% for value, label in form.code_type.field.choices %}
+                        <div class="radio-item">
+                            <input type="radio" name="code_type" value="{{ value }}" 
+                                   id="code_type_{{ forloop.counter }}" 
+                                   {% if form.code_type.value == value %}checked{% endif %}>
+                            <label for="code_type_{{ forloop.counter }}" style="margin: 0; cursor: pointer;">
+                                {{ label }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+                <small class="form-text">{{ form.code_type.help_text }}</small>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="button-group">
+            <a href="{% url 'core:vendor_promotion_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-2"></i>{% trans "Cancel" %}
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-lightning me-2"></i>{% trans "Generate Codes" %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

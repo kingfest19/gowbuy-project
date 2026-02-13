@@ -1630,6 +1630,300 @@ class Promotion(models.Model):
 
     # TODO: Add methods to check validity (is_active, within dates, usage limits, scope applicability)
 
+# --- PromotionVariant Model (A/B Testing) ---
+class PromotionVariant(models.Model):
+    """
+    Represents A/B test variants for promotions.
+    Test different discount values to find optimal conversion rates.
+    """
+    VARIANT_CHOICES = (
+        ('A', 'Variant A (Control)'),
+        ('B', 'Variant B (Test)'),
+        ('C', 'Variant C (Test 2)'),
+    )
+    
+    promotion = models.ForeignKey(Promotion, on_delete=models.CASCADE, related_name='variants')
+    variant_type = models.CharField(max_length=1, choices=VARIANT_CHOICES, help_text="Variant designation")
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2, help_text="Different discount value for this variant")
+    description = models.CharField(max_length=255, blank=True, help_text="e.g., 'Premium pricing', 'Standard pricing'")
+    
+    # Analytics
+    impressions = models.PositiveIntegerField(default=0, help_text="How many customers saw this variant")
+    clicks = models.PositiveIntegerField(default=0, help_text="How many clicked/used this variant")
+    conversions = models.PositiveIntegerField(default=0, help_text="How many converted with this variant")
+    revenue_generated = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Total revenue from this variant")
+    
+    is_winner = models.BooleanField(default=False, help_text="Mark as winning variant")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('promotion', 'variant_type')
+        ordering = ('variant_type',)
+        verbose_name = "Promotion Variant"
+        verbose_name_plural = "Promotion Variants"
+    
+    def __str__(self):
+        return f"{self.promotion.name} - Variant {self.variant_type}"
+    
+    @property
+    def ctr(self):
+        """Click-through rate"""
+        if self.impressions == 0:
+            return 0
+        return (self.clicks / self.impressions) * 100
+    
+    @property
+    def conversion_rate(self):
+        """Conversion rate"""
+        if self.clicks == 0:
+            return 0
+        return (self.conversions / self.clicks) * 100
+    
+    @property
+    def avg_order_value(self):
+        """Average order value for this variant"""
+        if self.conversions == 0:
+            return 0
+        return self.revenue_generated / self.conversions
+
+# --- PromotionSegmentRule Model ---
+class PromotionSegmentRule(models.Model):
+    """
+    Define rules for customer segmentation to control promotion eligibility.
+    """
+    SEGMENT_TYPES = (
+        ('new_customers', 'New Customers Only'),
+        ('loyalty_members', 'Loyalty Program Members'),
+        ('abandoned_cart', 'Abandoned Cart Recovery'),
+        ('high_value', 'High Value Customers'),
+        ('geographic', 'Geographic (Location-based)'),
+        ('first_time', 'First Time Buyers'),
+    )
+    
+    promotion = models.ForeignKey(Promotion, on_delete=models.CASCADE, related_name='segment_rules')
+    segment_type = models.CharField(max_length=20, choices=SEGMENT_TYPES)
+    
+    # Conditions/Rules
+    min_total_spent = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Min lifetime spending to qualify (for high-value segments)"
+    )
+    min_orders_count = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Min number of orders to qualify"
+    )
+    days_since_last_order = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Days since last order (for re-engagement)"
+    )
+    country_codes = models.CharField(
+        max_length=255, blank=True,
+        help_text="Comma-separated country codes (e.g., 'GH,NG,KE')"
+    )
+    
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('promotion', 'segment_type')
+        verbose_name = "Promotion Segment Rule"
+        verbose_name_plural = "Promotion Segment Rules"
+    
+    def __str__(self):
+        return f"{self.promotion.name} - {self.get_segment_type_display()}"
+    
+    def qualifies_customer(self, user):
+        """Check if a customer qualifies for this segment rule"""
+        from django.db.models import Sum, Count
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        if self.segment_type == 'new_customers':
+            # User's first order in last 30 days
+            from core.models import Order
+            user_order_count = Order.objects.filter(customer=user).count()
+            return user_order_count <= 1
+        
+        elif self.segment_type == 'loyalty_members':
+            # Check if user has loyalty membership
+            if hasattr(user, 'loyaltyprofile'):
+                return user.loyaltyprofile.is_active
+            return False
+        
+        elif self.segment_type == 'abandoned_cart':
+            # Has items in cart not purchased in 7+ days
+            from core.models import CartItem, Order
+            cart_items = CartItem.objects.filter(user=user)
+            if not cart_items.exists():
+                return False
+            
+            last_order = Order.objects.filter(customer=user).order_by('-created_at').first()
+            if not last_order:
+                return True
+            
+            days_passed = (timezone.now() - last_order.created_at).days
+            return days_passed >= 7
+        
+        elif self.segment_type == 'high_value':
+            # Total spent > min_total_spent
+            if not self.min_total_spent:
+                return False
+            
+            from core.models import Order
+            total_spent = Order.objects.filter(
+                customer=user,
+                status='completed'
+            ).aggregate(total=Sum('total_amount'))['total'] or 0
+            return total_spent >= self.min_total_spent
+        
+        elif self.segment_type == 'geographic':
+            # Check user's country
+            if not self.country_codes:
+                return True
+            
+            country_list = [c.strip() for c in self.country_codes.split(',')]
+            if hasattr(user, 'userprofile') and user.userprofile.location:
+                return user.userprofile.location in country_list
+            return False
+        
+        elif self.segment_type == 'first_time':
+            # Never made a purchase
+            from core.models import Order
+            return not Order.objects.filter(customer=user).exists()
+        
+        return False
+
+# --- PromotionCode Model (Bulk Code Generation) ---
+class PromotionCode(models.Model):
+    """
+    Individual promotion codes for bulk code generation and tracking.
+    """
+    CODE_STATUS = (
+        ('active', 'Active'),
+        ('redeemed', 'Redeemed'),
+        ('expired', 'Expired'),
+        ('disabled', 'Disabled'),
+    )
+    
+    promotion = models.ForeignKey(Promotion, on_delete=models.CASCADE, related_name='promo_codes')
+    code = models.CharField(max_length=50, unique=True, db_index=True)
+    status = models.CharField(max_length=20, choices=CODE_STATUS, default='active')
+    
+    redeemed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='redeemed_codes'
+    )
+    redeemed_at = models.DateTimeField(null=True, blank=True)
+    redeemed_order = models.ForeignKey(
+        'Order', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='used_promo_codes'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ('-created_at',)
+        verbose_name = "Promotion Code"
+        verbose_name_plural = "Promotion Codes"
+        indexes = [
+            models.Index(fields=['promotion', 'status']),
+            models.Index(fields=['code']),
+        ]
+    
+    def __str__(self):
+        return f"{self.code} - {self.promotion.name}"
+    
+    def redeem(self, user, order):
+        """Mark code as redeemed"""
+        if self.status != 'active':
+            raise ValidationError(f"Code {self.code} cannot be redeemed (status: {self.status})")
+        
+        self.redeemed_by = user
+        self.redeemed_at = timezone.now()
+        self.redeemed_order = order
+        self.status = 'redeemed'
+        self.save(update_fields=['redeemed_by', 'redeemed_at', 'redeemed_order', 'status', 'updated_at'])
+
+# --- PromotionCampaign Model ---
+class PromotionCampaign(models.Model):
+    """
+    Group related promotions under a campaign for coordinated management.
+    E.g., 'Summer Sale 2024' campaign containing multiple promotions.
+    """
+    CAMPAIGN_STATUS = (
+        ('draft', 'Draft'),
+        ('scheduled', 'Scheduled'),
+        ('active', 'Active'),
+        ('paused', 'Paused'),
+        ('ended', 'Ended'),
+    )
+    
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='promo_campaigns')
+    name = models.CharField(max_length=255, help_text="Campaign name (e.g., 'Summer Mega Sale')")
+    description = models.TextField(blank=True, help_text="Campaign description and objectives")
+    
+    promotions = models.ManyToManyField(Promotion, related_name='campaigns', help_text="Promotions included in this campaign")
+    
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=CAMPAIGN_STATUS, default='draft')
+    
+    # Emoji/Theme for UI
+    emoji = models.CharField(max_length=10, default='🎉', help_text="Emoji for campaign (e.g., ☀️, 🎃, 🎄)")
+    
+    # Performance tracking
+    impressions = models.PositiveIntegerField(default=0, editable=False)
+    clicks = models.PositiveIntegerField(default=0, editable=False)
+    revenue_generated = models.DecimalField(max_digits=12, decimal_places=2, default=0, editable=False, help_text="Total revenue from campaign")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ('-start_date',)
+        verbose_name = "Promotion Campaign"
+        verbose_name_plural = "Promotion Campaigns"
+        indexes = [
+            models.Index(fields=['vendor', 'status']),
+            models.Index(fields=['start_date', 'end_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.emoji} {self.name}"
+    
+    @property
+    def is_active_now(self):
+        """Check if campaign is currently active"""
+        now = timezone.now()
+        return self.start_date <= now <= self.end_date and self.status == 'active'
+    
+    @property
+    def promotion_count(self):
+        """Count of promotions in campaign"""
+        return self.promotions.count()
+    
+    def get_performance_metrics(self):
+        """Get aggregated performance metrics"""
+        from django.db.models import Sum, Avg
+        
+        promo_variants = PromotionVariant.objects.filter(promotion__in=self.promotions.all())
+        
+        metrics = {
+            'total_impressions': promo_variants.aggregate(Sum('impressions'))['impressions__sum'] or 0,
+            'total_clicks': promo_variants.aggregate(Sum('clicks'))['clicks__sum'] or 0,
+            'total_conversions': promo_variants.aggregate(Sum('conversions'))['conversions__sum'] or 0,
+            'total_revenue': promo_variants.aggregate(Sum('revenue_generated'))['revenue_generated__sum'] or 0,
+            'avg_ctr': promo_variants.aggregate(Avg('clicks'))['clicks__avg'] or 0,
+        }
+        
+        if metrics['total_clicks'] > 0:
+            metrics['conversion_rate'] = (metrics['total_conversions'] / metrics['total_clicks']) * 100
+        else:
+            metrics['conversion_rate'] = 0
+        
+        return metrics
+
 # --- AdCampaign Model ---
 class AdCampaign(models.Model):
     """
@@ -1641,6 +1935,18 @@ class AdCampaign(models.Model):
         ('category_sidebar', 'Category Sidebar'),
         # Add more placements as needed
     )
+    DEVICE_CHOICES = (
+        ('all', 'All Devices'),
+        ('mobile', 'Mobile'),
+        ('desktop', 'Desktop'),
+        ('tablet', 'Tablet'),
+    )
+    GOAL_CHOICES = (
+        ('ctr', 'CTR %'),
+        ('clicks', 'Clicks'),
+        ('conversions', 'Conversions'),
+        ('roi', 'ROI %'),
+    )
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='ad_campaigns', help_text="The vendor running the campaign.")
     name = models.CharField(max_length=255, help_text="Internal name for the campaign.")
     promoted_product = models.ForeignKey(Product, on_delete=models.CASCADE, blank=True, null=True, related_name='ad_campaigns', help_text="Product being promoted (optional, if promoting the vendor store itself).")
@@ -1648,8 +1954,45 @@ class AdCampaign(models.Model):
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     budget = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Total budget for the campaign (optional).")
+    spent = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Amount spent so far.")
+    impressions = models.PositiveIntegerField(default=0, help_text="Total impressions.")
+    clicks = models.PositiveIntegerField(default=0, help_text="Total clicks.")
+    conversions = models.PositiveIntegerField(default=0, help_text="Total conversions.")
+    ctr = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Click-through rate percentage (cached).")
+    conversion_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Conversion rate percentage (cached).")
+    roi = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Return on investment percentage (cached).")
+    performance_score = models.CharField(max_length=1, choices=[('A', 'A - Excellent'), ('B', 'B - Good'), ('C', 'C - Average'), ('D', 'D - Poor'), ('F', 'F - Critical')], default='C', help_text="Performance grade A-F.")
+    health_status = models.CharField(max_length=20, choices=[('healthy', 'Healthy'), ('warning', 'Warning'), ('critical', 'Critical')], default='healthy', help_text="Campaign health status.")
     is_active = models.BooleanField(default=True, help_text="Is the campaign currently running?")
+    paused = models.BooleanField(default=False, help_text="Is the campaign paused by vendor?")
+    archived = models.BooleanField(default=False, help_text="Is the campaign archived?")
+    template = models.ForeignKey('CampaignTemplate', on_delete=models.SET_NULL, blank=True, null=True, related_name='campaigns', help_text="Template used to create this campaign (optional).")
+    email_enabled = models.BooleanField(default=False, help_text="Include email channel.")
+    sms_enabled = models.BooleanField(default=False, help_text="Include SMS channel.")
+    social_enabled = models.BooleanField(default=False, help_text="Include social media channel.")
+    audience_location = models.CharField(max_length=255, blank=True, help_text="Target location (city, region, or country).")
+    audience_interests = models.TextField(blank=True, help_text="Comma-separated interests for targeting.")
+    audience_device = models.CharField(max_length=20, choices=DEVICE_CHOICES, default='all', help_text="Target device type.")
+    audience_age_min = models.PositiveSmallIntegerField(blank=True, null=True, help_text="Minimum target age.")
+    audience_age_max = models.PositiveSmallIntegerField(blank=True, null=True, help_text="Maximum target age.")
+    schedule_days = models.JSONField(default=list, blank=True, help_text="List of days to run the campaign.")
+    schedule_start_time = models.TimeField(blank=True, null=True, help_text="Daily start time for campaign display.")
+    schedule_end_time = models.TimeField(blank=True, null=True, help_text="Daily end time for campaign display.")
+    goal_type = models.CharField(max_length=20, choices=GOAL_CHOICES, blank=True, help_text="Primary performance goal.")
+    goal_value = models.DecimalField(max_digits=8, decimal_places=2, blank=True, null=True, help_text="Target value for the goal.")
+    utm_source = models.CharField(max_length=100, blank=True)
+    utm_medium = models.CharField(max_length=100, blank=True)
+    utm_campaign = models.CharField(max_length=150, blank=True)
+    utm_content = models.CharField(max_length=150, blank=True)
+    utm_term = models.CharField(max_length=150, blank=True)
+    base_headline = models.CharField(max_length=120, blank=True, help_text="Primary headline for the ad.")
+    base_description = models.CharField(max_length=200, blank=True, help_text="Primary description for the ad.")
+    base_image_url = models.URLField(blank=True, help_text="Image URL for the ad.")
+    base_cta = models.CharField(max_length=60, blank=True, help_text="Call-to-action text.")
+    creative_variants = models.JSONField(default=dict, blank=True, help_text="Creative variants for A/B testing.")
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_updated = models.DateTimeField(auto_now=True, help_text="Last time metrics were updated.")
 
     class Meta:
         ordering = ('-start_date',)
@@ -1660,7 +2003,137 @@ class AdCampaign(models.Model):
         target = self.promoted_product.name if self.promoted_product else self.vendor.name
         return f"Ad: {target} ({self.get_placement_display()})"
 
-    # TODO: Add methods to check if active based on dates
+    def calculate_metrics(self):
+        """Calculate and update performance metrics."""
+        from django.utils import timezone
+        
+        # Calculate CTR
+        if self.impressions > 0:
+            self.ctr = (self.clicks / self.impressions) * 100
+        else:
+            self.ctr = 0
+        
+        # Calculate conversion rate
+        if self.clicks > 0:
+            self.conversion_rate = (self.conversions / self.clicks) * 100
+        else:
+            self.conversion_rate = 0
+        
+        # Calculate ROI
+        if self.budget and self.budget > 0:
+            revenue = self.conversions * 100  # Assume $100 per conversion
+            self.roi = ((revenue - float(self.spent)) / float(self.budget)) * 100
+        else:
+            self.roi = None
+        
+        # Calculate performance score
+        avg_ctr = 2.0  # Industry benchmark
+        if self.ctr >= avg_ctr * 1.5:
+            self.performance_score = 'A'
+        elif self.ctr >= avg_ctr:
+            self.performance_score = 'B'
+        elif self.ctr >= avg_ctr * 0.5:
+            self.performance_score = 'C'
+        elif self.ctr >= avg_ctr * 0.25:
+            self.performance_score = 'D'
+        else:
+            self.performance_score = 'F'
+        
+        # Calculate health status
+        if self.ctr < 0.5 or self.conversion_rate < 1.0:
+            self.health_status = 'critical'
+        elif self.ctr < 1.0 or self.conversion_rate < 2.0:
+            self.health_status = 'warning'
+        else:
+            self.health_status = 'healthy'
+        
+        self.last_updated = timezone.now()
+        self.save(update_fields=['ctr', 'conversion_rate', 'roi', 'performance_score', 'health_status', 'last_updated'])
+
+    def get_time_remaining(self):
+        """Get time remaining for campaign."""
+        from django.utils import timezone
+        
+        remaining = self.end_date - timezone.now()
+        if remaining.total_seconds() <= 0:
+            return "Ended"
+        
+        days = remaining.days
+        hours = remaining.seconds // 3600
+        
+        if days > 0:
+            return f"{days}d {hours}h"
+        else:
+            return f"{hours}h"
+
+    def get_budget_remaining(self):
+        """Get remaining budget."""
+        if not self.budget:
+            return None
+        return self.budget - self.spent
+
+    def get_budget_percentage(self):
+        """Get percentage of budget spent."""
+        if not self.budget or self.budget == 0:
+            return 0
+        return min(100, (self.spent / self.budget) * 100)
+
+    def is_campaign_active(self):
+        """Check if campaign should be active based on dates."""
+        from django.utils import timezone
+        
+        now = timezone.now()
+        return self.start_date <= now <= self.end_date and self.is_active and not self.archived
+
+# --- Campaign Template Model ---
+class CampaignTemplate(models.Model):
+    """
+    Represents a campaign template for quick campaign creation.
+    """
+    TEMPLATE_TYPE_CHOICES = [
+        ('seasonal', 'Seasonal'),
+        ('product_launch', 'Product Launch'),
+        ('holiday', 'Holiday'),
+        ('clearance', 'Clearance'),
+        ('custom', 'Custom'),
+    ]
+    
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='campaign_templates', help_text="The vendor who owns this template.")
+    name = models.CharField(max_length=255, help_text="Template name (e.g., 'Black Friday 2024').")
+    description = models.TextField(blank=True, help_text="Description of the template.")
+    template_type = models.CharField(max_length=20, choices=TEMPLATE_TYPE_CHOICES, default='custom', help_text="Type of template for categorization.")
+    
+    # Campaign configuration saved in template
+    placement = models.CharField(max_length=50, choices=AdCampaign.PLACEMENT_CHOICES, help_text="Default placement for campaigns from this template.")
+    budget_template = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Suggested budget for campaigns from this template.")
+    duration_days = models.PositiveIntegerField(default=30, help_text="Default campaign duration in days.")
+    
+    # Integration settings
+    email_enabled = models.BooleanField(default=False, help_text="Include email channel.")
+    sms_enabled = models.BooleanField(default=False, help_text="Include SMS channel.")
+    social_enabled = models.BooleanField(default=False, help_text="Include social media channel.")
+    
+    # Metadata
+    is_public = models.BooleanField(default=False, help_text="Is this template visible to other vendors? (Premium feature)")
+    usage_count = models.PositiveIntegerField(default=0, help_text="Track how many times this template was used.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ('-created_at',)
+        verbose_name = "Campaign Template"
+        verbose_name_plural = "Campaign Templates"
+    
+    def __str__(self):
+        return f"Template: {self.name} ({self.get_template_type_display()})"
+    
+    def get_suggested_end_date(self):
+        """Get suggested end date based on duration."""
+        from django.utils import timezone
+        
+        start = timezone.now()
+        end = start + timezone.timedelta(days=self.duration_days)
+        return end
 
 # --- Notification Model ---
 class Notification(models.Model):

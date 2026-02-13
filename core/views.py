@@ -4,6 +4,7 @@ import json, datetime
 import csv
 from kombu.exceptions import OperationalError # Import OperationalError to handle broker connection issues
 import random # For selecting random spotlights
+import string # For code generation (BulkCodeGenerator)
 from decimal import Decimal, InvalidOperation
 from django.core.mail import EmailMessage
 from typing import Optional
@@ -70,7 +71,7 @@ from .artisan_verification_views import (
 )
 from .models import ( # Ensure UserProfile is imported
     Product, Category, Cart, CartItem, Order, OrderItem, Address,
-    Wishlist, ProductReview, Vendor, VendorReview, Promotion, AdCampaign,
+    Wishlist, ProductReview, Vendor, VendorReview, Promotion, AdCampaign, CampaignTemplate,
     Notification, UserProfile, Transaction, Escrow, Dispute, Message, Conversation, ProductImage, ProductVideo, SavedForLaterItem, # Added ProductImage, ProductVideo
     ShippingMethod, PaymentGateway, TaxRate, Currency, SiteSettings, BlogPost, BlogCategory,
     FAQ, SupportTicket, TicketResponse, UserActivity, AuditLog, APIKey, WebhookEvent,
@@ -101,7 +102,7 @@ from .forms import ( # Ensure RiderApplication is imported if needed by forms, b
     VendorRegistrationForm, VendorProfileUpdateForm, MessageForm, ServiceProviderProfileForm, # VendorVerificationForm, # Commented out
     ProductQuestionForm, ProductAnswerForm, ServiceBookingDetailsForm, ServiceAvailabilityForm,
     ServiceForm, ServicePackageFormSet, ServiceReviewForm, ServiceSearchForm, ServiceAvailabilityFormSet, ServiceProviderPayoutForm,
-    PortfolioItemForm, VendorPayoutRequestForm, CouponApplyForm, # Added VendorPayoutRequestForm and CouponApplyForm
+    PortfolioItemForm, VendorPayoutRequestForm, CouponApplyForm, BulkCodeGeneratorForm, # Added VendorPayoutRequestForm, CouponApplyForm, and BulkCodeGeneratorForm
     VendorShippingForm, VendorPaymentForm, VendorAdditionalInfoForm, RiderPayoutRequestForm, # Added RiderPayoutRequestForm
     VerificationMethodSelectionForm, ServiceProviderPayoutRequestForm, # New multi-step forms, Added ServiceProviderPayoutRequestForm
     BusinessDetailsForm,             # New multi-step forms
@@ -612,7 +613,159 @@ class VendorOrderListView(LoginRequiredMixin, IsVendorMixin, ListView):
 
     def get_queryset(self):
         vendor = self.request.user.vendor_profile
-        return Order.objects.filter(items__product__vendor=vendor).distinct().order_by('-created_at')
+        queryset = Order.objects.filter(items__product__vendor=vendor).distinct()
+
+        # Search by order ID or customer name
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(order_id__icontains=search_query) |
+                Q(user__first_name__icontains=search_query) |
+                Q(user__last_name__icontains=search_query) |
+                Q(user__email__icontains=search_query)
+            )
+
+        # Filter by status
+        status_filter = self.request.GET.get('status', '').strip()
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        # Filter by payment method
+        payment_method = self.request.GET.get('payment_method', '').strip()
+        if payment_method:
+            queryset = queryset.filter(payment_method=payment_method)
+
+        # Filter by date range
+        start_date = self.request.GET.get('start_date', '').strip()
+        end_date = self.request.GET.get('end_date', '').strip()
+        if start_date:
+            try:
+                start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+                queryset = queryset.filter(created_at__gte=start_dt)
+            except ValueError:
+                pass
+        if end_date:
+            try:
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+                # Include the entire end day
+                end_dt = end_dt.replace(hour=23, minute=59, second=59)
+                queryset = queryset.filter(created_at__lte=end_dt)
+            except ValueError:
+                pass
+
+        # Filter by amount range
+        min_amount = self.request.GET.get('min_amount', '').strip()
+        max_amount = self.request.GET.get('max_amount', '').strip()
+        if min_amount:
+            try:
+                queryset = queryset.filter(total_amount__gte=Decimal(min_amount))
+            except (ValueError, InvalidOperation):
+                pass
+        if max_amount:
+            try:
+                queryset = queryset.filter(total_amount__lte=Decimal(max_amount))
+            except (ValueError, InvalidOperation):
+                pass
+
+        # Sorting
+        sort_option = self.request.GET.get('sort', 'date_desc').strip()
+        if sort_option == 'date_asc':
+            queryset = queryset.order_by('created_at')
+        elif sort_option == 'date_desc':
+            queryset = queryset.order_by('-created_at')
+        elif sort_option == 'amount_asc':
+            queryset = queryset.order_by('total_amount')
+        elif sort_option == 'amount_desc':
+            queryset = queryset.order_by('-total_amount')
+        elif sort_option == 'status':
+            queryset = queryset.order_by('status', '-created_at')
+        else:
+            queryset = queryset.order_by('-created_at')
+
+        # CSV Export
+        if self.request.GET.get('export') == 'csv':
+            return self.export_to_csv(queryset, vendor)
+
+        return queryset
+
+    def export_to_csv(self, queryset, vendor):
+        import csv
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="vendor_orders_{vendor.slug}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['Order ID', 'Customer', 'Status', 'Payment Method', 'Total Amount', 'Created At', 'Updated At'])
+        
+        for order in queryset:
+            customer_name = f"{order.user.get_full_name()}" if order.user else "Guest"
+            writer.writerow([
+                order.order_id,
+                customer_name,
+                order.get_status_display(),
+                order.get_payment_method_display() if order.payment_method else 'N/A',
+                f"{order.total_amount:.2f}",
+                order.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                order.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+            ])
+        
+        return response
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        vendor = self.request.user.vendor_profile
+        
+        # Get all vendor orders for stats (no filters)
+        all_vendor_orders = Order.objects.filter(items__product__vendor=vendor).distinct()
+        
+        # Calculate statistics
+        context['total_orders'] = all_vendor_orders.count()
+        context['pending_orders'] = all_vendor_orders.filter(
+            status__in=['PENDING', 'AWAITING_ESCROW_PAYMENT', 'AWAITING_DIRECT_PAYMENT', 'AWAITING_BANK_TRANSFER']
+        ).count()
+        context['processing_orders'] = all_vendor_orders.filter(
+            status__in=['PROCESSING', 'IN_PROGRESS', 'SHIPPED']
+        ).count()
+        context['completed_orders'] = all_vendor_orders.filter(status='COMPLETED').count()
+        context['cancelled_orders'] = all_vendor_orders.filter(status__in=['CANCELLED', 'REFUNDED']).count()
+        context['disputed_orders'] = all_vendor_orders.filter(status='DISPUTED').count()
+        
+        # Calculate revenue (completed orders only)
+        from django.db.models import Sum
+        completed_revenue = all_vendor_orders.filter(status='COMPLETED').aggregate(
+            total=Sum('total_amount')
+        )['total'] or Decimal('0.00')
+        context['total_revenue'] = completed_revenue
+        
+        # Average order value
+        if context['completed_orders'] > 0:
+            context['avg_order_value'] = completed_revenue / context['completed_orders']
+        else:
+            context['avg_order_value'] = Decimal('0.00')
+        
+        # Current filters
+        context['search_query'] = self.request.GET.get('q', '').strip()
+        context['current_status'] = self.request.GET.get('status', '').strip()
+        context['current_payment_method'] = self.request.GET.get('payment_method', '').strip()
+        context['current_start_date'] = self.request.GET.get('start_date', '').strip()
+        context['current_end_date'] = self.request.GET.get('end_date', '').strip()
+        context['current_min_amount'] = self.request.GET.get('min_amount', '').strip()
+        context['current_max_amount'] = self.request.GET.get('max_amount', '').strip()
+        context['current_sort'] = self.request.GET.get('sort', 'date_desc').strip()
+        
+        # Filtered count
+        context['filtered_count'] = self.get_queryset().count()
+        
+        # Choices for filters
+        context['status_choices'] = [('', _('All Status'))] + list(Order.Status.choices)
+        context['payment_method_choices'] = [('', _('All Methods'))] + list(Order.PAYMENT_METHOD_CHOICES)
+        
+        return context
+
+    def render_to_response(self, context, **response_kwargs):
+        # Handle CSV export
+        if self.request.GET.get('export') == 'csv':
+            return self.export_to_csv(self.get_queryset(), self.request.user.vendor_profile)
+        return super().render_to_response(context, **response_kwargs)
 
 
 class VendorOrderDetailView(LoginRequiredMixin, IsVendorMixin, DetailView):
@@ -793,6 +946,69 @@ class VendorPromotionCreateView(LoginRequiredMixin, IsVendorMixin, SuccessMessag
     success_url = reverse_lazy('core:vendor_promotion_list')
     success_message = _("Promotion created successfully.")
 
+    def get_initial(self):
+        initial = super().get_initial()
+        template_key = self.request.GET.get('template')
+        if not template_key:
+            return initial
+
+        now = timezone.now()
+        start_date = now + datetime.timedelta(hours=1)
+        end_date = start_date + datetime.timedelta(days=7)
+
+        template_defaults = {
+            'new_customer': {
+                'name': _("New Customer Welcome"),
+                'promo_type': 'percentage',
+                'discount_value': Decimal('20.00'),
+                'scope': 'all',
+                'description': _("Attract first-time buyers with a special discount."),
+            },
+            'flash_sale': {
+                'name': _("Flash Sale"),
+                'promo_type': 'percentage',
+                'discount_value': Decimal('30.00'),
+                'scope': 'all',
+                'description': _("Time-limited offer for quick purchases."),
+            },
+            'vip_exclusive': {
+                'name': _("VIP Exclusive"),
+                'promo_type': 'percentage',
+                'discount_value': Decimal('25.00'),
+                'scope': 'all',
+                'description': _("Premium discount for loyal customers."),
+            },
+            'high_value': {
+                'name': _("High-Value Purchase"),
+                'promo_type': 'fixed_amount',
+                'discount_value': Decimal('50.00'),
+                'scope': 'all',
+                'minimum_purchase_amount': Decimal('50.00'),
+                'description': _("Encourage larger orders with tiered discounts."),
+            },
+            'category_sale': {
+                'name': _("Category Sale"),
+                'promo_type': 'percentage',
+                'discount_value': Decimal('15.00'),
+                'scope': 'category',
+                'description': _("Promote specific product categories."),
+            },
+            'seasonal': {
+                'name': _("Seasonal Offer"),
+                'promo_type': 'percentage',
+                'discount_value': Decimal('20.00'),
+                'scope': 'all',
+                'description': _("Holiday and season-specific promotions."),
+            },
+        }
+
+        if template_key in template_defaults:
+            initial.update(template_defaults[template_key])
+            initial.setdefault('start_date', start_date)
+            initial.setdefault('end_date', end_date)
+
+        return initial
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['vendor'] = self.request.user.vendor_profile
@@ -829,6 +1045,234 @@ class VendorPromotionDeleteView(LoginRequiredMixin, IsVendorMixin, SuccessMessag
         return Promotion.objects.filter(applicable_vendor=self.request.user.vendor_profile)
 
 
+class VendorBulkCodeGeneratorView(LoginRequiredMixin, IsVendorMixin, FormView):
+    """
+    Generate bulk promotion codes for vendors.
+    """
+    form_class = BulkCodeGeneratorForm
+    template_name = 'core/vendor_bulk_code_generator.html'
+    success_url = reverse_lazy('core:vendor_promotion_list')
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['vendor'] = self.request.user.vendor_profile
+        return kwargs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['promotions'] = Promotion.objects.filter(
+            applicable_vendor=self.request.user.vendor_profile
+        ).order_by('-created_at')
+        return context
+    
+    def generate_codes(self, prefix, quantity, code_type):
+        """Generate unique promotion codes."""
+        codes = set()
+        
+        # Define character set based on code_type
+        if code_type == 'numeric':
+            chars = string.digits
+        elif code_type == 'uppercase':
+            chars = string.ascii_uppercase + string.digits
+        else:  # alphanumeric
+            chars = string.ascii_letters.upper() + string.digits
+        
+        # Generate codes until we have enough unique ones
+        while len(codes) < quantity:
+            # Generate random suffix (6-8 chars)
+            suffix_length = random.randint(6, 8)
+            suffix = ''.join(random.choices(chars, k=suffix_length))
+            
+            if prefix:
+                code = f"{prefix.upper()}-{suffix}"
+            else:
+                code = suffix
+            
+            codes.add(code)
+        
+        return list(codes)
+    
+    def form_valid(self, form):
+        try:
+            promotion = form.cleaned_data['promotion']
+            quantity = form.cleaned_data['quantity']
+            prefix = form.cleaned_data['prefix']
+            code_type = form.cleaned_data['code_type']
+            
+            # Generate codes
+            generated_codes = self.generate_codes(prefix, quantity, code_type)
+            
+            # Store in session for display and confirmation
+            self.request.session['generated_codes'] = generated_codes
+            self.request.session['promotion_id'] = promotion.id
+            self.request.session['promotion_name'] = promotion.name
+            
+            # Redirect to confirmation page
+            return redirect('core:vendor_bulk_code_confirm')
+        
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error generating bulk codes: {str(e)}")
+            form.add_error(None, _("An error occurred while generating codes. Please try again."))
+            return self.form_invalid(form)
+
+
+class VendorBulkCodeConfirmView(LoginRequiredMixin, IsVendorMixin, View):
+    """
+    Confirm and save generated codes, or download them.
+    """
+    template_name = 'core/vendor_bulk_code_confirm.html'
+    
+    def get(self, request):
+        codes = request.session.get('generated_codes', [])
+        promotion_id = request.session.get('promotion_id')
+        promotion_name = request.session.get('promotion_name')
+        
+        if not codes or not promotion_id:
+            messages.error(request, _("Session expired. Please generate codes again."))
+            return redirect('core:vendor_bulk_code_generator')
+        
+        # Verify vendor owns this promotion
+        promotion = get_object_or_404(
+            Promotion.objects.filter(applicable_vendor=request.user.vendor_profile),
+            id=promotion_id
+        )
+        
+        context = {
+            'codes': codes,
+            'promotion': promotion,
+            'total_codes': len(codes),
+        }
+        return render(request, self.template_name, context)
+    
+    def post(self, request):
+        """Save generated codes to database."""
+        codes = request.session.get('generated_codes', [])
+        promotion_id = request.session.get('promotion_id')
+        
+        if not codes or not promotion_id:
+            messages.error(request, _("Session expired. Please generate codes again."))
+            return redirect('core:vendor_bulk_code_generator')
+        
+        # Verify vendor owns this promotion
+        promotion = get_object_or_404(
+            Promotion.objects.filter(applicable_vendor=request.user.vendor_profile),
+            id=promotion_id
+        )
+        
+        # Import PromotionCode model
+        from .models import PromotionCode
+        
+        try:
+            # Create PromotionCode objects in bulk
+            promotion_codes = [
+                PromotionCode(
+                    promotion=promotion,
+                    code=code,
+                    status='active'
+                )
+                for code in codes
+            ]
+            
+            # Use bulk_create for efficiency
+            created_codes = PromotionCode.objects.bulk_create(
+                promotion_codes,
+                ignore_conflicts=True  # Skip duplicates if any
+            )
+            
+            # Clear session
+            del request.session['generated_codes']
+            del request.session['promotion_id']
+            del request.session['promotion_name']
+            
+            messages.success(
+                request,
+                _("Successfully created {} promotion codes for '{}'.").format(
+                    len(created_codes),
+                    promotion.name
+                )
+            )
+            return redirect('core:vendor_promotion_list')
+        
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error saving bulk codes: {str(e)}")
+            messages.error(request, _("An error occurred while saving codes. Please try again."))
+            return redirect('core:vendor_bulk_code_confirm')
+
+
+class VendorBulkCodeGeneratorView(LoginRequiredMixin, IsVendorMixin, FormView):
+    """
+    Generate bulk promotion codes for vendors.
+    """
+    form_class = BulkCodeGeneratorForm
+    template_name = 'core/vendor_bulk_code_generator.html'
+    success_url = reverse_lazy('core:vendor_promotion_list')
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['vendor'] = self.request.user.vendor_profile
+        return kwargs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['promotions'] = Promotion.objects.filter(
+            applicable_vendor=self.request.user.vendor_profile
+        ).order_by('-created_at')
+        return context
+    
+    def generate_codes(self, prefix, quantity, code_type):
+        """Generate unique promotion codes."""
+        codes = set()
+        
+        # Define character set based on code_type
+        if code_type == 'numeric':
+            chars = string.digits
+        elif code_type == 'uppercase':
+            chars = string.ascii_uppercase + string.digits
+        else:  # alphanumeric
+            chars = string.ascii_letters.upper() + string.digits
+        
+        # Generate codes until we have enough unique ones
+        while len(codes) < quantity:
+            # Generate random suffix (6-8 chars)
+            suffix_length = random.randint(6, 8)
+            suffix = ''.join(random.choices(chars, k=suffix_length))
+            
+            if prefix:
+                code = f"{prefix.upper()}-{suffix}"
+            else:
+                code = suffix
+            
+            codes.add(code)
+        
+        return list(codes)
+    
+    def form_valid(self, form):
+        try:
+            promotion = form.cleaned_data['promotion']
+            quantity = form.cleaned_data['quantity']
+            prefix = form.cleaned_data['prefix']
+            code_type = form.cleaned_data['code_type']
+            
+            # Generate codes
+            generated_codes = self.generate_codes(prefix, quantity, code_type)
+            
+            # Store in session for display and confirmation
+            self.request.session['generated_codes'] = generated_codes
+            self.request.session['promotion_id'] = promotion.id
+            self.request.session['promotion_name'] = promotion.name
+            
+            # Redirect to confirmation page
+            return redirect('core:vendor_bulk_code_confirm')
+        
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error generating bulk codes: {str(e)}")
+            form.add_error(None, _("An error occurred while generating codes. Please try again."))
+            return self.form_invalid(form)
+
+
 class VendorCampaignListView(LoginRequiredMixin, IsVendorMixin, ListView):
     model = AdCampaign
     template_name = 'core/vendor_campaign_list.html'
@@ -836,7 +1280,10 @@ class VendorCampaignListView(LoginRequiredMixin, IsVendorMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        queryset = AdCampaign.objects.filter(vendor=self.request.user.vendor_profile)
+        queryset = AdCampaign.objects.filter(
+            vendor=self.request.user.vendor_profile,
+            archived=False
+        )
 
         search_query = self.request.GET.get('q')
         if search_query:
@@ -844,17 +1291,63 @@ class VendorCampaignListView(LoginRequiredMixin, IsVendorMixin, ListView):
 
         status = self.request.GET.get('status')
         if status == 'active':
-            queryset = queryset.filter(is_active=True)
+            queryset = queryset.filter(is_active=True, paused=False)
         elif status == 'inactive':
             queryset = queryset.filter(is_active=False)
+        elif status == 'paused':
+            queryset = queryset.filter(paused=True)
+        
+        # Filter by placement
+        placement = self.request.GET.get('placement')
+        if placement:
+            queryset = queryset.filter(placement=placement)
+        
+        # Filter by date range
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+        if date_from:
+            from django.utils import timezone
+            start_date = timezone.datetime.strptime(date_from, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+            queryset = queryset.filter(start_date__gte=start_date)
+        if date_to:
+            from django.utils import timezone
+            end_date = timezone.datetime.strptime(date_to, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+            queryset = queryset.filter(end_date__lte=end_date)
 
-        return queryset.order_by('-start_date')
+        sort = self.request.GET.get('sort', '-start_date')
+        if sort in ['-start_date', 'start_date', 'name', '-name', 'end_date', '-end_date']:
+            queryset = queryset.order_by(sort)
+        
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('q', '')
         context['current_status'] = self.request.GET.get('status', '')
+        context['current_placement'] = self.request.GET.get('placement', '')
+        context['date_from'] = self.request.GET.get('date_from', '')
+        context['date_to'] = self.request.GET.get('date_to', '')
+        context['sort'] = self.request.GET.get('sort', '-start_date')
         context['vendor'] = self.request.user.vendor_profile
+        context['campaign_templates'] = CampaignTemplate.objects.filter(
+            vendor=self.request.user.vendor_profile
+        ).order_by('-created_at')
+        
+        # Calculate summary stats
+        all_campaigns = AdCampaign.objects.filter(vendor=self.request.user.vendor_profile, archived=False)
+        context['total_campaigns'] = all_campaigns.count()
+        context['active_campaigns'] = all_campaigns.filter(is_active=True, paused=False).count()
+        context['paused_campaigns'] = all_campaigns.filter(paused=True).count()
+        context['total_spent'] = all_campaigns.aggregate(Sum('spent'))['spent__sum'] or 0
+        context['total_budget'] = all_campaigns.aggregate(Sum('budget'))['budget__sum'] or 0
+        context['total_impressions'] = all_campaigns.aggregate(Sum('impressions'))['impressions__sum'] or 0
+        context['total_clicks'] = all_campaigns.aggregate(Sum('clicks'))['clicks__sum'] or 0
+        context['total_conversions'] = all_campaigns.aggregate(Sum('conversions'))['conversions__sum'] or 0
+        if context['total_impressions']:
+            context['total_ctr'] = (context['total_clicks'] / context['total_impressions']) * 100
+        else:
+            context['total_ctr'] = 0
+        
         return context
 
 class VendorCampaignCreateView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, CreateView):
@@ -872,6 +1365,28 @@ class VendorCampaignCreateView(LoginRequiredMixin, IsVendorMixin, SuccessMessage
     def form_valid(self, form):
         form.instance.vendor = self.request.user.vendor_profile
         return super().form_valid(form)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        template_id = self.request.GET.get('template_id') or self.request.GET.get('template')
+        if template_id:
+            template = CampaignTemplate.objects.filter(
+                pk=template_id,
+                vendor=self.request.user.vendor_profile
+            ).first()
+            if template:
+                now = timezone.now()
+                initial.update({
+                    'template': template,
+                    'placement': template.placement,
+                    'budget': template.budget_template,
+                    'email_enabled': template.email_enabled,
+                    'sms_enabled': template.sms_enabled,
+                    'social_enabled': template.social_enabled,
+                    'start_date': now,
+                    'end_date': now + timezone.timedelta(days=template.duration_days),
+                })
+        return initial
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -910,6 +1425,163 @@ class VendorCampaignDeleteView(LoginRequiredMixin, IsVendorMixin, SuccessMessage
 
     def get_queryset(self):
         return AdCampaign.objects.filter(vendor=self.request.user.vendor_profile)
+
+
+class VendorCampaignPauseView(LoginRequiredMixin, IsVendorMixin, View):
+    """Toggle pause state of a campaign."""
+    
+    def post(self, request, pk):
+        campaign = get_object_or_404(AdCampaign, pk=pk, vendor=request.user.vendor_profile)
+        campaign.paused = not campaign.paused
+        campaign.save()
+        
+        status = "paused" if campaign.paused else "resumed"
+        messages.success(request, f"Campaign {status} successfully.")
+        
+        return redirect('core:vendor_campaign_list')
+
+
+class VendorCampaignDuplicateView(LoginRequiredMixin, IsVendorMixin, View):
+    """Duplicate a campaign with new name."""
+    
+    def post(self, request, pk):
+        original = get_object_or_404(AdCampaign, pk=pk, vendor=request.user.vendor_profile)
+        
+        duplicate = AdCampaign(
+            vendor=original.vendor,
+            name=f"{original.name} (Copy)",
+            promoted_product=original.promoted_product,
+            placement=original.placement,
+            start_date=original.start_date,
+            end_date=original.end_date,
+            budget=original.budget,
+        )
+        duplicate.save()
+        
+        messages.success(request, f"Campaign duplicated successfully.")
+        return redirect('core:vendor_campaign_edit', pk=duplicate.pk)
+
+
+class VendorCampaignAnalyticsView(LoginRequiredMixin, IsVendorMixin, DetailView):
+    """Show detailed analytics for a campaign."""
+    model = AdCampaign
+    template_name = 'core/vendor_campaign_analytics.html'
+    context_object_name = 'campaign'
+    
+    def get_queryset(self):
+        return AdCampaign.objects.filter(vendor=self.request.user.vendor_profile)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        campaign = self.get_object()
+        
+        # Calculate additional analytics
+        context['time_remaining'] = campaign.get_time_remaining()
+        context['budget_percentage'] = campaign.get_budget_percentage()
+        context['budget_remaining'] = campaign.get_budget_remaining()
+        context['performance_grade'] = campaign.performance_score
+        
+        # Calculate daily metrics if available
+        context['avg_daily_spend'] = campaign.spent / max(1, (campaign.end_date - campaign.start_date).days)
+        
+        return context
+
+
+class VendorCampaignBulkActionView(LoginRequiredMixin, IsVendorMixin, View):
+    """Handle bulk actions on campaigns."""
+    
+    def post(self, request):
+        action = request.POST.get('action')
+        campaign_ids = request.POST.getlist('campaign_ids')
+        
+        if not campaign_ids:
+            messages.error(request, "No campaigns selected.")
+            return redirect('core:vendor_campaign_list')
+        
+        campaigns = AdCampaign.objects.filter(
+            pk__in=campaign_ids,
+            vendor=request.user.vendor_profile
+        )
+        
+        if action == 'pause':
+            campaigns.update(paused=True)
+            messages.success(request, f"Paused {campaigns.count()} campaign(s).")
+        elif action == 'resume':
+            campaigns.update(paused=False)
+            messages.success(request, f"Resumed {campaigns.count()} campaign(s).")
+        elif action == 'archive':
+            campaigns.update(archived=True)
+            messages.success(request, f"Archived {campaigns.count()} campaign(s).")
+        elif action == 'delete':
+            campaigns.delete()
+            messages.success(request, f"Deleted {campaigns.count()} campaign(s).")
+        
+        return redirect('core:vendor_campaign_list')
+
+
+class VendorCampaignTemplateListView(LoginRequiredMixin, IsVendorMixin, ListView):
+    """List campaign templates for vendor."""
+    model = CampaignTemplate
+    template_name = 'core/vendor_campaign_template_list.html'
+    context_object_name = 'templates'
+    paginate_by = 10
+    
+    def get_queryset(self):
+        return CampaignTemplate.objects.filter(vendor=self.request.user.vendor_profile).order_by('-created_at')
+
+
+class VendorCampaignTemplateCreateView(LoginRequiredMixin, IsVendorMixin, CreateView):
+    """Create a new campaign template."""
+    model = CampaignTemplate
+    template_name = 'core/vendor_campaign_template_form.html'
+    fields = ['name', 'description', 'template_type', 'placement', 'budget_template', 'duration_days', 'email_enabled', 'sms_enabled', 'social_enabled']
+    success_url = reverse_lazy('core:vendor_campaign_template_list')
+    
+    def form_valid(self, form):
+        form.instance.vendor = self.request.user.vendor_profile
+        messages.success(self.request, "Campaign template created successfully.")
+        return super().form_valid(form)
+
+
+class VendorCampaignTemplateDeleteView(LoginRequiredMixin, IsVendorMixin, DeleteView):
+    """Delete a campaign template."""
+    model = CampaignTemplate
+    template_name = 'core/vendor_campaign_template_confirm_delete.html'
+    success_url = reverse_lazy('core:vendor_campaign_template_list')
+    
+    def get_queryset(self):
+        return CampaignTemplate.objects.filter(vendor=self.request.user.vendor_profile)
+    
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, "Campaign template deleted successfully.")
+        return super().delete(request, *args, **kwargs)
+
+
+class VendorCampaignFromTemplateView(LoginRequiredMixin, IsVendorMixin, View):
+    """Create a campaign from a template."""
+    
+    def get(self, request, pk):
+        template = get_object_or_404(CampaignTemplate, pk=pk, vendor=request.user.vendor_profile)
+        
+        # Create a new campaign from template
+        from django.utils import timezone
+        
+        new_campaign = AdCampaign(
+            vendor=request.user.vendor_profile,
+            name=f"{template.name} - {timezone.now().strftime('%b %d, %Y')}",
+            placement=template.placement,
+            start_date=timezone.now(),
+            end_date=timezone.now() + timezone.timedelta(days=template.duration_days),
+            budget=template.budget_template,
+        )
+        new_campaign.save()
+        
+        # Update template usage
+        template.usage_count += 1
+        template.save(update_fields=['usage_count'])
+        
+        messages.success(request, f"Campaign created from template '{template.name}'.")
+        return redirect('core:vendor_campaign_edit', pk=new_campaign.pk)
 
 
 class VendorNotificationListView(LoginRequiredMixin, IsVendorMixin, ListView):

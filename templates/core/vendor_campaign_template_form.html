@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% load i18n static crispy_forms_tags %}
+
+{% block title %}{% trans "Create Campaign Template" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --accent-color: #667eea;
+        --secondary-color: #764ba2;
+        --dark-bg: #1e1e2e;
+        --dark-card: #2d2d44;
+        --border-color: #3d3d54;
+    }
+
+    [data-theme="dark"] {
+        --bg-color: var(--dark-bg);
+        --card-bg: var(--dark-card);
+    }
+
+    body {
+        background-color: var(--bg-color, #f8f9fa);
+        color: var(--text-color, #1f2937);
+    }
+
+    .form-container {
+        max-width: 900px;
+        margin: 2rem auto;
+        background-color: var(--card-bg, white);
+        padding: 2rem;
+        border-radius: 12px;
+        border: 1px solid var(--border-color, #e5e7eb);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+    }
+
+    .form-section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--accent-color);
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    label {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color, #e5e7eb);
+        border-radius: 6px;
+        font-size: 1rem;
+        background-color: var(--bg-color, #f9fafb);
+        color: var(--text-color, #1f2937);
+    }
+
+    [data-theme="dark"] input[type="text"],
+    [data-theme="dark"] input[type="number"],
+    [data-theme="dark"] textarea,
+    [data-theme="dark"] select {
+        background-color: rgba(255, 255, 255, 0.08);
+        color: #f0f4ff;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    [data-theme="dark"] input::placeholder,
+    [data-theme="dark"] textarea::placeholder {
+        color: rgba(240, 244, 255, 0.65);
+        opacity: 1;
+    }
+
+    [data-theme="dark"] select option {
+        background-color: #1f2430;
+        color: #f0f4ff;
+    }
+
+    input[type="checkbox"] {
+        width: auto;
+        margin-right: 0.5rem;
+    }
+
+    .checkbox-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .checkbox-wrapper {
+        display: flex;
+        align-items: center;
+    }
+
+    button {
+        background-color: var(--accent-color);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    button:hover {
+        background-color: var(--secondary-color);
+        transform: translateY(-2px);
+    }
+
+    a.btn-cancel {
+        display: inline-block;
+        margin-left: 1rem;
+        padding: 0.75rem 1.5rem;
+        background-color: transparent;
+        color: var(--accent-color);
+        border: 2px solid var(--accent-color);
+        border-radius: 6px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    a.btn-cancel:hover {
+        background-color: var(--accent-color);
+        color: white;
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="form-container">
+    <h1 style="margin-bottom: 0.5rem;">📋 {% trans "Create Campaign Template" %}</h1>
+    <p style="margin: 0 0 2rem 0; color: var(--muted-color);">{% trans "Define a reusable template for creating campaigns quickly." %}</p>
+
+    {% include 'partials/_messages.html' %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Basic Info -->
+        <div class="form-section">
+            <div class="form-section-title">{% trans "Template Information" %}</div>
+
+            <div class="form-group">
+                <label for="id_name">{% trans "Template Name" %} *</label>
+                {{ form.name }}
+                {% if form.name.errors %}<small style="color: #ef4444;">{{ form.name.errors }}</small>{% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="id_description">{% trans "Description" %}</label>
+                {{ form.description }}
+                <small style="color: var(--muted-color);">{% trans "Brief description of when to use this template." %}</small>
+                {% if form.description.errors %}<small style="color: #ef4444;">{{ form.description.errors }}</small>{% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="id_template_type">{% trans "Template Type" %} *</label>
+                {{ form.template_type }}
+                {% if form.template_type.errors %}<small style="color: #ef4444;">{{ form.template_type.errors }}</small>{% endif %}
+            </div>
+        </div>
+
+        <!-- Campaign Config -->
+        <div class="form-section">
+            <div class="form-section-title">{% trans "Campaign Configuration" %}</div>
+
+            <div class="form-group">
+                <label for="id_placement">{% trans "Default Placement" %} *</label>
+                {{ form.placement }}
+                {% if form.placement.errors %}<small style="color: #ef4444;">{{ form.placement.errors }}</small>{% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="id_duration_days">{% trans "Duration (Days)" %} *</label>
+                {{ form.duration_days }}
+                <small style="color: var(--muted-color);">{% trans "Default campaign duration in days." %}</small>
+                {% if form.duration_days.errors %}<small style="color: #ef4444;">{{ form.duration_days.errors }}</small>{% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="id_budget_template">{% trans "Suggested Budget" %}</label>
+                {{ form.budget_template }}
+                <small style="color: var(--muted-color);">{% trans "Optional recommended budget for campaigns." %}</small>
+                {% if form.budget_template.errors %}<small style="color: #ef4444;">{{ form.budget_template.errors }}</small>{% endif %}
+            </div>
+        </div>
+
+        <!-- Integration Settings -->
+        <div class="form-section">
+            <div class="form-section-title">{% trans "Integration Channels" %}</div>
+
+            <div class="checkbox-group">
+                <div class="checkbox-wrapper">
+                    {{ form.email_enabled }}
+                    <label for="id_email_enabled" style="margin: 0; display: inline;">📧 {% trans "Enable Email Channel" %}</label>
+                </div>
+
+                <div class="checkbox-wrapper">
+                    {{ form.sms_enabled }}
+                    <label for="id_sms_enabled" style="margin: 0; display: inline;">📱 {% trans "Enable SMS Channel" %}</label>
+                </div>
+
+                <div class="checkbox-wrapper">
+                    {{ form.social_enabled }}
+                    <label for="id_social_enabled" style="margin: 0; display: inline;">🔗 {% trans "Enable Social Media Channel" %}</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <button type="submit">
+                ✅ {% trans "Create Template" %}
+            </button>
+            <a href="{% url 'core:vendor_campaign_template_list' %}" class="btn-cancel">
+                {% trans "Cancel" %}
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock content %}

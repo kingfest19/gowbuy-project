@@ -6,14 +6,49 @@
 {% block extra_css %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
+        /* CSS Variables for Color Theming */
+        :root {
+            --bg-body: #ffffff;
+            --bg-surface: #f8f9fa;
+            --text-main: #1a2533;
+            --text-muted: #6c757d;
+            --border-color: #e9ecef;
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --card-shadow: 0 8px 32px rgba(102, 126, 234, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #0f1419;
+            --bg-surface: rgba(30, 30, 46, 0.9);
+            --text-main: #f0f4ff;
+            --text-muted: #cbd5e1;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --card-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
         .list-container {
             max-width: 1200px;
-            margin: 0 auto;
-            background-color: #ebe8e8;
+            margin: 2rem auto;
+            background-color: var(--bg-surface);
             padding: 2rem 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
-            border: 1px solid #959aa0; /* Softer border */
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
         }
 
         .page-header {
@@ -22,30 +57,204 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 1rem;
-            padding: 1.5rem;
             margin-bottom: 2.5rem;
-            border-radius: 8px;
-            background-color: #ffffff; /* White background */
-            border-left: 5px solid #323232ff; /* Prominent black left border */
-            border: 1px solid #c7c9cb; /* Subtle border for separation */
         }
 
         .page-header h1 {
-            font-weight: 600;
-            color: #323232ff; /* Black text for contrast */
+            font-weight: 700;
+            color: var(--text-main);
             margin-bottom: 0;
+            font-size: 1.75rem;
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+            margin: 0.5rem 0 0 0;
+        }
+
+        .page-header div {
+            flex: 1;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+            padding: 1.25rem 1.5rem;
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.35rem;
+            background: rgba(102, 126, 234, 0.12);
+        }
+
+        .stat-icon svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .stat-card.stat-green .stat-icon {
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        .stat-card.stat-amber .stat-icon {
+            background: rgba(245, 158, 11, 0.18);
+        }
+
+        .stat-card.stat-blue .stat-icon {
+            background: rgba(59, 130, 246, 0.15);
+        }
+
+        .stat-card.stat-purple .stat-icon {
+            background: rgba(118, 75, 162, 0.18);
+        }
+
+        .stat-value {
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: var(--accent-color);
+            letter-spacing: -0.02em;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .filter-bar {
+            background: linear-gradient(135deg, var(--bg-surface), rgba(102, 126, 234, 0.02));
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .filter-bar {
+            background: linear-gradient(135deg, rgba(30, 30, 46, 0.5), rgba(102, 126, 234, 0.05));
+        }
+
+        .filter-bar .input-group .form-control {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .filter-bar .input-group .form-control {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border-color: var(--border-color);
+        }
+
+        .filter-bar .input-group .form-control:focus {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            border-color: var(--accent-color);
+        }
+
+        [data-theme="dark"] .filter-bar .input-group .form-control:focus {
+            background-color: rgba(255, 255, 255, 0.12);
+        }
+
+        [data-theme="dark"] .filter-bar .input-group-text {
+            color: var(--text-main);
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .filter-bar .form-control::placeholder {
+            color: var(--text-muted);
+            opacity: 1;
+        }
+
+        [data-theme="dark"] .filter-bar input[type="date"] {
+            color-scheme: dark;
+        }
+
+        [data-theme="dark"] .filter-bar .date-input {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff' stroke-width='2'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 18px 18px;
+            padding-right: 2.5rem;
+        }
+
+        [data-theme="dark"] .filter-bar .date-input::-webkit-calendar-picker-indicator {
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .btn-dark {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-dark:hover {
+            background-color: var(--accent-secondary);
+            border-color: var(--accent-secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-outline-secondary {
+            background-color: transparent;
+            border-color: var(--border-color);
+            color: var(--text-main);
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
+        }
+
+        .btn-group .btn {
+            background-color: var(--bg-surface);
+            border-color: var(--border-color);
+            color: var(--text-main);
+            transition: all 0.3s ease;
+        }
+
+        .btn-group .btn.btn-dark {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
         }
 
         .table {
             border-collapse: separate;
-            border-spacing: 0 0.75rem; /* Increased spacing for a "card list" feel */
+            border-spacing: 0 0.75rem;
         }
 
         .table thead th {
             border: none;
             font-weight: 600;
-            color: #6c757d;
-            background-color: transparent; /* Make header transparent to show page bg */
+            color: var(--text-muted);
+            background-color: transparent;
             padding: 0.5rem 1rem;
             text-transform: uppercase;
             font-size: 0.8rem;
@@ -53,67 +262,291 @@
         }
 
         .table tbody tr {
-            background-color: #fff;
+            background-color: var(--bg-body);
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
-            border: 1px solid #f0f2f5;
+            border: 1px solid var(--border-color);
         }
-        
+
+        [data-theme="dark"] .table tbody tr {
+            background-color: rgba(30, 30, 46, 0.5);
+            border-color: var(--border-color);
+        }
+
         .table tbody tr:hover {
             transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 24px var(--card-shadow);
         }
 
         .table td, .table th {
             border: none;
             vertical-align: middle;
             padding: 1rem;
+            color: var(--text-main);
         }
 
-        .btn-dark {
-            background-color: #474747;
-            border-color: #474747;
-        }
-        .btn-dark:hover {
-            background-color: #383838; /* A darker shade for hover */
-            border-color: #383838;
+        .badge {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
         }
 
-        .filter-bar {
-            background-color: #f8f9fa;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            border: 1px solid #c7c9cb; /* Softer border */
+        .badge.bg-success {
+            background-color: var(--success-color) !important;
+        }
+
+        .badge.bg-secondary {
+            background-color: var(--text-muted) !important;
         }
 
         .action-buttons .btn {
-            border-radius: 50%; /* Circular buttons */
-            width: 38px;
-            height: 38px;
+            border-radius: 6px;
+            width: auto;
+            height: auto;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0;
+            padding: 0.5rem 0.75rem;
+            margin-left: 0.25rem;
+            transition: all 0.3s ease;
         }
-        .action-buttons form {
-            vertical-align: middle;
+
+        .btn-outline-dark {
+            border-color: var(--border-color);
+            color: var(--text-main);
+        }
+
+        .btn-outline-dark:hover {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
+        }
+
+        .btn-outline-danger {
+            border-color: var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .btn-outline-danger:hover {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h4 {
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            color: var(--text-muted);
+        }
+
+        .modal-content {
+            background-color: var(--bg-surface);
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .modal-content {
+            background-color: rgba(30, 30, 46, 0.95);
+            border-color: var(--border-color);
+        }
+
+        .modal-header, .modal-footer {
+            border-color: var(--border-color);
+        }
+
+        .modal-title {
+            color: var(--text-main);
+        }
+
+        [data-theme="dark"] .modal-header,
+        [data-theme="dark"] .modal-footer {
+            border-color: var(--border-color);
+        }
+
+        .modal-body {
+            color: var(--text-main);
+        }
+
+        .campaign-cards {
+            display: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .campaign-card {
+            background-color: var(--bg-body);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+        }
+
+        .campaign-card summary {
+            list-style: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .campaign-card summary::after {
+            content: "▾";
+            font-size: 1.1rem;
+            color: var(--text-muted);
+        }
+
+        .campaign-card[open] summary::after {
+            content: "▴";
+        }
+
+        .campaign-card summary > div {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+            border-radius: 12px;
+            padding: 0.75rem 0.85rem;
+            flex: 1;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .campaign-card summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .campaign-card-header {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .campaign-card-meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .campaign-card-body {
+            margin-top: 0.75rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 0.75rem;
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .campaign-card-row span:first-child {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.72rem;
+        }
+
+        .campaign-card-row span:last-child {
+            font-weight: 600;
+        }
+
+        .campaign-card-actions .btn {
+            border-radius: 999px;
+        }
+
+        .campaign-card-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .list-container {
+                padding: 1.5rem 1rem;
+            }
+
+            .page-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .page-header div {
+                width: 100%;
+            }
+
+            .page-header a {
+                width: 100%;
+                text-align: center;
+            }
+
+            .stats-bar {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+
+            .filter-bar {
+                padding: 1rem;
+            }
+
+            .table-responsive {
+                display: none;
+            }
+
+            .campaign-cards {
+                display: block;
+            }
         }
     </style>
 {% endblock extra_css %}
 
 {% block content %}
-<div class="container mt-5 mb-5">
+<div class="container-fluid mt-5 mb-5">
     <div class="list-container">
         <div class="page-header">
             <div>
-                <h1>{% trans "Manage Ad Campaigns" %}</h1>
-                <p class="text-muted mb-0">{% trans "Create and manage advertising for your products or store." %}</p>
+                <h1><i class="bi bi-megaphone-fill me-2" style="color: var(--accent-color);"></i>{% trans "Manage Ad Campaigns" %}</h1>
+                <p>{% trans "Create and manage advertising for your products or store." %}</p>
             </div>
-            <a href="{% url 'core:vendor_campaign_create' %}" class="btn btn-lg btn-dark">
-                <i class="bi bi-plus-circle me-2"></i> {% trans "Create New Campaign" %}
-            </a>
+            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                <form method="get" action="{% url 'core:vendor_campaign_create' %}" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <div style="min-width: 220px;">
+                        <select id="templateQuickSelect" name="template_id" class="form-select" style="background-color: var(--bg-body); color: var(--text-main); border-color: var(--border-color);">
+                            <option value="">{% trans "Use template..." %}</option>
+                            {% if campaign_templates %}
+                                {% for template in campaign_templates %}
+                                    <option value="{{ template.id }}">{{ template.name }}</option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="" disabled>{% trans "No templates yet" %}</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-outline-secondary">
+                        <i class="bi bi-magic me-2"></i>{% trans "Use Template" %}
+                    </button>
+                </form>
+                <a href="{% url 'core:vendor_campaign_template_create' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-plus-circle me-2"></i>{% trans "Create Template" %}
+                </a>
+                <a href="{% url 'core:vendor_campaign_template_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-collection me-2"></i>{% trans "View Templates" %}
+                </a>
+                <a href="{% url 'core:vendor_campaign_create' %}" class="btn btn-lg btn-dark">
+                    <i class="bi bi-plus-circle me-2"></i> {% trans "Create Campaign" %}
+                </a>
+            </div>
+            {% if not campaign_templates %}
+                <div style="width: 100%; margin-top: 0.75rem; padding: 0.75rem 1rem; border-radius: 10px; border: 1px dashed rgba(102, 126, 234, 0.35); background: rgba(102, 126, 234, 0.08); color: var(--text-main);">
+                    <strong>{% trans "No templates yet." %}</strong>
+                    <span class="ms-1">{% trans "Create one to speed up campaign creation." %}</span>
+                </div>
+            {% endif %}
         </div>
 
         {% include 'partials/_messages.html' %}
@@ -121,110 +554,508 @@
         <!-- Filter Bar -->
         <div class="filter-bar">
             <form method="get" action="">
-                <div class="row g-2 align-items-center">
-                    <div class="col-md">
+                <div class="row g-2 align-items-center mb-2">
+                    <div class="col-12 col-md-5">
                         <div class="input-group">
-                            <input type="text" name="q" class="form-control" placeholder="{% trans 'Search by campaign name...' %}" value="{{ search_query|default:'' }}">
-                            <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+                            <span class="input-group-text" style="background-color: transparent; border-color: var(--border-color);">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" name="q" class="form-control" placeholder="{% trans 'Search campaigns...' %}" value="{{ search_query|default:'' }}">
                         </div>
                     </div>
-                    <div class="col-md-auto">
-                        <div class="btn-group" role="group" aria-label="Status filter">
-                            <a href="?{% query_transform status='' page=1 %}" class="btn {% if not current_status %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "All" %}</a>
-                            <a href="?{% query_transform status='active' page=1 %}" class="btn {% if current_status == 'active' %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "Active" %}</a>
-                            <a href="?{% query_transform status='inactive' page=1 %}" class="btn {% if current_status == 'inactive' %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "Inactive" %}</a>
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <select name="sort" class="form-select" style="background-color: var(--bg-body); color: var(--text-main); border-color: var(--border-color);">
+                            <option value="-created_at" {% if sort == '-created_at' %}selected{% endif %}>{% trans "Newest First" %}</option>
+                            <option value="created_at" {% if sort == 'created_at' %}selected{% endif %}>{% trans "Oldest First" %}</option>
+                            <option value="name" {% if sort == 'name' %}selected{% endif %}>{% trans "Name (A-Z)" %}</option>
+                            <option value="-start_date" {% if sort == '-start_date' %}selected{% endif %}>{% trans "Recently Started" %}</option>
+                            <option value="-end_date" {% if sort == '-end_date' %}selected{% endif %}>{% trans "Ending Soon" %}</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <button type="button" class="btn btn-outline-secondary w-100" data-bs-toggle="collapse" data-bs-target="#advancedFilters" aria-expanded="false" aria-controls="advancedFilters">
+                            <i class="bi bi-funnel me-2"></i> {% trans "Advanced Filters" %}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Advanced Filters Collapse -->
+                <div class="collapse mt-3" id="advancedFilters">
+                    <div style="background-color: var(--bg-surface); padding: 1.25rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <div class="row g-3">
+                            <div class="col-12 col-sm-6 col-md-4">
+                                <label class="form-label" style="color: var(--text-main); font-weight: 600;">{% trans "Status" %}</label>
+                                <div class="btn-group w-100" role="group">
+                                    <a href="?{% query_transform status='' page=1 %}" class="btn btn-sm {% if not current_status %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "All" %}</a>
+                                    <a href="?{% query_transform status='active' page=1 %}" class="btn btn-sm {% if current_status == 'active' %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "Active" %}</a>
+                                    <a href="?{% query_transform status='inactive' page=1 %}" class="btn btn-sm {% if current_status == 'inactive' %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "Inactive" %}</a>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-4">
+                                <label class="form-label" style="color: var(--text-main); font-weight: 600;">{% trans "Placement" %}</label>
+                                <select name="placement" class="form-select form-select-sm" style="background-color: var(--bg-body); color: var(--text-main); border-color: var(--border-color);">
+                                    <option value="">{% trans "All Placements" %}</option>
+                                    <option value="homepage" {% if placement == 'homepage' %}selected{% endif %}>🏠 {% trans "Homepage" %}</option>
+                                    <option value="category" {% if placement == 'category' %}selected{% endif %}>📂 {% trans "Category" %}</option>
+                                    <option value="search" {% if placement == 'search' %}selected{% endif %}>🔍 {% trans "Search Results" %}</option>
+                                    <option value="email" {% if placement == 'email' %}selected{% endif %}>📧 {% trans "Email" %}</option>
+                                    <option value="social" {% if placement == 'social' %}selected{% endif %}>📱 {% trans "Social Media" %}</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-4">
+                                <label class="form-label" style="color: var(--text-main); font-weight: 600;">{% trans "Date Range" %}</label>
+                                <input type="date" name="date_from" class="form-control form-control-sm" placeholder="{% trans 'From' %}" value="{{ date_from|default:'' }}" style="background-color: var(--bg-body); color: var(--text-main); border-color: var(--border-color);">
+                            </div>
+                            <div class="col-12 col-sm-6 col-md">
+                                <label class="form-label" style="color: var(--text-main); font-weight: 600;">{% trans "To Date" %}</label>
+                                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to|default:'' }}" style="background-color: var(--bg-body); color: var(--text-main); border-color: var(--border-color);">
+                            </div>
+                            <div class="col-12">
+                                <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
+                                    <button type="submit" class="btn btn-dark btn-sm">
+                                        <i class="bi bi-search me-2"></i> {% trans "Apply Filters" %}
+                                    </button>
+                                    <a href="{% url 'core:vendor_campaign_list' %}" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-arrow-clockwise me-2"></i> {% trans "Reset" %}
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </form>
         </div>
 
-    {% if campaigns %}
-    <div class="table-responsive">
-        <table class="table table-hover table-vcenter mb-0">
-            <thead>
-                <tr>
-                    <th>{% trans "Name" %}</th>
-                    <th>{% trans "Target" %}</th>
-                    <th>{% trans "Placement" %}</th>
-                    <th>{% trans "Duration" %}</th>
-                    <th class="text-center">{% trans "Status" %}</th>
-                    <th class="text-end pe-3">{% trans "Actions" %}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for campaign in campaigns %}
-                <tr>
-                    <td>{{ campaign.name }}</td>
-                    <td><code>{{ campaign.promoted_product.name|default:vendor.name }}</code></td>
-                    <td>{{ campaign.get_placement_display }}</td>
-                    <td>
-                        <small class="d-block">{{ campaign.start_date|date:"M d, Y" }}</small>
-                        <small class="d-block text-muted">{% trans "to" %} {{ campaign.end_date|date:"M d, Y" }}</small>
-                    </td>
-                    <td class="text-center">
-                        {% if campaign.is_active %}
-                            <span class="badge bg-success">{% trans "Active" %}</span>
-                        {% else %}
-                            <span class="badge bg-secondary">{% trans "Inactive" %}</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-end action-buttons">
-                        <a href="{% url 'core:vendor_campaign_edit' campaign.id %}" class="btn btn-outline-dark" title="{% trans 'Edit' %}">
-                            <i class="bi bi-pencil-fill"></i>
-                        </a>
-                        <!-- Delete Button trigger modal -->
-                        <button type="button" class="btn btn-outline-danger ms-1" data-bs-toggle="modal" data-bs-target="#deleteCampaignModal-{{ campaign.id }}" title="{% trans 'Delete' %}">
-                            <i class="bi bi-trash-fill"></i>
-                        </button>
+        <!-- Stats -->
+        <div class="stats-bar">
+            <div class="stat-card stat-blue">
+                <span class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                        <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                        <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                        <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                    </svg>
+                </span>
+                <div class="stat-value">{{ total_campaigns|default:0 }}</div>
+                <div class="stat-label">{% trans "Total Campaigns" %}</div>
+            </div>
+            <div class="stat-card stat-green">
+                <span class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12l5 5L19 7"></path>
+                    </svg>
+                </span>
+                <div class="stat-value">{{ active_campaigns|default:0 }}</div>
+                <div class="stat-label">{% trans "Active Now" %}</div>
+            </div>
+            <div class="stat-card stat-amber">
+                <span class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M12 7v5l3 3"></path>
+                    </svg>
+                </span>
+                <div class="stat-value">{{ paused_campaigns|default:0 }}</div>
+                <div class="stat-label">{% trans "Paused" %}</div>
+            </div>
+            <div class="stat-card stat-purple">
+                <span class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#764ba2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1v22"></path>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H15a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                </span>
+                <div class="stat-value">${{ total_budget|floatformat:0 }}</div>
+                <div class="stat-label">{% trans "Total Budget" %}</div>
+            </div>
+        </div>
 
-                        <!-- Delete Confirmation Modal -->
-                        <div class="modal fade" id="deleteCampaignModal-{{ campaign.id }}" tabindex="-1" aria-labelledby="deleteCampaignModalLabel-{{ campaign.id }}" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title text-start" id="deleteCampaignModalLabel-{{ campaign.id }}">{% trans "Confirm Deletion" %}</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body text-start">
-                                        {% blocktrans with campaign_name=campaign.name %}Are you sure you want to delete the campaign "{{ campaign_name }}"? This action cannot be undone.{% endblocktrans %}
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
-                                        <form action="{% url 'core:vendor_campaign_delete' campaign.id %}" method="post" class="d-inline">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-danger">{% trans "Yes, Delete" %}</button>
-                                        </form>
-                                    </div>
-                                </div>
+        <!-- Performance Metrics -->
+        <div class="stats-bar">
+            <div class="stat-card stat-blue">
+                <span class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </span>
+                <div class="stat-value">{{ total_impressions|default:0 }}</div>
+                <div class="stat-label">{% trans "Impressions" %}</div>
+            </div>
+            <div class="stat-card stat-purple">
+                <span class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#764ba2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12h18"></path>
+                        <path d="M13 5l7 7-7 7"></path>
+                    </svg>
+                </span>
+                <div class="stat-value">{{ total_clicks|default:0 }}</div>
+                <div class="stat-label">{% trans "Clicks" %}</div>
+            </div>
+            <div class="stat-card stat-green">
+                <span class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2l3 7h7l-5.5 4 2.5 7-7-4.5L5 20l2.5-7L2 9h7z"></path>
+                    </svg>
+                </span>
+                <div class="stat-value">{{ total_conversions|default:0 }}</div>
+                <div class="stat-label">{% trans "Conversions" %}</div>
+            </div>
+            <div class="stat-card stat-amber">
+                <span class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 3v18h18"></path>
+                        <path d="M7 14l4-4 3 3 5-6"></path>
+                    </svg>
+                </span>
+                <div class="stat-value">{{ total_ctr|floatformat:2 }}%</div>
+                <div class="stat-label">{% trans "Avg. CTR" %}</div>
+            </div>
+        </div>
+
+        {% if campaigns %}
+            <!-- Smart Suggestions -->
+            <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08)); border: 1px solid rgba(102, 126, 234, 0.3); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+                <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                    <div style="font-size: 1.5rem;">💡</div>
+                    <div>
+                        <h5 style="color: var(--text-main); font-weight: 700; margin-bottom: 0.75rem; margin-top: 0;">{% trans "Campaign Optimization Tips" %}</h5>
+                        <ul style="margin-bottom: 0; color: var(--text-muted); font-size: 0.9rem; line-height: 1.8;">
+                            <li><strong>🎯 {% trans "Multi-Placement Strategy" %}</strong> - {% trans "Campaigns across 3+ placements get 2.5x more engagement. Mix homepage, email, and search." %}</li>
+                            <li><strong>📅 {% trans "Seasonal Timing" %}</strong> - {% trans "Product category campaigns perform 40% better during relevant seasons and holidays." %}</li>
+                            <li><strong>⚡ {% trans "Test New Audiences" %}</strong> - {% trans "A/B test campaigns with different product segments to find what resonates." %}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="campaign-cards">
+                {% for campaign in campaigns %}
+                <details class="campaign-card">
+                    <summary>
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <input type="checkbox" class="form-check-input campaign-checkbox" name="campaign_ids" value="{{ campaign.id }}">
+                            <div class="campaign-card-header">
+                                <strong>{{ campaign.name }}</strong>
+                                <span class="campaign-card-meta">
+                                    {% if campaign.paused %}
+                                        ⏸ {% trans "Paused" %}
+                                    {% elif campaign.is_campaign_active %}
+                                        ✓ {% trans "Active" %}
+                                    {% else %}
+                                        ✕ {% trans "Ended" %}
+                                    {% endif %}
+                                </span>
                             </div>
                         </div>
-                    </td>
-                </tr>
+                        <span class="badge bg-secondary">{% trans "Details" %}</span>
+                    </summary>
+                    <div class="campaign-card-body">
+                        <div class="campaign-card-row">
+                            <span>{% trans "Target" %}</span>
+                            <span>{{ campaign.promoted_product.name|truncatewords:2|default:vendor.name }}</span>
+                        </div>
+                        <div class="campaign-card-row">
+                            <span>{% trans "Placement" %}</span>
+                            <span>{{ campaign.get_placement_display }}</span>
+                        </div>
+                        <div class="campaign-card-row">
+                            <span>{% trans "Metrics" %}</span>
+                            <span>👁 {{ campaign.impressions|default:0 }} · 🖱 {{ campaign.clicks|default:0 }} · {{ campaign.ctr|default:"0"|floatformat:2 }}% CTR</span>
+                        </div>
+                        <div class="campaign-card-row">
+                            <span>{% trans "Health" %}</span>
+                            <span>{{ campaign.performance_score|default:"—" }} · {% if campaign.health_status == 'healthy' %}✓{% elif campaign.health_status == 'warning' %}⚠{% else %}✕{% endif %}</span>
+                        </div>
+                        <div class="campaign-card-row">
+                            <span>{% trans "Budget" %}</span>
+                            <span>${{ campaign.spent|default:"0"|floatformat:2 }} / ${{ campaign.budget|default:"0"|floatformat:2 }}</span>
+                        </div>
+                        <div class="campaign-card-row campaign-card-actions" style="justify-content: flex-start; gap: 0.5rem; flex-wrap: wrap;">
+                            <a href="{% url 'core:vendor_campaign_analytics' campaign.id %}" class="btn btn-sm btn-outline-dark">{% trans "Analytics" %}</a>
+                            <a href="{% url 'core:vendor_campaign_edit' campaign.id %}" class="btn btn-sm btn-outline-dark">{% trans "Edit" %}</a>
+                            <form method="post" action="{% url 'core:vendor_campaign_pause' campaign.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-dark">
+                                    {% if campaign.paused %}{% trans "Resume" %}{% else %}{% trans "Pause" %}{% endif %}
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'core:vendor_campaign_duplicate' campaign.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-dark">{% trans "Duplicate" %}</button>
+                            </form>
+                            <a href="{% url 'core:vendor_campaign_delete' campaign.id %}" class="btn btn-sm btn-outline-danger">{% trans "Delete" %}</a>
+                        </div>
+                    </div>
+                </details>
                 {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="text-center py-5">
-        <i class="bi bi-megaphone" style="font-size: 3rem; color: #6c757d;"></i>
-        <h4 class="mt-3">{% trans "No Ad Campaigns Found" %}</h4>
-        {% if search_query or current_status %}
-            <p class="text-muted">{% trans "Try adjusting your search or filter to find what you're looking for." %}</p>
-            <a href="{% url 'core:vendor_campaign_list' %}" class="btn btn-secondary btn-sm">{% trans "Clear Filters" %}</a>
+            </div>
+
+        <div class="table-responsive">
+            <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width: 30px;">
+                                <input type="checkbox" id="checkAllCampaigns" class="form-check-input">
+                            </th>
+                            <th>{% trans "Name" %}</th>
+                            <th>{% trans "Target" %}</th>
+                            <th>{% trans "Placement" %}</th>
+                            <th class="text-center">{% trans "Metrics" %}</th>
+                            <th class="text-center">{% trans "Health" %}</th>
+                            <th>{% trans "Budget" %}</th>
+                            <th class="text-end pe-3">{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for campaign in campaigns %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="form-check-input campaign-checkbox" name="campaign_ids" value="{{ campaign.id }}">
+                            </td>
+                            <td>
+                                <strong>{{ campaign.name }}</strong>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                                    {% if campaign.paused %}
+                                        <span class="badge bg-warning">⏸ {% trans "Paused" %}</span>
+                                    {% elif campaign.is_campaign_active %}
+                                        <span class="badge bg-success">✓ {% trans "Active" %}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">✕ {% trans "Ended" %}</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <code style="background-color: var(--bg-surface); color: var(--text-main); padding: 0.25rem 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.85rem;">
+                                    {{ campaign.promoted_product.name|truncatewords:2|default:vendor.name }}
+                                </code>
+                            </td>
+                            <td>
+                                <i class="bi me-1" style="color: var(--accent-color);">
+                                    {% if campaign.placement == 'homepage_banner' %}
+                                        🏠
+                                    {% elif campaign.placement == 'category_sidebar' %}
+                                        📂
+                                    {% elif campaign.placement == 'search_results_top' %}
+                                        🔍
+                                    {% else %}
+                                        📢
+                                    {% endif %}
+                                </i>
+                                {{ campaign.get_placement_display }}
+                            </td>
+                            <td class="text-center">
+                                <div style="font-size: 0.85rem;">
+                                    <div class="metric-badge">
+                                        👁 <strong>{{ campaign.impressions|default:0 }}</strong><br>
+                                        🖱 <strong>{{ campaign.clicks|default:0 }}</strong>
+                                    </div>
+                                    <div style="color: var(--accent-color); font-weight: 600; font-size: 0.9rem; margin-top: 0.25rem;">
+                                        {{ campaign.ctr|default:"0"|floatformat:2 }}% CTR
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <div class="health-badge" style="display: inline-block;">
+                                    <div class="performance-grade" style="display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; font-weight: 700; border: 2px solid; margin-right: 0.5rem; vertical-align: middle;
+                                        {% if campaign.performance_score == 'A' %}
+                                            background-color: rgba(16, 185, 129, 0.1); color: var(--success-color); border-color: var(--success-color);
+                                        {% elif campaign.performance_score == 'B' %}
+                                            background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border-color: #3b82f6;
+                                        {% elif campaign.performance_score == 'C' %}
+                                            background-color: rgba(245, 158, 11, 0.1); color: var(--warning-color); border-color: var(--warning-color);
+                                        {% elif campaign.performance_score == 'D' %}
+                                            background-color: rgba(249, 115, 22, 0.1); color: #f97316; border-color: #f97316;
+                                        {% else %}
+                                            background-color: rgba(239, 68, 68, 0.1); color: var(--danger-color); border-color: var(--danger-color);
+                                        {% endif %}
+                                    ">
+                                        {{ campaign.performance_score|default:"—" }}
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.75rem; color: var(--muted-text); margin-top: 0.25rem;">
+                                    {% if campaign.health_status == 'healthy' %}
+                                        ✓ {% trans "Healthy" %}
+                                    {% elif campaign.health_status == 'warning' %}
+                                        ⚠ {% trans "Warning" %}
+                                    {% else %}
+                                        ✕ {% trans "Critical" %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if campaign.budget %}
+                                <div style="font-size: 0.85rem;">
+                                    <div><strong>${{ campaign.spent|default:"0"|floatformat:2 }}</strong> / <span style="color: var(--text-muted);">${{ campaign.budget|floatformat:2 }}</span></div>
+                                    <div style="background-color: rgba(0,0,0,0.1); border-radius: 8px; height: 6px; margin: 0.25rem 0; overflow: hidden;">
+                                        <div style="width: {{ campaign.get_budget_percentage|floatformat:0 }}%; height: 100%; background: linear-gradient(90deg, var(--accent-color) 0%, var(--accent-secondary) 100%);"></div>
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted);">{{ campaign.get_budget_percentage|floatformat:0 }}% {% trans "used" %}</div>
+                                </div>
+                                {% else %}
+                                <small style="color: var(--text-muted);">—</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-end action-buttons">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'core:vendor_campaign_analytics' campaign.id %}" class="btn btn-sm btn-outline-dark" title="{% trans 'Analytics' %}" data-bs-toggle="tooltip">
+                                        <i class="bi bi-graph-up"></i>
+                                    </a>
+                                    <a href="{% url 'core:vendor_campaign_edit' campaign.id %}" class="btn btn-sm btn-outline-dark" title="{% trans 'Edit' %}" data-bs-toggle="tooltip">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </a>
+                                    <form method="post" action="{% url 'core:vendor_campaign_pause' campaign.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-dark" title="{% if campaign.paused %}{% trans 'Resume' %}{% else %}{% trans 'Pause' %}{% endif %}" data-bs-toggle="tooltip">
+                                            {% if campaign.paused %}
+                                                <i class="bi bi-play-fill"></i>
+                                            {% else %}
+                                                <i class="bi bi-pause-fill"></i>
+                                            {% endif %}
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{% url 'core:vendor_campaign_duplicate' campaign.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-dark" title="{% trans 'Duplicate' %}" data-bs-toggle="tooltip">
+                                            <i class="bi bi-files"></i>
+                                        </button>
+                                    </form>
+                                    <a href="{% url 'core:vendor_campaign_delete' campaign.id %}" class="btn btn-sm btn-outline-danger" title="{% trans 'Delete' %}" data-bs-toggle="tooltip">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        <!-- Bulk Actions Toolbar -->
+        <div id="bulkActionsToolbar" style="display: none; margin-top: 2rem; padding: 1rem; background-color: rgba(102, 126, 234, 0.1); border: 1px solid rgba(102, 126, 234, 0.3); border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <span style="color: var(--text-main); font-weight: 600;" id="bulkActionCount">0 {% trans "selected" %}</span>
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <form method="post" action="{% url 'core:vendor_campaign_bulk_action' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="pause">
+                        <div id="bulkCampaignIds"></div>
+                        <button type="submit" class="btn btn-sm btn-outline-dark">
+                            <i class="bi bi-pause-fill me-1"></i> {% trans "Pause Selected" %}
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'core:vendor_campaign_bulk_action' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="resume">
+                        <div id="bulkCampaignIds2"></div>
+                        <button type="submit" class="btn btn-sm btn-outline-dark">
+                            <i class="bi bi-play-fill me-1"></i> {% trans "Resume Selected" %}
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'core:vendor_campaign_bulk_action' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="archive">
+                        <div id="bulkCampaignIds3"></div>
+                        <button type="submit" class="btn btn-sm btn-outline-dark">
+                            <i class="bi bi-archive me-1"></i> {% trans "Archive Selected" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
         {% else %}
-            <p class="text-muted">{% trans "You haven't created any campaigns yet." %}</p>
-            <a href="{% url 'core:vendor_campaign_create' %}" class="btn btn-dark">
-                <i class="bi bi-plus-circle-fill me-2"></i>{% trans "Create Your First Campaign" %}
-            </a>
+            <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <h4>{% trans "No Ad Campaigns Found" %}</h4>
+                {% if search_query or current_status %}
+                    <p>{% trans "Try adjusting your search or filter to find what you're looking for." %}</p>
+                    <a href="{% url 'core:vendor_campaign_list' %}" class="btn btn-outline-secondary btn-sm">{% trans "Clear Filters" %}</a>
+                {% else %}
+                    <p>{% trans "You haven't created any campaigns yet." %}</p>
+                    <a href="{% url 'core:vendor_campaign_create' %}" class="btn btn-dark">
+                        <i class="bi bi-plus-circle-fill me-2"></i>{% trans "Create Your First Campaign" %}
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if is_paginated %}
+        <div class="mt-4">
+            {% include "core/pagination_snippet.html" with page_obj=page_obj %}
+        </div>
         {% endif %}
     </div>
-    {% endif %}
-    {% if is_paginated %}
-    <div class="mt-4">
-        {% include "core/pagination_snippet.html" with page_obj=page_obj %}
-    </div>
-    {% endif %}
-    </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkAllCheckbox = document.getElementById('checkAllCampaigns');
+    const campaignCheckboxes = document.querySelectorAll('.campaign-checkbox');
+    const bulkActionsToolbar = document.getElementById('bulkActionsToolbar');
+    const bulkActionCount = document.getElementById('bulkActionCount');
+
+    // Handle "select all" checkbox
+    if (checkAllCheckbox) {
+        checkAllCheckbox.addEventListener('change', function() {
+            campaignCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActionsUI();
+        });
+    }
+
+    // Handle individual checkboxes
+    campaignCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateBulkActionsUI();
+            
+            // Update "select all" checkbox state
+            const allChecked = Array.from(campaignCheckboxes).every(box => box.checked);
+            const someChecked = Array.from(campaignCheckboxes).some(box => box.checked);
+            if (checkAllCheckbox) {
+                checkAllCheckbox.checked = allChecked;
+                checkAllCheckbox.indeterminate = someChecked && !allChecked;
+            }
+        });
+    });
+
+    function updateBulkActionsUI() {
+        const selectedCount = Array.from(campaignCheckboxes).filter(box => box.checked).length;
+        
+        if (selectedCount > 0) {
+            bulkActionsToolbar.style.display = 'flex';
+            bulkActionCount.textContent = selectedCount + ' {% trans "selected" %}';
+            
+            // Update all forms with the selected campaign IDs
+            const selectedIds = Array.from(campaignCheckboxes)
+                .filter(box => box.checked)
+                .map(box => box.value);
+            
+            // Populate all bulk action forms
+            ['bulkCampaignIds', 'bulkCampaignIds2', 'bulkCampaignIds3'].forEach(containerId => {
+                const container = document.getElementById(containerId);
+                container.innerHTML = '';
+                selectedIds.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'campaign_ids';
+                    input.value = id;
+                    container.appendChild(input);
+                });
+            });
+        } else {
+            bulkActionsToolbar.style.display = 'none';
+        }
+    }
+
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
 {% endblock %}

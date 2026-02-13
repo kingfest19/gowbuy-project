@@ -99,12 +99,26 @@ urlpatterns = [
     path('dashboard/promotions/create/', views.VendorPromotionCreateView.as_view(), name='vendor_promotion_create'),
     path('dashboard/promotions/<int:pk>/edit/', views.VendorPromotionUpdateView.as_view(), name='vendor_promotion_edit'),
     path('dashboard/promotions/<int:pk>/delete/', views.VendorPromotionDeleteView.as_view(), name='vendor_promotion_delete'),
+    
+    # --- Bulk Code Generator ---
+    path('dashboard/promotions/bulk-codes/generate/', views.VendorBulkCodeGeneratorView.as_view(), name='vendor_bulk_code_generator'),
+    path('dashboard/promotions/bulk-codes/confirm/', views.VendorBulkCodeConfirmView.as_view(), name='vendor_bulk_code_confirm'),
 
     # --- Vendor Ad Campaigns ---
     path('dashboard/campaigns/', views.VendorCampaignListView.as_view(), name='vendor_campaign_list'),  # Corrected name to match template usage
        path('dashboard/campaigns/create/', views.VendorCampaignCreateView.as_view(), name='vendor_campaign_create'), # Corrected name
     path('dashboard/campaigns/<int:pk>/edit/', views.VendorCampaignUpdateView.as_view(), name='vendor_campaign_edit'), # Assuming pk
     path('dashboard/campaigns/<int:pk>/delete/', views.VendorCampaignDeleteView.as_view(), name='vendor_campaign_delete'), # Assuming pk
+    path('dashboard/campaigns/<int:pk>/pause/', views.VendorCampaignPauseView.as_view(), name='vendor_campaign_pause'),
+    path('dashboard/campaigns/<int:pk>/duplicate/', views.VendorCampaignDuplicateView.as_view(), name='vendor_campaign_duplicate'),
+    path('dashboard/campaigns/<int:pk>/analytics/', views.VendorCampaignAnalyticsView.as_view(), name='vendor_campaign_analytics'),
+    path('dashboard/campaigns/bulk-action/', views.VendorCampaignBulkActionView.as_view(), name='vendor_campaign_bulk_action'),
+    
+    # --- Campaign Templates ---
+    path('dashboard/campaign-templates/', views.VendorCampaignTemplateListView.as_view(), name='vendor_campaign_template_list'),
+    path('dashboard/campaign-templates/create/', views.VendorCampaignTemplateCreateView.as_view(), name='vendor_campaign_template_create'),
+    path('dashboard/campaign-templates/<int:pk>/delete/', views.VendorCampaignTemplateDeleteView.as_view(), name='vendor_campaign_template_delete'),
+    path('dashboard/campaign-templates/<int:pk>/use/', views.VendorCampaignFromTemplateView.as_view(), name='vendor_campaign_from_template'),
 
     # --- Vendor Notifications ---
     path('dashboard/notifications/', views.VendorNotificationListView.as_view(), name='vendor_notification_list'),

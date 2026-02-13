@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Campaign Templates" %} - {{ vendor.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<style>
+    :root {
+        --accent-color: #667eea;
+        --secondary-color: #764ba2;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --dark-bg: #1e1e2e;
+        --dark-card: #2d2d44;
+        --dark-border: #3d3d54;
+        --light-text: #e0e0e0;
+    }
+
+    [data-theme="dark"] {
+        --bg-color: var(--dark-bg);
+        --card-bg: var(--dark-card);
+        --border-color: var(--dark-border);
+        --text-color: var(--light-text);
+    }
+
+    body {
+        background-color: var(--bg-color, #f8f9fa);
+        color: var(--text-color, #333);
+    }
+
+    .templates-shell {
+        max-width: 1320px;
+        margin: 2.5rem auto;
+        padding: 0 0.5rem;
+    }
+
+    .templates-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+        padding: 1.5rem 1.75rem;
+        border-radius: 16px;
+        border: 1px solid var(--border-color, #e5e7eb);
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+    }
+
+    .templates-title {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }
+
+    .templates-subtitle {
+        margin: 0.5rem 0 0 0;
+        color: var(--text-muted, #6b7280);
+    }
+
+    .templates-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-primary-template {
+        background-color: var(--accent-color);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: 1px solid transparent;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-primary-template:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px rgba(102, 126, 234, 0.25);
+        color: white;
+    }
+
+    .btn-outline-template {
+        border: 1px solid var(--border-color, #e5e7eb);
+        color: var(--text-color, #111827);
+        padding: 0.7rem 1.25rem;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: transparent;
+    }
+
+    .template-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .template-card {
+        background-color: var(--card-bg, white);
+        border: 1px solid var(--border-color, #e5e7eb);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .template-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    }
+
+    .template-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+
+    .template-type-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        background-color: rgba(102, 126, 234, 0.1);
+        color: var(--accent-color);
+    }
+
+    .template-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-icon {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        background-color: transparent;
+        color: var(--text-color);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+
+    .btn-icon:hover {
+        background-color: var(--accent-color);
+        color: white;
+        border-color: var(--accent-color);
+    }
+
+    .template-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--accent-color);
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: var(--muted-color, #9ca3af);
+    }
+
+    .use-template-btn {
+        width: 100%;
+        margin-top: 1rem;
+        padding: 0.75rem;
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .use-template-btn:hover {
+        background-color: var(--secondary-color);
+        transform: translateY(-2px);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        border: 1px dashed rgba(102, 126, 234, 0.3);
+        border-radius: 16px;
+        background: rgba(102, 126, 234, 0.06);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        color: var(--muted-color);
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="templates-shell">
+        <div class="templates-header">
+            <div>
+                <h1 class="templates-title">📋 {% trans "Campaign Templates" %}</h1>
+                <p class="templates-subtitle">{% trans "Create campaigns quickly with pre-configured templates." %}</p>
+            </div>
+            <div class="templates-actions">
+                <a href="{% url 'core:vendor_campaign_template_list' %}" class="btn-outline-template">
+                    <i class="bi bi-collection"></i> {% trans "All Templates" %}
+                </a>
+                <a href="{% url 'core:vendor_campaign_template_create' %}" class="btn-primary-template">
+                    <i class="bi bi-plus-circle"></i> {% trans "New Template" %}
+                </a>
+            </div>
+        </div>
+
+        {% include 'partials/_messages.html' %}
+
+        {% if templates %}
+            <div class="template-grid">
+                {% for template in templates %}
+                    <div class="template-card">
+                        <div class="template-header">
+                            <div>
+                                <h3 style="margin: 0 0 0.5rem 0;">{{ template.name }}</h3>
+                                <span class="template-type-badge">{{ template.get_template_type_display }}</span>
+                            </div>
+                            <div class="template-actions">
+                                <a href="{% url 'core:vendor_campaign_template_delete' template.pk %}" class="btn-icon" title="{% trans 'Delete' %}">
+                                    🗑
+                                </a>
+                            </div>
+                        </div>
+
+                        {% if template.description %}
+                            <p style="margin: 0.75rem 0; font-size: 0.9rem; color: var(--muted-color);">{{ template.description }}</p>
+                        {% endif %}
+
+                        <div style="margin: 1rem 0; padding: 0.75rem; background-color: rgba(102, 126, 234, 0.05); border-radius: 6px; font-size: 0.85rem;">
+                            <div>📍 <strong>{{ template.get_placement_display }}</strong></div>
+                            {% if template.budget_template %}
+                                <div>💰 <strong>${{ template.budget_template|floatformat:2 }}</strong></div>
+                            {% endif %}
+                            <div>📅 <strong>{{ template.duration_days }}</strong> {% trans "days" %}</div>
+                        </div>
+
+                        <div style="display: flex; gap: 0.5rem; margin: 0.75rem 0;">
+                            {% if template.email_enabled %}<span style="font-size: 0.9rem; padding: 0.25rem 0.5rem; background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border-radius: 4px;">📧 {% trans "Email" %}</span>{% endif %}
+                            {% if template.sms_enabled %}<span style="font-size: 0.9rem; padding: 0.25rem 0.5rem; background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border-radius: 4px;">📱 {% trans "SMS" %}</span>{% endif %}
+                            {% if template.social_enabled %}<span style="font-size: 0.9rem; padding: 0.25rem 0.5rem; background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border-radius: 4px;">🔗 {% trans "Social" %}</span>{% endif %}
+                        </div>
+
+                        <div class="template-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">{{ template.usage_count }}</div>
+                                <div class="stat-label">{% trans "Used" %}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ template.created_at|date:"M d" }}</div>
+                                <div class="stat-label">{% trans "Created" %}</div>
+                            </div>
+                        </div>
+
+                        <a href="{% url 'core:vendor_campaign_from_template' template.pk %}" class="use-template-btn">
+                            ⚡ {% trans "Use Template" %}
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">📋</div>
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--text-color);">{% trans "No Templates Yet" %}</h4>
+                <p style="margin: 0; color: var(--muted-color);">{% trans "Create your first campaign template to get started." %}</p>
+                <a href="{% url 'core:vendor_campaign_template_create' %}" style="display: inline-block; margin-top: 1.5rem; background-color: var(--accent-color); color: white; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600;">
+                    ➕ {% trans "Create Template" %}
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock content %}

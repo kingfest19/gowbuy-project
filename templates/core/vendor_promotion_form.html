@@ -8,15 +8,48 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
+        /* CSS Variables for Color Theming */
+        :root {
+            --bg-body: #ffffff;
+            --bg-surface: #f8f9fa;
+            --text-main: #1a2533;
+            --text-muted: #6c757d;
+            --border-color: #e9ecef;
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --card-shadow: 0 8px 32px rgba(102, 126, 234, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #0f1419;
+            --bg-surface: rgba(30, 30, 46, 0.9);
+            --text-main: #f0f4ff;
+            --text-muted: #cbd5e1;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --card-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
         .form-container {
-            max-width: 900px; /* Adjusted for a form view */
+            max-width: 1000px;
             margin: 0 auto;
-            background-color:  #ebe8e8;
-            padding: 2rem 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
-            border: 1px solid #959aa0;
-            font-family: "Outfit", sans-serif; /* Consistent font from theme */
+            background-color: var(--bg-surface);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            font-family: "Outfit", sans-serif;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
 
         .page-header {
@@ -24,26 +57,94 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 1rem;
+            gap: 1.5rem;
             padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid #f0f2f5;
+            margin-bottom: 2.5rem;
+            border-bottom: 2px solid var(--border-color);
         }
 
         .page-header h1 {
-            font-family: "Poppins", sans-serif; /* Consistent font from theme */
+            font-family: "Poppins", sans-serif;
             font-weight: 700;
-            color: #1a2533;
+            color: var(--text-main);
             margin-bottom: 0;
+            font-size: 1.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .page-header h1 i {
+            color: var(--accent-color);
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+            margin-bottom: 0;
+            font-size: 0.9rem;
+        }
+
+        [data-theme="dark"] .page-header p {
+            color: #f0f4ff;
+        }
+
+        /* Two Column Layout */
+        .form-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 340px;
+            gap: 2.5rem;
+            align-items: start;
+        }
+
+        .form-layout > div {
+            min-width: 0;
+        }
+
+        /* Section Tabs */
+        .form-sections {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+            overflow-x: auto;
+            padding-bottom: 0;
+        }
+
+        .form-section-tab {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: none;
+            color: var(--text-muted);
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .form-section-tab:hover {
+            color: var(--text-main);
+            border-bottom-color: var(--accent-color);
+        }
+
+        .form-section-tab.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
         }
 
         fieldset {
-            background-color: #ffffff;
-            border: 1px solid #dee2e6;
-            border-radius: 10px;
-            padding: 1.5rem 2rem;
+            background-color: var(--bg-body);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
             margin-bottom: 2rem;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] fieldset {
+            background-color: rgba(30, 30, 46, 0.8);
         }
 
         fieldset:last-of-type {
@@ -51,56 +152,340 @@
         }
 
         legend {
-            font-family: "Poppins", sans-serif; /* Consistent font from theme */
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #1a2533;
-            padding: 0;
-            width: 100%;
+            font-family: "Poppins", sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            padding: 0 0.75rem;
+            width: auto;
             float: left;
             margin-bottom: 1.5rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid #e9ecef;
+            margin-left: -0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .form-container .form-control,
-        .form-container .form-select {
-            border: 1px solid #ced4da;
-            transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
-        }
-        .form-container .form-control:focus,
-        .form-container .form-select:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        legend i {
+            color: var(--accent-color);
+            font-size: 1.3rem;
         }
 
+        /* Form Controls */
         .form-label {
-            font-weight: 500;
-            color: #495057;
+            font-weight: 600;
+            color: var(--text-main);
             font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: capitalize;
+            letter-spacing: 0.3px;
         }
 
-        .form-container .btn-primary {
-            background-color: #474747;
-            border-color: #474747;
+        .form-label .badge {
+            margin-left: 0.5rem;
+            background-color: rgba(240, 113, 145, 0.2);
+            color: #f07191;
+            font-weight: 600;
+            font-size: 0.7rem;
+            padding: 0.3rem 0.6rem;
+        }
+
+        .form-control,
+        .form-select {
+            background-color: var(--bg-surface);
+            color: var(--text-main);
+            border: 1.5px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            background-color: var(--bg-surface);
+            color: var(--text-main);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+            outline: none;
+        }
+
+        .form-control::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select {
+            background-color: rgba(30, 30, 46, 0.9);
+            color: #f0f4ff;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        [data-theme="dark"] .form-control::placeholder {
+            color: #cbd5e1;
+            opacity: 1;
+        }
+
+        [data-theme="dark"] .form-control:focus,
+        [data-theme="dark"] .form-select:focus {
+            background-color: rgba(30, 30, 46, 0.9);
+            color: #f0f4ff;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+        }
+
+        /* Helper Text */
+        .form-text {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 0.4rem;
             font-weight: 500;
         }
-        .form-container .btn-primary:hover {
-            background-color: #383838;
-            border-color: #383838;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+
+        [data-theme="dark"] .form-text {
+            color: #cbd5e1;
         }
-        .form-container .btn-outline-secondary {
-            background-color: #474747;
-            color: #ffffffff;
-            border-color: #474747;
+
+        /* Date/Time Inputs and Number Spinners in Dark Mode */
+        [data-theme="dark"] input[type="date"],
+        [data-theme="dark"] input[type="time"],
+        [data-theme="dark"] input[type="datetime-local"] {
+            color: #f0f4ff;
         }
-        .btn-outline-secondary:hover {
-            background-color: #474747;
+
+        [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+        [data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator,
+        [data-theme="dark"] input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            filter: invert(1) brightness(1.1);
+            cursor: pointer;
+        }
+
+        [data-theme="dark"] input[type="number"]::-webkit-outer-spin-button,
+        [data-theme="dark"] input[type="number"]::-webkit-inner-spin-button {
+            filter: invert(1) brightness(1.1);
+        }
+
+        /* Preview Card in Sidebar */
+        .preview-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: sticky;
+            top: 20px;
+        }
+
+        .preview-card-title {
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .preview-card-title i {
+            color: var(--accent-color);
+            font-size: 1.1rem;
+        }
+
+        .preview-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .preview-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .preview-label {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 0.2rem;
+            font-weight: 600;
+        }
+
+        .preview-value {
+            color: var(--text-main);
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .preview-value.highlight {
+            color: var(--accent-color);
+            background-color: rgba(102, 126, 234, 0.1);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        /* Buttons */
+        .btn {
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 0.65rem 1.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-secondary) 100%);
             color: #fff;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+            color: #fff;
+        }
+
+        .btn-outline-secondary {
+            color: var(--text-main);
+            border: 1.5px solid var(--border-color);
+            background-color: var(--bg-body);
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: var(--bg-surface);
+            border-color: var(--accent-color);
+            color: var(--text-main);
+            transform: translateY(-2px);
+        }
+
+        /* Help Section */
+        .help-box {
+            background-color: rgba(59, 130, 246, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-main);
+        }
+
+        .help-box strong {
+            color: var(--accent-color);
+        }
+
+        [data-theme="dark"] .help-box {
+            background-color: rgba(59, 130, 246, 0.08);
+            border-color: rgba(59, 130, 246, 0.2);
+            color: #f0f4ff;
+        }
+
+        [data-theme="dark"] .form-label,
+        [data-theme="dark"] .form-check-label,
+        [data-theme="dark"] .form-check-label strong,
+        [data-theme="dark"] .form-check-label small,
+        [data-theme="dark"] .preview-label,
+        [data-theme="dark"] .preview-value,
+        [data-theme="dark"] .preview-card-title,
+        [data-theme="dark"] .form-text,
+        [data-theme="dark"] .text-muted,
+        [data-theme="dark"] small {
+            color: #f0f4ff;
+        }
+
+        [data-theme="dark"] .alert-info,
+        [data-theme="dark"] .alert-info * {
+            color: #f0f4ff;
+        }
+
+        [data-theme="dark"] .alert-info {
+            background-color: rgba(59, 130, 246, 0.12);
+            border-color: rgba(59, 130, 246, 0.25);
+        }
+
+        /* Error Messages */
+        .errorlist {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0;
+        }
+
+        .errorlist li {
+            color: #dc3545;
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+            padding: 0.4rem 0.8rem;
+            background-color: rgba(220, 53, 69, 0.1);
+            border-left: 3px solid #dc3545;
+            border-radius: 2px;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 1024px) {
+            .form-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .preview-card {
+                position: static;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 1.5rem;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+
+            fieldset {
+                padding: 1.5rem;
+            }
+
+            legend {
+                font-size: 1.1rem;
+            }
+
+            .form-sections {
+                gap: 0;
+            }
+
+            .form-section-tab {
+                padding: 0.5rem 1rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .form-container {
+                padding: 1rem;
+            }
+
+            .page-header h1 {
+                font-size: 1.25rem;
+            }
+
+            fieldset {
+                padding: 1rem;
+            }
+
+            legend {
+                font-size: 1rem;
+            }
         }
     </style>
 {% endblock extra_css %}
@@ -110,11 +495,11 @@
     <div class="form-container">
         <div class="page-header">
             <div>
-                <h1>{{ form_title }}</h1>
-                <p class="text-muted mb-0">{% trans "Manage your promotion details below." %}</p>
+                <h1><i class="bi bi-tag-fill"></i>{{ form_title }}</h1>
+                <p>{% trans "Set up your promotion to attract customers and boost sales." %}</p>
             </div>
-            <a href="{% url 'core:vendor_promotion_list' %}" class="btn btn-lg btn-outline-secondary">
-                <i class="bi bi-arrow-left me-2"></i>{% trans "Back to Promotions" %}
+            <a href="{% url 'core:vendor_promotion_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>{% trans "Back" %}
             </a>
         </div>
 
@@ -127,56 +512,255 @@
             {% endfor %}
         {% endif %}
 
-        <form method="post" id="promotionForm">
-            {% csrf_token %}
+        <div class="form-layout">
+            <!-- Main Form -->
+            <div>
+                <form method="post" id="promotionForm">
+                    {% csrf_token %}
 
-            {% if form.non_field_errors %}
-                <div class="alert alert-danger">
-                    {% for error in form.non_field_errors %}
-                        <p class="mb-0">{{ error }}</p>
-                    {% endfor %}
-                </div>
-            {% endif %}
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p class="mb-0">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
 
-            <div class="form-body">
-                <fieldset>
-                    <legend>{% trans "Promotion Details & Type" %}</legend>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">{{ form.name|as_crispy_field }}</div>
-                        <div class="col-md-6 mb-3">{{ form.code|as_crispy_field }}</div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">{{ form.promo_type|as_crispy_field }}</div>
-                        <div class="col-md-6 mb-3">{{ form.discount_value|as_crispy_field }}</div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">{{ form.start_date|as_crispy_field }}</div>
-                        <div class="col-md-6 mb-3">{{ form.end_date|as_crispy_field }}</div>
-                    </div>
-                     <div class="mb-3">{{ form.is_active|as_crispy_field }}</div>
-                </fieldset>
+                    <div class="form-body">
+                        <!-- Promotion Details Fieldset -->
+                        <fieldset>
+                            <legend><i class="bi bi-info-circle"></i>{% trans "Promotion Details" %}</legend>
+                            <div class="help-box">
+                                <i class="bi bi-lightbulb me-2"></i>
+                                <strong>{% trans "Tip:" %}</strong>
+                                {% trans "Choose a clear, memorable name and code that customers will recognize and use easily." %}
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">{{ form.name|as_crispy_field }}</div>
+                                <div class="col-md-4 mb-3">{{ form.code|as_crispy_field }}</div>
+                                <div class="col-md-2 mb-3 d-flex align-items-end">{{ form.requires_code|as_crispy_field }}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">{{ form.promo_type|as_crispy_field }}</div>
+                                <div class="col-md-6 mb-3">{{ form.discount_value|as_crispy_field }}</div>
+                            </div>
+                        </fieldset>
 
-                <fieldset>
-                    <legend>{% trans "Conditions & Scope" %}</legend>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">{{ form.minimum_purchase_amount|as_crispy_field }}</div>
-                        <div class="col-md-6 mb-3">{{ form.usage_limit|as_crispy_field }}</div>
-                    </div>
-                    <div class="mb-3">{{ form.scope|as_crispy_field }}</div>
-                    <div id="categories-field-wrapper" class="mb-3" style="display: none;">
-                        {{ form.applicable_categories|as_crispy_field }}
-                    </div>
-                    <div id="products-field-wrapper" class="mb-3" style="display: none;">
-                        {{ form.applicable_products|as_crispy_field }}
-                    </div>
-                </fieldset>
+                        <!-- Duration & Status Fieldset -->
+                        <fieldset>
+                            <legend><i class="bi bi-calendar-event"></i>{% trans "Duration & Status" %}</legend>
+                            <div class="help-box">
+                                <i class="bi bi-lightbulb me-2"></i>
+                                <strong>{% trans "Tip:" %}</strong>
+                                {% trans "Set specific dates to create urgency and plan promotional campaigns in advance." %}
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">{{ form.start_date|as_crispy_field }}</div>
+                                <div class="col-md-6 mb-3">{{ form.end_date|as_crispy_field }}</div>
+                            </div>
+                            <div class="mb-3">{{ form.is_active|as_crispy_field }}</div>
+                        </fieldset>
 
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                    <a href="{% url 'core:vendor_promotion_list' %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
-                    <button type="submit" class="btn btn-primary">{% if form.instance.pk %}{% trans "Save Changes" %}{% else %}{% trans "Create Promotion" %}{% endif %}</button>
+                        <!-- Conditions & Scope Fieldset -->
+                        <fieldset>
+                            <legend><i class="bi bi-funnel"></i>{% trans "Conditions & Scope" %}</legend>
+                            <div class="help-box">
+                                <i class="bi bi-lightbulb me-2"></i>
+                                <strong>{% trans "Tip:" %}</strong>
+                                {% trans "Set minimum purchase amounts to encourage higher order values and limit usage to control costs." %}
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">{{ form.minimum_purchase_amount|as_crispy_field }}</div>
+                                <div class="col-md-6 mb-3">{{ form.usage_limit|as_crispy_field }}</div>
+                            </div>
+                            <div class="mb-3">{{ form.scope|as_crispy_field }}</div>
+                            <div id="categories-field-wrapper" class="mb-3" style="display: none;">
+                                {{ form.applicable_categories|as_crispy_field }}
+                            </div>
+                            <div id="products-field-wrapper" class="mb-3" style="display: none;">
+                                {{ form.applicable_products|as_crispy_field }}
+                            </div>
+                        </fieldset>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{% url 'core:vendor_promotion_list' %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>
+                                {% if form.instance.pk %}{% trans "Save Changes" %}{% else %}{% trans "Create Promotion" %}{% endif %}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- A/B Testing Variants -->
+                    <fieldset>
+                        <legend><i class="bi bi-diagram-2"></i>{% trans "A/B Testing Variants" %} <span class="badge" style="background-color: rgba(168, 85, 247, 0.2); color: #a855f7; margin-left: 0.5rem;">PRO</span></legend>
+                        <div class="help-box">
+                            <i class="bi bi-lightbulb me-2"></i>
+                            <strong>{% trans "Tip:" %}</strong>
+                            {% trans "Test different discount amounts or codes to see which performs better. Not applicable if this is a main promotion." %}
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="enableVariant" name="enable_variant">
+                            <label class="form-check-label" for="enableVariant">
+                                {% trans "Create variant to test different discount rates" %}
+                            </label>
+                        </div>
+                        <div id="variantSection" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{% trans "Variant Discount Value" %}</label>
+                                    <input type="number" class="form-control" placeholder="e.g., 25" step="0.01" name="variant_discount">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{% trans "Variant Code (Optional)" %}</label>
+                                    <input type="text" class="form-control" placeholder="e.g., PROMO25" name="variant_code">
+                                </div>
+                            </div>
+                            <div class="alert alert-info">
+                                <large><i class="bi bi-info-circle me-2"></i>{% trans "The variant will run alongside your main promotion to compare performance." %}</large>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Customer Segmentation -->
+                    <fieldset>
+                        <legend><i class="bi bi-people"></i>{% trans "Customer Segmentation" %}</legend>
+                        <div class="help-box">
+                            <i class="bi bi-lightbulb me-2"></i>
+                            <strong>{% trans "Tip:" %}</strong>
+                            {% trans "Target specific customer groups to maximize relevance and ROI. Leave all unchecked to apply to everyone." %}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="newCustomersOnly" name="new_customers_only">
+                                    <label class="form-check-label" for="newCustomersOnly">
+                                        <strong>{% trans "New Customers Only" %}</strong>
+                                        <br><small style="color: var(--text-muted);">{% trans "Only customers making their first purchase" %}</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="loyaltyProgram" name="loyalty_program_only">
+                                    <label class="form-check-label" for="loyaltyProgram">
+                                        <strong>{% trans "Loyalty Members Only" %}</strong>
+                                        <br><small style="color: var(--text-muted);">{% trans "Existing customers with high engagement" %}</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="abandonedCart" name="abandoned_cart_recovery">
+                                    <label class="form-check-label" for="abandonedCart">
+                                        <strong>{% trans "Abandoned Cart Recovery" %}</strong>
+                                        <br><small style="color: var(--text-muted);">{% trans "Customers who didn't complete purchase" %}</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="highSpender" name="high_spender">
+                                    <label class="form-check-label" for="highSpender">
+                                        <strong>{% trans "High-Value Customers" %}</strong>
+                                        <br><small style="color: var(--text-muted);">{% trans "Buyers with order history >GH₵500" %}</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{% url 'core:vendor_promotion_list' %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>
+                            {% if form.instance.pk %}{% trans "Save Changes" %}{% else %}{% trans "Create Promotion" %}{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Preview Sidebar -->
+            <div>
+                <div class="preview-card">
+                    <div class="preview-card-title">
+                        <i class="bi bi-eye"></i>{% trans "Preview" %}
+                    </div>
+
+                    <div class="preview-item">
+                        <div class="preview-label">{% trans "Code" %}</div>
+                        <div class="preview-value">
+                            <code id="preview-code" style="background-color: rgba(102, 126, 234, 0.1); padding: 0.4rem 0.6rem; border-radius: 4px; color: var(--accent-color);">PROMO2024</code>
+                        </div>
+                    </div>
+
+                    <div class="preview-item">
+                        <div class="preview-label">{% trans "Discount" %}</div>
+                        <div class="preview-value highlight" id="preview-discount">
+                            Save 20%
+                        </div>
+                    </div>
+
+                    <div class="preview-item">
+                        <div class="preview-label">{% trans "Target Audience" %}</div>
+                        <div class="preview-value" id="preview-audience">
+                            🌍 {% trans "All Customers" %}
+                        </div>
+                    </div>
+
+                    <div class="preview-item">
+                        <div class="preview-label">{% trans "Min. Purchase" %}</div>
+                        <div class="preview-value" id="preview-min-purchase">
+                            {% trans "No minimum" %}
+                        </div>
+                    </div>
+
+                    <div class="preview-item">
+                        <div class="preview-label">{% trans "Validity" %}</div>
+                        <div class="preview-value" id="preview-validity">
+                            {% trans "Start Date" %} → {% trans "End Date" %}
+                        </div>
+                    </div>
+
+                    <div class="preview-item">
+                        <div class="preview-label">{% trans "Applies To" %}</div>
+                        <div class="preview-value" id="preview-scope">
+                            {% trans "All Products" %}
+                        </div>
+                    </div>
+
+                    <div class="preview-item">
+                        <div class="preview-label">{% trans "A/B Variant" %}</div>
+                        <div class="preview-value" id="preview-variant">
+                            <span class="badge" style="background-color: rgba(107, 114, 128, 0.2); color: #4b5563;">{% trans "None" %}</span>
+                        </div>
+                    </div>
+
+                    <div class="preview-item">
+                        <div class="preview-label">{% trans "Status" %}</div>
+                        <div class="preview-value" id="preview-status">
+                            <span class="badge" style="background-color: rgba(16, 185, 129, 0.2); color: #059669;">✓ {% trans "Active" %}</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                        <div class="preview-label">{% trans "Usage Stats" %}</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem;">
+                            <div style="text-align: center; padding: 0.5rem; background-color: rgba(102, 126, 234, 0.05); border-radius: 6px;">
+                                <div style="font-weight: 700; color: var(--accent-color); font-size: 1.2rem;">0</div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">{% trans "Redeemed" %}</div>
+                            </div>
+                            <div style="text-align: center; padding: 0.5rem; background-color: rgba(102, 126, 234, 0.05); border-radius: 6px;">
+                                <div style="font-weight: 700; color: var(--accent-color); font-size: 1.2rem;">—</div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">{% trans "Limit" %}</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </form>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -188,6 +772,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const scopeSelect = document.getElementById('id_scope');
     const categoriesField = document.getElementById('categories-field-wrapper');
     const productsField = document.getElementById('products-field-wrapper');
+    const enableVariantCheckbox = document.getElementById('enableVariant');
+    const variantSection = document.getElementById('variantSection');
 
     function toggleScopeFields() {
         if (!scopeSelect) return;
@@ -211,8 +797,108 @@ document.addEventListener('DOMContentLoaded', function() {
         scopeSelect.addEventListener('change', toggleScopeFields);
     }
 
+    // A/B Testing Toggle
+    if (enableVariantCheckbox) {
+        enableVariantCheckbox.addEventListener('change', function() {
+            variantSection.style.display = this.checked ? 'block' : 'none';
+            updatePreview();
+        });
+    }
+
     // Run on page load in case of form validation errors
     toggleScopeFields();
+
+    // Preview Update Logic
+    function updatePreview() {
+        const nameInput = document.getElementById('id_name');
+        const codeInput = document.getElementById('id_code');
+        const typeSelect = document.getElementById('id_promo_type');
+        const valueInput = document.getElementById('id_discount_value');
+        const minPurchaseInput = document.getElementById('id_minimum_purchase_amount');
+        const startDateInput = document.getElementById('id_start_date');
+        const endDateInput = document.getElementById('id_end_date');
+        const isActiveCheckbox = document.getElementById('id_is_active');
+        const variantValueInput = document.querySelector('input[name="variant_discount"]');
+        const newCustomersCheckbox = document.getElementById('newCustomersOnly');
+        const loyaltyCheckbox = document.getElementById('loyaltyProgram');
+        const abandonedCartCheckbox = document.getElementById('abandonedCart');
+        const highSpenderCheckbox = document.getElementById('highSpender');
+
+        // Update code preview
+        if (codeInput) {
+            const code = codeInput.value || 'PROMO2024';
+            document.getElementById('preview-code').textContent = code;
+        }
+
+        // Update discount preview
+        if (typeSelect && valueInput) {
+            const type = typeSelect.value;
+            const value = valueInput.value || '20';
+            const symbol = type === 'percentage' ? '%' : '{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}';
+            document.getElementById('preview-discount').textContent = `Save ${value}${symbol}`;
+        }
+
+        // Update minimum purchase
+        if (minPurchaseInput) {
+            const minPurchase = minPurchaseInput.value;
+            const minText = minPurchase ? `{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}${minPurchase}+` : '{% trans "No minimum" %}';
+            document.getElementById('preview-min-purchase').textContent = minText;
+        }
+
+        // Update dates
+        if (startDateInput) {
+            const startDate = startDateInput.value || '{% trans "Start Date" %}';
+            const endDate = endDateInput?.value || '{% trans "End Date" %}';
+            document.getElementById('preview-validity').textContent = startDate + ' → ' + endDate;
+        }
+
+        // Update scope
+        if (scopeSelect) {
+            const scopeText = scopeSelect.options[scopeSelect.selectedIndex]?.text || '{% trans "All Products" %}';
+            document.getElementById('preview-scope').textContent = scopeText;
+        }
+
+        // Update status
+        const statusText = isActiveCheckbox?.checked ? '✓ {% trans "Active" %}' : '○ {% trans "Inactive" %}';
+        const statusColor = isActiveCheckbox?.checked ? 'rgba(16, 185, 129, 0.2); color: #059669' : 'rgba(107, 114, 128, 0.2); color: #4b5563';
+        document.getElementById('preview-status').innerHTML = `<span class="badge" style="background-color: ${statusColor};">${statusText}</span>`;
+
+        // Update A/B Variant
+        if (enableVariantCheckbox && enableVariantCheckbox.checked && variantValueInput && variantValueInput.value) {
+            const variantValue = variantValueInput.value;
+            const variantSymbol = typeSelect.value === 'percentage' ? '%' : '{{ settings.DEFAULT_CURRENCY_SYMBOL|default:"GH₵" }}';
+            document.getElementById('preview-variant').innerHTML = `<span class="badge" style="background-color: rgba(168, 85, 247, 0.2); color: #a855f7;">🎯 ${variantValue}${variantSymbol}</span>`;
+        } else {
+            document.getElementById('preview-variant').innerHTML = `<span class="badge" style="background-color: rgba(107, 114, 128, 0.2); color: #4b5563;">{% trans "None" %}</span>`;
+        }
+
+        // Update audience/target
+        let audienceText = '🌍 {% trans "All Customers" %}';
+        let audience = [];
+        if (newCustomersCheckbox?.checked) audience.push('👤 {% trans "New Only" %}');
+        if (loyaltyCheckbox?.checked) audience.push('👑 {% trans "Loyalty" %}');
+        if (abandonedCartCheckbox?.checked) audience.push('🛒 {% trans "Cart Recovery" %}');
+        if (highSpenderCheckbox?.checked) audience.push('💎 {% trans "High Value" %}');
+
+        if (audience.length > 0) {
+            audienceText = audience.join(' + ');
+        }
+        document.getElementById('preview-audience').textContent = audienceText;
+    }
+
+    // Update preview on input change
+    document.querySelectorAll('#promotionForm input, #promotionForm select').forEach(el => {
+        el.addEventListener('change', updatePreview);
+        el.addEventListener('input', updatePreview);
+    });
+
+    // Additional listeners for segmentation and variant
+    document.querySelectorAll('#newCustomersOnly, #loyaltyProgram, #abandonedCart, #highSpender').forEach(checkbox => {
+        checkbox.addEventListener('change', updatePreview);
+    });
+
+    // Initial preview update
+    updatePreview();
 });
 </script>
 {% endblock extra_js %}

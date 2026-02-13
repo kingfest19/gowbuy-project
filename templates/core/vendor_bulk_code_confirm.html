@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "Confirm Bulk Codes" %} - {{ vendor.name }}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        /* CSS Variables for Color Theming */
+        :root {
+            --bg-body: #ffffff;
+            --bg-surface: #f8f9fa;
+            --text-main: #1a2533;
+            --text-muted: #6c757d;
+            --border-color: #e9ecef;
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --card-shadow: 0 8px 32px rgba(102, 126, 234, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #0f1419;
+            --bg-surface: rgba(30, 30, 46, 0.9);
+            --text-main: #f0f4ff;
+            --text-muted: #cbd5e1;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --card-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .confirm-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            background-color: var(--bg-surface);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .confirm-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .confirm-header h1 {
+            margin: 0;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .confirm-header i {
+            font-size: 2rem;
+            color: var(--success-color);
+        }
+
+        .info-section {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(16, 185, 129, 0.1));
+            border-left: 4px solid var(--success-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+        }
+
+        .info-label {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .codes-section {
+            margin-bottom: 2rem;
+        }
+
+        .codes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .codes-header h3 {
+            margin: 0;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .copy-all-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .copy-all-btn:hover {
+            background-color: var(--accent-secondary);
+            transform: translateY(-2px);
+        }
+
+        [data-theme="dark"] .copy-all-btn {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .codes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 1rem;
+            background-color: rgba(102, 126, 234, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+
+        [data-theme="dark"] .codes-grid {
+            background-color: rgba(102, 126, 234, 0.08);
+        }
+
+        .code-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background-color: var(--bg-body);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        [data-theme="dark"] .code-item {
+            background-color: rgba(30, 30, 46, 0.5);
+            border-color: var(--border-color);
+        }
+
+        .code-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .copy-btn {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--accent-color);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .copy-btn:hover {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .copy-btn.copied {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+
+        .download-section {
+            background-color: rgba(16, 185, 129, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+
+        .download-section p {
+            margin: 0 0 1rem 0;
+            color: var(--text-muted);
+        }
+
+        .download-btn {
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .download-btn:hover {
+            background-color: #059669;
+            transform: translateY(-2px);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-success:hover {
+            background-color: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-main);
+            flex: 1;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--bg-body);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+            padding: 1rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--accent-color);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 576px) {
+            .confirm-container {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+
+            .codes-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                max-height: 300px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .confirm-header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="confirm-container">
+    <div class="confirm-header">
+        <i class="bi bi-check-circle-fill"></i>
+        <div>
+            <h1>{% trans "Codes Generated Successfully!" %}</h1>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="info-section">
+        <div class="info-row">
+            <span class="info-label">
+                <i class="bi bi-tag me-2"></i>{% trans "Promotion" %}
+            </span>
+            <span class="info-value">{{ promotion.name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">
+                <i class="bi bi-lightning me-2"></i>{% trans "Total Codes" %}
+            </span>
+            <span class="info-value">{{ total_codes }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">
+                <i class="bi bi-calendar me-2"></i>{% trans "Generated" %}
+            </span>
+            <span class="info-value">{% now "SHORT_DATE_FORMAT" %}</span>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+        <div class="stat-item">
+            <div class="stat-value">{{ total_codes }}</div>
+            <div class="stat-label">{% trans "Unique Codes" %}</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ promotion.usage_limit|default:"∞" }}</div>
+            <div class="stat-label">{% trans "Total Usage Limit" %}</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ promotion.uses_per_customer|default:"∞" }}</div>
+            <div class="stat-label">{% trans "Per Customer Limit" %}</div>
+        </div>
+    </div>
+
+    <!-- Codes Preview -->
+    <div class="codes-section">
+        <div class="codes-header">
+            <h3><i class="bi bi-list me-2"></i>{% trans "Generated Codes" %}</h3>
+            <button class="copy-all-btn" onclick="copyAllCodes()">
+                <i class="bi bi-files me-1"></i>{% trans "Copy All" %}
+            </button>
+        </div>
+        <div class="codes-grid" id="codesGrid">
+            {% for code in codes %}
+                <div class="code-item">
+                    <span class="code-text" title="{{ code }}">{{ code }}</span>
+                    <button class="copy-btn" onclick="copyCode('{{ code }}', this)" title="{% trans 'Copy' %}">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Download Button -->
+    <div class="download-section">
+        <p>{% trans "Download all codes as CSV for use in spreadsheets or other systems." %}</p>
+        <button class="download-btn" onclick="downloadCodesAsCSV()">
+            <i class="bi bi-download"></i>{% trans "Download as CSV" %}
+        </button>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <a href="{% url 'core:vendor_promotion_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i>{% trans "Back to Promotions" %}
+        </a>
+        <form method="post" style="flex: 1;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success" style="width: 100%;">
+                <i class="bi bi-check"></i>{% trans "Save & Activate Codes" %}
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const codesToDownload = {{ codes|safe }};
+
+    function copyCode(code, btn) {
+        navigator.clipboard.writeText(code).then(() => {
+            const originalClass = btn.className;
+            btn.classList.add('copied');
+            btn.innerHTML = '<i class="bi bi-check"></i>';
+            setTimeout(() => {
+                btn.className = originalClass;
+                btn.innerHTML = '<i class="bi bi-clipboard"></i>';
+            }, 2000);
+        });
+    }
+
+    function copyAllCodes() {
+        const allCodes = codesToDownload.join('\n');
+        navigator.clipboard.writeText(allCodes).then(() => {
+            alert('{% trans "All codes copied to clipboard!" %}');
+        });
+    }
+
+    function downloadCodesAsCSV() {
+        const csv = 'Code\n' + codesToDownload.join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'promotion_codes_{{ promotion.id }}_{% now "Y-m-d_H-i-s" %}.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    }
+</script>
+{% endblock %}

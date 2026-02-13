@@ -330,6 +330,32 @@
             border-color: #667eea;
         }
 
+        [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 0.8;
+            cursor: pointer;
+        }
+
+        /* Dark mode dropdown menu styling */
+        [data-theme="dark"] .dropdown-menu {
+            background-color: rgba(30, 30, 46, 0.95);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="dark"] .dropdown-item {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .dropdown-item:hover,
+        [data-theme="dark"] .dropdown-item:focus {
+            background-color: rgba(102, 126, 234, 0.2);
+            color: #ffffff;
+        }
+
+        [data-theme="dark"] .dropdown-divider {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
         /* List Group Item Styling */
         .list-group-item {
             background: rgba(255, 255, 255, 0.6);

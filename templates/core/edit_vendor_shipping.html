@@ -9,14 +9,14 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
         .form-container {
-            max-width: 900px; /* Good width for forms */
+            max-width: 900px;
             margin: 0 auto;
-            background-color:  #ebe8e8;
+            background-color: var(--bg-body);
             padding: 2rem 2.5rem;
             border-radius: 12px;
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
-            border: 1px solid #c7c9cb;
-            font-family: "Outfit", sans-serif; /* Consistent font from theme */
+            border: 1px solid var(--border-color);
+            font-family: "Outfit", sans-serif;
         }
 
         .page-header {
@@ -27,19 +27,19 @@
             gap: 1rem;
             padding-bottom: 1.5rem;
             margin-bottom: 2rem;
-            border-bottom: 2px solid #f0f2f5;
+            border-bottom: 2px solid var(--border-color);
         }
 
         .page-header h1 {
-            font-family: "Poppins", sans-serif; /* Consistent font from theme */
+            font-family: "Poppins", sans-serif;
             font-weight: 700;
-            color: #1a2533;
+            color: var(--text-main);
             margin-bottom: 0;
         }
 
         fieldset {
-            background-color: #ffffff;
-            border: 1px solid #dee2e6;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
             border-radius: 10px;
             padding: 1.5rem 2rem;
             margin-bottom: 2rem;
@@ -51,56 +51,216 @@
         }
 
         legend {
-            font-family: "Poppins", sans-serif; /* Consistent font from theme */
+            font-family: "Poppins", sans-serif;
             font-size: 1.25rem;
             font-weight: 600;
-            color: #1a2533;
+            color: var(--text-main);
             padding: 0;
             width: 100%;
             float: left;
             margin-bottom: 1.5rem;
             padding-bottom: 0.75rem;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .form-container .form-control,
         .form-container .form-select {
-            border: 1px solid #ced4da;
+            background-color: var(--bg-input);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
             transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
         }
         .form-container .form-control:focus,
         .form-container .form-select:focus {
-            border-color: #86b7fe;
+            background-color: var(--bg-input);
+            color: var(--text-main);
+            border-color: var(--accent-color);
             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
         }
 
         .form-label {
             font-weight: 500;
-            color: #495057;
+            color: var(--text-main);
             font-size: 0.9rem;
         }
 
         .form-container .btn-primary {
-            background-color: #474747;
-            border-color: #474747;
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
             font-weight: 500;
         }
         .form-container .btn-primary:hover {
-            background-color: #383838;
-            border-color: #383838;
+            filter: brightness(0.9);
             transform: translateY(-2px);
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
         .form-container .btn-outline-secondary {
-            background-color: #474747;
-            color: #ffffffff;
-            border-color: #474747;
+            color: var(--text-main);
+            border-color: var(--border-color);
         }
         .btn-outline-secondary:hover {
-            background-color: #474747;
-            color: #fff;
+            background-color: var(--border-color);
+            color: var(--text-main);
             transform: translateY(-2px);
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 1.5rem 1rem;
+            }
+            fieldset {
+                padding: 1rem;
+            }
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .page-header .btn {
+                width: 100%;
+            }
+        }
+
+        /* Dark Mode Styling */
+        [data-theme="dark"] .form-container {
+            background-color: rgba(30, 30, 46, 0.9);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        [data-theme="dark"] fieldset {
+            background-color: rgba(50, 50, 70, 0.6);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="dark"] legend {
+            color: #f0f4ff;
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select,
+        [data-theme="dark"] textarea {
+            background-color: rgba(30, 30, 46, 0.8);
+            color: #f0f4ff;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        [data-theme="dark"] .form-control:focus,
+        [data-theme="dark"] .form-select:focus,
+        [data-theme="dark"] textarea:focus {
+            background-color: rgba(30, 30, 46, 0.8);
+            color: #f0f4ff;
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.2);
+        }
+
+        [data-theme="dark"] .form-label {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .form-text {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        [data-theme="dark"] .page-header {
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="dark"] .page-header h1,
+        [data-theme="dark"] .page-header p {
+            color: #f0f4ff;
+        }
+
+        [data-theme="dark"] .text-muted {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        [data-theme="dark"] p {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .invalid-feedback {
+            color: #ff6b6b;
+        }
+
+        [data-theme="dark"] .alert {
+            background-color: rgba(30, 30, 46, 0.8);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .btn-close {
+            filter: invert(1);
+            opacity: 0.7;
+        }
+
+        /* Stats Cards Dark Mode */
+        [data-theme="dark"] .stats-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08)) !important;
+            border-color: rgba(102, 126, 234, 0.2) !important;
+        }
+
+        [data-theme="dark"] .stats-card p {
+            color: #e2e8f0;
+        }
+
+        /* Form checks and advanced styling */
+        [data-theme="dark"] .form-check-input {
+            background-color: rgba(30, 30, 46, 0.8);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        [data-theme="dark"] .form-check-input:checked {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+
+        [data-theme="dark"] .form-check-label {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] textarea.form-control {
+            background-color: rgba(30, 30, 46, 0.8);
+            color: #f0f4ff;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        [data-theme="dark"] textarea.form-control:focus {
+            background-color: rgba(30, 30, 46, 0.8);
+            color: #f0f4ff;
+            border-color: #667eea;
+        }
+
+        /* Practice tips and guide boxes */
+        [data-theme="dark"] [style*="rgb(255, 193, 7)"] {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.08), rgba(251, 140, 0, 0.08)) !important;
+        }
+
+        [data-theme="dark"] [style*="rgb(76, 175, 80)"] {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.08), rgba(56, 142, 60, 0.08)) !important;
+        }
+
+        [data-theme="dark"] [style*="color: #f9a825"] {
+            color: #ffc107 !important;
+        }
+
+        [data-theme="dark"] [style*="color: #4caf50"] {
+            color: #66bb6a !important;
+        }
+
+        /* Info boxes content styling */
+        [data-theme="dark"] ul {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] ul li {
+            color: #e2e8f0;
+        }
+
+        /* Insight cards colors in dark mode */
+        [data-theme="dark"] .stats-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08)) !important;
         }
     </style>
 {% endblock extra_css %}
@@ -153,6 +313,245 @@
                         {{ form.return_policy }}
                         {% if form.return_policy.help_text %}<div class="form-text">{{ form.return_policy.help_text|safe }}</div>{% endif %}
                         {% if form.return_policy.errors %}<div class="invalid-feedback d-block">{% for error in form.return_policy.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>{% trans "Shipping Information" %}</legend>
+                    <p class="text-muted small mb-3">{% trans "Set up shipping details for your store." %}</p>
+                    {% if form.shipping_zones %}
+                    <div class="mb-3">
+                        <label for="{{ form.shipping_zones.id_for_label }}" class="form-label">{{ form.shipping_zones.label }}</label>
+                        {{ form.shipping_zones }}
+                        {% if form.shipping_zones.help_text %}<div class="form-text">{{ form.shipping_zones.help_text|safe }}</div>{% endif %}
+                        {% if form.shipping_zones.errors %}<div class="invalid-feedback d-block">{% for error in form.shipping_zones.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                    </div>
+                    {% endif %}
+                    {% if form.processing_time %}
+                    <div class="mb-3">
+                        <label for="{{ form.processing_time.id_for_label }}" class="form-label">{{ form.processing_time.label }}</label>
+                        {{ form.processing_time }}
+                        {% if form.processing_time.help_text %}<div class="form-text">{{ form.processing_time.help_text|safe }}</div>{% endif %}
+                        {% if form.processing_time.errors %}<div class="invalid-feedback d-block">{% for error in form.processing_time.errors %}{{ error }}{% endfor %}</div>{% endif %}
+                    </div>
+                    {% endif %}
+                    {% if not form.shipping_zones and not form.processing_time %}
+                    <div class="stats-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border-radius: 10px; padding: 1.5rem; border: 1px solid rgba(102, 126, 234, 0.2);">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div style="font-size: 2rem;">📦</div>
+                            <div>
+                                <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">{% trans "Shipping Details" %}</p>
+                                <p style="margin: 0; font-size: 1rem; font-weight: 600;">{% trans "Configurable Zones & Processing" %}</p>
+                                <p style="margin: 0; font-size: 0.75rem; opacity: 0.6;">{% trans "Manage shipping zones for different regions and set processing time" %}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </fieldset>
+
+                <fieldset>
+                    <legend>{% trans "Shipping Delivery Options" %}</legend>
+                    <p class="text-muted small mb-3">{% trans "Configure shipping tiers, delivery times, and enable international shipping." %}</p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% trans "Standard Delivery Time" %}</label>
+                            <input type="text" name="shipping_standard_days" class="form-control" placeholder="e.g., 3-5 business days" />
+                            <small class="form-text">{% trans "How long standard shipping typically takes" %}</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% trans "Express Delivery Time" %}</label>
+                            <input type="text" name="shipping_express_days" class="form-control" placeholder="e.g., 1-2 business days" />
+                            <small class="form-text">{% trans "Faster delivery option if offered" %}</small>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% trans "Free Shipping Threshold" %}</label>
+                            <input type="number" name="free_shipping_threshold" class="form-control" placeholder="e.g., 100" step="0.01" />
+                            <small class="form-text">{% trans "Minimum order amount for free shipping (leave empty if not applicable)" %}</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% trans "International Shipping" %}</label>
+                            <select name="international_shipping" class="form-select">
+                                <option value="">{% trans "Select..." %}</option>
+                                <option value="yes">{% trans "Yes, I ship internationally" %}</option>
+                                <option value="selected">{% trans "Yes, to selected countries only" %}</option>
+                                <option value="no">{% trans "No, domestic only" %}</option>
+                            </select>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>{% trans "Logistics & Carrier Management" %}</legend>
+                    <p class="text-muted small mb-3">{% trans "Set up carrier integrations and tracking information." %}</p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% trans "Primary Shipping Carrier" %}</label>
+                            <select name="primary_carrier" class="form-select">
+                                <option value="">{% trans "Select primary carrier..." %}</option>
+                                <option value="dhl">DHL</option>
+                                <option value="fedex">FedEx</option>
+                                <option value="ups">UPS</option>
+                                <option value="local">Local Courier</option>
+                                <option value="postal">National Postal Service</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <small class="form-text">{% trans "Your default shipping partner" %}</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% trans "Tracking Number Prefix" %}</label>
+                            <input type="text" name="tracking_prefix" class="form-control" placeholder="e.g., KF" />
+                            <small class="form-text">{% trans "Auto-generated tracking numbers start with this" %}</small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label d-block">{% trans "Supported Carriers" %}</label>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="carriers" value="dhl" />
+                            <label class="form-check-label">DHL</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="carriers" value="fedex" />
+                            <label class="form-check-label">FedEx</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="carriers" value="ups" />
+                            <label class="form-check-label">UPS</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="carriers" value="local" />
+                            <label class="form-check-label">Local Courier</label>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>{% trans "Advanced Return Terms" %}</legend>
+                    <p class="text-muted small mb-3">{% trans "Set detailed return conditions and fees." %}</p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% trans "Return Shipping Cost" %}</label>
+                            <select name="return_shipping_cost" class="form-select">
+                                <option value="">{% trans "Select..." %}</option>
+                                <option value="customer">{% trans "Customer pays return shipping" %}</option>
+                                <option value="vendor">{% trans "We pay for return shipping" %}</option>
+                                <option value="free_threshold">{% trans "Free returns over certain amount" %}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{% trans "Restocking Fee (%)" %}</label>
+                            <input type="number" name="restocking_fee" class="form-control" placeholder="e.g., 10" min="0" max="100" />
+                            <small class="form-text">{% trans "Percentage of order value, or 0 for none" %}</small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{% trans "Acceptable Return Conditions" %}</label>
+                        <textarea name="return_conditions" class="form-control" rows="3" placeholder="e.g., Items must be unopened, unused, and in original packaging..."></textarea>
+                        <small class="form-text">{% trans "Describe what condition items must be in to qualify for returns" %}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{% trans "Common Return Reasons" %}</label>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="return_reasons" value="damaged" />
+                            <label class="form-check-label">{% trans "Damaged in transit" %}</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="return_reasons" value="defective" />
+                            <label class="form-check-label">{% trans "Defective/Not working" %}</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="return_reasons" value="wrong_item" />
+                            <label class="form-check-label">{% trans "Wrong item sent" %}</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="return_reasons" value="not_as_described" />
+                            <label class="form-check-label">{% trans "Not as described" %}</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="return_reasons" value="changed_mind" />
+                            <label class="form-check-label">{% trans "Changed mind" %}</label>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>{% trans "Help & Best Practices" %}</legend>
+                    <div style="background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(251, 140, 0, 0.1)); border-radius: 10px; padding: 1.5rem; border: 1px solid rgba(255, 193, 7, 0.2); margin-bottom: 1.5rem;">
+                        <h6 style="margin-top: 0; color: #f9a825; font-weight: 600;">💡 {% trans "Shipping Best Practices" %}</h6>
+                        <ul style="margin: 1rem 0 0 1.5rem; padding: 0;">
+                            <li>{% trans "Clear delivery times increase customer confidence" %}</li>
+                            <li>{% trans "Offering multiple carriers improves delivery speed options" %}</li>
+                            <li>{% trans "Free shipping on high-order values boosts average order value" %}</li>
+                            <li>{% trans "Transparent return conditions reduce disputes and refund requests" %}</li>
+                            <li>{% trans "Easy returns improve customer satisfaction and repeat purchases" %}</li>
+                        </ul>
+                    </div>
+                    <div style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(56, 142, 60, 0.1)); border-radius: 10px; padding: 1.5rem; border: 1px solid rgba(76, 175, 80, 0.2);">
+                        <h6 style="margin-top: 0; color: #4caf50; font-weight: 600;">📋 {% trans "Policy Templates & Guidelines" %}</h6>
+                        <p style="margin: 0.5rem 0; font-size: 0.9rem;">{% trans "Use these templates or customize based on your business needs:" %}</p>
+                        <ul style="margin: 1rem 0 0 1.5rem; padding: 0; font-size: 0.9rem;">
+                            <li><strong>{% trans "Standard:" %}</strong> {% trans "7-30 days return window, customer pays return shipping" %}</li>
+                            <li><strong>{% trans "Customer-Friendly:" %}</strong> {% trans "30-60 days, free returns, low/no restocking fees" %}</li>
+                            <li><strong>{% trans "Strict:" %}</strong> {% trans "7-14 days, 15-20% restocking fee, unopened items only" %}</li>
+                        </ul>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>{% trans "Performance Insights" %}</legend>
+                    <p class="text-muted small mb-3">{% trans "Track your shipping and return performance metrics." %}</p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="stats-card" style="background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(229, 57, 53, 0.1)); border-radius: 10px; padding: 1.5rem; border: 1px solid rgba(244, 67, 54, 0.2);">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <div style="font-size: 2rem;">📊</div>
+                                    <div>
+                                        <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">{% trans "Return Rate" %}</p>
+                                        <p style="margin: 0; font-size: 1.5rem; font-weight: 700;">{{ vendor.return_rate|default:"N/A" }}</p>
+                                        <p style="margin: 0; font-size: 0.75rem; opacity: 0.6;">{% trans "% of orders returned" %}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="stats-card" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(56, 142, 60, 0.1)); border-radius: 10px; padding: 1.5rem; border: 1px solid rgba(76, 175, 80, 0.2);">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <div style="font-size: 2rem;">⏰</div>
+                                    <div>
+                                        <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">{% trans "Avg Refund Time" %}</p>
+                                        <p style="margin: 0; font-size: 1.5rem; font-weight: 700;">{{ vendor.avg_refund_days|default:"N/A" }}</p>
+                                        <p style="margin: 0; font-size: 0.75rem; opacity: 0.6;">{% trans "days to process refunds" %}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="stats-card" style="background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(21, 101, 192, 0.1)); border-radius: 10px; padding: 1.5rem; border: 1px solid rgba(33, 150, 243, 0.2);">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <div style="font-size: 2rem;">📦</div>
+                                    <div>
+                                        <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">{% trans "Total Shipped" %}</p>
+                                        <p style="margin: 0; font-size: 1.5rem; font-weight: 700;">{{ vendor.total_shipped|default:"0" }}</p>
+                                        <p style="margin: 0; font-size: 0.75rem; opacity: 0.6;">{% trans "orders shipped" %}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="stats-card" style="background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(245, 127, 23, 0.1)); border-radius: 10px; padding: 1.5rem; border: 1px solid rgba(255, 152, 0, 0.2);">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <div style="font-size: 2rem;">⚠️</div>
+                                    <div>
+                                        <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">{% trans "Complaints" %}</p>
+                                        <p style="margin: 0; font-size: 1.5rem; font-weight: 700;">{{ vendor.shipping_complaints|default:"0" }}</p>
+                                        <p style="margin: 0; font-size: 0.75rem; opacity: 0.6;">{% trans "shipping-related disputes" %}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </fieldset>
 

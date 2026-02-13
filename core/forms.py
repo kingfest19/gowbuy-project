@@ -15,8 +15,9 @@ import logging # <<< Add this import
 # Import models needed for forms
 from .utils import geocode_address # Import the new utility
 from decimal import Decimal # Ensure Decimal is imported
+from datetime import timedelta
 from .models import (
-    VendorReview, ProductReview, Vendor, Promotion, AdCampaign, Product, Category, ServiceProviderProfile, PortfolioItem, ProductImage, ProductQuestion, ProductAnswer,
+    VendorReview, ProductReview, Vendor, Promotion, AdCampaign, CampaignTemplate, Product, Category, ServiceProviderProfile, PortfolioItem, ProductImage, ProductQuestion, ProductAnswer,
     ServiceCategory, Service, ServiceReview, ServicePackage, Address, PayoutRequest,
     RiderProfile, RiderApplication, DeliveryTask, UserProfile, UserPreferences, ServiceAvailability,
     AuthenticityFeedback,  # Phase 4: Authenticity Feedback
@@ -370,6 +371,11 @@ class PromotionForm(forms.ModelForm):
     """
     start_date = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}))
     end_date = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}))
+    requires_code = forms.BooleanField(
+        required=False,
+        label=_('Requires code'),
+        help_text=_('Enable if customers must enter a code to use this promotion.')
+    )
 
     applicable_categories = forms.ModelMultipleChoiceField(
         queryset=Category.objects.filter(is_active=True),
@@ -422,11 +428,104 @@ class PromotionForm(forms.ModelForm):
             self.fields['applicable_products'].queryset = Product.objects.filter(vendor=vendor, is_active=True)
             self.fields['applicable_categories'].queryset = Category.objects.filter(products__vendor=vendor).distinct()
 
+        if not self.is_bound and self.instance and self.instance.code:
+            self.fields['requires_code'].initial = True
+
         # Optional: Add help text directly in the form for more control
         self.fields['minimum_purchase_amount'].help_text = _("Apply discount only if cart subtotal is over this amount.")
         self.fields['usage_limit'].help_text = _("How many times can this code be used in total? Leave blank for unlimited.")
 
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+
+        now = timezone.now()
+
+        if start_date and start_date < now:
+            self.add_error('start_date', _("Start date cannot be in the past."))
+
+        if end_date and end_date <= now:
+            self.add_error('end_date', _("End date must be in the future."))
+
+        if start_date and end_date and end_date <= start_date:
+            self.add_error('end_date', _("End date must be later than start date."))
+
+        if start_date and end_date and (end_date - start_date) < timedelta(days=1):
+            self.add_error('end_date', _("Promotion must run for at least 1 day."))
+
+        if start_date and end_date:
+            cleaned_data['is_active'] = start_date <= now <= end_date
+
+        if cleaned_data.get('requires_code') and not cleaned_data.get('code'):
+            self.add_error('code', _("Code is required when 'Requires code' is enabled."))
+
+        return cleaned_data
+
 # --- End PromotionForm ---
+
+# --- BulkCodeGeneratorForm ---
+class BulkCodeGeneratorForm(forms.Form):
+    """
+    Form for generating bulk promotion codes.
+    """
+    promotion = forms.ModelChoiceField(
+        queryset=Promotion.objects.none(),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label=_('Select Promotion'),
+        help_text=_('Choose which promotion these codes will be linked to.')
+    )
+    
+    quantity = forms.IntegerField(
+        min_value=1,
+        max_value=10000,
+        initial=100,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '100'
+        }),
+        label=_('Number of Codes'),
+        help_text=_('Generate 1 to 10,000 codes at once.')
+    )
+    
+    prefix = forms.CharField(
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': _('e.g., SAVE2024')
+        }),
+        label=_('Code Prefix (Optional)'),
+        help_text=_('All generated codes will start with this prefix.')
+    )
+    
+    CODE_TYPE_CHOICES = [
+        ('alphanumeric', _('Alphanumeric (A-Z, 0-9)')),
+        ('numeric', _('Numeric (0-9 only)')),
+        ('uppercase', _('Uppercase Letters & Numbers')),
+    ]
+    
+    code_type = forms.ChoiceField(
+        choices=CODE_TYPE_CHOICES,
+        initial='alphanumeric',
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label=_('Code Format')
+    )
+    
+    def __init__(self, vendor=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if vendor:
+            self.fields['promotion'].queryset = Promotion.objects.filter(applicable_vendor=vendor).order_by('-created_at')
+        else:
+            self.fields['promotion'].queryset = Promotion.objects.all().order_by('-created_at')
+    
+    def clean_prefix(self):
+        prefix = self.cleaned_data.get('prefix', '').strip()
+        if prefix and not prefix.replace('_', '').replace('-', '').isalnum():
+            raise ValidationError(_('Prefix can only contain letters, numbers, hyphens, and underscores.'))
+        return prefix
+
+# --- END: BulkCodeGeneratorForm ---
 
 # --- START: Coupon Apply Form ---
 class CouponApplyForm(forms.Form):
@@ -442,6 +541,21 @@ class AdCampaignForm(forms.ModelForm):
     """
     Form for vendors to create or update ad campaigns.
     """
+    DAY_CHOICES = [
+        ('mon', _('Mon')),
+        ('tue', _('Tue')),
+        ('wed', _('Wed')),
+        ('thu', _('Thu')),
+        ('fri', _('Fri')),
+        ('sat', _('Sat')),
+        ('sun', _('Sun')),
+    ]
+    template = forms.ModelChoiceField(
+        queryset=CampaignTemplate.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text=_('Optional: select a template to prefill this campaign.')
+    )
     start_date = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}))
     end_date = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}))
     promoted_product = forms.ModelChoiceField(
@@ -450,15 +564,73 @@ class AdCampaignForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'}),
         help_text=_("Select a product to promote, or leave blank to promote your store.")
     )
+    schedule_days = forms.MultipleChoiceField(
+        required=False,
+        choices=DAY_CHOICES,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        help_text=_('Select days to run the campaign (leave blank for all days).')
+    )
+    audience_age_min = forms.IntegerField(
+        required=False,
+        min_value=13,
+        max_value=120,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+    audience_age_max = forms.IntegerField(
+        required=False,
+        min_value=13,
+        max_value=120,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+    variant_a_headline = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    variant_a_image_url = forms.URLField(required=False, widget=forms.URLInput(attrs={'class': 'form-control'}))
+    variant_a_weight = forms.IntegerField(required=False, min_value=0, max_value=100, widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    variant_b_headline = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    variant_b_image_url = forms.URLField(required=False, widget=forms.URLInput(attrs={'class': 'form-control'}))
+    variant_b_weight = forms.IntegerField(required=False, min_value=0, max_value=100, widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    variant_c_headline = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    variant_c_image_url = forms.URLField(required=False, widget=forms.URLInput(attrs={'class': 'form-control'}))
+    variant_c_weight = forms.IntegerField(required=False, min_value=0, max_value=100, widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    variant_d_headline = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    variant_d_image_url = forms.URLField(required=False, widget=forms.URLInput(attrs={'class': 'form-control'}))
+    variant_d_weight = forms.IntegerField(required=False, min_value=0, max_value=100, widget=forms.NumberInput(attrs={'class': 'form-control'}))
 
     class Meta:
         model = AdCampaign
-        exclude = ['vendor', 'created_at']
+        fields = [
+            'name', 'template', 'placement', 'promoted_product',
+            'start_date', 'end_date', 'budget', 'is_active',
+            'email_enabled', 'sms_enabled', 'social_enabled',
+            'audience_location', 'audience_interests', 'audience_device', 'audience_age_min', 'audience_age_max',
+            'schedule_days', 'schedule_start_time', 'schedule_end_time',
+            'goal_type', 'goal_value',
+            'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+            'base_headline', 'base_description', 'base_image_url', 'base_cta',
+        ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'placement': forms.Select(attrs={'class': 'form-select'}),
             'budget': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'email_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'sms_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'social_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'audience_location': forms.TextInput(attrs={'class': 'form-control'}),
+            'audience_interests': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'audience_device': forms.Select(attrs={'class': 'form-select'}),
+            'schedule_start_time': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'schedule_end_time': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'goal_type': forms.Select(attrs={'class': 'form-select'}),
+            'goal_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'utm_source': forms.TextInput(attrs={'class': 'form-control'}),
+            'utm_medium': forms.TextInput(attrs={'class': 'form-control'}),
+            'utm_campaign': forms.TextInput(attrs={'class': 'form-control'}),
+            'utm_content': forms.TextInput(attrs={'class': 'form-control'}),
+            'utm_term': forms.TextInput(attrs={'class': 'form-control'}),
+            'base_headline': forms.TextInput(attrs={'class': 'form-control'}),
+            'base_description': forms.TextInput(attrs={'class': 'form-control'}),
+            'base_image_url': forms.URLInput(attrs={'class': 'form-control'}),
+            'base_cta': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -466,6 +638,63 @@ class AdCampaignForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if vendor:
             self.fields['promoted_product'].queryset = Product.objects.filter(vendor=vendor, is_active=True)
+            self.fields['template'].queryset = CampaignTemplate.objects.filter(vendor=vendor)
+
+        if self.instance and getattr(self.instance, 'schedule_days', None):
+            self.initial['schedule_days'] = self.instance.schedule_days
+
+        if self.instance and getattr(self.instance, 'creative_variants', None):
+            variants = self.instance.creative_variants or {}
+            for key in ['a', 'b', 'c', 'd']:
+                data = variants.get(key, {})
+                self.initial[f'variant_{key}_headline'] = data.get('headline', '')
+                self.initial[f'variant_{key}_image_url'] = data.get('image_url', '')
+                self.initial[f'variant_{key}_weight'] = data.get('weight', '')
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        age_min = cleaned_data.get('audience_age_min')
+        age_max = cleaned_data.get('audience_age_max')
+        if age_min and age_max and age_min > age_max:
+            self.add_error('audience_age_max', _('Max age must be greater than or equal to min age.'))
+
+        start_time = cleaned_data.get('schedule_start_time')
+        end_time = cleaned_data.get('schedule_end_time')
+        if start_time and end_time and start_time >= end_time:
+            self.add_error('schedule_end_time', _('End time must be after start time.'))
+
+        weights = []
+        for key in ['a', 'b', 'c', 'd']:
+            weight = cleaned_data.get(f'variant_{key}_weight')
+            if weight is not None:
+                weights.append(weight)
+        if weights and sum(weights) > 100:
+            self.add_error(None, _('Total variant weights cannot exceed 100.'))
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.schedule_days = self.cleaned_data.get('schedule_days', [])
+
+        variants = {}
+        for key in ['a', 'b', 'c', 'd']:
+            headline = self.cleaned_data.get(f'variant_{key}_headline')
+            image_url = self.cleaned_data.get(f'variant_{key}_image_url')
+            weight = self.cleaned_data.get(f'variant_{key}_weight')
+            if headline or image_url or weight is not None:
+                variants[key] = {
+                    'headline': headline,
+                    'image_url': image_url,
+                    'weight': weight,
+                }
+        instance.creative_variants = variants
+
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
 
 # --- End AdCampaignForm ---
 
