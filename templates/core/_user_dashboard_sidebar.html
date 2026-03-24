@@ -29,7 +29,7 @@
     <a href="{% url 'core:edit_user_profile' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'edit_user_profile' %}active{% endif %}">
         <i class="fas fa-user-edit fa-fw me-2"></i>{% trans "Account Settings" %}
     </a>
-    <a href="{% url 'core:login_history' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'login_history' %}active{% endif %}">
+    <a href="{% url 'core:session_management' %}" class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'session_management' %}active{% endif %}">
         <i class="fas fa-shield-alt fa-fw me-2"></i>{% trans "Login & Security" %}
     </a>
 </div>

@@ -166,68 +166,6 @@
             }
         }
         
-        .hero-slider {
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
-            margin-bottom: 3rem;
-            animation: slideUp 0.6s ease-out;
-        }
-        
-        [data-theme="dark"] .hero-slider {
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-        
-        .carousel-caption {
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 16px;
-            padding: 2rem !important;
-            bottom: 2rem !important;
-            left: 50% !important;
-            right: auto !important;
-            transform: translateX(-50%);
-            max-width: 600px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-        
-        [data-theme="dark"] .carousel-caption {
-            background: rgba(30, 30, 46, 0.9);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-        }
-        
-        .carousel-caption h5 {
-            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
-        }
-        
-        .carousel-caption p {
-            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5);
-        }
-        
-        .carousel-item img {
-            height: 400px;
-            object-fit: cover;
-        }
-        
-        .carousel-indicators button {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.5);
-            border: 2px solid rgba(255, 255, 255, 0.7);
-            transition: all 0.3s ease;
-        }
-        
-        .carousel-indicators button.active {
-            background-color: rgba(139, 92, 246, 1);
-            border-color: rgba(139, 92, 246, 1);
-        }
-        
         /* Section Titles */
         .section-title {
             font-size: 2rem;
@@ -506,7 +444,7 @@
         .service-item-flat:hover, .vendor-item-flat:hover {
             transform: translateY(-8px);
             box-shadow: 0 16px 48px rgba(102, 126, 234, 0.2);
-            border: 2px solid #667eea;
+            border-color: #667eea;
         }
         
         [data-theme="dark"] .service-item-flat,
@@ -522,7 +460,7 @@
         [data-theme="dark"] .vendor-item-flat:hover {
             background: rgba(40, 40, 60, 0.9);
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 20px rgba(102, 126, 234, 0.6);
-            border: 2px solid rgba(102, 126, 234, 0.8);
+            border-color: rgba(102, 126, 234, 0.8);
             transform: translateY(-8px);
         }
         
@@ -727,7 +665,7 @@
             scroll-snap-align: start;
         }
         
-        /* Quick View Button Styles */
+                /* Quick View Button Styles */
         .image-container {
             position: relative;
             overflow: hidden;
@@ -753,7 +691,8 @@
             z-index: 1;
         }
         
-        .image-container:hover a::before {
+        .service-item-flat:hover .image-container a::before,
+        .vendor-item-flat:hover .image-container a::before {
             background: rgba(0, 0, 0, 0.4);
         }
         
@@ -770,7 +709,8 @@
             visibility: hidden;
         }
         
-        .image-container:hover .hover-btns {
+        .service-item-flat:hover .hover-btns,
+        .vendor-item-flat:hover .hover-btns {
             opacity: 1;
             visibility: visible;
         }
@@ -797,7 +737,31 @@
             margin-right: 0.3rem;
         }
 
-        /* Desktop Display Control */
+        /* Keep quick-view actions interactable even with layered backdrops */
+        #quickViewModal a,
+        #quickViewModal button,
+        #quickViewModal input,
+        #quickViewModal form,
+        #quickViewModal label {
+            pointer-events: auto;
+        }
+
+        #quickViewModal .modal-dialog,
+        #quickViewModal .modal-content,
+        #quickViewModal .modal-body {
+            pointer-events: auto !important;
+        }
+
+        #quickViewModal .btn,
+        #quickViewLink,
+        #quickViewAddToCartForm,
+        #quickViewWishlistForm {
+            position: relative;
+            z-index: 3002;
+            pointer-events: auto !important;
+        }
+
+              /* Desktop Display Control */
         .display-4 {
             font-size: 2.5rem !important;
         }
@@ -927,10 +891,12 @@
                 font-size: 0.85rem;
             }
         }
+
     </style>
 {% endblock extra_css %}
 
 {% block content %}
+<div class="home-modern">
 <div class="container-fluid px-0">
     <section class="mb-0">
         <div id="headerSlider" class="carousel slide hero-slider" data-bs-ride="carousel">
@@ -984,6 +950,7 @@
         <form method="get" action="{% url 'core:product_list' %}" class="mt-4">
             <div class="input-group input-group-lg">
                 <input type="text" name="q" class="form-control" placeholder="{% trans 'Search for products or services (e.g., smartphone, logo design)' %}" value="{{ request.GET.q|default:'' }}">
+                <button class="btn btn-outline-secondary" id="saveSearchBtn" type="button" title="{% trans 'Save this search' %}"><i class="bi bi-bookmark-plus"></i></button>
                 <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> {% trans "Search" %}</button>
             </div>
         </form>
@@ -991,6 +958,118 @@
 </div>
 
 <div class="container my-4">
+
+    <!-- Marketplace Trust Highlights -->
+    <section class="home-value-strip mb-4">
+        <div class="value-item">
+            <span class="value-icon"><i class="bi bi-shield-check"></i></span>
+            <div>
+                <h6>{% trans "Verified Sellers" %}</h6>
+                <p>{% trans "Trusted stores and approved providers" %}</p>
+            </div>
+        </div>
+        <div class="value-item">
+            <span class="value-icon"><i class="bi bi-credit-card-2-front"></i></span>
+            <div>
+                <h6>{% trans "Secure Payments" %}</h6>
+                <p>{% trans "Protected checkout and order flow" %}</p>
+            </div>
+        </div>
+        <div class="value-item">
+            <span class="value-icon"><i class="bi bi-truck"></i></span>
+            <div>
+                <h6>{% trans "Fast Fulfillment" %}</h6>
+                <p>{% trans "Reliable delivery and service response" %}</p>
+            </div>
+        </div>
+        <div class="value-item">
+            <span class="value-icon"><i class="bi bi-chat-dots"></i></span>
+            <div>
+                <h6>{% trans "Live Support" %}</h6>
+                <p>{% trans "Get help from our support team" %}</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trending Discovery Chips -->
+    <section class="home-discovery-strip mb-4">
+        <div class="discovery-head">
+            <h2 class="section-title mb-2">{% trans "Trending Right Now" %}</h2>
+            <p class="text-muted mb-0">{% trans "Quick links to popular categories and origins." %}</p>
+        </div>
+        <div class="discovery-chips">
+            {% for category in top_categories %}
+                <a href="{% url 'core:product_list' %}?category={{ category.slug }}" class="discovery-chip">
+                    <i class="bi bi-stars"></i>
+                    {{ category.name }}
+                </a>
+            {% empty %}
+                <a href="{% url 'core:product_list' %}" class="discovery-chip"><i class="bi bi-stars"></i>{% trans "Featured" %}</a>
+                <a href="{% url 'core:product_list' %}?sort=-created_at" class="discovery-chip"><i class="bi bi-lightning-charge"></i>{% trans "New Arrivals" %}</a>
+            {% endfor %}
+
+            {% for country in top_countries|slice:":4" %}
+                <a href="{% url 'core:product_list' %}?origin_country={{ country.code }}" class="discovery-chip alt">
+                    <i class="bi bi-geo-alt"></i>
+                    {{ country.name }}
+                </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    {% if personalized_promo %}
+    <section class="promo-intel-banner mb-4">
+        <div class="promo-intel-copy">
+            <span class="promo-kicker">{% trans "Personalized Offer" %}</span>
+            <h3>{{ personalized_promo.name }}</h3>
+            <p class="mb-0">
+                {% if personalized_promo.description %}
+                    {{ personalized_promo.description|truncatechars:120 }}
+                {% else %}
+                    {% trans "Special savings tailored to your recent interests." %}
+                {% endif %}
+            </p>
+        </div>
+        <div class="promo-intel-meta">
+            <strong>
+                {% if personalized_promo.promo_type == 'percentage' %}
+                    {{ personalized_promo.discount_value|floatformat:0 }}% {% trans "OFF" %}
+                {% else %}
+                    {{ personalized_promo.discount_value|floatformat:2 }} {% trans "OFF" %}
+                {% endif %}
+            </strong>
+            <a href="{% url 'core:product_list' %}" class="btn btn-sm btn-primary">{% trans "Browse Deals" %}</a>
+        </div>
+    </section>
+    {% endif %}
+
+    <section id="savedSearchesSection" class="saved-searches mb-4 home-rail" data-rail="saved-searches" style="display:none;">
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Saved Searches" %}</h2>
+            <button type="button" id="clearSavedSearches" class="btn btn-sm btn-outline-secondary">{% trans "Clear" %}</button>
+        </div>
+        <div id="savedSearchChips" class="saved-searches-chips"></div>
+    </section>
+
+    <!-- Marketplace Activity Snapshot -->
+    <section class="market-activity mb-5">
+        <div class="activity-card">
+            <span class="activity-label">{% trans "Featured Products" %}</span>
+            <strong class="activity-value">{{ featured_products|length }}</strong>
+        </div>
+        <div class="activity-card">
+            <span class="activity-label">{% trans "Fresh Arrivals" %}</span>
+            <strong class="activity-value">{{ new_arrivals|length }}</strong>
+        </div>
+        <div class="activity-card">
+            <span class="activity-label">{% trans "Top Vendors" %}</span>
+            <strong class="activity-value">{{ top_vendors|length }}</strong>
+        </div>
+        <div class="activity-card">
+            <span class="activity-label">{% trans "Featured Services" %}</span>
+            <strong class="activity-value">{{ featured_services|length }}</strong>
+        </div>
+    </section>
 
     <!-- Shop by Country Section (replaces the old Shop by Category) -->
     {% if top_countries %} 
@@ -1032,8 +1111,14 @@
         <div class="horizontal-scroll-wrapper">
             {% for product in featured_products %}
             <div class="horizontal-scroll-item">
-                <div class="service-item-flat">
+                <div class="service-item-flat" data-product-id="{{ product.id }}" data-price="{{ product.price }}" data-stock="{{ product.stock|default:0 }}" data-category-name="{{ product.category.name|lower }}" data-origin-name="{% if product.origin_country %}{{ product.origin_country.name|lower }}{% endif %}">
                     <div class="image-container">
+                        <div class="product-chip-row">
+                            <span class="product-chip featured">{% trans "Featured" %}</span>
+                            {% if product.vendor.is_verified %}
+                                <span class="product-chip verified"><i class="bi bi-patch-check-fill"></i> {% trans "Verified" %}</span>
+                            {% endif %}
+                        </div>
                         <a href="{{ product.get_absolute_url }}">
                             {% with first_image=product.images.first %}
                                 {% if first_image.image.url %}
@@ -1044,7 +1129,7 @@
                             {% endwith %}
                         </a>
                         <div class="hover-btns">
-                            <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn" 
+                                <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn" 
                                     title="{% trans 'Quick View' %}"
                                     data-bs-toggle="modal" 
                                     data-bs-target="#quickViewModal"
@@ -1055,7 +1140,7 @@
                                     data-url="{{ product.get_absolute_url }}"
                                     data-image="{% if product.images.first.image %}{{ product.images.first.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
                                     data-product-id="{{ product.id }}">
-                                <i class="bi bi-eye"></i> {% trans "Quick View" %}
+                                <i class="bi bi-eye"></i>
                             </button>
                             <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
                                 <i class="bi bi-arrow-left-right"></i>
@@ -1208,8 +1293,14 @@
         <div class="horizontal-scroll-wrapper">
             {% for product in new_arrivals %}
             <div class="horizontal-scroll-item">
-                <div class="service-item-flat">
+                <div class="service-item-flat" data-product-id="{{ product.id }}" data-price="{{ product.price }}" data-stock="{{ product.stock|default:0 }}" data-category-name="{{ product.category.name|lower }}" data-origin-name="{% if product.origin_country %}{{ product.origin_country.name|lower }}{% endif %}">
                     <div class="image-container">
+                        <div class="product-chip-row">
+                            <span class="product-chip new">{% trans "New" %}</span>
+                            {% if product.vendor.is_verified %}
+                                <span class="product-chip verified"><i class="bi bi-patch-check-fill"></i> {% trans "Verified" %}</span>
+                            {% endif %}
+                        </div>
                         <a href="{{ product.get_absolute_url }}">
                             {% with first_image=product.images.first %}
                                 {% if first_image.image.url %}
@@ -1220,7 +1311,7 @@
                             {% endwith %}
                         </a>
                         <div class="hover-btns">
-                            <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn" 
+                                <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn" 
                                     title="{% trans 'Quick View' %}"
                                     data-bs-toggle="modal" 
                                     data-bs-target="#quickViewModal"
@@ -1231,7 +1322,7 @@
                                     data-url="{{ product.get_absolute_url }}"
                                     data-image="{% if product.images.first.image %}{{ product.images.first.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
                                     data-product-id="{{ product.id }}">
-                                <i class="bi bi-eye"></i> {% trans "Quick View" %}
+                                <i class="bi bi-eye"></i>
                             </button>
                             <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
                                 <i class="bi bi-arrow-left-right"></i>
@@ -1246,7 +1337,6 @@
                     </p>
                     <p class="service-description-flat mb-2">{{ product.description|truncatewords_html:12 }}</p>
                     <p class="service-price-flat mb-2">
-                        £{{ product.price|floatformat:2 }}
                         £{{ product.price|floatformat:2 }}
                     </p>
                     <div class="d-flex gap-2 btn-details-flat w-100">
@@ -1263,14 +1353,180 @@
     </section>
     {% endif %}
 
+    <!-- Personalized Picks -->
+    {% if featured_products %}
+    <section id="recommendedRail" class="mb-5 personalized-picks home-rail" data-rail="recommended">
+        <div class="section-header">
+            <h2 class="section-title">
+                {% if user.is_authenticated %}
+                    {% trans "Recommended For You" %}
+                {% else %}
+                    {% trans "Editor’s Picks" %}
+                {% endif %}
+            </h2>
+            <a href="{% url 'core:product_list' %}?is_featured=1" class="btn btn-sm btn-outline-secondary">{% trans "See more" %}</a>
+        </div>
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-2">
+            {% for product in featured_products|slice:":8" %}
+            <div class="col">
+                <div class="pick-mini-card h-100" data-product-id="{{ product.id }}" data-price="{{ product.price }}" data-stock="{{ product.stock|default:0 }}" data-category-name="{{ product.category.name|lower }}" data-origin-name="{% if product.origin_country %}{{ product.origin_country.name|lower }}{% endif %}">
+                    <div class="pick-mini-media-wrap">
+                        {% with first_image=product.images.first %}
+                        <a href="{{ product.get_absolute_url }}" class="pick-mini-media-link" aria-label="{{ product.name }}">
+                            <div class="pick-mini-media">
+                            {% if first_image.image.url %}
+                                <img src="{{ first_image.image.url }}" alt="{{ product.name }}">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                            {% endif %}
+                            </div>
+                        </a>
+
+                        <div class="pick-mini-actions">
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn"
+                                    title="{% trans 'Quick View' %}"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#quickViewModal"
+                                    data-name="{{ product.name }}"
+                                    data-price="{{ product.price }}"
+                                    data-category="{{ product.category.name }}"
+                                    data-description="{{ product.description|striptags|truncatewords:20 }}"
+                                    data-url="{{ product.get_absolute_url }}"
+                                    data-image="{% if first_image.image.url %}{{ first_image.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                                    data-product-id="{{ product.id }}">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </button>
+                        </div>
+                        {% endwith %}
+                    </div>
+                    <div class="pick-mini-body">
+                        <h6><a href="{{ product.get_absolute_url }}">{{ product.name|truncatechars:45 }}</a></h6>
+                        <p class="mb-0">{% convert_price product.price %}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if continue_shopping_products %}
+    <section id="continueRail" class="mb-5 continue-shopping-block home-rail" data-rail="continue-shopping">
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Continue Shopping" %}</h2>
+            <a href="{% url 'core:product_list' %}" class="btn btn-sm btn-outline-secondary">{% trans "Explore more" %}</a>
+        </div>
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-2">
+            {% for product in continue_shopping_products %}
+            <div class="col">
+                <div class="pick-mini-card h-100" data-product-id="{{ product.id }}" data-price="{{ product.price }}" data-stock="{{ product.stock|default:0 }}" data-category-name="{{ product.category.name|lower }}" data-origin-name="{% if product.origin_country %}{{ product.origin_country.name|lower }}{% endif %}">
+                    <div class="pick-mini-media-wrap">
+                        {% with first_image=product.images.first %}
+                        <a href="{{ product.get_absolute_url }}" class="pick-mini-media-link" aria-label="{{ product.name }}">
+                            <div class="pick-mini-media">
+                            {% if first_image.image.url %}
+                                <img src="{{ first_image.image.url }}" alt="{{ product.name }}">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                            {% endif %}
+                            </div>
+                        </a>
+
+                        <div class="pick-mini-actions">
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn"
+                                    title="{% trans 'Quick View' %}"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#quickViewModal"
+                                    data-name="{{ product.name }}"
+                                    data-price="{{ product.price }}"
+                                    data-category="{{ product.category.name }}"
+                                    data-description="{{ product.description|striptags|truncatewords:20 }}"
+                                    data-url="{{ product.get_absolute_url }}"
+                                    data-image="{% if first_image.image.url %}{{ first_image.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                                    data-product-id="{{ product.id }}">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </button>
+                        </div>
+                        {% endwith %}
+                    </div>
+                    <div class="pick-mini-body">
+                        <h6><a href="{{ product.get_absolute_url }}">{{ product.name|truncatechars:40 }}</a></h6>
+                        <p class="mb-0">{% convert_price product.price %}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if because_viewed_products and because_viewed_anchor %}
+    <section class="mb-5 because-viewed-block home-rail" data-rail="because-viewed">
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Because You Viewed" %} {{ because_viewed_anchor.name|truncatechars:36 }}</h2>
+            <a href="{{ because_viewed_anchor.get_absolute_url }}" class="btn btn-sm btn-outline-secondary">{% trans "View item" %}</a>
+        </div>
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-2">
+            {% for product in because_viewed_products %}
+            <div class="col">
+                <div class="pick-mini-card h-100" data-product-id="{{ product.id }}" data-price="{{ product.price }}" data-stock="{{ product.stock|default:0 }}" data-category-name="{{ product.category.name|lower }}" data-origin-name="{% if product.origin_country %}{{ product.origin_country.name|lower }}{% endif %}">
+                    <div class="pick-mini-media-wrap">
+                        {% with first_image=product.images.first %}
+                        <a href="{{ product.get_absolute_url }}" class="pick-mini-media-link" aria-label="{{ product.name }}">
+                            <div class="pick-mini-media">
+                            {% if first_image.image.url %}
+                                <img src="{{ first_image.image.url }}" alt="{{ product.name }}">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                            {% endif %}
+                            </div>
+                        </a>
+
+                        <div class="pick-mini-actions">
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn"
+                                    title="{% trans 'Quick View' %}"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#quickViewModal"
+                                    data-name="{{ product.name }}"
+                                    data-price="{{ product.price }}"
+                                    data-category="{{ product.category.name }}"
+                                    data-description="{{ product.description|striptags|truncatewords:20 }}"
+                                    data-url="{{ product.get_absolute_url }}"
+                                    data-image="{% if first_image.image.url %}{{ first_image.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                                    data-product-id="{{ product.id }}">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </button>
+                        </div>
+                        {% endwith %}
+                    </div>
+                    <div class="pick-mini-body">
+                        <h6><a href="{{ product.get_absolute_url }}">{{ product.name|truncatechars:40 }}</a></h6>
+                        <p class="mb-0">{% convert_price product.price %}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
     <!-- Recently Viewed Section (Logged-in Users) -->
-    {% if user.is_authenticated and recently_viewed %}
-    <section class="mb-5">
+    {% if recently_viewed %}
+    <section class="mb-5 home-rail" data-rail="recently-viewed-products">
         <h2 class="section-title">{% trans "Recently Viewed" %}</h2>
         <div class="horizontal-scroll-wrapper">
             {% for product in recently_viewed %}
             <div class="horizontal-scroll-item">
-                <div class="service-item-flat">
+                <div class="service-item-flat" data-product-id="{{ product.id }}" data-price="{{ product.price }}" data-stock="{{ product.stock|default:0 }}" data-category-name="{{ product.category.name|lower }}" data-origin-name="{% if product.origin_country %}{{ product.origin_country.name|lower }}{% endif %}">
                     <div class="image-container">
                         <a href="{{ product.get_absolute_url }}">
                             {% with first_image=product.images.first %}
@@ -1282,7 +1538,7 @@
                             {% endwith %}
                         </a>
                         <div class="hover-btns">
-                            <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn" 
+                                <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn" 
                                     title="{% trans 'Quick View' %}"
                                     data-bs-toggle="modal" 
                                     data-bs-target="#quickViewModal"
@@ -1293,7 +1549,7 @@
                                     data-url="{{ product.get_absolute_url }}"
                                     data-image="{% if product.images.first.image %}{{ product.images.first.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
                                     data-product-id="{{ product.id }}">
-                                <i class="bi bi-eye"></i> {% trans "Quick View" %}
+                                <i class="bi bi-eye"></i>
                             </button>
                             <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
                                 <i class="bi bi-arrow-left-right"></i>
@@ -1330,6 +1586,378 @@
                             <button type="submit" class="btn btn-sm btn-success w-100">{% trans "Buy" %}</button>
                         </form>
                     </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if recent_viewed_categories %}
+    <section class="mb-5 home-rail" data-rail="recently-viewed-categories">
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Recently Viewed Categories" %}</h2>
+        </div>
+        <div class="saved-searches-chips">
+            {% for category in recent_viewed_categories %}
+                <a href="{% url 'core:product_list' %}?category={{ category.slug }}" class="saved-search-chip">
+                    <i class="bi bi-grid-3x3-gap"></i>{{ category.name }}
+                </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if social_proof_products %}
+    <section class="mb-5 social-proof-block home-rail" data-rail="social-proof">
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Recently Purchased by Other Buyers" %}</h2>
+        </div>
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-2">
+            {% for entry in social_proof_products %}
+            <div class="col">
+                <div class="pick-mini-card h-100" data-product-id="{{ entry.product.id }}" data-price="{{ entry.product.price }}" data-stock="{{ entry.product.stock|default:0 }}" data-category-name="{{ entry.product.category.name|lower }}" data-origin-name="{% if entry.product.origin_country %}{{ entry.product.origin_country.name|lower }}{% endif %}">
+                    <div class="pick-mini-media-wrap">
+                        {% with first_image=entry.product.images.first %}
+                        <a href="{{ entry.product.get_absolute_url }}" class="pick-mini-media-link" aria-label="{{ entry.product.name }}">
+                            <div class="pick-mini-media">
+                            {% if first_image.image.url %}
+                                <img src="{{ first_image.image.url }}" alt="{{ entry.product.name }}">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                            {% endif %}
+                            </div>
+                        </a>
+
+                        <div class="pick-mini-actions">
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn"
+                                    title="{% trans 'Quick View' %}"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#quickViewModal"
+                                    data-name="{{ entry.product.name }}"
+                                    data-price="{{ entry.product.price }}"
+                                    data-category="{{ entry.product.category.name }}"
+                                    data-description="{{ entry.product.description|striptags|truncatewords:20 }}"
+                                    data-url="{{ entry.product.get_absolute_url }}"
+                                    data-image="{% if first_image.image.url %}{{ first_image.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                                    data-product-id="{{ entry.product.id }}">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ entry.product.id }}">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </button>
+                        </div>
+                        {% endwith %}
+                    </div>
+                    <div class="pick-mini-body">
+                        <h6><a href="{{ entry.product.get_absolute_url }}">{{ entry.product.name|truncatechars:38 }}</a></h6>
+                        <p class="mb-0">{% convert_price entry.product.price %}</p>
+                        <span class="insight-mini-meta">{{ entry.sold_qty }} {% trans "sold" %} · {{ entry.buyers }} {% trans "buyers" %}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if user.is_authenticated %}
+    {% if wishlist_back_in_stock or wishlist_price_drop %}
+    <section class="mb-5 wishlist-alerts-block home-rail" data-rail="wishlist-alerts">
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Wishlist Alerts" %}</h2>
+            <a href="{% url 'core:wishlist' %}" class="btn btn-sm btn-outline-secondary">{% trans "Open Wishlist" %}</a>
+        </div>
+
+        {% if wishlist_back_in_stock %}
+        <div class="alerts-subhead"><span>{% trans "Back in Stock" %}</span></div>
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-2 mb-3">
+            {% for product in wishlist_back_in_stock %}
+            <div class="col">
+                <div class="pick-mini-card h-100" data-product-id="{{ product.id }}" data-price="{{ product.price }}" data-stock="{{ product.stock|default:0 }}" data-category-name="{{ product.category.name|lower }}" data-origin-name="{% if product.origin_country %}{{ product.origin_country.name|lower }}{% endif %}">
+                    <div class="pick-mini-media-wrap">
+                        {% with first_image=product.images.first %}
+                        <a href="{{ product.get_absolute_url }}" class="pick-mini-media-link" aria-label="{{ product.name }}">
+                            <div class="pick-mini-media">
+                            {% if first_image.image.url %}
+                                <img src="{{ first_image.image.url }}" alt="{{ product.name }}">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                            {% endif %}
+                            </div>
+                        </a>
+
+                        <div class="pick-mini-actions">
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn"
+                                    title="{% trans 'Quick View' %}"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#quickViewModal"
+                                    data-name="{{ product.name }}"
+                                    data-price="{{ product.price }}"
+                                    data-category="{{ product.category.name }}"
+                                    data-description="{{ product.description|striptags|truncatewords:20 }}"
+                                    data-url="{{ product.get_absolute_url }}"
+                                    data-image="{% if first_image.image.url %}{{ first_image.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                                    data-product-id="{{ product.id }}">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </button>
+                        </div>
+                        {% endwith %}
+                    </div>
+                    <div class="pick-mini-body">
+                        <h6><a href="{{ product.get_absolute_url }}">{{ product.name|truncatechars:38 }}</a></h6>
+                        <p class="mb-0">{% convert_price product.price %}</p>
+                        <span class="insight-mini-meta in-stock"><i class="bi bi-check-circle-fill"></i> {% trans "Available now" %}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if wishlist_price_drop %}
+        <div class="alerts-subhead"><span>{% trans "Price Drop / Promo Picks" %}</span></div>
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-2">
+            {% for product in wishlist_price_drop %}
+            <div class="col">
+                <div class="pick-mini-card h-100" data-product-id="{{ product.id }}" data-price="{{ product.price }}" data-stock="{{ product.stock|default:0 }}" data-category-name="{{ product.category.name|lower }}" data-origin-name="{% if product.origin_country %}{{ product.origin_country.name|lower }}{% endif %}">
+                    <div class="pick-mini-media-wrap">
+                        {% with first_image=product.images.first %}
+                        <a href="{{ product.get_absolute_url }}" class="pick-mini-media-link" aria-label="{{ product.name }}">
+                            <div class="pick-mini-media">
+                            {% if first_image.image.url %}
+                                <img src="{{ first_image.image.url }}" alt="{{ product.name }}">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                            {% endif %}
+                            </div>
+                        </a>
+
+                        <div class="pick-mini-actions">
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn"
+                                    title="{% trans 'Quick View' %}"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#quickViewModal"
+                                    data-name="{{ product.name }}"
+                                    data-price="{{ product.price }}"
+                                    data-category="{{ product.category.name }}"
+                                    data-description="{{ product.description|striptags|truncatewords:20 }}"
+                                    data-url="{{ product.get_absolute_url }}"
+                                    data-image="{% if first_image.image.url %}{{ first_image.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                                    data-product-id="{{ product.id }}">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </button>
+                        </div>
+                        {% endwith %}
+                    </div>
+                    <div class="pick-mini-body">
+                        <h6><a href="{{ product.get_absolute_url }}">{{ product.name|truncatechars:38 }}</a></h6>
+                        <p class="mb-0">{% convert_price product.price %}</p>
+                        <span class="insight-mini-meta deal"><i class="bi bi-lightning-charge-fill"></i> {% trans "Deal detected" %}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+    {% endif %}
+
+    {% if smart_search_suggestions %}
+    <section class="mb-4 smart-suggestions-block home-rail" data-rail="smart-search-suggestions">
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Smart Search Prompts" %}</h2>
+        </div>
+        <div class="saved-searches-chips smart-suggestion-chips" id="homeSmartSuggestionChips">
+            {% for suggestion in smart_search_suggestions %}
+                <button type="button" class="saved-search-chip smart-suggestion-chip-btn" data-suggestion-label="{{ suggestion.label }}">
+                    <i class="bi bi-stars"></i>{{ suggestion.label }}
+                </button>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="mb-4 quick-filter-block home-rail" data-rail="instant-filters">
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Quick Filters" %}</h2>
+        </div>
+        <div class="quick-filter-chips" id="homeQuickFilters">
+            <button type="button" class="quick-filter-chip active" data-filter="all">{% trans "All" %}</button>
+            <button type="button" class="quick-filter-chip" data-filter="budget">{% trans "Budget" %}</button>
+            <button type="button" class="quick-filter-chip" data-filter="mid">{% trans "Mid-range" %}</button>
+            <button type="button" class="quick-filter-chip" data-filter="premium">{% trans "Premium" %}</button>
+            <button type="button" class="quick-filter-chip" data-filter="in-stock">{% trans "In stock" %}</button>
+        </div>
+    </section>
+
+    <section class="mb-4 live-commerce-bar">
+        <div class="live-metric-pill">
+            <i class="bi bi-lightning-charge-fill"></i>
+            <span>{{ live_orders_24h }}</span>
+            <small>{% trans "orders in last 24h" %}</small>
+        </div>
+        <div class="live-metric-pill">
+            <i class="bi bi-people-fill"></i>
+            <span>{{ live_shoppers_24h }}</span>
+            <small>{% trans "active shoppers today" %}</small>
+        </div>
+    </section>
+
+    {% if user.is_authenticated and rewards_summary %}
+    <section class="mb-5 rewards-progress-card home-rail" data-rail="rewards-progress">
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Your Rewards Progress" %}</h2>
+            <a href="{% url 'core:user_profile' %}" class="btn btn-sm btn-outline-secondary">{% trans "View profile" %}</a>
+        </div>
+        <div class="rewards-grid">
+            <div>
+                <div class="rewards-points">{{ rewards_summary.points }}</div>
+                <div class="rewards-caption">{% trans "Current points" %}</div>
+            </div>
+            <div>
+                <div class="rewards-points">{{ rewards_summary.completed_orders }}</div>
+                <div class="rewards-caption">{% trans "Completed orders" %}</div>
+            </div>
+            <div>
+                <div class="rewards-points">{{ rewards_summary.points_to_next }}</div>
+                <div class="rewards-caption">{% trans "Points to next goal" %}</div>
+            </div>
+        </div>
+        <div class="progress rewards-progress-track mt-3" role="progressbar" aria-valuenow="{{ rewards_summary.progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar" style="width: {{ rewards_summary.progress_percent }}%"></div>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if buy_again_products %}
+    <section class="mb-5 home-rail" data-rail="buy-again">
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Buy Again" %}</h2>
+            <a href="{% url 'core:product_list' %}" class="btn btn-sm btn-outline-secondary">{% trans "Explore more" %}</a>
+        </div>
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-2">
+            {% for product in buy_again_products %}
+            <div class="col">
+                <div class="pick-mini-card h-100" data-product-id="{{ product.id }}" data-price="{{ product.price }}" data-stock="{{ product.stock|default:0 }}" data-category-name="{{ product.category.name|lower }}" data-origin-name="{% if product.origin_country %}{{ product.origin_country.name|lower }}{% endif %}">
+                    <div class="pick-mini-media-wrap">
+                        {% with first_image=product.images.first %}
+                        <a href="{{ product.get_absolute_url }}" class="pick-mini-media-link" aria-label="{{ product.name }}">
+                            <div class="pick-mini-media">
+                            {% if first_image.image.url %}
+                                <img src="{{ first_image.image.url }}" alt="{{ product.name }}">
+                            {% else %}
+                                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+                            {% endif %}
+                            </div>
+                        </a>
+                        <div class="pick-mini-actions">
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn quick-view-btn"
+                                    title="{% trans 'Quick View' %}"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#quickViewModal"
+                                    data-name="{{ product.name }}"
+                                    data-price="{{ product.price }}"
+                                    data-category="{{ product.category.name }}"
+                                    data-description="{{ product.description|striptags|truncatewords:20 }}"
+                                    data-url="{{ product.get_absolute_url }}"
+                                    data-image="{% if first_image.image.url %}{{ first_image.image.url }}{% else %}{% static 'assets/img/placeholder.png' %}{% endif %}"
+                                    data-product-id="{{ product.id }}">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-light btn-sm rounded-pill hover-btn compare-btn" title="{% trans 'Compare' %}" data-product-id="{{ product.id }}">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </button>
+                        </div>
+                        {% endwith %}
+                    </div>
+                    <div class="pick-mini-body">
+                        <h6><a href="{{ product.get_absolute_url }}">{{ product.name|truncatechars:40 }}</a></h6>
+                        <p class="mb-0">{% convert_price product.price %}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if bundle_anchor and frequently_bought_together %}
+    <section class="mb-5 bundle-intelligence-block home-rail" data-rail="frequently-bought-together">
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Frequently Bought Together" %}</h2>
+            <a href="{{ bundle_anchor.get_absolute_url }}" class="btn btn-sm btn-outline-secondary">{% trans "View anchor item" %}</a>
+        </div>
+        <p class="bundle-subtitle">{% trans "Based on shoppers who bought" %} <strong>{{ bundle_anchor.name|truncatechars:45 }}</strong></p>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+            {% for item in frequently_bought_together %}
+            <div class="col">
+                <div class="bundle-card">
+                    <div class="bundle-card-copy">
+                        <a href="{{ item.product.get_absolute_url }}" class="bundle-product-name">{{ item.product.name|truncatechars:52 }}</a>
+                        <span class="bundle-meta">{{ item.freq }} {% trans "co-purchases" %} · {{ item.qty }} {% trans "units" %}</span>
+                    </div>
+                    <a href="{% url 'core:add_to_cart' item.product.id %}" class="btn btn-sm btn-outline-primary">{% trans "Add" %}</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if trusted_seller_spotlight %}
+    <section class="mb-5 trusted-seller-block home-rail" data-rail="trusted-sellers">
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Trusted Seller Spotlight" %}</h2>
+        </div>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+            {% for vendor in trusted_seller_spotlight %}
+            <div class="col">
+                <div class="trusted-seller-card">
+                    <div class="trusted-seller-top">
+                        <div>
+                            <h6><a href="{{ vendor.get_absolute_url }}">{{ vendor.name|truncatechars:35 }}</a></h6>
+                            <span class="trusted-seller-meta">{{ vendor.active_products }} {% trans "active products" %}</span>
+                        </div>
+                        {% if vendor.is_verified %}
+                        <span class="badge bg-success"><i class="bi bi-patch-check-fill"></i> {% trans "Verified" %}</span>
+                        {% endif %}
+                    </div>
+                    <div class="trusted-seller-stats">
+                        <span><i class="bi bi-star-fill"></i> {{ vendor.avg_rating|default:"0"|floatformat:1 }}</span>
+                        <span><i class="bi bi-chat-left-text"></i> {{ vendor.review_count }}</span>
+                        <span><i class="bi bi-bag-check"></i> {{ vendor.recent_sales }}</span>
+                    </div>
+                    <a href="{{ vendor.get_absolute_url }}" class="btn btn-sm btn-outline-primary w-100">{% trans "Visit Store" %}</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if buyer_moments %}
+    <section class="mb-5 buyer-moments-block home-rail" data-rail="buyer-moments">
+        <div class="section-header">
+            <h2 class="section-title">{% trans "Buyer Moments" %}</h2>
+        </div>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+            {% for moment in buyer_moments %}
+            <div class="col">
+                <div class="buyer-moment-card">
+                    <a href="{{ moment.product.get_absolute_url }}" class="buyer-moment-title">{{ moment.product.name|truncatechars:45 }}</a>
+                    <div class="buyer-moment-meta">
+                        <span><i class="bi bi-camera-video-fill"></i> {% trans "Video review" %}</span>
+                        <span><i class="bi bi-star-fill"></i> {{ moment.rating }}/5</span>
+                    </div>
+                    <small>{% trans "by" %} {{ moment.user.username }}</small>
                 </div>
             </div>
             {% endfor %}
@@ -1980,6 +2608,17 @@
     </section>
     {% endif %}
 
+    <section class="home-growth-cta my-5">
+        <div class="growth-copy">
+            <h3>{% trans "Ready to grow on GOWBUY?" %}</h3>
+            <p>{% trans "Launch products, offer services, and reach buyers actively looking for quality." %}</p>
+        </div>
+        <div class="growth-actions">
+            <a href="{% url 'core:register_vendor' %}" class="btn btn-primary">{% trans "Start Selling" %}</a>
+            <a href="{% url 'core:become_service_provider' %}" class="btn btn-outline-primary">{% trans "Become a Provider" %}</a>
+        </div>
+    </section>
+
     <!-- Floating Compare Button -->
     <a href="#" id="compareFloatingBtn" class="compare-floating-btn" title="{% trans 'Compare Selected Items' %}">
         <i class="bi bi-arrow-left-right"></i>
@@ -1988,7 +2627,42 @@
         </span>
     </a>
 
-    <!-- Quick View Modal -->
+    {% if user.is_authenticated and mini_cart_count %}
+    <div id="miniCartWidget" class="mini-cart-widget">
+        <button type="button" class="mini-cart-toggle" id="miniCartToggle" aria-expanded="true">
+            <span><i class="bi bi-cart3"></i> {% trans "Mini Cart" %}</span>
+            <span class="badge bg-primary">{{ mini_cart_count }}</span>
+        </button>
+        <div class="mini-cart-body" id="miniCartBody">
+            <div class="mini-cart-items">
+                {% for entry in mini_cart_items %}
+                <div class="mini-cart-row">
+                    <a href="{{ entry.product.get_absolute_url }}" class="mini-cart-name">{{ entry.product.name|truncatechars:32 }}</a>
+                    <span class="mini-cart-qty">×{{ entry.quantity }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="mini-cart-footer">
+                <strong>{% trans "Total" %}: {% convert_price mini_cart_total %}</strong>
+                <div class="mini-cart-actions">
+                    <a href="{% url 'core:cart_detail' %}" class="btn btn-sm btn-outline-primary">{% trans "Open Cart" %}</a>
+                    <a href="{% url 'core:checkout' %}" class="btn btn-sm btn-primary">{% trans "Checkout" %}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div id="compareMiniDrawer" class="compare-mini-drawer" style="display:none;">
+        <div class="compare-mini-header">
+            <strong>{% trans "Compare Queue" %}</strong>
+            <button type="button" class="btn btn-sm btn-link text-decoration-none" id="compareMiniClose">×</button>
+        </div>
+        <div id="compareMiniItems" class="compare-mini-items"></div>
+        <a href="#" id="compareMiniGo" class="btn btn-primary btn-sm w-100 mt-2">{% trans "Compare now" %}</a>
+    </div>
+
+     <!-- Quick View Modal -->
     <div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
@@ -2010,16 +2684,18 @@
                             <p class="text-muted mb-2"><i class="bi bi-tag-fill"></i> <span id="quickViewCategory"></span></p>
                             <h4 class="text-primary fw-bold mb-3" id="quickViewPrice"></h4>
                             <p class="mb-4" id="quickViewDescription"></p>
-                            <form id="quickViewAddToCartForm" method="post" action="">
+                            <form id="quickViewAddToCartForm" method="post" action="{% url 'core:add_to_cart' 0 %}">
                                 {% csrf_token %}
                                 <div class="d-flex align-items-center mb-3">
                                     <label for="quickViewQuantity" class="me-2 fw-bold">{% trans "Qty:" %}</label>
                                     <input type="number" class="form-control" id="quickViewQuantity" name="quantity" value="1" min="1" style="width: 80px;">
                                 </div>
-                                <div class="d-flex gap-2 mb-3">
-                                    <button type="submit" class="btn btn-success flex-grow-1"><i class="bi bi-cart-plus"></i> {% trans "Add to Cart" %}</button>
-                                    <a id="quickViewWishlistBtn" href="#" class="btn btn-outline-danger" title="{% trans 'Add to Wishlist' %}"><i class="bi bi-heart"></i></a>
-                                </div>
+                                <button type="submit" class="btn btn-success w-100 mb-3"><i class="bi bi-cart-plus"></i> {% trans "Add to Cart" %}</button>
+                            </form>
+                            <form id="quickViewWishlistForm" method="post" action="{% url 'core:add_to_wishlist' %}" class="mb-3">
+                                {% csrf_token %}
+                                <input type="hidden" name="product_id" id="quickViewWishlistProductId" value="">
+                                <button type="submit" class="btn btn-outline-danger w-100" title="{% trans 'Add to Wishlist' %}"><i class="bi bi-heart"></i> {% trans "Add to Wishlist" %}</button>
                             </form>
                             <a id="quickViewLink" href="#" class="btn btn-outline-primary w-100">{% trans "View Full Details" %}</a>
                         </div>
@@ -2029,8 +2705,7 @@
         </div>
     </div>
 
-</div>
-{% endblock content %}
+</div>{% endblock content %}
 
 
 {% block extra_js %}
@@ -2040,8 +2715,14 @@
             // Quick View Modal Logic
             const quickViewModal = document.getElementById('quickViewModal');
             if (quickViewModal) {
+                // Move modal to body to prevent z-index/backdrop stacking issues
+                document.body.appendChild(quickViewModal);
+
                 quickViewModal.addEventListener('show.bs.modal', function (event) {
                     const button = event.relatedTarget;
+                    if (!button) {
+                        return;
+                    }
                     
                     const name = button.getAttribute('data-name');
                     const price = button.getAttribute('data-price');
@@ -2054,7 +2735,9 @@
                     document.getElementById('quickViewTitle').textContent = name;
                     document.getElementById('quickViewPrice').textContent = '£' + parseFloat(price).toFixed(2);
                     document.getElementById('quickViewImage').src = image;
-                    document.getElementById('quickViewLink').href = url;
+                    const quickViewLink = document.getElementById('quickViewLink');
+                    quickViewLink.href = url || '#';
+                    quickViewLink.dataset.url = url || '';
                     document.getElementById('quickViewCategory').textContent = category;
                     document.getElementById('quickViewDescription').textContent = description;
                     
@@ -2064,22 +2747,57 @@
                     document.getElementById('quickViewImage').src = image;
 
                     // Update Add to Cart Form Action
-                    // Note: Replace '/cart/add/' with your actual URL pattern if different
                     const addToCartForm = document.getElementById('quickViewAddToCartForm');
                     if (addToCartForm) {
-                        addToCartForm.action = `/add-to-cart/${productId}/`; 
+                        addToCartForm.action = `{% url 'core:add_to_cart' 0 %}`.replace('/0/', '/' + productId + '/');
                     }
 
-                    // Update Wishlist Button URL
-                    const wishlistBtn = document.getElementById('quickViewWishlistBtn');
-                    if (wishlistBtn) {
-                        wishlistBtn.href = `/wishlist/add/${productId}/`;
+                    // Wishlist endpoint accepts POST with product_id payload
+                    const wishlistProductId = document.getElementById('quickViewWishlistProductId');
+                    if (wishlistProductId) {
+                        wishlistProductId.value = productId || '';
                     }
                 });
+
+                const quickViewLink = document.getElementById('quickViewLink');
+                if (quickViewLink) {
+                    quickViewLink.addEventListener('click', function(event) {
+                        const targetUrl = this.dataset.url || this.getAttribute('href');
+                        if (!targetUrl || targetUrl === '#') {
+                            event.preventDefault();
+                            return;
+                        }
+                        window.location.href = targetUrl;
+                    });
+                }
+
+                const addToCartForm = document.getElementById('quickViewAddToCartForm');
+                if (addToCartForm) {
+                    addToCartForm.addEventListener('submit', function(event) {
+                        if (!this.action || this.action.endsWith('/add-to-cart/0/')) {
+                            event.preventDefault();
+                        }
+                    });
+                }
+
+                const wishlistForm = document.getElementById('quickViewWishlistForm');
+                if (wishlistForm) {
+                    wishlistForm.addEventListener('submit', function(event) {
+                        const productIdField = document.getElementById('quickViewWishlistProductId');
+                        if (!productIdField || !productIdField.value) {
+                            event.preventDefault();
+                        }
+                    });
+                }
             }
+
 
             // --- Compare Logic ---
             const compareKey = 'gowbuy_compare_list';
+            const compareDrawer = document.getElementById('compareMiniDrawer');
+            const compareDrawerItems = document.getElementById('compareMiniItems');
+            const compareMiniGo = document.getElementById('compareMiniGo');
+            const compareMiniClose = document.getElementById('compareMiniClose');
             
             function getCompareList() {
                 return JSON.parse(localStorage.getItem(compareKey)) || [];
@@ -2099,6 +2817,7 @@
                     floatBtn.style.display = 'flex';
                     badge.textContent = list.length;
                     floatBtn.href = `/compare/?ids=${list.join(',')}`; 
+                    if (compareMiniGo) compareMiniGo.href = `/compare/?ids=${list.join(',')}`;
                 } else {
                     floatBtn.style.display = 'none';
                 }
@@ -2114,6 +2833,29 @@
                         btn.classList.remove('btn-primary');
                     }
                 });
+
+                if (compareDrawer && compareDrawerItems) {
+                    if (!list.length) {
+                        compareDrawer.style.display = 'none';
+                        compareDrawerItems.innerHTML = '';
+                    } else {
+                        const cardMap = new Map();
+                        document.querySelectorAll('.pick-mini-card[data-product-id], .service-item-flat .compare-btn, .vendor-item-flat .compare-btn').forEach(el => {
+                            const pid = el.getAttribute('data-product-id') || el.closest('[data-product-id]')?.getAttribute('data-product-id');
+                            if (!pid || cardMap.has(pid)) return;
+                            const card = el.closest('.pick-mini-card, .service-item-flat, .vendor-item-flat') || el;
+                            const title = card.querySelector('h6 a, h5 a')?.textContent?.trim() || 'Product';
+                            const link = card.querySelector('a[href*="/product/"]')?.getAttribute('href') || '#';
+                            cardMap.set(pid, { title, link });
+                        });
+
+                        compareDrawer.style.display = '';
+                        compareDrawerItems.innerHTML = list.map(pid => {
+                            const item = cardMap.get(pid) || { title: `#${pid}`, link: '#' };
+                            return `<div class="compare-mini-item"><a href="${item.link}">${item.title}</a><button type="button" class="compare-mini-remove" data-product-id="${pid}">×</button></div>`;
+                        }).join('');
+                    }
+                }
             }
 
             // Event Delegation for Compare Buttons
@@ -2142,7 +2884,148 @@
                     saveCompareList(list);
                     updateCompareUI();
                 }
+
+                const removeBtn = e.target.closest('.compare-mini-remove');
+                if (removeBtn) {
+                    const pid = removeBtn.getAttribute('data-product-id');
+                    const list = getCompareList().filter(id => id !== pid);
+                    saveCompareList(list);
+                    updateCompareUI();
+                }
             });
+
+            if (compareMiniClose && compareDrawer) {
+                compareMiniClose.addEventListener('click', function() {
+                    compareDrawer.style.display = 'none';
+                });
+            }
+
+            // --- Mini Cart Widget ---
+            const miniCartToggle = document.getElementById('miniCartToggle');
+            const miniCartBody = document.getElementById('miniCartBody');
+            if (miniCartToggle && miniCartBody) {
+                const collapsedKey = 'gowbuy_home_mini_cart_collapsed';
+                const collapsed = localStorage.getItem(collapsedKey) === '1';
+                if (collapsed) {
+                    miniCartBody.style.display = 'none';
+                    miniCartToggle.setAttribute('aria-expanded', 'false');
+                }
+
+                miniCartToggle.addEventListener('click', function() {
+                    const isOpen = miniCartBody.style.display !== 'none';
+                    miniCartBody.style.display = isOpen ? 'none' : '';
+                    miniCartToggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+                    localStorage.setItem(collapsedKey, isOpen ? '1' : '0');
+                });
+            }
+
+            // --- Instant on-page filters ---
+            const quickFilters = document.getElementById('homeQuickFilters');
+            const filterableCards = Array.from(document.querySelectorAll('.pick-mini-card[data-price], .service-item-flat[data-price]'));
+
+            function applyHomeFilter(filterName) {
+                filterableCards.forEach(card => {
+                    const price = parseFloat(card.getAttribute('data-price') || '0');
+                    const stock = parseInt(card.getAttribute('data-stock') || '0', 10);
+                    let visible = true;
+
+                    if (filterName === 'budget') {
+                        visible = price > 0 && price < 30;
+                    } else if (filterName === 'mid') {
+                        visible = price >= 30 && price <= 120;
+                    } else if (filterName === 'premium') {
+                        visible = price > 120;
+                    } else if (filterName === 'in-stock') {
+                        visible = stock > 0;
+                    }
+
+                    const container = card.closest('.col, .horizontal-scroll-item') || card;
+                    container.classList.toggle('home-filter-hidden', !visible);
+                });
+            }
+
+            if (quickFilters) {
+                quickFilters.addEventListener('click', function(event) {
+                    const chip = event.target.closest('.quick-filter-chip');
+                    if (!chip) return;
+
+                    quickFilters.querySelectorAll('.quick-filter-chip').forEach(btn => btn.classList.remove('active'));
+                    chip.classList.add('active');
+                    if (smartSuggestionContainer) {
+                        smartSuggestionContainer.querySelectorAll('.smart-suggestion-chip-btn').forEach(btn => btn.classList.remove('active'));
+                    }
+                    applyHomeFilter(chip.getAttribute('data-filter') || 'all');
+                });
+            }
+
+            // --- Smart suggestion chips: in-page filtering (no redirect) ---
+            const smartSuggestionClicksKey = 'gowbuy_smart_suggestion_clicks';
+            const smartSuggestionContainer = document.getElementById('homeSmartSuggestionChips');
+
+            function normalizeText(value) {
+                return String(value || '').trim().toLowerCase();
+            }
+
+            function applySuggestionFilter(label) {
+                const normalizedLabel = normalizeText(label);
+                if (!normalizedLabel) {
+                    applyHomeFilter('all');
+                    return;
+                }
+
+                let filterType = 'category';
+                let filterValue = normalizedLabel;
+
+                if (normalizedLabel.startsWith('from ')) {
+                    filterType = 'origin';
+                    filterValue = normalizedLabel.replace(/^from\s+/, '').trim();
+                } else if (normalizedLabel.startsWith('top ')) {
+                    filterType = 'category';
+                    filterValue = normalizedLabel.replace(/^top\s+/, '').trim();
+                } else if (normalizedLabel.endsWith(' deals')) {
+                    filterType = 'category';
+                    filterValue = normalizedLabel.replace(/\s+deals$/, '').trim();
+                }
+
+                filterableCards.forEach(card => {
+                    const cardCategory = normalizeText(card.getAttribute('data-category-name'));
+                    const cardOrigin = normalizeText(card.getAttribute('data-origin-name'));
+                    const visible = filterType === 'origin'
+                        ? cardOrigin === filterValue
+                        : cardCategory === filterValue;
+
+                    const container = card.closest('.col, .horizontal-scroll-item') || card;
+                    container.classList.toggle('home-filter-hidden', !visible);
+                });
+            }
+
+            if (smartSuggestionContainer) {
+                smartSuggestionContainer.addEventListener('click', function(event) {
+                    const chip = event.target.closest('.smart-suggestion-chip-btn');
+                    if (!chip) return;
+
+                    event.preventDefault();
+
+                    smartSuggestionContainer.querySelectorAll('.smart-suggestion-chip-btn').forEach(btn => btn.classList.remove('active'));
+                    chip.classList.add('active');
+
+                    const label = chip.getAttribute('data-suggestion-label') || chip.textContent.trim();
+
+                    const current = JSON.parse(localStorage.getItem(smartSuggestionClicksKey) || '{}');
+                    current[label] = (current[label] || 0) + 1;
+                    localStorage.setItem(smartSuggestionClicksKey, JSON.stringify(current));
+
+                    if (quickFilters) {
+                        const allFilterChip = quickFilters.querySelector('[data-filter="all"]');
+                        if (allFilterChip) {
+                            quickFilters.querySelectorAll('.quick-filter-chip').forEach(btn => btn.classList.remove('active'));
+                            allFilterChip.classList.add('active');
+                        }
+                    }
+
+                    applySuggestionFilter(label);
+                });
+            }
 
             // --- Deal of the Day Countdown Logic ---
             function initDealCountdown(endDate) {
@@ -2178,6 +3061,230 @@
 
             // Initialize UI on load
             updateCompareUI();
+
+            // --- Rail skeleton loading state ---
+            const homeRails = Array.from(document.querySelectorAll('.home-rail'));
+            homeRails.forEach(rail => rail.classList.add('rail-skeleton'));
+            setTimeout(() => homeRails.forEach(rail => rail.classList.remove('rail-skeleton')), 320);
+
+            // --- Per-rail hide/show preferences ---
+            const hiddenRailsKey = 'gowbuy_hidden_home_rails';
+            function getHiddenRails() {
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(hiddenRailsKey) || '[]');
+                    return new Set(Array.isArray(parsed) ? parsed : []);
+                } catch (e) {
+                    return new Set();
+                }
+            }
+            function persistHiddenRails(setObj) {
+                localStorage.setItem(hiddenRailsKey, JSON.stringify(Array.from(setObj)));
+            }
+            const hiddenRails = getHiddenRails();
+
+            homeRails.forEach(rail => {
+                const railId = rail.getAttribute('data-rail');
+                if (!railId) return;
+                const header = rail.querySelector('.section-header, .discovery-head') || rail;
+
+                const toggle = document.createElement('button');
+                toggle.type = 'button';
+                toggle.className = 'btn btn-sm btn-outline-secondary rail-toggle-btn';
+                toggle.textContent = hiddenRails.has(railId) ? '{% trans "Show" %}' : '{% trans "Hide" %}';
+
+                const bodyNodes = Array.from(rail.children).filter(n => !n.classList?.contains('section-header') && !n.classList?.contains('discovery-head'));
+                function applyRailState() {
+                    const isHidden = hiddenRails.has(railId);
+                    bodyNodes.forEach(node => node.style.display = isHidden ? 'none' : '');
+                    toggle.textContent = isHidden ? '{% trans "Show" %}' : '{% trans "Hide" %}';
+                }
+                toggle.addEventListener('click', function() {
+                    if (hiddenRails.has(railId)) hiddenRails.delete(railId);
+                    else hiddenRails.add(railId);
+                    persistHiddenRails(hiddenRails);
+                    applyRailState();
+                });
+
+                if (header.classList?.contains('section-header')) {
+                    header.appendChild(toggle);
+                } else {
+                    rail.insertBefore(toggle, rail.firstChild);
+                }
+                applyRailState();
+            });
+
+            // --- A/B ordering for key rails (auto winner after engagement) ---
+            const railVariantKey = 'gowbuy_home_rail_variant';
+            const railWinnerKey = 'gowbuy_home_rail_winner';
+            const railStatsKey = 'gowbuy_home_rail_stats';
+            const recommendedRail = document.getElementById('recommendedRail');
+            const continueRail = document.getElementById('continueRail');
+
+            function getRailVariant() {
+                const winner = localStorage.getItem(railWinnerKey);
+                if (winner) return winner;
+                let variant = localStorage.getItem(railVariantKey);
+                if (!variant) {
+                    variant = Math.random() < 0.5 ? 'A' : 'B';
+                    localStorage.setItem(railVariantKey, variant);
+                }
+                return variant;
+            }
+
+            const activeVariant = getRailVariant();
+            if (recommendedRail && continueRail && continueRail.parentNode && activeVariant === 'B') {
+                continueRail.parentNode.insertBefore(continueRail, recommendedRail);
+            }
+
+            function getRailStats() {
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(railStatsKey) || '{}');
+                    return {
+                        A: parsed.A || { impressions: 0, clicks: 0 },
+                        B: parsed.B || { impressions: 0, clicks: 0 },
+                    };
+                } catch (e) {
+                    return { A: { impressions: 0, clicks: 0 }, B: { impressions: 0, clicks: 0 } };
+                }
+            }
+
+            const railStats = getRailStats();
+            railStats[activeVariant].impressions += 1;
+            localStorage.setItem(railStatsKey, JSON.stringify(railStats));
+
+            // --- Card-level badges and CTR analytics hooks ---
+            const ctrKey = 'gowbuy_home_ctr_stats';
+            function getCtrStats() {
+                try {
+                    return JSON.parse(localStorage.getItem(ctrKey) || '{}');
+                } catch (e) {
+                    return {};
+                }
+            }
+            function setCtrStats(stats) {
+                localStorage.setItem(ctrKey, JSON.stringify(stats));
+            }
+
+            document.querySelectorAll('.home-rail .pick-mini-card, .home-modern .service-item-flat[data-product-id]').forEach(card => {
+                const price = parseFloat(card.getAttribute('data-price') || '0');
+                const stock = parseInt(card.getAttribute('data-stock') || '0', 10);
+                const parentRail = card.closest('.home-rail')?.getAttribute('data-rail') || 'unknown';
+
+                // price context label (rail-relative)
+                const railCards = Array.from(card.closest('.home-rail')?.querySelectorAll('.pick-mini-card, .service-item-flat[data-product-id]') || []);
+                const prices = railCards.map(c => parseFloat(c.getAttribute('data-price') || '0')).filter(v => v > 0);
+                let priceLabel = '{% trans "Near avg" %}';
+                if (prices.length) {
+                    const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+                    if (price <= avg * 0.85) priceLabel = '{% trans "Lower than avg" %}';
+                    else if (price >= avg * 1.15) priceLabel = '{% trans "Above avg" %}';
+                }
+
+                const body = card.querySelector('.pick-mini-body') || card.querySelector('.service-price-flat')?.parentElement;
+                if (body && !body.querySelector('.micro-badges')) {
+                    const badges = document.createElement('div');
+                    badges.className = 'micro-badges';
+                    const stockText = stock <= 0 ? '{% trans "Out of stock" %}' : (stock <= 3 ? `{% trans "Only" %} ${stock} {% trans "left" %}` : (stock <= 10 ? '{% trans "Low stock" %}' : '{% trans "In stock" %}'));
+                    badges.innerHTML = `<span class="micro-badge stock">${stockText}</span><span class="micro-badge price">${priceLabel}</span>`;
+                    body.appendChild(badges);
+                }
+
+                card.addEventListener('click', function() {
+                    const pid = card.getAttribute('data-product-id') || 'unknown';
+                    const stats = getCtrStats();
+                    const key = `${parentRail}:${pid}`;
+                    stats[key] = (stats[key] || 0) + 1;
+                    setCtrStats(stats);
+
+                    if (parentRail === 'recommended' || parentRail === 'continue-shopping') {
+                        const variantStats = getRailStats();
+                        variantStats[activeVariant].clicks += 1;
+                        localStorage.setItem(railStatsKey, JSON.stringify(variantStats));
+
+                        const totalImpressions = variantStats.A.impressions + variantStats.B.impressions;
+                        if (totalImpressions >= 20) {
+                            const ctrA = variantStats.A.impressions ? variantStats.A.clicks / variantStats.A.impressions : 0;
+                            const ctrB = variantStats.B.impressions ? variantStats.B.clicks / variantStats.B.impressions : 0;
+                            localStorage.setItem(railWinnerKey, ctrA >= ctrB ? 'A' : 'B');
+                        }
+                    }
+                });
+            });
+
+            // --- Saved Searches (Home) ---
+            const savedSearchKey = 'gowbuy_saved_searches';
+            const heroSearchForm = document.querySelector('.service-hero-section form');
+            const heroSearchInput = heroSearchForm ? heroSearchForm.querySelector('input[name="q"]') : null;
+            const saveSearchBtn = document.getElementById('saveSearchBtn');
+            const savedSection = document.getElementById('savedSearchesSection');
+            const savedChips = document.getElementById('savedSearchChips');
+            const clearSavedBtn = document.getElementById('clearSavedSearches');
+
+            function getSavedSearches() {
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(savedSearchKey) || '[]');
+                    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function saveSearchTerm(term) {
+                if (!term) return;
+                const existing = getSavedSearches().filter(item => item.toLowerCase() !== term.toLowerCase());
+                existing.unshift(term);
+                localStorage.setItem(savedSearchKey, JSON.stringify(existing.slice(0, 8)));
+            }
+
+            function renderSavedSearches() {
+                if (!savedSection || !savedChips || !heroSearchForm) return;
+
+                const searches = getSavedSearches();
+                if (!searches.length) {
+                    savedSection.style.display = 'none';
+                    savedChips.innerHTML = '';
+                    return;
+                }
+
+                savedSection.style.display = '';
+                const actionUrl = heroSearchForm.getAttribute('action') || '{% url "core:product_list" %}';
+                savedChips.innerHTML = searches
+                    .map(term => `<a class="saved-search-chip" href="${actionUrl}?q=${encodeURIComponent(term)}"><i class="bi bi-clock-history"></i>${term}</a>`)
+                    .join('');
+            }
+
+            if (heroSearchForm && heroSearchInput) {
+                heroSearchForm.addEventListener('submit', function() {
+                    const term = (heroSearchInput.value || '').trim();
+                    if (term) {
+                        saveSearchTerm(term);
+                    }
+                });
+            }
+
+            if (saveSearchBtn && heroSearchInput) {
+                saveSearchBtn.addEventListener('click', function() {
+                    const term = (heroSearchInput.value || '').trim();
+                    if (!term) return;
+                    saveSearchTerm(term);
+                    renderSavedSearches();
+                    saveSearchBtn.classList.remove('btn-outline-secondary');
+                    saveSearchBtn.classList.add('btn-success');
+                    setTimeout(() => {
+                        saveSearchBtn.classList.add('btn-outline-secondary');
+                        saveSearchBtn.classList.remove('btn-success');
+                    }, 900);
+                });
+            }
+
+            if (clearSavedBtn) {
+                clearSavedBtn.addEventListener('click', function() {
+                    localStorage.removeItem(savedSearchKey);
+                    renderSavedSearches();
+                });
+            }
+
+            renderSavedSearches();
         });
     </script>
 {% endblock extra_js %}

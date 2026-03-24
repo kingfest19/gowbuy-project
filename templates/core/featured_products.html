@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load i18n static currency_filters %}
+
+{% block title %}{% trans "Featured Products" %}{% endblock title %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+.featured-products-page .hero{padding:2.2rem 0;border-bottom:1px solid var(--border-color);background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));margin-bottom:1.5rem}
+.featured-products-page .hero h1{margin:0;font-weight:800}
+.featured-products-page .hero p{margin:.35rem 0 0;color:var(--text-muted)}
+.featured-products-page .card-item{border:1px solid var(--border-color);border-radius:12px;padding:.7rem;background:var(--bg-surface);height:100%;display:flex;flex-direction:column}
+.featured-products-page .card-item:hover{transform:translateY(-3px);transition:.2s ease;box-shadow:0 10px 24px rgba(0,0,0,.09)}
+.featured-products-page .media{aspect-ratio:1/1;background:var(--bg-body);border-radius:10px;overflow:hidden;margin-bottom:.7rem;display:flex;align-items:center;justify-content:center}
+.featured-products-page .media img{width:100%;height:100%;object-fit:contain;padding:.45rem}
+.featured-products-page .name{font-weight:700;color:var(--text-main);text-decoration:none;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em}
+.featured-products-page .price{margin-top:auto;font-weight:800;color:var(--color-primary,#6366f1)}
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="featured-products-page">
+  <section class="hero">
+    <div class="container">
+      <h1>{% trans "Featured Products" %}</h1>
+      <p>{% trans "Hand-picked standout products from trusted sellers." %}</p>
+    </div>
+  </section>
+
+  <div class="container pb-4">
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3">
+      {% for product in products %}
+      <div class="col">
+        <article class="card-item">
+          <a href="{{ product.get_absolute_url }}" class="media">
+            {% with first_image=product.images.first %}
+              {% if first_image and first_image.image %}
+                <img src="{{ first_image.image.url }}" alt="{{ product.name }}">
+              {% else %}
+                <img src="{% static 'assets/img/placeholder.png' %}" alt="{% trans 'Placeholder' %}">
+              {% endif %}
+            {% endwith %}
+          </a>
+          <a href="{{ product.get_absolute_url }}" class="name">{{ product.name }}</a>
+          <div class="small text-muted mt-1">{{ product.category.name }}</div>
+          <div class="price mt-2">{% convert_price product.price %}</div>
+        </article>
+      </div>
+      {% empty %}
+      <div class="col-12"><div class="alert alert-info">{% trans "No featured products available right now." %}</div></div>
+      {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+    <nav class="mt-4" aria-label="Pagination">
+      <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">{% trans "Previous" %}</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">{% trans "Next" %}</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+</div>
+{% endblock content %}

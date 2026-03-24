@@ -1,0 +1,60 @@
+/* Global responsive fixes shared across all templates */
+
+/* Normalize form choice controls so they never inherit oversized button dimensions */
+input[type="radio"],
+input[type="checkbox"],
+.form-check-input {
+    width: 1rem;
+    height: 1rem;
+    min-width: 1rem;
+    min-height: 1rem;
+    max-width: 1.15rem;
+    max-height: 1.15rem;
+    padding: 0;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+    input[type="radio"],
+    input[type="checkbox"],
+    .form-check-input {
+        width: 1rem !important;
+        height: 1rem !important;
+        min-width: 1rem !important;
+        min-height: 1rem !important;
+        margin: 0 0.35rem 0 0 !important;
+    }
+
+    .btn,
+    button,
+    input[type="button"],
+    input[type="submit"] {
+        min-height: 2.25rem !important;
+        min-width: auto !important;
+    }
+}
+
+/* Prevent border clipping in desktop card hovers */
+@media (hover: hover) and (pointer: fine) {
+    .products-slider,
+    .products-slider2,
+    .products-slider3,
+    .products-slider-with-price,
+    .products-slider-with-price2,
+    .products-slider-with-price3 {
+        overflow: visible;
+    }
+
+    .service-item-flat,
+    .vendor-item-flat,
+    .product-card {
+        box-sizing: border-box;
+    }
+
+    .service-item-flat:hover,
+    .vendor-item-flat:hover,
+    .product-card:hover {
+        border-width: 1px !important;
+    }
+}

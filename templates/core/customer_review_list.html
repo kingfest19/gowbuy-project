@@ -1,10 +1,101 @@
+
 {% extends 'base.html' %}
 {% load static i18n %}
 
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        .review-page-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+            padding: 2.5rem 2rem 2rem 2rem;
+            margin-top: 40px;
+            margin-bottom: 40px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .review-page-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #4f46e5;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        .review-page-divider {
+            border: none;
+            border-top: 2px solid #e5e7eb;
+            margin: 0.5rem 0 2rem 0;
+        }
+        .nav-tabs {
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .nav-tabs .nav-link {
+            color: #6b7280;
+            font-weight: 500;
+            border: none;
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .nav-tabs .nav-link.active {
+            color: #4f46e5;
+            background: none;
+            border-bottom: 2.5px solid #4f46e5;
+        }
+        .tab-content {
+            margin-top: 2rem;
+        }
+        /* Review item enhancements (for review_tab.html) */
+        .list-group-item {
+            border: none;
+            border-radius: 12px;
+            margin-bottom: 1.2rem;
+            box-shadow: 0 2px 8px rgba(79,70,229,0.06);
+            transition: box-shadow 0.2s, background 0.2s;
+        }
+        .list-group-item:hover {
+            box-shadow: 0 4px 16px rgba(79,70,229,0.13);
+            background: #f5f7ff;
+        }
+        .list-group-item h5 a {
+            color: #4f46e5;
+            text-decoration: none;
+        }
+        .list-group-item h5 a:hover {
+            text-decoration: underline;
+        }
+        .btn-outline-primary, .btn-outline-danger {
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .btn-outline-primary {
+            border-color: #4f46e5;
+            color: #4f46e5;
+        }
+        .btn-outline-primary:hover {
+            background: #4f46e5;
+            color: #fff;
+        }
+        .btn-outline-danger {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .btn-outline-danger:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+        @media (max-width: 600px) {
+            .review-page-card { padding: 1.2rem 0.5rem; }
+            .review-page-title { font-size: 1.3rem; }
+        }
+    </style>
+{% endblock extra_css %}
+
 {% block content %}
-<div class="container mt-5">
-    <h2>{% trans 'My Reviews' %}</h2>
-    <hr>
+<div class="review-page-card">
+    <div class="review-page-title">{% trans 'My Reviews' %}</div>
+    <hr class="review-page-divider">
 
     <ul class="nav nav-tabs" id="reviewTabs" role="tablist">
         <li class="nav-item" role="presentation">

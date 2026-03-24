@@ -1,6 +1,7 @@
 # c:\Users\Hp\Desktop\Nexus\core\views.py
 import logging
 import json, datetime
+from datetime import timedelta
 import csv
 from kombu.exceptions import OperationalError # Import OperationalError to handle broker connection issues
 import random # For selecting random spotlights
@@ -33,6 +34,102 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden, HttpResponseRedirect, FileResponse, Http404
 from django.template.loader import render_to_string
+
+# --- Customer Conversation AJAX Actions ---
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
+@login_required
+@require_POST
+@csrf_exempt
+def customer_conversation_archive(request):
+    conversation_id = request.POST.get('conversation_id')
+    unarchive = request.POST.get('unarchive')
+    try:
+        conversation = Conversation.objects.get(id=conversation_id, participants=request.user)
+        if unarchive:
+            conversation.status = 'active'
+            conversation.save(update_fields=['status'])
+            return JsonResponse({'success': True, 'message': 'Conversation unarchived.'})
+        else:
+            conversation.status = 'archived'
+            conversation.save(update_fields=['status'])
+            return JsonResponse({'success': True, 'message': 'Conversation archived.'})
+    except Conversation.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Conversation not found.'}, status=404)
+
+@login_required
+@require_POST
+@csrf_exempt
+def customer_conversation_mark_read(request):
+    conversation_id = request.POST.get('conversation_id')
+    try:
+        conversation = Conversation.objects.get(id=conversation_id, participants=request.user)
+        conversation.unread_message_count = 0
+        conversation.save(update_fields=['unread_message_count'])
+        return JsonResponse({'success': True, 'message': 'Conversation marked as read.'})
+    except Conversation.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Conversation not found.'}, status=404)
+
+@login_required
+@require_POST
+@csrf_exempt
+def customer_conversation_add_tag(request):
+    conversation_id = request.POST.get('conversation_id')
+    tag = request.POST.get('tag')
+    remove = request.POST.get('remove')
+    try:
+        conversation = Conversation.objects.get(id=conversation_id, participants=request.user)
+        if tag:
+            tag_obj, _ = ConversationTag.objects.get_or_create(name=tag)
+            if remove:
+                conversation.tags.remove(tag_obj)
+                return JsonResponse({'success': True, 'message': 'Tag removed.'})
+            else:
+                conversation.tags.add(tag_obj)
+                return JsonResponse({'success': True, 'message': 'Tag added.'})
+        return JsonResponse({'success': False, 'message': 'No tag specified.'}, status=400)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Conversation not found.'}, status=404)
+
+@login_required
+@require_POST
+@csrf_exempt
+def customer_conversation_set_priority(request):
+    conversation_id = request.POST.get('conversation_id')
+    priority = request.POST.get('priority')
+    try:
+        conversation = Conversation.objects.get(id=conversation_id, participants=request.user)
+        conversation.urgency_score = int(priority)
+        conversation.save(update_fields=['urgency_score'])
+        return JsonResponse({'success': True, 'message': 'Priority set.'})
+    except Conversation.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Conversation not found.'}, status=404)
+
+@login_required
+@require_POST
+@csrf_exempt
+def customer_conversation_bulk_action(request):
+    action = request.POST.get('action')
+    conversation_ids = request.POST.getlist('conversation_ids[]')
+    updated = 0
+    for cid in conversation_ids:
+        try:
+            conversation = Conversation.objects.get(id=cid, participants=request.user)
+            if action == 'archive':
+                conversation.status = 'archived'
+                conversation.save(update_fields=['status'])
+            elif action == 'mark_read':
+                conversation.unread_message_count = 0
+                conversation.save(update_fields=['unread_message_count'])
+            elif action == 'set_priority':
+                priority = request.POST.get('priority')
+                conversation.urgency_score = int(priority)
+                conversation.save(update_fields=['urgency_score'])
+            updated += 1
+        except Conversation.DoesNotExist:
+            continue
+    return JsonResponse({'success': True, 'updated': updated, 'message': f'Bulk action {action} applied.'})
 from django.views.decorators.csrf import csrf_exempt
 from xhtml2pdf import pisa
 from formtools.wizard.views import SessionWizardView
@@ -42,6 +139,7 @@ from django.db import transaction
 from django.db.models import Q, Avg, Count, Sum, F, ExpressionWrapper, fields, Prefetch, Max, OuterRef, Subquery, Exists
 from django.utils.dateparse import parse_date
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
@@ -56,8 +154,9 @@ from io import BytesIO
 from django.contrib.auth import get_user_model
 from authapp.models import CustomUser # <<< Import CustomUser from authapp
 import os
+from urllib.parse import quote_plus
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from django.db.models.functions import TruncDay, TruncMonth
+from django.db.models.functions import TruncDay, TruncMonth, Coalesce
 from .origin_verification_views import (
     ajax_validate_product_origin,
     ajax_get_origin_suggestions,
@@ -72,7 +171,9 @@ from .artisan_verification_views import (
 from .models import ( # Ensure UserProfile is imported
     Product, Category, Cart, CartItem, Order, OrderItem, Address,
     Wishlist, ProductReview, Vendor, VendorReview, Promotion, AdCampaign, CampaignTemplate,
-    Notification, UserProfile, Transaction, Escrow, Dispute, Message, Conversation, ProductImage, ProductVideo, SavedForLaterItem, # Added ProductImage, ProductVideo
+    Notification, UserProfile, Transaction, Escrow, Dispute, Message, Conversation, ConversationTag,
+    MessageAttachment, MessageReaction, MessageRead, MessagePin, MessageBookmark,
+    ProductImage, ProductVideo, SavedForLaterItem, # Added ConversationTag, ProductImage, ProductVideo
     ShippingMethod, PaymentGateway, TaxRate, Currency, SiteSettings, BlogPost, BlogCategory,
     FAQ, SupportTicket, TicketResponse, UserActivity, AuditLog, APIKey, WebhookEvent,
     FeatureFlag, ABTest, UserSegment, EmailTemplate, SMSTemplate, PushNotificationTemplate, Reward,
@@ -3048,6 +3149,43 @@ class VendorReviewListView(LoginRequiredMixin, IsVendorMixin, ListView):
         context['current_rating'] = self.request.GET.get('rating')
         context['search_query'] = self.request.GET.get('q', '')
 
+        # Analytics and metrics for the new dashboard
+        context['pending_reviews_count'] = all_reviews_for_vendor.filter(reply__isnull=True).count()
+        context['low_rating_count'] = all_reviews_for_vendor.filter(rating__lte=2, reply__isnull=True).count()
+        
+        # Response rate calculation
+        total_count = all_reviews_for_vendor.count()
+        replied_count = all_reviews_for_vendor.filter(reply__isnull=False).count()
+        context['replied_count'] = replied_count
+        context['response_rate'] = round((replied_count / total_count * 100), 1) if total_count > 0 else 0
+        
+        # Average response time (in hours) - calculate from replied_at and created_at
+        replied_reviews = all_reviews_for_vendor.filter(replied_at__isnull=False)
+        if replied_reviews.exists():
+            time_diffs = [(r.replied_at - r.created_at).total_seconds() / 3600 for r in replied_reviews if r.replied_at]
+            context['avg_response_time'] = round(sum(time_diffs) / len(time_diffs), 1) if time_diffs else 0
+        else:
+            context['avg_response_time'] = 0
+        
+        # Reviews this month
+        from django.utils import timezone
+        from datetime import timedelta
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        context['reviews_this_month'] = all_reviews_for_vendor.filter(created_at__gte=thirty_days_ago).count()
+        
+        # Rating distribution for analytics (as list of tuples with percentages)
+        total = all_reviews_for_vendor.count()
+        rating_dist = []
+        for rating in [5, 4, 3, 2, 1]:
+            count = all_reviews_for_vendor.filter(rating=rating).count()
+            percentage = round((count / total * 100), 1) if total > 0 else 0
+            rating_dist.append((rating, count, percentage))
+        context['rating_distribution'] = rating_dist
+        
+        # Moderation queue counts
+        context['no_reply_count'] = all_reviews_for_vendor.filter(reply__isnull=True).count()
+        context['flagged_count'] = 0  # Add flagged field to model if needed
+
         return context
 
 class VendorReviewReplyView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMixin, UpdateView):
@@ -3075,19 +3213,160 @@ class VendorReviewReplyView(LoginRequiredMixin, IsVendorMixin, SuccessMessageMix
 
 
 def home(request):
-    # Example: Fetch some products and categories for the homepage
-    featured_products = Product.objects.filter(is_featured=True, is_active=True)[:16]
-    new_arrivals = Product.objects.filter(is_active=True).order_by('-created_at')[:20]
-    top_categories = Category.objects.annotate(num_products=Count('products')).filter(num_products__gt=0, is_active=True).order_by('-num_products')[:6]
+    # Shared homepage data (cache-safe, same for most users)
+    featured_products = cache.get('home_featured_products_v3')
+    if featured_products is None:
+        featured_products = list(
+            Product.objects.filter(is_featured=True, is_active=True)
+            .select_related('category', 'vendor')
+            .prefetch_related('images')[:16]
+        )
+        cache.set('home_featured_products_v3', featured_products, timeout=300)
 
-    # Get a featured product as deal of the day (pick one with good image)
-    deal_of_day = Product.objects.filter(is_active=True, is_featured=True).select_related('vendor').order_by('?').first()
+    new_arrivals = cache.get('home_new_arrivals_v3')
+    if new_arrivals is None:
+        new_arrivals = list(
+            Product.objects.filter(is_active=True)
+            .select_related('category', 'vendor')
+            .prefetch_related('images')
+            .order_by('-created_at')[:20]
+        )
+        cache.set('home_new_arrivals_v3', new_arrivals, timeout=300)
 
-    # Example: Fetch some services
-    featured_services = Service.objects.filter(is_active=True, is_featured=True).select_related('provider', 'provider__service_provider_profile')[:4] # Assuming an 'is_featured' field
+    top_categories = cache.get('home_top_categories_v2')
+    if top_categories is None:
+        top_categories = list(
+            Category.objects.annotate(num_products=Count('products'))
+            .filter(num_products__gt=0, is_active=True)
+            .order_by('-num_products')[:6]
+        )
+        cache.set('home_top_categories_v2', top_categories, timeout=600)
 
-    # Example: Fetch some vendors
-    top_vendors = Vendor.objects.filter(is_approved=True, is_verified=True).annotate(avg_rating=Avg('reviews__rating')).order_by('-avg_rating')[:4] # Assuming 'reviews' related_name
+    deal_of_day = cache.get('home_deal_of_day_v2')
+    if deal_of_day is None:
+        deal_of_day = (
+            Product.objects.filter(is_active=True, is_featured=True)
+            .select_related('vendor', 'category')
+            .prefetch_related('images')
+            .order_by('?')
+            .first()
+        )
+        cache.set('home_deal_of_day_v2', deal_of_day, timeout=300)
+
+    featured_services = cache.get('home_featured_services_v2')
+    if featured_services is None:
+        featured_services = list(
+            Service.objects.filter(is_active=True, is_featured=True)
+            .select_related('provider', 'provider__service_provider_profile', 'category')
+            .prefetch_related('images')[:4]
+        )
+        cache.set('home_featured_services_v2', featured_services, timeout=300)
+
+    new_service_arrivals = cache.get('home_new_service_arrivals_v1')
+    if new_service_arrivals is None:
+        new_service_arrivals = list(
+            Service.objects.filter(is_active=True)
+            .select_related('provider', 'provider__service_provider_profile', 'category')
+            .prefetch_related('images')
+            .order_by('-created_at')[:8]
+        )
+        cache.set('home_new_service_arrivals_v1', new_service_arrivals, timeout=300)
+
+    top_rated_services = cache.get('home_top_rated_services_v1')
+    if top_rated_services is None:
+        top_rated_services = list(
+            Service.objects.filter(is_active=True)
+            .select_related('provider', 'provider__service_provider_profile', 'category')
+            .prefetch_related('images')
+            .annotate(
+                avg_rating=Coalesce(Avg('reviews__rating'), 0.0),
+                review_total=Count('reviews', distinct=True),
+            )
+            .order_by('-avg_rating', '-review_total', '-created_at')[:8]
+        )
+        cache.set('home_top_rated_services_v1', top_rated_services, timeout=300)
+
+    recommended_services = []
+    if request.user.is_authenticated:
+        preferred_service_category_ids = []
+        preferred_service_provider_ids = []
+        completed_service_ids = []
+
+        recent_service_bookings = (
+            ServiceBooking.objects.filter(user=request.user)
+            .exclude(status__in=['CANCELLED_BY_USER', 'CANCELLED_BY_PROVIDER'])
+            .select_related('service_package__service__category', 'service_package__service__provider')
+            .order_by('-created_at')[:80]
+        )
+
+        for booking in recent_service_bookings:
+            service = getattr(getattr(booking, 'service_package', None), 'service', None)
+            if not service:
+                continue
+            if service.id not in completed_service_ids:
+                completed_service_ids.append(service.id)
+            if service.category_id and service.category_id not in preferred_service_category_ids:
+                preferred_service_category_ids.append(service.category_id)
+            if service.provider_id and service.provider_id not in preferred_service_provider_ids:
+                preferred_service_provider_ids.append(service.provider_id)
+
+        def append_services(source_qs):
+            for service in source_qs:
+                if not service or service.id in seen_recommended_service_ids:
+                    continue
+                seen_recommended_service_ids.add(service.id)
+                recommended_services.append(service)
+                if len(recommended_services) >= 8:
+                    break
+
+        seen_recommended_service_ids = set(completed_service_ids)
+
+        if preferred_service_category_ids:
+            append_services(
+                Service.objects.filter(is_active=True, category_id__in=preferred_service_category_ids)
+                .exclude(id__in=completed_service_ids)
+                .select_related('provider', 'provider__service_provider_profile', 'category')
+                .prefetch_related('images')
+                .annotate(avg_rating=Coalesce(Avg('reviews__rating'), 0.0), review_total=Count('reviews', distinct=True))
+                .order_by('-is_featured', '-avg_rating', '-review_total', '-created_at')[:10]
+            )
+
+        if len(recommended_services) < 8 and preferred_service_provider_ids:
+            append_services(
+                Service.objects.filter(is_active=True, provider_id__in=preferred_service_provider_ids)
+                .exclude(id__in=completed_service_ids)
+                .select_related('provider', 'provider__service_provider_profile', 'category')
+                .prefetch_related('images')
+                .annotate(avg_rating=Coalesce(Avg('reviews__rating'), 0.0), review_total=Count('reviews', distinct=True))
+                .order_by('-avg_rating', '-review_total', '-created_at')[:10]
+            )
+
+        if len(recommended_services) < 8:
+            for source_list in [top_rated_services, new_service_arrivals, featured_services]:
+                append_services(source_list)
+                if len(recommended_services) >= 8:
+                    break
+    else:
+        seen_recommended_service_ids = set()
+        for source_list in [top_rated_services, new_service_arrivals, featured_services]:
+            for service in source_list:
+                if not service or service.id in seen_recommended_service_ids:
+                    continue
+                seen_recommended_service_ids.add(service.id)
+                recommended_services.append(service)
+                if len(recommended_services) >= 8:
+                    break
+            if len(recommended_services) >= 8:
+                break
+
+    top_vendors = cache.get('home_top_vendors_v2')
+    if top_vendors is None:
+        top_vendors = list(
+            Vendor.objects.filter(is_approved=True, is_verified=True)
+            .annotate(avg_rating=Avg('reviews__rating'))
+            .order_by('-avg_rating')[:4]
+        )
+        cache.set('home_top_vendors_v2', top_vendors, timeout=300)
 
     # Fetch Featured Riders
     now = timezone.now()
@@ -3115,18 +3394,544 @@ def home(request):
         name = countries.name(code) if code else ''
         top_countries.append({'code': code, 'name': name or code, 'count': entry.get('count', 0)})
 
+    # Browsing history: resolve recently viewed products (deduplicated, newest first)
+    recent_product_ids = []
+    if request.user.is_authenticated:
+        recent_activities = (
+            UserActivity.objects.filter(user=request.user, activity_type='viewed_product')
+            .values_list('details', flat=True)[:60]
+        )
+        for details in recent_activities:
+            if isinstance(details, dict):
+                product_id = details.get('product_id')
+                try:
+                    product_id = int(product_id)
+                except (TypeError, ValueError):
+                    continue
+                if product_id not in recent_product_ids:
+                    recent_product_ids.append(product_id)
+                if len(recent_product_ids) >= 12:
+                    break
+    else:
+        session_history = request.session.get('recently_viewed_product_ids', [])
+        for product_id in session_history:
+            try:
+                product_id = int(product_id)
+            except (TypeError, ValueError):
+                continue
+            if product_id not in recent_product_ids:
+                recent_product_ids.append(product_id)
+            if len(recent_product_ids) >= 12:
+                break
+
+    recent_products_qs = (
+        Product.objects.filter(id__in=recent_product_ids, is_active=True)
+        .select_related('category', 'vendor')
+        .prefetch_related('images')
+    )
+    recent_products_map = {product.id: product for product in recent_products_qs}
+    recently_viewed = [recent_products_map[pid] for pid in recent_product_ids if pid in recent_products_map]
+
+    recent_viewed_categories = []
+    seen_category_ids = set()
+    for product in recently_viewed:
+        if product.category_id and product.category_id not in seen_category_ids:
+            seen_category_ids.add(product.category_id)
+            recent_viewed_categories.append(product.category)
+        if len(recent_viewed_categories) >= 6:
+            break
+
+    # Continue shopping (cart-aware suggestions)
+    continue_shopping_products = []
+    cart_product_ids = []
+    cart_category_ids = []
+    if request.user.is_authenticated:
+        cart = Cart.objects.filter(user=request.user, ordered=False).prefetch_related('items__product__category').first()
+        if cart:
+            cart_products = [item.product for item in cart.items.all() if item.product and item.product.is_active]
+            cart_product_ids = [product.id for product in cart_products]
+            cart_category_ids = list({product.category_id for product in cart_products if product.category_id})
+
+            if cart_category_ids:
+                continue_shopping_products = list(
+                    Product.objects.filter(is_active=True, category_id__in=cart_category_ids)
+                    .exclude(id__in=cart_product_ids)
+                    .select_related('category', 'vendor')
+                    .prefetch_related('images')
+                    .order_by('-created_at')[:12]
+                )
+
+    if not continue_shopping_products and recently_viewed:
+        continue_shopping_products = recently_viewed[:8]
+
+    # "Because you viewed" recommendations
+    because_viewed_anchor = recently_viewed[0] if recently_viewed else None
+    because_viewed_products = []
+    if because_viewed_anchor:
+        because_viewed_products = list(
+            Product.objects.filter(is_active=True, category=because_viewed_anchor.category)
+            .exclude(id=because_viewed_anchor.id)
+            .select_related('category', 'vendor')
+            .prefetch_related('images')
+            .order_by('-created_at')[:10]
+        )
+
+    # Recently purchased by others (social proof)
+    social_sales = (
+        OrderItem.objects.filter(
+            product__isnull=False,
+            order__status__in=[Order.Status.DELIVERED, Order.Status.COMPLETED, Order.Status.PENDING_PAYOUT],
+            order__created_at__gte=now - timedelta(days=45),
+        )
+        .values('product_id')
+        .annotate(
+            sold_qty=Sum('quantity'),
+            buyers=Count('order__user', distinct=True),
+            last_purchase=Max('order__created_at'),
+        )
+        .order_by('-last_purchase', '-sold_qty')[:12]
+    )
+    social_product_ids = [entry['product_id'] for entry in social_sales if entry.get('product_id')]
+    social_products_map = {
+        product.id: product
+        for product in Product.objects.filter(id__in=social_product_ids, is_active=True).select_related('category', 'vendor').prefetch_related('images')
+    }
+    social_proof_products = []
+    for entry in social_sales:
+        product = social_products_map.get(entry.get('product_id'))
+        if product:
+            social_proof_products.append({
+                'product': product,
+                'sold_qty': entry.get('sold_qty') or 0,
+                'buyers': entry.get('buyers') or 0,
+            })
+
+    # Personalized promo banner
+    active_promotions = Promotion.objects.filter(
+        is_active=True,
+        start_date__lte=now,
+        end_date__gte=now,
+    )
+    preferred_category_ids = list({product.category_id for product in recently_viewed if product.category_id})
+    preferred_vendor_ids = list({product.vendor_id for product in recently_viewed if product.vendor_id})
+
+    personalized_promo = None
+    if preferred_category_ids:
+        personalized_promo = (
+            active_promotions.filter(scope='category', applicable_categories__id__in=preferred_category_ids)
+            .distinct()
+            .order_by('-discount_value')
+            .first()
+        )
+
+    if not personalized_promo and recent_product_ids:
+        personalized_promo = (
+            active_promotions.filter(scope='product', applicable_products__id__in=recent_product_ids)
+            .distinct()
+            .order_by('-discount_value')
+            .first()
+        )
+
+    if not personalized_promo and preferred_vendor_ids:
+        personalized_promo = (
+            active_promotions.filter(scope='vendor', applicable_vendor__id__in=preferred_vendor_ids)
+            .order_by('-discount_value')
+            .first()
+        )
+
+    if not personalized_promo:
+        personalized_promo = active_promotions.order_by('-discount_value').first()
+
+    # Wishlist alerts (back in stock + promo/price-drop proxy)
+    wishlist_back_in_stock = []
+    wishlist_price_drop = []
+    if request.user.is_authenticated:
+        try:
+            wishlist_products_qs = request.user.wishlist_profile.products.filter(is_active=True).select_related('category', 'vendor').prefetch_related('images')
+        except Wishlist.DoesNotExist:
+            wishlist_products_qs = Product.objects.none()
+
+        wishlist_back_in_stock = list(wishlist_products_qs.filter(stock__gt=0).order_by('-created_at')[:8])
+
+        promo_linked_wishlist = wishlist_products_qs.filter(
+            Q(promotions__is_active=True, promotions__start_date__lte=now, promotions__end_date__gte=now, promotions__scope='product') |
+            Q(category__promotions__is_active=True, category__promotions__start_date__lte=now, category__promotions__end_date__gte=now, category__promotions__scope='category') |
+            Q(vendor__promotions__is_active=True, vendor__promotions__start_date__lte=now, vendor__promotions__end_date__gte=now, vendor__promotions__scope='vendor')
+        ).distinct()[:8]
+
+        wishlist_price_drop = list(promo_linked_wishlist)
+        if not wishlist_price_drop and active_promotions.filter(scope='all').exists():
+            wishlist_price_drop = list(wishlist_products_qs[:8])
+
+    # Buy-again products from completed user purchases
+    buy_again_products = []
+    if request.user.is_authenticated:
+        bought_product_ids = []
+        bought_rows = (
+            OrderItem.objects.filter(
+                order__user=request.user,
+                product__isnull=False,
+                order__status__in=[Order.Status.DELIVERED, Order.Status.COMPLETED, Order.Status.PENDING_PAYOUT],
+            )
+            .order_by('-order__created_at')
+            .values_list('product_id', flat=True)[:80]
+        )
+        for product_id in bought_rows:
+            if product_id and product_id not in bought_product_ids:
+                bought_product_ids.append(product_id)
+            if len(bought_product_ids) >= 10:
+                break
+
+        bought_products_qs = Product.objects.filter(
+            id__in=bought_product_ids,
+            is_active=True,
+        ).select_related('category', 'vendor').prefetch_related('images')
+        bought_products_map = {product.id: product for product in bought_products_qs}
+        buy_again_products = [bought_products_map[pid] for pid in bought_product_ids if pid in bought_products_map]
+
+    # Sticky mini-cart preview widget
+    mini_cart_items = []
+    mini_cart_count = 0
+    mini_cart_total = Decimal('0.00')
+    if request.user.is_authenticated:
+        active_cart = Cart.objects.filter(user=request.user, ordered=False).prefetch_related('items__product').first()
+        if active_cart:
+            mini_cart_count = active_cart.get_item_count()
+            mini_cart_total = active_cart.get_cart_total()
+            for cart_item in active_cart.items.select_related('product').all()[:4]:
+                if cart_item.product:
+                    mini_cart_items.append({
+                        'product': cart_item.product,
+                        'quantity': cart_item.quantity,
+                        'line_total': cart_item.get_total_item_price(),
+                    })
+
+    # Frequently-bought-together recommendations
+    bundle_anchor = because_viewed_anchor or (recently_viewed[0] if recently_viewed else None)
+    frequently_bought_together = []
+    if bundle_anchor:
+        anchor_order_ids = OrderItem.objects.filter(
+            product=bundle_anchor,
+            order__status__in=[Order.Status.DELIVERED, Order.Status.COMPLETED, Order.Status.PENDING_PAYOUT],
+            order__created_at__gte=now - timedelta(days=180),
+        ).values_list('order_id', flat=True)[:500]
+
+        co_purchase_rows = (
+            OrderItem.objects.filter(order_id__in=anchor_order_ids, product__isnull=False)
+            .exclude(product_id=bundle_anchor.id)
+            .values('product_id')
+            .annotate(freq=Count('id'), qty=Sum('quantity'))
+            .order_by('-freq', '-qty')[:8]
+        )
+        bundle_product_ids = [row['product_id'] for row in co_purchase_rows if row.get('product_id')]
+        bundle_products_map = {
+            product.id: product
+            for product in Product.objects.filter(id__in=bundle_product_ids, is_active=True).select_related('category', 'vendor').prefetch_related('images')
+        }
+        for row in co_purchase_rows:
+            product = bundle_products_map.get(row.get('product_id'))
+            if product:
+                frequently_bought_together.append({
+                    'product': product,
+                    'freq': row.get('freq') or 0,
+                    'qty': row.get('qty') or 0,
+                })
+
+    # Trusted seller cards with quality metrics
+    trusted_seller_spotlight = list(
+        Vendor.objects.filter(is_approved=True)
+        .annotate(
+            avg_rating=Avg('reviews__rating'),
+            review_count=Count('reviews', distinct=True),
+            active_products=Count('products', filter=Q(products__is_active=True), distinct=True),
+            recent_sales=Count(
+                'products__order_items',
+                filter=Q(
+                    products__order_items__order__status__in=[Order.Status.DELIVERED, Order.Status.COMPLETED, Order.Status.PENDING_PAYOUT],
+                    products__order_items__order__created_at__gte=now - timedelta(days=90),
+                ),
+                distinct=True,
+            ),
+        )
+        .order_by('-is_verified', '-recent_sales', '-avg_rating')[:6]
+    )
+
+    # User-generated buyer moments (photo/video proof)
+    buyer_moments = list(
+        ProductReview.objects.filter(is_approved=True)
+        .exclude(video='')
+        .exclude(video__isnull=True)
+        .select_related('product', 'user')
+        .order_by('-created_at')[:8]
+    )
+
+    # Live commerce snapshot
+    live_orders_24h = Order.objects.filter(
+        created_at__gte=now - timedelta(hours=24),
+        status__in=[Order.Status.PROCESSING, Order.Status.SHIPPED, Order.Status.DELIVERED, Order.Status.COMPLETED, Order.Status.PENDING_PAYOUT],
+    ).count()
+    live_shoppers_24h = UserActivity.objects.filter(
+        activity_type='viewed_product',
+        timestamp__gte=now - timedelta(hours=24),
+    ).values('user_id').distinct().count()
+
+    # Rewards progress widget
+    rewards_summary = None
+    if request.user.is_authenticated:
+        completed_orders_qs = Order.objects.filter(
+            user=request.user,
+            status__in=[Order.Status.DELIVERED, Order.Status.COMPLETED, Order.Status.PENDING_PAYOUT],
+        )
+        lifetime_spend = completed_orders_qs.aggregate(total=Sum('total_amount')).get('total') or Decimal('0.00')
+        completed_orders_count = completed_orders_qs.count()
+        current_points = int(lifetime_spend // Decimal('10'))
+        next_goal_points = ((current_points // 100) + 1) * 100 if current_points >= 0 else 100
+        points_to_next = max(next_goal_points - current_points, 0)
+        progress_percent = int((current_points % 100) * 100 / 100)
+        rewards_summary = {
+            'points': current_points,
+            'next_goal': next_goal_points,
+            'points_to_next': points_to_next,
+            'progress_percent': progress_percent,
+            'completed_orders': completed_orders_count,
+            'lifetime_spend': lifetime_spend,
+        }
+
+    # Smart search suggestions (AI-like quick prompts)
+    suggestion_labels = []
+    preferred_category_names = []
+    if preferred_category_ids:
+        preferred_category_names = list(
+            Category.objects.filter(id__in=preferred_category_ids).values_list('name', flat=True)[:3]
+        )
+        suggestion_labels.extend([f"{name} deals" for name in preferred_category_names if name])
+
+    suggestion_labels.extend([f"Top {category.name}" for category in top_categories[:3] if getattr(category, 'name', None)])
+    suggestion_labels.extend([f"From {country['name']}" for country in top_countries[:3] if country.get('name')])
+    if not suggestion_labels:
+        suggestion_labels = [_('Trending products'), _('Fast delivery picks'), _('Best rated products')]
+
+    unique_suggestion_labels = []
+    for label in suggestion_labels:
+        if label and label not in unique_suggestion_labels:
+            unique_suggestion_labels.append(label)
+        if len(unique_suggestion_labels) >= 8:
+            break
+
+    smart_search_suggestions = [
+        {
+            'label': label,
+            'url': f"{reverse('core:product_list')}?q={quote_plus(label)}",
+        }
+        for label in unique_suggestion_labels
+    ]
+
+    # Personalized "For You" rail (deduped blend of behavioral and editorial signals)
+    for_you_products = []
+    seen_for_you_ids = set()
+    for source_list in [
+        buy_again_products,
+        because_viewed_products,
+        continue_shopping_products,
+        recently_viewed,
+        featured_products,
+    ]:
+        for product in source_list:
+            if not product or product.id in seen_for_you_ids:
+                continue
+            seen_for_you_ids.add(product.id)
+            for_you_products.append(product)
+            if len(for_you_products) >= 12:
+                break
+        if len(for_you_products) >= 12:
+            break
+
+    # Smart search autosuggest terms for instant query box
+    search_autocomplete_terms = []
+    seen_terms = set()
+    seed_terms = []
+    seed_terms.extend([product.name for product in for_you_products[:6] if getattr(product, 'name', None)])
+    seed_terms.extend([category.name for category in top_categories[:4] if getattr(category, 'name', None)])
+    seed_terms.extend(unique_suggestion_labels)
+    for term in seed_terms:
+        normalized_term = (term or '').strip()
+        if not normalized_term:
+            continue
+        normalized_key = normalized_term.lower()
+        if normalized_key in seen_terms:
+            continue
+        seen_terms.add(normalized_key)
+        search_autocomplete_terms.append(normalized_term)
+        if len(search_autocomplete_terms) >= 14:
+            break
+
+    # Dynamic assistant prompts by user segment (category affinity + location + behavior)
+    assistant_prompt_weights = {
+        'recent_views': 100,
+        'buy_again': 90,
+        'preferred_category': 80,
+        'top_country': 70,
+        'verified_sellers': 40,
+        'budget_finds': 30,
+    }
+    configured_assistant_prompt_weights = getattr(settings, 'HOME_ASSISTANT_PROMPT_WEIGHTS', None)
+    if isinstance(configured_assistant_prompt_weights, dict):
+        for key in assistant_prompt_weights.keys():
+            configured_value = configured_assistant_prompt_weights.get(key)
+            try:
+                assistant_prompt_weights[key] = int(configured_value)
+            except (TypeError, ValueError):
+                continue
+
+    assistant_prompt_candidates = []
+    seen_assistant_labels = set()
+    assistant_insert_order = 0
+
+    def add_assistant_prompt(label, prompt, score):
+        nonlocal assistant_insert_order
+        normalized_label = (label or '').strip()
+        normalized_prompt = (prompt or '').strip()
+        if not normalized_label or not normalized_prompt:
+            return
+        key = normalized_label.lower()
+        if key in seen_assistant_labels:
+            return
+        seen_assistant_labels.add(key)
+        assistant_insert_order += 1
+        assistant_prompt_candidates.append({
+            'label': normalized_label,
+            'prompt': normalized_prompt,
+            'score': int(score),
+            'order': assistant_insert_order,
+        })
+
+    if preferred_category_names:
+        top_preferred_category = preferred_category_names[0]
+        add_assistant_prompt(
+            _('Top %(category)s') % {'category': top_preferred_category},
+            _('Show me highly rated %(category)s with fast delivery') % {'category': top_preferred_category},
+            assistant_prompt_weights['preferred_category'],
+        )
+
+    if top_countries:
+        top_country_name = top_countries[0].get('name')
+        if top_country_name:
+            add_assistant_prompt(
+                _('From %(country)s') % {'country': top_country_name},
+                _('Find authentic products from %(country)s with verified sellers') % {'country': top_country_name},
+                assistant_prompt_weights['top_country'],
+            )
+
+    if request.user.is_authenticated and buy_again_products:
+        add_assistant_prompt(
+            _('Buy again picks'),
+            _('Show me repeat-purchase essentials and similar alternatives under my usual budget'),
+            assistant_prompt_weights['buy_again'],
+        )
+
+    if request.user.is_authenticated and recently_viewed:
+        add_assistant_prompt(
+            _('Based on my views'),
+            _('Recommend products similar to my recently viewed items with strong ratings'),
+            assistant_prompt_weights['recent_views'],
+        )
+
+    add_assistant_prompt(
+        _('Budget finds'),
+        _('Find budget-friendly products with the best current discounts and reliable delivery'),
+        assistant_prompt_weights['budget_finds'],
+    )
+    add_assistant_prompt(
+        _('Verified sellers'),
+        _('Show only products from verified sellers with top customer reviews'),
+        assistant_prompt_weights['verified_sellers'],
+    )
+
+    assistant_prompt_candidates.sort(key=lambda item: (-item['score'], item['order']))
+    assistant_prompt_suggestions = [
+        {
+            'label': item['label'],
+            'prompt': item['prompt'],
+        }
+        for item in assistant_prompt_candidates[:4]
+    ]
+
+    # Trust snapshot metrics
+    recent_order_window_start = now - timedelta(days=30)
+    fulfilled_order_statuses = [Order.Status.DELIVERED, Order.Status.COMPLETED, Order.Status.PENDING_PAYOUT]
+    considered_order_statuses = [
+        Order.Status.PROCESSING,
+        Order.Status.SHIPPED,
+        Order.Status.DELIVERED,
+        Order.Status.COMPLETED,
+        Order.Status.PENDING_PAYOUT,
+    ]
+    recent_orders_considered = Order.objects.filter(
+        created_at__gte=recent_order_window_start,
+        status__in=considered_order_statuses,
+    ).count()
+    recent_orders_fulfilled = Order.objects.filter(
+        created_at__gte=recent_order_window_start,
+        status__in=fulfilled_order_statuses,
+    ).count()
+    delivery_confidence_rate = int((recent_orders_fulfilled * 100) / recent_orders_considered) if recent_orders_considered else 0
+
+    trust_snapshot = {
+        'delivery_confidence_rate': delivery_confidence_rate,
+        'verified_vendor_count': Vendor.objects.filter(is_approved=True, is_verified=True).count(),
+        'active_product_count': Product.objects.filter(is_active=True).count(),
+    }
+
     context = {
         'featured_products': featured_products,
+        'for_you_products': for_you_products,
         'new_arrivals': new_arrivals,
         'top_categories': top_categories,
         'featured_services': featured_services,
+        'recommended_services': recommended_services,
+        'new_service_arrivals': new_service_arrivals,
+        'top_rated_services': top_rated_services,
         'top_vendors': top_vendors,
         'page_title': _("Welcome to GOWBUY Marketplace"),
         'featured_rider_profiles': featured_rider_profiles,
         'top_countries': top_countries,
         'deal_of_day': deal_of_day,
+        'recently_viewed': recently_viewed,
+        'recent_viewed_categories': recent_viewed_categories,
+        'continue_shopping_products': continue_shopping_products,
+        'because_viewed_anchor': because_viewed_anchor,
+        'because_viewed_products': because_viewed_products,
+        'social_proof_products': social_proof_products,
+        'personalized_promo': personalized_promo,
+        'wishlist_back_in_stock': wishlist_back_in_stock,
+        'wishlist_price_drop': wishlist_price_drop,
+        'buy_again_products': buy_again_products,
+        'mini_cart_items': mini_cart_items,
+        'mini_cart_count': mini_cart_count,
+        'mini_cart_total': mini_cart_total,
+        'bundle_anchor': bundle_anchor,
+        'frequently_bought_together': frequently_bought_together,
+        'trusted_seller_spotlight': trusted_seller_spotlight,
+        'buyer_moments': buyer_moments,
+        'live_orders_24h': live_orders_24h,
+        'live_shoppers_24h': live_shoppers_24h,
+        'rewards_summary': rewards_summary,
+        'smart_search_suggestions': smart_search_suggestions,
+        'search_autocomplete_terms': search_autocomplete_terms,
+        'assistant_prompt_suggestions': assistant_prompt_suggestions,
+        'trust_snapshot': trust_snapshot,
+        'show_guest_auth_prompt': (not request.user.is_authenticated and not request.session.get('guest_mode_enabled', False)),
     }
     return render(request, 'core/home.html', context)
+
+
+@require_POST
+def continue_as_guest(request):
+    request.session['guest_mode_enabled'] = True
+    next_url = request.POST.get('next') or reverse('core:home')
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        next_url = reverse('core:home')
+    return redirect(next_url)
 
 def menu(request):
     """
@@ -3276,16 +4081,72 @@ class ProductListView(ListView):
     template_name = 'core/product_list.html'
     context_object_name = 'products'
     paginate_by = 12 # Show 12 products per page
+    default_is_featured = None
+    default_sort = ''
+    default_page_title = _("Products")
 
     def get_queryset(self):
         queryset = super().get_queryset() # Your existing logic
         self.filterset = ProductFilter(self.request.GET, queryset=queryset)
-        return self.filterset.qs
+        queryset = self.filterset.qs
+
+        featured_param = str(self.request.GET.get('is_featured', '')).strip().lower()
+        if featured_param:
+            self.featured_only = featured_param in {'1', 'true', 'yes', 'on'}
+        elif self.default_is_featured is not None:
+            self.featured_only = bool(self.default_is_featured)
+        else:
+            self.featured_only = False
+        if self.featured_only:
+            queryset = queryset.filter(is_featured=True)
+
+        sort_param = str(self.request.GET.get('sort', '')).strip() or self.default_sort
+        self.current_sort = sort_param
+        if sort_param in {'price_low', 'price_asc', 'amount_asc'}:
+            queryset = queryset.order_by('price', '-created_at')
+        elif sort_param in {'price_high', 'price_desc', 'amount_desc'}:
+            queryset = queryset.order_by('-price', '-created_at')
+        elif sort_param in {'-created_at', 'date_desc', 'newest'}:
+            queryset = queryset.order_by('-created_at')
+        elif sort_param in {'created_at', 'date_asc', 'oldest'}:
+            queryset = queryset.order_by('created_at')
+        elif sort_param in {'-rating', 'rating_desc', 'top_rated'}:
+            queryset = queryset.annotate(sort_avg_rating=Coalesce(Avg('reviews__rating'), 0.0)).order_by('-sort_avg_rating', '-created_at')
+        elif sort_param in {'rating_asc'}:
+            queryset = queryset.annotate(sort_avg_rating=Coalesce(Avg('reviews__rating'), 0.0)).order_by('sort_avg_rating', '-created_at')
+        elif sort_param in {'name_asc', 'name'}:
+            queryset = queryset.order_by('name')
+        elif sort_param in {'name_desc'}:
+            queryset = queryset.order_by('-name')
+
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['filter'] = self.filterset
+        context['featured_only'] = getattr(self, 'featured_only', False)
+        context['current_sort'] = getattr(self, 'current_sort', '')
+        context['page_title'] = getattr(self, 'default_page_title', _("Products"))
         return context
+
+
+class FeaturedProductListView(ProductListView):
+    template_name = 'core/featured_products.html'
+    default_is_featured = True
+    default_page_title = _("Featured Products")
+
+
+class NewArrivalProductListView(ProductListView):
+    template_name = 'core/new_arrivals_products.html'
+    default_sort = '-created_at'
+    default_page_title = _("New Arrivals")
+
+
+class EditorsPickProductListView(ProductListView):
+    template_name = 'core/editors_picks_products.html'
+    default_is_featured = True
+    default_sort = '-rating'
+    default_page_title = _("Editor's Picks")
 
 
 class OriginDetailView(ListView):
@@ -3530,6 +4391,37 @@ class ProductDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         product = self.get_object()
+
+        # Track browsing history (authenticated + session fallback)
+        session_history = self.request.session.get('recently_viewed_product_ids', [])
+        session_history = [pid for pid in session_history if pid != product.id]
+        session_history.insert(0, product.id)
+        self.request.session['recently_viewed_product_ids'] = session_history[:20]
+
+        if self.request.user.is_authenticated:
+            last_activity = (
+                UserActivity.objects.filter(user=self.request.user, activity_type='viewed_product')
+                .values_list('details', flat=True)
+                .first()
+            )
+            last_product_id = None
+            if isinstance(last_activity, dict):
+                try:
+                    last_product_id = int(last_activity.get('product_id'))
+                except (TypeError, ValueError):
+                    last_product_id = None
+
+            if last_product_id != product.id:
+                UserActivity.objects.create(
+                    user=self.request.user,
+                    activity_type='viewed_product',
+                    details={
+                        'product_id': product.id,
+                        'product_slug': product.slug,
+                        'path': self.request.path,
+                    },
+                )
+
         context['related_products'] = Product.objects.filter(category=product.category, is_active=True).exclude(id=product.id)[:4]
         context['reviews'] = ProductReview.objects.filter(product=product, is_approved=True).order_by('-created_at')
         context['review_form'] = ProductReviewForm()
@@ -3642,6 +4534,14 @@ class ConversationListView(LoginRequiredMixin, ListView):
         self.current_status = self.request.GET.get('status', '')
         if self.current_status == 'unread':
             queryset = queryset.filter(is_unread_by_user=True)
+        elif self.current_status == 'archived':
+            queryset = queryset.filter(status='archived')
+        elif self.current_status == 'starred':
+            # Filter conversations that have the 'starred' tag
+            queryset = queryset.filter(tags__name='starred').distinct()
+        else:
+            # Default: show active conversations (not archived)
+            queryset = queryset.exclude(status='archived')
         # --- END: Add Search and Filter Logic ---
 
         return queryset
@@ -3649,13 +4549,72 @@ class ConversationListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         """Adds the 'other_participant' to each conversation for easy template access."""
         context = super().get_context_data(**kwargs)
+        
+        # Process each conversation with enhanced data
         for conv in context.get('conversations', []):
             conv.other_participant = conv.get_other_participant(self.request.user)
+            
+            # Calculate dynamic values
+            conv.unread_count = conv.get_unread_count(self.request.user)
+            conv.is_overdue = conv.get_is_overdue()
+            conv.time_since_update = conv.get_time_since_update()
+            
+            # Calculate urgency if not already set
+            if conv.urgency_score == 5:  # Default value
+                conv.urgency_score = conv.calculate_urgency_score()
+            
+            # Get sentiment emoji
+            sentiment_map = {
+                'happy': '😊',
+                'neutral': '😐',
+                'frustrated': '😞',
+            }
+            conv.sentiment_emoji = sentiment_map.get(conv.sentiment, '😐')
+            
+            # Determine if overdue (4+ hours without response)
+            conv.is_sla_overdue = conv.is_overdue
+            
+            # Get customer order count (for segment determination)
+            if conv.order:
+                orders_count = Order.objects.filter(buyer=conv.other_participant).count()
+                if orders_count == 0:
+                    conv.customer_segment = 'new_customer'
+                elif orders_count >= 5:
+                    conv.customer_segment = 'repeat_buyer'
+        
         context['page_title'] = _("Messages")
 
         # Pass search and filter state to the template
         context['search_query'] = getattr(self, 'search_query', '')
         context['current_status'] = getattr(self, 'current_status', '')
+        
+        # Add unread count for dashboard stats
+        context['unread_count'] = Conversation.objects.filter(
+            participants=self.request.user,
+            messages__is_read=False
+        ).exclude(messages__sender=self.request.user).distinct().count()
+        
+        # Analytics metrics
+        all_conversations = Conversation.objects.filter(participants=self.request.user)
+        context['conversations_this_week'] = all_conversations.filter(
+            last_message_time__gte=timezone.now() - timedelta(days=7)
+        ).count() if hasattr(Conversation, 'last_message_time') else 0
+        
+        # Calculate average response time from actual data
+        resolved_convs = all_conversations.filter(is_resolved=True, response_time_seconds__isnull=False)
+        if resolved_convs.exists():
+            avg_seconds = resolved_convs.aggregate(Avg('response_time_seconds'))['response_time_seconds__avg']
+            if avg_seconds:
+                hours = int(avg_seconds / 3600)
+                context['avg_response_time'] = f"{hours}h" if hours > 0 else "<1h"
+            else:
+                context['avg_response_time'] = "2h"
+        else:
+            context['avg_response_time'] = "2h"
+        
+        context['satisfaction_rating'] = "4.5"  # Placeholder - implement when you have ratings
+        context['resolution_rate'] = str(int((all_conversations.filter(is_resolved=True).count() / max(all_conversations.count(), 1)) * 100))
+        context['resolved_count'] = all_conversations.filter(is_resolved=True).count()
 
         return context
 
@@ -3765,6 +4724,11 @@ class ConversationDetailView(LoginRequiredMixin, View):
         if unread_message_ids:
             unread_messages.update(is_read=True, read_at=timezone.now())
 
+            MessageRead.objects.bulk_create(
+                [MessageRead(message_id=message_id, user=request.user) for message_id in unread_message_ids],
+                ignore_conflicts=True
+            )
+
             # Broadcast that these messages have been read
             channel_layer = get_channel_layer()
             async_to_sync(channel_layer.group_send)(
@@ -3822,6 +4786,326 @@ class ConversationDetailView(LoginRequiredMixin, View):
         # If form is invalid, re-render the page with errors
         # Re-calling get() to rebuild the context correctly
         return self.get(request, form=form, *args, **kwargs)
+
+
+def _attachment_type_from_mime(mime_type, filename):
+    if mime_type.startswith('image/'):
+        return 'image'
+    if mime_type.startswith('video/'):
+        return 'video'
+    if mime_type.startswith('audio/'):
+        return 'audio'
+    # Fallback by extension
+    ext = os.path.splitext(filename)[1].lower()
+    if ext in {'.png', '.jpg', '.jpeg', '.gif', '.webp'}:
+        return 'image'
+    if ext in {'.mp4', '.webm', '.mov'}:
+        return 'video'
+    if ext in {'.mp3', '.wav', '.ogg', '.m4a'}:
+        return 'audio'
+    return 'file'
+
+
+def _serialize_attachment(attachment):
+    return {
+        'id': attachment.id,
+        'url': attachment.file.url,
+        'name': attachment.original_name,
+        'type': attachment.file_type,
+        'size': attachment.size_bytes,
+        'mime': attachment.mime_type,
+        'duration': attachment.duration_seconds,
+    }
+
+
+@login_required
+@require_POST
+def ajax_send_message(request):
+    conversation_id = request.POST.get('conversation_id')
+    conversation = get_object_or_404(Conversation, pk=conversation_id, participants=request.user)
+
+    content = (request.POST.get('content') or '').strip()
+    message_type = request.POST.get('message_type', 'text')
+    metadata_raw = request.POST.get('metadata', '')
+    attachments = request.FILES.getlist('attachments')
+    voice_note = request.FILES.get('voice_note')
+
+    if not content and not attachments and not voice_note and not metadata_raw:
+        return JsonResponse({'success': False, 'error': _('Message is empty.')}, status=400)
+
+    try:
+        metadata = json.loads(metadata_raw) if metadata_raw else {}
+    except json.JSONDecodeError:
+        metadata = {}
+
+    if voice_note:
+        message_type = 'voice'
+    elif attachments:
+        message_type = 'attachment'
+    elif metadata.get('card_type'):
+        message_type = 'card'
+
+    message = Message.objects.create(
+        conversation=conversation,
+        sender=request.user,
+        content=content,
+        message_type=message_type,
+        metadata=metadata,
+    )
+
+    attachment_payloads = []
+    for upload in attachments:
+        file_type = _attachment_type_from_mime(upload.content_type or '', upload.name)
+        attachment = MessageAttachment.objects.create(
+            message=message,
+            uploader=request.user,
+            file=upload,
+            original_name=upload.name,
+            file_type=file_type,
+            mime_type=upload.content_type or '',
+            size_bytes=upload.size or 0,
+        )
+        attachment_payloads.append(_serialize_attachment(attachment))
+
+    if voice_note:
+        attachment = MessageAttachment.objects.create(
+            message=message,
+            uploader=request.user,
+            file=voice_note,
+            original_name=voice_note.name,
+            file_type='audio',
+            mime_type=voice_note.content_type or 'audio/webm',
+            size_bytes=voice_note.size or 0,
+        )
+        attachment_payloads.append(_serialize_attachment(attachment))
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'chat_{conversation.id}',
+        {
+            'type': 'chat_message_broadcast',
+            'message_id': message.id,
+            'message': message.content,
+            'sender': request.user.username,
+            'timestamp': message.timestamp.isoformat(),
+            'message_type': message.message_type,
+            'metadata': message.metadata,
+            'attachments': attachment_payloads,
+        }
+    )
+
+    return JsonResponse({
+        'success': True,
+        'message_id': message.id,
+        'timestamp': message.timestamp.isoformat(),
+        'message_type': message.message_type,
+        'attachments': attachment_payloads,
+        'metadata': message.metadata,
+    })
+
+
+@login_required
+@require_POST
+def ajax_toggle_message_reaction(request):
+    message_id = request.POST.get('message_id')
+    emoji = request.POST.get('emoji')
+
+    if not message_id or not emoji:
+        return JsonResponse({'success': False, 'error': _('Invalid reaction.')}, status=400)
+
+    message = get_object_or_404(Message, pk=message_id, conversation__participants=request.user)
+
+    existing = MessageReaction.objects.filter(message=message, user=request.user, emoji=emoji)
+    if existing.exists():
+        existing.delete()
+        action = 'removed'
+    else:
+        MessageReaction.objects.create(message=message, user=request.user, emoji=emoji)
+        action = 'added'
+
+    reaction_counts = MessageReaction.objects.filter(message=message).values('emoji').annotate(count=Count('id')).order_by('emoji')
+    reactions_payload = [{'emoji': item['emoji'], 'count': item['count']} for item in reaction_counts]
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'chat_{message.conversation_id}',
+        {
+            'type': 'reaction_update',
+            'message_id': message.id,
+            'reactions': reactions_payload,
+        }
+    )
+
+    return JsonResponse({'success': True, 'action': action, 'reactions': reactions_payload})
+
+
+@login_required
+@require_POST
+def ajax_toggle_message_pin(request):
+    message_id = request.POST.get('message_id')
+    message = get_object_or_404(Message, pk=message_id, conversation__participants=request.user)
+
+    existing = MessagePin.objects.filter(message=message, user=request.user)
+    if existing.exists():
+        existing.delete()
+        pinned = False
+    else:
+        MessagePin.objects.create(message=message, user=request.user)
+        pinned = True
+
+    return JsonResponse({'success': True, 'pinned': pinned})
+
+
+@login_required
+@require_POST
+def ajax_toggle_message_bookmark(request):
+    message_id = request.POST.get('message_id')
+    message = get_object_or_404(Message, pk=message_id, conversation__participants=request.user)
+
+    existing = MessageBookmark.objects.filter(message=message, user=request.user)
+    if existing.exists():
+        existing.delete()
+        bookmarked = False
+    else:
+        MessageBookmark.objects.create(message=message, user=request.user)
+        bookmarked = True
+
+    return JsonResponse({'success': True, 'bookmarked': bookmarked})
+
+
+@login_required
+def ajax_search_messages(request):
+    conversation_id = request.GET.get('conversation_id')
+    query = (request.GET.get('query') or '').strip()
+    sender = request.GET.get('sender')
+    message_type = request.GET.get('message_type')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    conversation = get_object_or_404(Conversation, pk=conversation_id, participants=request.user)
+    messages_qs = conversation.messages.select_related('sender')
+
+    if query:
+        messages_qs = messages_qs.filter(content__icontains=query)
+    if sender:
+        messages_qs = messages_qs.filter(sender__username__icontains=sender)
+    if message_type:
+        messages_qs = messages_qs.filter(message_type=message_type)
+    if date_from:
+        messages_qs = messages_qs.filter(timestamp__date__gte=parse_date(date_from))
+    if date_to:
+        messages_qs = messages_qs.filter(timestamp__date__lte=parse_date(date_to))
+
+    results = []
+    for message in messages_qs.order_by('-timestamp')[:100]:
+        snippet = message.content[:120] + ('...' if len(message.content) > 120 else '')
+        results.append({
+            'id': message.id,
+            'sender': message.sender.username,
+            'timestamp': message.timestamp.isoformat(),
+            'snippet': snippet,
+            'message_type': message.message_type,
+        })
+
+    return JsonResponse({'success': True, 'results': results})
+
+
+@login_required
+def ajax_list_pinned_messages(request):
+    conversation_id = request.GET.get('conversation_id')
+    conversation = get_object_or_404(Conversation, pk=conversation_id, participants=request.user)
+    pins = MessagePin.objects.filter(user=request.user, message__conversation=conversation).select_related('message__sender')
+
+    results = []
+    for pin in pins[:100]:
+        message = pin.message
+        snippet = message.content[:120] + ('...' if len(message.content) > 120 else '')
+        results.append({
+            'id': message.id,
+            'sender': message.sender.username,
+            'timestamp': message.timestamp.isoformat(),
+            'snippet': snippet,
+        })
+
+    return JsonResponse({'success': True, 'results': results})
+
+
+@login_required
+def ajax_list_bookmarked_messages(request):
+    conversation_id = request.GET.get('conversation_id')
+    conversation = get_object_or_404(Conversation, pk=conversation_id, participants=request.user)
+    bookmarks = MessageBookmark.objects.filter(user=request.user, message__conversation=conversation).select_related('message__sender')
+
+    results = []
+    for bookmark in bookmarks[:100]:
+        message = bookmark.message
+        snippet = message.content[:120] + ('...' if len(message.content) > 120 else '')
+        results.append({
+            'id': message.id,
+            'sender': message.sender.username,
+            'timestamp': message.timestamp.isoformat(),
+            'snippet': snippet,
+        })
+
+    return JsonResponse({'success': True, 'results': results})
+
+
+@login_required
+def ajax_message_readers(request):
+    message_id = request.GET.get('message_id')
+    message = get_object_or_404(Message, pk=message_id, conversation__participants=request.user)
+    readers = message.read_receipts.select_related('user').order_by('read_at')
+
+    data = [
+        {
+            'username': receipt.user.username,
+            'read_at': receipt.read_at.isoformat(),
+        }
+        for receipt in readers
+    ]
+
+    return JsonResponse({'success': True, 'readers': data})
+
+
+@login_required
+def ajax_message_card_preview(request):
+    card_type = request.GET.get('card_type')
+    target_id = request.GET.get('target_id')
+
+    if not card_type or not target_id:
+        return JsonResponse({'success': False, 'error': _('Invalid card request.')}, status=400)
+
+    if card_type == 'product':
+        product = get_object_or_404(Product, pk=target_id)
+        data = {
+            'card_type': 'product',
+            'title': product.name,
+            'subtitle': product.category.name if product.category else '',
+            'image': product.image.url if getattr(product, 'image', None) else '',
+            'price': str(product.price),
+            'url': product.get_absolute_url(),
+        }
+        return JsonResponse({'success': True, 'card': data})
+
+    if card_type == 'order':
+        order = get_object_or_404(Order, pk=target_id)
+        has_access = order.customer == request.user
+        if hasattr(request.user, 'vendor_profile'):
+            has_access = has_access or order.items.filter(product__vendor=request.user.vendor_profile).exists()
+        if not has_access and not request.user.is_staff:
+            return JsonResponse({'success': False, 'error': _('Access denied.')}, status=403)
+
+        data = {
+            'card_type': 'order',
+            'title': f"Order #{order.order_id}",
+            'subtitle': order.get_status_display() if hasattr(order, 'get_status_display') else order.status,
+            'image': '',
+            'price': str(order.total),
+            'url': reverse('core:order_detail', kwargs={'order_id': order.order_id}),
+        }
+        return JsonResponse({'success': True, 'card': data})
+
+    return JsonResponse({'success': False, 'error': _('Unsupported card type.')}, status=400)
 
 
 @login_required
@@ -5841,6 +7125,8 @@ class ServiceListView(ListView):
     template_name = 'core/service_list.html'
     context_object_name = 'services'
     paginate_by = 9
+    default_is_featured = None
+    default_page_title = _("All Services")
 
     def get_queryset(self):
         queryset = Service.objects.filter(
@@ -5879,6 +7165,41 @@ class ServiceListView(ListView):
             )
             queryset = queryset.filter(search_filters).distinct() # Apply filters and ensure distinct results
 
+        featured_param = str(self.request.GET.get('is_featured', '')).strip().lower()
+        if featured_param:
+            self.featured_only = featured_param in {'1', 'true', 'yes', 'on'}
+        elif self.default_is_featured is not None:
+            self.featured_only = bool(self.default_is_featured)
+        else:
+            self.featured_only = False
+        if self.featured_only:
+            queryset = queryset.filter(is_featured=True)
+
+        sort_param = str(self.request.GET.get('sort', '')).strip()
+        self.current_sort = sort_param
+        if sort_param in {'price_low', 'price_asc'}:
+            queryset = queryset.order_by('price', '-created_at')
+        elif sort_param in {'price_high', 'price_desc'}:
+            queryset = queryset.order_by('-price', '-created_at')
+        elif sort_param in {'-created_at', 'newest', 'date_desc'}:
+            queryset = queryset.order_by('-created_at')
+        elif sort_param in {'created_at', 'oldest', 'date_asc'}:
+            queryset = queryset.order_by('created_at')
+        elif sort_param in {'-rating', 'rating_desc', 'top_rated'}:
+            queryset = queryset.annotate(
+                sort_avg_rating=Coalesce(Avg('reviews__rating'), 0.0),
+                sort_review_count=Count('reviews', distinct=True),
+            ).order_by('-sort_avg_rating', '-sort_review_count', '-created_at')
+        elif sort_param in {'rating_asc'}:
+            queryset = queryset.annotate(
+                sort_avg_rating=Coalesce(Avg('reviews__rating'), 0.0),
+                sort_review_count=Count('reviews', distinct=True),
+            ).order_by('sort_avg_rating', '-sort_review_count', '-created_at')
+        elif sort_param in {'name_asc', 'name'}:
+            queryset = queryset.order_by('title')
+        elif sort_param in {'name_desc'}:
+            queryset = queryset.order_by('-title')
+
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -5898,10 +7219,128 @@ class ServiceListView(ListView):
         context['categories'] = ServiceCategory.objects.filter(is_active=True).order_by('name')
         context['current_category'] = self.category
         context['search_query'] = self.search_query
-        context['page_title'] = self.category.name if self.category else _("All Services")
+        context['current_sort'] = getattr(self, 'current_sort', '')
+        context['page_title'] = self.category.name if self.category else self.default_page_title
+        if getattr(self, 'featured_only', False):
+            context['page_title'] = _("Featured Services")
         if self.search_query:
             context['page_title'] = _("Search results for '{query}'").format(query=self.search_query)
 
+        return context
+
+
+class FeaturedServiceListView(ServiceListView):
+    template_name = 'core/featured_services.html'
+    default_is_featured = True
+    default_page_title = _("Featured Services")
+
+
+class RecommendedServiceListView(ServiceListView):
+    template_name = 'core/recommended_services.html'
+    default_page_title = _("Recommended Services For You")
+
+    def get_queryset(self):
+        category_slug = str(self.request.GET.get('category', '')).strip()
+
+        base_queryset = Service.objects.filter(
+            is_active=True,
+        ).select_related(
+            'provider',
+            'provider__service_provider_profile',
+            'provider__userprofile',
+            'category',
+        ).prefetch_related('packages', 'images').annotate(
+            avg_rating=Coalesce(Avg('reviews__rating'), 0.0),
+            review_total=Count('reviews', distinct=True),
+        )
+
+        if category_slug:
+            self.current_category = get_object_or_404(ServiceCategory, slug=category_slug, is_active=True)
+            base_queryset = base_queryset.filter(category=self.current_category)
+        else:
+            self.current_category = None
+
+        if self.request.user.is_authenticated:
+            preferred_service_category_ids = []
+            preferred_service_provider_ids = []
+            completed_service_ids = []
+
+            recent_service_bookings = (
+                ServiceBooking.objects.filter(user=self.request.user)
+                .exclude(status__in=['CANCELLED_BY_USER', 'CANCELLED_BY_PROVIDER'])
+                .select_related('service_package__service__category', 'service_package__service__provider')
+                .order_by('-created_at')[:120]
+            )
+
+            for booking in recent_service_bookings:
+                service = getattr(getattr(booking, 'service_package', None), 'service', None)
+                if not service:
+                    continue
+                if service.id not in completed_service_ids:
+                    completed_service_ids.append(service.id)
+                if service.category_id and service.category_id not in preferred_service_category_ids:
+                    preferred_service_category_ids.append(service.category_id)
+                if service.provider_id and service.provider_id not in preferred_service_provider_ids:
+                    preferred_service_provider_ids.append(service.provider_id)
+
+            if preferred_service_category_ids or preferred_service_provider_ids:
+                personalized_queryset = base_queryset.filter(
+                    Q(category_id__in=preferred_service_category_ids) |
+                    Q(provider_id__in=preferred_service_provider_ids)
+                ).exclude(id__in=completed_service_ids).distinct().order_by(
+                    '-is_featured', '-avg_rating', '-review_total', '-created_at'
+                )
+                if personalized_queryset.exists():
+                    return personalized_queryset
+
+        return base_queryset.order_by('-is_featured', '-avg_rating', '-review_total', '-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_category'] = getattr(self, 'current_category', None)
+        if context['current_category']:
+            context['page_title'] = _("Recommended Services: {category}").format(category=context['current_category'].name)
+        else:
+            context['page_title'] = _("Recommended Services For You")
+
+        reason_payload = {
+            'is_personalized': False,
+            'bookings_count': 0,
+            'category_names': [],
+            'category_items': [],
+            'provider_count': 0,
+        }
+
+        if self.request.user.is_authenticated:
+            bookings_qs = ServiceBooking.objects.filter(user=self.request.user).exclude(
+                status__in=['CANCELLED_BY_USER', 'CANCELLED_BY_PROVIDER']
+            ).select_related('service_package__service__category', 'service_package__service__provider')
+
+            reason_payload['bookings_count'] = bookings_qs.count()
+
+            category_items = []
+            provider_ids = set()
+            for booking in bookings_qs[:60]:
+                service = getattr(getattr(booking, 'service_package', None), 'service', None)
+                if not service:
+                    continue
+                if service.category and service.category.name:
+                    existing_slugs = {item['slug'] for item in category_items}
+                    if service.category.slug not in existing_slugs:
+                        category_items.append({'name': service.category.name, 'slug': service.category.slug})
+                if service.provider_id:
+                    provider_ids.add(service.provider_id)
+                if len(category_items) >= 3 and len(provider_ids) >= 3:
+                    break
+
+            reason_payload['category_items'] = category_items[:3]
+            reason_payload['category_names'] = [item['name'] for item in reason_payload['category_items']]
+            reason_payload['provider_count'] = len(provider_ids)
+            reason_payload['is_personalized'] = bool(
+                reason_payload['bookings_count'] or reason_payload['category_names'] or reason_payload['provider_count']
+            )
+
+        context['recommendation_reason'] = reason_payload
         return context
 
 class CategoryServiceListView(ServiceListView):
@@ -6108,9 +7547,37 @@ class LoginHistoryView(LoginRequiredMixin, ListView):
         return SecurityLog.objects.filter(user=self.request.user, action__in=['login_success', 'login_failed'])
 
 @login_required
+@login_required
 def session_management_view(request):
-    # Placeholder
-    return HttpResponse("Session Management View")
+    # Get all sessions for the current user
+    user_sessions = []
+    current_session_key = request.session.session_key
+    sessions = Session.objects.filter(expire_date__gte=datetime.datetime.now())
+    for session in sessions:
+        data = session.get_decoded()
+        if data.get('_auth_user_id') == str(request.user.id):
+            user_sessions.append({
+                'session_key': session.session_key,
+                'device_info': data.get('device_info', 'Unknown'),
+                'ip_address': data.get('ip_address', 'Unknown'),
+                'last_activity': session.expire_date,
+                'is_current': session.session_key == current_session_key,
+            })
+    # 2FA status for this user (using allauth Authenticator)
+    authenticators = Authenticator.objects.filter(user=request.user)
+    has_totp_enabled = authenticators.filter(type=Authenticator.Type.TOTP).exists()
+    has_fido_enabled = authenticators.filter(type=Authenticator.Type.WEBAUTHN).exists()
+    has_any_2fa_enabled = has_totp_enabled or has_fido_enabled
+
+    context = {
+        'user_sessions': [s for s in user_sessions if not s['is_current']],
+        'page_title': _('Login & Security'),
+        'messages': messages.get_messages(request),
+        'has_totp_enabled': has_totp_enabled,
+        'has_fido_enabled': has_fido_enabled,
+        'has_any_2fa_enabled': has_any_2fa_enabled,
+    }
+    return render(request, 'core/security/session_list.html', context)
 
 @login_required
 def logout_other_sessions_view(request):
@@ -7756,3 +9223,423 @@ def report_product_authenticity(request, pk):
             'message': _('Please fix the errors and try again.'),
             'errors': json.loads(errors)
         }, status=400)
+
+
+# --- START: Conversation Management APIs ---
+
+@login_required
+@require_http_methods(["PATCH"])
+def api_conversation_status(request, pk):
+    """API endpoint to update conversation status"""
+    try:
+        conversation = Conversation.objects.get(pk=pk, participants=request.user)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Conversation not found.'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+        new_status = data.get('status')
+        
+        if new_status not in dict(Conversation.STATUS_CHOICES):
+            return JsonResponse({'status': 'error', 'message': 'Invalid status.'}, status=400)
+        
+        conversation.status = new_status
+        conversation.save(update_fields=['status', 'updated_at'])
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Conversation status updated to {new_status}.',
+            'conversation_id': conversation.pk,
+            'new_status': new_status
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["PATCH"])
+def api_conversation_urgency(request, pk):
+    """API endpoint to update conversation urgency score"""
+    try:
+        conversation = Conversation.objects.get(pk=pk, participants=request.user)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Conversation not found.'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+        urgency_score = int(data.get('urgency_score', 5))
+        
+        if not (1 <= urgency_score <= 10):
+            return JsonResponse({'status': 'error', 'message': 'Urgency score must be between 1 and 10.'}, status=400)
+        
+        conversation.urgency_score = urgency_score
+        conversation.save(update_fields=['urgency_score', 'updated_at'])
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Urgency score updated to {urgency_score}.',
+            'conversation_id': conversation.pk,
+            'urgency_score': urgency_score
+        })
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'status': 'error', 'message': 'Invalid data.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["PATCH"])
+def api_conversation_assign(request, pk):
+    """API endpoint to assign conversation to a team member"""
+    try:
+        conversation = Conversation.objects.get(pk=pk, participants=request.user)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Conversation not found.'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+        assigned_to_id = data.get('assigned_to')
+        
+        if assigned_to_id is None:
+            conversation.assigned_to = None
+        else:
+            User = get_user_model()
+            assigned_user = User.objects.get(pk=assigned_to_id)
+            conversation.assigned_to = assigned_user
+        
+        conversation.save(update_fields=['assigned_to', 'updated_at'])
+        
+        assigned_name = conversation.assigned_to.get_full_name() if conversation.assigned_to else 'Unassigned'
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Conversation assigned to {assigned_name}.',
+            'conversation_id': conversation.pk,
+            'assigned_to': assigned_name
+        })
+    except User.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'User not found.'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["PATCH"])
+def api_conversation_followup(request, pk):
+    """API endpoint to schedule conversation follow-up"""
+    try:
+        conversation = Conversation.objects.get(pk=pk, participants=request.user)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Conversation not found.'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+        follow_up_date_str = data.get('follow_up_date')
+        
+        if follow_up_date_str:
+            # Parse ISO format datetime
+            follow_up_date = datetime.datetime.fromisoformat(follow_up_date_str.replace('Z', '+00:00'))
+            conversation.follow_up_date = follow_up_date
+        else:
+            conversation.follow_up_date = None
+        
+        conversation.save(update_fields=['follow_up_date', 'updated_at'])
+        
+        date_display = follow_up_date.strftime('%Y-%m-%d %H:%M') if follow_up_date_str else 'Cleared'
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Follow-up scheduled for {date_display}.',
+            'conversation_id': conversation.pk,
+            'follow_up_date': date_display
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["PATCH"])
+def api_conversation_category(request, pk):
+    """API endpoint to update conversation category"""
+    try:
+        conversation = Conversation.objects.get(pk=pk, participants=request.user)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Conversation not found.'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+        category = data.get('category')
+        
+        if category not in dict(Conversation.CATEGORY_CHOICES):
+            return JsonResponse({'status': 'error', 'message': 'Invalid category.'}, status=400)
+        
+        conversation.category = category
+        conversation.save(update_fields=['category', 'updated_at'])
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Category updated to {category}.',
+            'conversation_id': conversation.pk,
+            'category': category
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["PATCH"])
+def api_conversation_sentiment(request, pk):
+    """API endpoint to update conversation sentiment"""
+    try:
+        conversation = Conversation.objects.get(pk=pk, participants=request.user)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Conversation not found.'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+        sentiment = data.get('sentiment')
+        
+        if sentiment not in dict(Conversation.SENTIMENT_CHOICES):
+            return JsonResponse({'status': 'error', 'message': 'Invalid sentiment.'}, status=400)
+        
+        conversation.sentiment = sentiment
+        conversation.save(update_fields=['sentiment', 'updated_at'])
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Sentiment updated to {sentiment}.',
+            'conversation_id': conversation.pk,
+            'sentiment': sentiment
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["PATCH", "DELETE"])
+def api_conversation_tags(request, pk):
+    """API endpoint to manage conversation tags"""
+    try:
+        conversation = Conversation.objects.get(pk=pk, participants=request.user)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Conversation not found.'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+        
+        if request.method == 'DELETE':
+            tag_id = data.get('tag_id')
+            tag = ConversationTag.objects.get(pk=tag_id)
+            conversation.tags.remove(tag)
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Tag "{tag.name}" removed.',
+                'conversation_id': conversation.pk
+            })
+        else:  # PATCH
+            tag_name = data.get('tag_name')
+            if not tag_name:
+                return JsonResponse({'status': 'error', 'message': 'Tag name is required.'}, status=400)
+            
+            tag, created = ConversationTag.objects.get_or_create(
+                name=tag_name,
+                defaults={'color': '#667eea'}
+            )
+            conversation.tags.add(tag)
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Tag "{tag.name}" added.',
+                'conversation_id': conversation.pk,
+                'tag_id': tag.pk,
+                'tag_name': tag.name
+            })
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON.'}, status=400)
+    except ConversationTag.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Tag not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["PATCH"])
+def api_conversation_segment(request, pk):
+    """API endpoint to update customer segment"""
+    try:
+        conversation = Conversation.objects.get(pk=pk, participants=request.user)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Conversation not found.'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+        segment = data.get('customer_segment')
+        
+        if segment not in dict(Conversation.SEGMENT_CHOICES):
+            return JsonResponse({'status': 'error', 'message': 'Invalid segment.'}, status=400)
+        
+        conversation.customer_segment = segment
+        conversation.save(update_fields=['customer_segment', 'updated_at'])
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Customer segment updated to {segment}.',
+            'conversation_id': conversation.pk,
+            'segment': segment
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["PATCH"])
+def api_conversation_resolve(request, pk):
+    """API endpoint to mark conversation as resolved"""
+    try:
+        conversation = Conversation.objects.get(pk=pk, participants=request.user)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Conversation not found.'}, status=404)
+    
+    try:
+        data = json.loads(request.body)
+        is_resolved = data.get('is_resolved', False)
+        
+        if is_resolved:
+            conversation.is_resolved = True
+            conversation.resolved_at = timezone.now()
+            conversation.status = 'resolved'
+        else:
+            conversation.is_resolved = False
+            conversation.resolved_at = None
+            conversation.status = 'active'
+        
+        conversation.save(update_fields=['is_resolved', 'resolved_at', 'status', 'updated_at'])
+        
+        status_text = 'Marked as resolved' if is_resolved else 'Reopened'
+        return JsonResponse({
+            'status': 'success',
+            'message': status_text,
+            'conversation_id': conversation.pk,
+            'is_resolved': is_resolved
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# --- AJAX Message Endpoints ---
+
+@login_required
+def ajax_get_messages(request, pk):
+    """Get all messages for a conversation as JSON"""
+    try:
+        conversation = get_object_or_404(Conversation, pk=pk, participants=request.user)
+        messages = conversation.messages.select_related('sender').order_by('timestamp')
+        
+        messages_data = []
+        for msg in messages:
+            messages_data.append({
+                'id': msg.id,
+                'sender': msg.sender.get_full_name() or msg.sender.username,
+                'sender_id': msg.sender.id,
+                'content': msg.content,
+                'created_at': msg.timestamp.isoformat(),
+                'is_read': msg.is_read,
+            })
+        
+        return JsonResponse({'success': True, 'messages': messages_data})
+    except Conversation.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Conversation not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def ajax_send_message(request, pk):
+    """Send a new message to a conversation"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=400)
+    
+    try:
+        conversation = get_object_or_404(Conversation, pk=pk, participants=request.user)
+        content = request.POST.get('content', '').strip()
+        
+        if not content:
+            return JsonResponse({'success': False, 'error': 'Message content empty'}, status=400)
+        
+        # Create the message
+        message = Message.objects.create(
+            conversation=conversation,
+            sender=request.user,
+            content=content,
+            timestamp=timezone.now(),
+            is_read=True
+        )
+        
+        # Handle file attachment if present
+        if 'attachment' in request.FILES:
+            file = request.FILES['attachment']
+            attachment = MessageAttachment.objects.create(
+                message=message,
+                file=file,
+                uploaded_at=timezone.now()
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'message': {
+                'id': message.id,
+                'sender': request.user.get_full_name() or request.user.username,
+                'sender_id': request.user.id,
+                'content': message.content,
+                'created_at': message.timestamp.isoformat(),
+                'is_read': message.is_read,
+            }
+        })
+    except Conversation.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Conversation not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def ajax_search_messages(request, pk):
+    """Search messages in a conversation"""
+    try:
+        conversation = get_object_or_404(Conversation, pk=pk, participants=request.user)
+        query = request.GET.get('q', '').strip()
+        
+        if not query:
+            return JsonResponse({'success': True, 'results': []})
+        
+        messages = conversation.messages.filter(
+            content__icontains=query
+        ).select_related('sender').order_by('-timestamp')[:50]
+        
+        results = []
+        for msg in messages:
+            results.append({
+                'id': msg.id,
+                'sender': msg.sender.get_full_name() or msg.sender.username,
+                'content': msg.content[:100],
+                'created_at': msg.timestamp.isoformat(),
+            })
+        
+        return JsonResponse({'success': True, 'results': results})
+    except Conversation.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Conversation not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+# --- END: Conversation Management APIs ---

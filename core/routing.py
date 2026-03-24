@@ -3,7 +3,7 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from django.utils import timezone
-from .models import Conversation, Message
+from .models import Conversation, Message, MessageRead
 from authapp.models import CustomUser
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -58,19 +58,27 @@ class ChatConsumer(AsyncWebsocketConsumer):
         message_type = data.get('type')
 
         if message_type == 'chat_message':
-            message_content = data['message']
+            message_content = data.get('message', '')
+            metadata = data.get('metadata') or {}
+            message_kind = data.get('message_type', 'text')
             
             # Save message to DB
-            message = await self.save_message(message_content)
+            message = await self.save_message(message_content, message_kind, metadata)
+            if not message:
+                return
 
             # Send message to room group
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     'type': 'chat_message_broadcast',
+                    'message_id': message.id if message else None,
                     'message': message.content,
                     'sender': self.user.username,
-                    'timestamp': message.timestamp.isoformat()
+                    'timestamp': message.timestamp.isoformat(),
+                    'message_type': message.message_type,
+                    'metadata': message.metadata,
+                    'attachments': []
                 }
             )
         elif message_type == 'typing':
@@ -83,6 +91,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'is_typing': data['is_typing']
                 }
             )
+        elif message_type == 'mark_messages_as_read':
+            message_ids = data.get('message_ids', [])
+            if message_ids:
+                await self.mark_messages_read(message_ids)
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'read_receipts_broadcast',
+                        'message_ids': message_ids,
+                        'read_by': self.user.username
+                    }
+                )
 
     # --- Handlers for group messages ---
 
@@ -90,9 +110,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def chat_message_broadcast(self, event):
         await self.send(text_data=json.dumps({
             'type': 'new_message',
+            'message_id': event.get('message_id'),
             'message': event['message'],
             'sender': event['sender'],
-            'timestamp': event['timestamp']
+            'timestamp': event['timestamp'],
+            'message_type': event.get('message_type', 'text'),
+            'metadata': event.get('metadata', {}),
+            'attachments': event.get('attachments', [])
         }))
 
     # Receive typing status from room group
@@ -113,6 +137,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'is_online': event['is_online']
         }))
 
+    async def read_receipts_broadcast(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'messages_read',
+            'message_ids': event['message_ids'],
+            'read_by': event.get('read_by')
+        }))
+
+    async def reaction_update(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'reaction_update',
+            'message_id': event['message_id'],
+            'reactions': event['reactions']
+        }))
+
     # --- Database Helpers ---
 
     @sync_to_async
@@ -127,7 +165,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return False
 
     @sync_to_async
-    def save_message(self, message_content):
+    def save_message(self, message_content, message_kind='text', metadata=None):
         """
         Saves a new message to the database.
         """
@@ -136,11 +174,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
             message = Message.objects.create(
                 conversation=conversation,
                 sender=self.user,
-                content=message_content
+                content=message_content,
+                message_type=message_kind,
+                metadata=metadata or {}
             )
             # Mark messages as read for the sender upon sending
             conversation.messages.filter(is_read=False).exclude(sender=self.user).update(is_read=True)
             return message
         except Conversation.DoesNotExist:
             return None
+
+    @sync_to_async
+    def mark_messages_read(self, message_ids):
+        messages = Message.objects.filter(pk__in=message_ids, conversation_id=self.conversation_id)
+        messages.update(is_read=True, read_at=timezone.now())
+        MessageRead.objects.bulk_create(
+            [MessageRead(message_id=message_id, user=self.user) for message_id in message_ids],
+            ignore_conflicts=True
+        )
 

@@ -1,0 +1,142 @@
+
+
+{% extends 'core/user_dashboard_base.html' %}
+{% load i18n %}
+
+{% block title %}{{ page_title|default:_('Login & Security') }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-4">
+    <h1 class="h2 mb-0"><i class="fas fa-user-shield me-2"></i>{{ page_title|default:_('Login & Security') }}</h1>
+    <a href="{% url 'core:user_profile' %}" class="btn btn-outline-secondary">{% trans "Back to Profile" %}</a>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-7 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Login History" %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-login-history align-middle">
+                        <thead>
+                            <tr>
+                                <th scope="col">{% trans "Date & Time" %}</th>
+                                <th scope="col">{% trans "IP Address" %}</th>
+                                <th scope="col">{% trans "Device" %}</th>
+                                <th scope="col">{% trans "Status" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in login_history %}
+                            <tr>
+                                <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                                <td>{{ log.ip_address }}</td>
+                                <td>{{ log.device_info|default:_("Unknown") }}</td>
+                                <td>
+                                    {% if log.success %}
+                                        <span class="status-success">{% trans "Success" %}</span>
+                                    {% else %}
+                                        <span class="status-failed">{% trans "Failed" %}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">{% trans "No login history found." %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5 mb-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Current Session" %}</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">{% trans "This is the browser you are currently using. This session will not be logged out." %}</p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">{% trans "Other Active Sessions" %}</h5>
+                {% if user_sessions %}
+                <form action="{% url 'core:logout_other_sessions' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">{% trans "Log Out All Other Sessions" %}</button>
+                </form>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if user_sessions %}
+                    <p>{% trans "If you don't recognize a session, you can log it out below. For security, it's a good idea to also change your password." %}</p>
+                    <ul class="list-group mb-3">
+                        {% for session in user_sessions %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i class="fas fa-desktop me-2 text-muted"></i>
+                                    {% trans "Session active since" %} {{ session.last_activity|timesince }} {% trans "ago" %}.
+                                    <span class="ms-2 text-muted small">{{ session.device_info|default:_('Unknown') }} | {{ session.ip_address }}</span>
+                                </span>
+                                <form action="{% url 'core:logout_session' session_key=session.session_key %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">{% trans "Log Out" %}</button>
+                                </form>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">{% trans "You have no other active sessions." %}</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Security Actions" %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="mb-1">{% trans "Two-Factor Authentication" %}</h6>
+                    {% if has_any_2fa_enabled %}
+                        <span class="badge bg-success me-2">{% trans "Enabled" %}</span>
+                        <small class="text-muted d-block mt-1">
+                            {% if has_totp_enabled and has_fido_enabled %}
+                                {% trans "Authenticator app and security key are active on your account." %}
+                            {% elif has_totp_enabled %}
+                                {% trans "Authenticator app (TOTP) is active on your account." %}
+                            {% elif has_fido_enabled %}
+                                {% trans "Security key (WebAuthn) is active on your account." %}
+                            {% endif %}
+                        </small>
+                        <a href="{% url 'mfa_index' %}" class="btn btn-sm btn-outline-secondary mt-2">{% trans "Manage 2FA" %}</a>
+                    {% else %}
+                        <span class="badge bg-warning text-dark me-2">{% trans "Not Enabled" %}</span>
+                        <small class="text-muted d-block mt-1">{% trans "Add an extra layer of security with 2FA." %}</small>
+                        <a href="{% url 'mfa_index' %}" class="btn btn-sm btn-primary mt-2">{% trans "Set up 2FA" %}</a>
+                    {% endif %}
+                </div>
+                <hr>
+                <div>
+                    <h6 class="mb-1">{% trans "Password" %}</h6>
+                    <small class="text-muted d-block mb-2">{% trans "Use a strong, unique password for your account." %}</small>
+                    <a href="{% url 'core:change_password' %}" class="btn btn-outline-primary btn-sm">{% trans "Change Password" %}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock dashboard_content %}

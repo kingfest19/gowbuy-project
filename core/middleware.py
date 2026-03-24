@@ -1,5 +1,9 @@
 from django.utils import translation
 from django.conf import settings
+from django.http import JsonResponse
+from django.shortcuts import redirect
+from django.urls import reverse
+from urllib.parse import quote_plus
 # from django.utils.translation.trans_real import check_for_language # No longer needed
 import logging
 
@@ -63,3 +67,87 @@ class SanitizeLanguageMiddleware:
         logger.debug(f"[SanitizeLangMiddleware] Language for response/cookie: '{lang_for_cookie}'")
 
         return response
+
+
+class GuestAccessRestrictionMiddleware:
+    """
+    Restricts anonymous users from protected areas while allowing guest browsing
+    on selected public pages.
+    """
+
+    PUBLIC_EXACT_PATHS = {
+        '/',
+        '/signin/',
+        '/signup/',
+        '/logout/',
+        '/robots.txt',
+        '/sitemap.xml',
+        '/update-location/',
+        '/update-currency/',
+        '/update-language/',
+        '/guest/continue/',
+    }
+
+    PUBLIC_PREFIXES = (
+        '/static/',
+        '/media/',
+        '/admin/',
+        '/tinymce/',
+        '/i18n/',
+        '/accounts/',
+        '/auth/',
+        '/menu/',
+        '/blog/',
+        '/category/',
+        '/product/',
+        '/products/',
+        '/origin/',
+        '/search/',
+        '/compare/',
+        '/offers/',
+        '/sell/',
+        '/shop-local/',
+        '/vendors/',
+        '/vendor/',
+        '/services/',
+        '/service/',
+        '/service-category/',
+        '/help/',
+        '/terms/',
+        '/privacy/',
+        '/about/',
+        '/careers/',
+        '/press/',
+        '/blog-info/',
+        '/affiliate/',
+        '/advertise/',
+        '/delivery-partner/',
+        '/shipping-rates/',
+        '/returns/',
+        '/contact/',
+        '/site-map/',
+        '/accessibility/',
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated or request.method == 'OPTIONS':
+            return self.get_response(request)
+
+        path = request.path or '/'
+        if self._is_public_path(path):
+            return self.get_response(request)
+
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'detail': 'Authentication required.'}, status=401)
+
+        signin_url = reverse('signin')
+        next_param = quote_plus(request.get_full_path() or '/')
+        return redirect(f"{signin_url}?next={next_param}")
+
+    def _is_public_path(self, path):
+        if path in self.PUBLIC_EXACT_PATHS:
+            return True
+        return any(path.startswith(prefix) for prefix in self.PUBLIC_PREFIXES)

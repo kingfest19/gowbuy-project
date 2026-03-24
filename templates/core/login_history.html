@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        .login-history-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+            padding: 2.5rem 2rem 2rem 2rem;
+            margin-top: 40px;
+            margin-bottom: 40px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .login-history-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #4f46e5;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        .login-history-divider {
+            border: none;
+            border-top: 2px solid #e5e7eb;
+            margin: 0.5rem 0 2rem 0;
+        }
+        .table-login-history {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(79,70,229,0.06);
+            overflow: hidden;
+        }
+        .table-login-history th {
+            background: #f5f7ff;
+            color: #4f46e5;
+            font-weight: 600;
+        }
+        .table-login-history td {
+            vertical-align: middle;
+        }
+        .status-success { color: #22c55e; font-weight: 600; }
+        .status-failed { color: #ef4444; font-weight: 600; }
+        @media (max-width: 600px) {
+            .login-history-card { padding: 1.2rem 0.5rem; }
+            .login-history-title { font-size: 1.3rem; }
+        }
+    </style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="login-history-card">
+    <div class="login-history-title">{% trans "Login History" %}</div>
+    <hr class="login-history-divider">
+    <div class="table-responsive">
+        <table class="table table-login-history align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">{% trans "Date & Time" %}</th>
+                    <th scope="col">{% trans "IP Address" %}</th>
+                    <th scope="col">{% trans "Device" %}</th>
+                    <th scope="col">{% trans "Status" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in login_history %}
+                <tr>
+                    <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                    <td>{{ log.ip_address }}</td>
+                    <td>{{ log.device_info|default:_("Unknown") }}</td>
+                    <td>
+                        {% if log.success %}
+                            <span class="status-success">{% trans "Success" %}</span>
+                        {% else %}
+                            <span class="status-failed">{% trans "Failed" %}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">{% trans "No login history found." %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock content %}

@@ -2992,6 +2992,73 @@ class Conversation(models.Model):
     subject = models.CharField(max_length=255, blank=True, help_text=_("Optional subject for the conversation."))
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True) # Timestamp of the last message
+    
+    # Status Management
+    STATUS_CHOICES = [
+        ('active', _('Active')),
+        ('idle', _('Idle')),
+        ('awaiting_response', _('Awaiting Response')),
+        ('resolved', _('Resolved')),
+        ('archived', _('Archived')),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    
+    # Sentiment Analysis
+    SENTIMENT_CHOICES = [
+        ('happy', _('Happy')),
+        ('neutral', _('Neutral')),
+        ('frustrated', _('Frustrated')),
+    ]
+    sentiment = models.CharField(max_length=20, choices=SENTIMENT_CHOICES, default='neutral', blank=True)
+    
+    # Urgency Scoring (1-10)
+    urgency_score = models.IntegerField(default=5, help_text=_("1-10 scale: 1=low, 10=critical"))
+    
+    # Category
+    CATEGORY_CHOICES = [
+        ('inquiry', _('Inquiry')),
+        ('complaint', _('Complaint')),
+        ('feedback', _('Feedback')),
+        ('support', _('Support')),
+        ('order_related', _('Order Related')),
+        ('return', _('Return')),
+        ('other', _('Other')),
+    ]
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='inquiry', blank=True)
+    
+    # Customer Segment
+    SEGMENT_CHOICES = [
+        ('vip', _('VIP')),
+        ('repeat_buyer', _('Repeat Buyer')),
+        ('high_value', _('High Value')),
+        ('new_customer', _('New Customer')),
+        ('at_risk', _('At Risk')),
+        ('regular', _('Regular')),
+    ]
+    customer_segment = models.CharField(max_length=50, choices=SEGMENT_CHOICES, default='regular', blank=True)
+    
+    # Team Assignment
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_conversations')
+    
+    # Tags
+    tags = models.ManyToManyField('ConversationTag', blank=True, related_name='conversations')
+    
+    # Auto-detected tags (from AI/NLP)
+    auto_tags = models.TextField(blank=True, help_text=_("Comma-separated auto-detected tags"))
+    
+    # Response tracking
+    first_response_time = models.DateTimeField(null=True, blank=True, help_text=_("Time of first response by vendor"))
+    response_time_seconds = models.IntegerField(null=True, blank=True, help_text=_("Seconds until first response"))
+    
+    # Resolution tracking
+    is_resolved = models.BooleanField(default=False)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    
+    # Follow-up scheduling
+    follow_up_date = models.DateTimeField(null=True, blank=True, help_text=_("Scheduled follow-up reminder"))
+    
+    # Message count tracking
+    unread_message_count = models.IntegerField(default=0)
 
     class Meta:
         ordering = ['-updated_at']
@@ -3012,6 +3079,93 @@ class Conversation(models.Model):
             # Prefetching participants in the view is recommended for performance
             return self.participants.exclude(id=user.id).first()
         return None
+    
+    def get_unread_count(self, user):
+        """Get count of unread messages for a specific user"""
+        return self.messages.filter(is_read=False).exclude(sender=user).count()
+    
+    def get_is_overdue(self):
+        """Check if response time SLA is exceeded (4 hours)"""
+        if self.status == 'awaiting_response' and self.updated_at:
+            time_elapsed = timezone.now() - self.updated_at
+            return time_elapsed.total_seconds() > 14400  # 4 hours in seconds
+        return False
+    
+    def get_time_since_update(self):
+        """Get human-readable time since last update"""
+        if self.updated_at:
+            delta = timezone.now() - self.updated_at
+            if delta.days > 0:
+                return f"{delta.days}d ago" if delta.days == 1 else f"{delta.days}d ago"
+            hours = delta.seconds // 3600
+            if hours > 0:
+                return f"{hours}h ago" if hours == 1 else f"{hours}h ago"
+            minutes = (delta.seconds % 3600) // 60
+            return f"{minutes}m ago" if minutes > 0 else "just now"
+        return ""
+    
+    def update_sentiment_from_messages(self):
+        """Analyze recent messages and update sentiment"""
+        # Simple keyword-based sentiment analysis
+        recent_messages = self.messages.order_by('-timestamp')[:5].values_list('content', flat=True)
+        
+        frustrated_keywords = ['angry', 'frustrated', 'terrible', 'awful', 'worst', 'disappointed', 'unacceptable', 'bad', 'poor']
+        happy_keywords = ['great', 'excellent', 'amazing', 'wonderful', 'love', 'perfect', 'satisfied', 'thank', 'awesome']
+        
+        frustrated_count = sum(1 for msg in recent_messages for keyword in frustrated_keywords if keyword.lower() in msg.lower())
+        happy_count = sum(1 for msg in recent_messages for keyword in happy_keywords if keyword.lower() in msg.lower())
+        
+        if frustrated_count > happy_count:
+            self.sentiment = 'frustrated'
+        elif happy_count > frustrated_count:
+            self.sentiment = 'happy'
+        else:
+            self.sentiment = 'neutral'
+        self.save(update_fields=['sentiment'])
+    
+    def calculate_urgency_score(self):
+        """Calculate urgency based on status, sentiment, and time"""
+        base_score = 5
+        
+        # Status modifiers
+        status_modifiers = {
+            'awaiting_response': 8,
+            'frustrated': 9,
+            'idle': 3,
+            'resolved': 1,
+            'archived': 0,
+        }
+        base_score = status_modifiers.get(self.status, 5)
+        
+        # Sentiment modifiers
+        if self.sentiment == 'frustrated':
+            base_score += 3
+        elif self.sentiment == 'happy':
+            base_score -= 2
+            
+        # Time modifier - older conversations get higher priority if unresolved
+        if self.updated_at:
+            hours_old = (timezone.now() - self.updated_at).total_seconds() / 3600
+            if hours_old > 24:
+                base_score += 2
+            if hours_old > 48:
+                base_score += 2
+        
+        return min(max(base_score, 1), 10)  # Clamp between 1-10
+
+
+class ConversationTag(models.Model):
+    """Tags for categorizing and organizing conversations"""
+    name = models.CharField(max_length=50, unique=True)
+    color = models.CharField(max_length=7, default='#667eea')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = _("Conversation Tag")
+        verbose_name_plural = _("Conversation Tags")
+    
+    def __str__(self):
+        return self.name
 
 class Message(models.Model):
     """
@@ -3020,7 +3174,19 @@ class Message(models.Model):
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_messages')
     content = models.TextField()
+    message_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('text', _('Text')),
+            ('attachment', _('Attachment')),
+            ('voice', _('Voice Note')),
+            ('card', _('Rich Card')),
+        ],
+        default='text'
+    )
+    metadata = models.JSONField(default=dict, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
     read_at = models.DateTimeField(_("Read At"), null=True, blank=True)
     is_read = models.BooleanField(default=False) # Could be more complex with read receipts per participant
 
@@ -3034,11 +3200,93 @@ class Message(models.Model):
         if not self.pk: # Only on creation
             self.conversation.updated_at = timezone.now()
             self.conversation.save(update_fields=['updated_at'])
+            if not self.delivered_at:
+                self.delivered_at = timezone.now()
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Message from {self.sender.username} at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
 # --- END: Conversation & Message Models ---
+
+
+class MessageAttachment(models.Model):
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='attachments')
+    uploader = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='message_attachments')
+    file = models.FileField(upload_to='message_attachments/%Y/%m/')
+    original_name = models.CharField(max_length=255)
+    file_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('image', _('Image')),
+            ('video', _('Video')),
+            ('audio', _('Audio')),
+            ('file', _('File')),
+        ],
+        default='file'
+    )
+    mime_type = models.CharField(max_length=100, blank=True)
+    size_bytes = models.BigIntegerField(default=0)
+    duration_seconds = models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Attachment {self.original_name} for message {self.message_id}"
+
+
+class MessageReaction(models.Model):
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='reactions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='message_reactions')
+    emoji = models.CharField(max_length=32)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('message', 'user', 'emoji')
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.user.username} reacted {self.emoji}"
+
+
+class MessageRead(models.Model):
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='read_receipts')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='read_messages')
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('message', 'user')
+        ordering = ['read_at']
+
+    def __str__(self):
+        return f"{self.user.username} read message {self.message_id}"
+
+
+class MessagePin(models.Model):
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='pins')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='pinned_messages')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('message', 'user')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} pinned message {self.message_id}"
+
+
+class MessageBookmark(models.Model):
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='bookmarks')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='bookmarked_messages')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('message', 'user')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} bookmarked message {self.message_id}"
 
 # --- START: ShippingMethod Model ---
 class ShippingMethod(models.Model):

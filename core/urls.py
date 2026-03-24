@@ -16,6 +16,7 @@ app_name = 'core' # Namespace for reversing URLs (e.g., {% url 'core:product_det
 urlpatterns = [
     # Main pages
     path('', views.home, name='home'),
+    path('guest/continue/', views.continue_as_guest, name='continue_as_guest'),
     path('menu/', views.menu, name='menu'),
 
     # --- Blog URLs ---
@@ -38,6 +39,12 @@ urlpatterns = [
     path('returns/', TemplateView.as_view(template_name='core/info/returns_replacements.html', extra_context={'page_title': 'Returns & Replacements'}), name='info_returns'),
     path('contact/', TemplateView.as_view(template_name='core/info/contact_us.html', extra_context={'page_title': 'Contact Us'}), name='info_contact'),
     path('site-map/', TemplateView.as_view(template_name='core/info/site_map.html', extra_context={'page_title': 'Site Map'}), name='info_sitemap'),
+    # --- Customer Conversation AJAX Actions ---
+    path('customer/conversation/archive/', views.customer_conversation_archive, name='customer_conversation_archive'),
+    path('customer/conversation/mark-read/', views.customer_conversation_mark_read, name='customer_conversation_mark_read'),
+    path('customer/conversation/add-tag/', views.customer_conversation_add_tag, name='customer_conversation_add_tag'),
+    path('customer/conversation/set-priority/', views.customer_conversation_set_priority, name='customer_conversation_set_priority'),
+    path('customer/conversation/bulk-action/', views.customer_conversation_bulk_action, name='customer_conversation_bulk_action'),
     path('accessibility/', TemplateView.as_view(template_name='core/info/accessibility.html', extra_context={'page_title': 'Accessibility'}), name='info_accessibility'),
 
     # Product pages
@@ -50,6 +57,9 @@ urlpatterns = [
     path('compare/', views.compare_products, name='compare_products'),
 
     path('product_list/', views.ProductListView.as_view(), name='product_list'), # For ProductListView
+    path('products/featured/', views.FeaturedProductListView.as_view(), name='featured_products'),
+    path('products/new-arrivals/', views.NewArrivalProductListView.as_view(), name='new_arrivals_products'),
+    path('products/editors-picks/', views.EditorsPickProductListView.as_view(), name='editors_picks_products'),
     path('origin/<str:country_code>/', views.OriginDetailView.as_view(), name='origin_detail'),
     # Offers page
     path('offers/', views.daily_offers, name='daily_offers'),
@@ -244,6 +254,9 @@ urlpatterns = [
     # --- Vendor Messaging ---
     path('dashboard/messages/', views.ConversationListView.as_view(), name='vendor_message_list'),
     path('dashboard/messages/<int:pk>/', views.ConversationDetailView.as_view(), name='vendor_message_detail'),
+    path('dashboard/messages/<int:pk>/get-messages/', views.ajax_get_messages, name='ajax_get_messages'),
+    path('dashboard/messages/<int:pk>/send/', views.ajax_send_message, name='ajax_send_message_new'),
+    path('dashboard/messages/<int:pk>/search/', views.ajax_search_messages, name='ajax_search_messages_new'),
     path('product/<int:product_id>/contact-vendor/', views.StartConversationView.as_view(), name='start_conversation'),
 
 
@@ -252,6 +265,15 @@ urlpatterns = [
     path('ajax/chatbot-message/', views.ajax_chatbot_message, name='ajax_chatbot_message'),
     path('ajax/get-product-details/', views.ajax_get_product_details, name='ajax_get_product_details'),
     path('ajax/get-item-details/', views.ajax_get_item_details, name='ajax_get_item_details'), # New endpoint for chatbot
+    path('ajax/messages/send/', views.ajax_send_message, name='ajax_send_message'),
+    path('ajax/messages/reaction/', views.ajax_toggle_message_reaction, name='ajax_toggle_message_reaction'),
+    path('ajax/messages/pin/', views.ajax_toggle_message_pin, name='ajax_toggle_message_pin'),
+    path('ajax/messages/bookmark/', views.ajax_toggle_message_bookmark, name='ajax_toggle_message_bookmark'),
+    path('ajax/messages/search/', views.ajax_search_messages, name='ajax_search_messages'),
+    path('ajax/messages/pinned/', views.ajax_list_pinned_messages, name='ajax_list_pinned_messages'),
+    path('ajax/messages/bookmarked/', views.ajax_list_bookmarked_messages, name='ajax_list_bookmarked_messages'),
+    path('ajax/messages/readers/', views.ajax_message_readers, name='ajax_message_readers'),
+    path('ajax/messages/card-preview/', views.ajax_message_card_preview, name='ajax_message_card_preview'),
     path('ajax/visual-search/', views.ajax_visual_search, name='ajax_visual_search'),
     path('ajax/generate-3d-model/', views.ajax_generate_3d_model, name='ajax_generate_3d_model'), # <<< Add this URL
     # --- START: New AJAX Image Tool URLs ---
@@ -295,6 +317,8 @@ urlpatterns += [
 # --- START: Service Marketplace URLs ---
 urlpatterns += [
     path('services/', views.ServiceListView.as_view(), name='service_list'),
+    path('services/featured/', views.FeaturedServiceListView.as_view(), name='featured_services'),
+    path('services/recommended/', views.RecommendedServiceListView.as_view(), name='recommended_services'),
     path('services/category/<slug:category_slug>/', views.CategoryServiceListView.as_view(), name='services_by_category'),
     path('service-category/<slug:category_slug>/', views.ServiceCategoryDetailView.as_view(), name='service_category_detail'),
     path('services/search/', views.ServiceSearchResultsView.as_view(), name='service_search_results'),
@@ -377,6 +401,29 @@ urlpatterns += [
 # --- START: Customer Notification URL ---
 urlpatterns += [path('notifications/', views.CustomerNotificationListView.as_view(), name='customer_notification_list'),]
 # END: Customer Notification URL
+
+# --- START: Conversation Management APIs ---
+urlpatterns += [
+    # Conversation Status API
+    path('api/conversations/<int:pk>/status/', views.api_conversation_status, name='api_conversation_status'),
+    # Conversation Urgency API
+    path('api/conversations/<int:pk>/urgency/', views.api_conversation_urgency, name='api_conversation_urgency'),
+    # Conversation Assignment API
+    path('api/conversations/<int:pk>/assign/', views.api_conversation_assign, name='api_conversation_assign'),
+    # Conversation Follow-up API
+    path('api/conversations/<int:pk>/followup/', views.api_conversation_followup, name='api_conversation_followup'),
+    # Conversation Category API
+    path('api/conversations/<int:pk>/category/', views.api_conversation_category, name='api_conversation_category'),
+    # Conversation Sentiment API
+    path('api/conversations/<int:pk>/sentiment/', views.api_conversation_sentiment, name='api_conversation_sentiment'),
+    # Conversation Tags API
+    path('api/conversations/<int:pk>/tags/', views.api_conversation_tags, name='api_conversation_tags'),
+    # Conversation Segment API
+    path('api/conversations/<int:pk>/segment/', views.api_conversation_segment, name='api_conversation_segment'),
+    # Conversation Resolution API
+    path('api/conversations/<int:pk>/resolve/', views.api_conversation_resolve, name='api_conversation_resolve'),
+]
+# --- END: Conversation Management APIs ---
 
 # --- Media Files Serving (Fix for Production) ---
 if settings.DEBUG:

@@ -56,12 +56,20 @@ def calculate_shipping_cost(cart: Cart, shipping_address: Address, nexus_fulfill
 
     nexus_item_count = 0
     for item in items_to_consider:
+        product = getattr(item, 'product', None)
+        if not product:
+            continue
+
+        if getattr(product, 'product_type', None) != 'physical':
+            continue
+
         # Determine fulfillment method (product specific, then vendor default)
-        product_fulfillment = item.product.fulfillment_method
-        vendor_default_fulfillment = item.product.vendor.default_fulfillment_method if item.product.vendor else 'vendor'
+        product_fulfillment = getattr(product, 'fulfillment_method', None)
+        vendor = getattr(product, 'vendor', None)
+        vendor_default_fulfillment = getattr(vendor, 'default_fulfillment_method', 'vendor')
         actual_fulfillment = product_fulfillment if product_fulfillment else vendor_default_fulfillment
         
-        if actual_fulfillment == 'nexus' and item.product.product_type == 'physical':
+        if actual_fulfillment == 'nexus':
             nexus_item_count += 1 # Count each unique Nexus-fulfilled physical product line item
 
     if nexus_item_count == 0:

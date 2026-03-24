@@ -1,150 +1,2889 @@
 {% extends "base.html" %}
-{% load i18n humanize query_params %}
+{% load i18n humanize query_params custom_filters %}
 
 {% block page_title %}{% trans "Messages" %}{% endblock page_title %}
 
 {% block extra_css %}
-<style>
-    .page-header {
+    {{ block.super }}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        /* CSS Variables for Color Theming */
+        :root {
+            --bg-body: #ffffff;
+            --bg-surface: #f8f9fa;
+            --text-main: #1a2533;
+            --text-muted: #6c757d;
+            --border-color: #e9ecef;
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #3b82f6;
+            --card-shadow: 0 8px 32px rgba(102, 126, 234, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #0f1419;
+            --bg-surface: rgba(30, 30, 46, 0.9);
+            --text-main: #f0f4ff;
+            --text-muted: #cbd5e1;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #667eea;
+            --accent-secondary: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #3b82f6;
+            --card-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Notification Toast Styles */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 400px;
+        }
+
+        .notification {
+            padding: 1rem 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideInRight 0.3s ease-out;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .notification.success {
+            border-left-color: #10b981;
+            background: #ecfdf5;
+            color: #065f46;
+        }
+
+        .notification.error {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+            color: #7f1d1d;
+        }
+
+        .notification.warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+            color: #7c2d12;
+        }
+
+        .notification.info {
+            border-left-color: #3b82f6;
+            background: #eff6ff;
+            color: #0c4a6e;
+        }
+
+        .notification i {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .notification-message {
+            flex: 1;
+        }
+
+        .notification-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: currentColor;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            font-size: 1.25rem;
+            padding: 0;
+        }
+
+        .notification-close:hover {
+            opacity: 1;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .notification.remove {
+            animation: slideOutRight 0.3s ease-out forwards;
+        }
+
+        .messages-shell {
+            max-width: 1400px;
+            margin: 2.5rem auto;
+            padding: 0 1rem;
+        }
+
+        .messages-header {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-secondary) 100%);
+            color: white;
+            padding: 3rem 2.5rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .messages-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .messages-header h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2.5rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .messages-header p {
+            margin: 0.5rem 0 0 0;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+            font-size: 1.1rem;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 1.5rem;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        /* Bulk Actions Bar */
+        .bulk-actions-bar {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.08));
+            border: 2px solid var(--accent-color);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .bulk-actions-bar.show {
+            display: flex;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .bulk-actions-bar span {
+            color: var(--text-main);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .bulk-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.35rem 0.7rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.15rem;
+        }
+
+        .bulk-btn:hover {
+            background-color: var(--accent-secondary);
+            transform: translateY(-2px);
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.7rem;
+            margin-bottom: 0.7rem;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.08);
+        }}
+
+        .filter-section-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 0.75rem;
+        }
+
+        .input-group .form-control {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-right: none;
+            padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+        }
+
+        .input-group .form-control:focus {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            border-color: var(--accent-color);
+            box-shadow: none;
+        }
+
+        .btn-search {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0 8px 8px 0;
+            transition: all 0.3s ease;
+        }
+
+        .btn-search:hover {
+            background-color: var(--accent-secondary);
+        }
+
+        .btn-group .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-filter-active {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-secondary) 100%);
+            color: white;
+            border: none;
+        }
+
+        .btn-filter-inactive {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-filter-inactive:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .form-select, .form-control {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.6rem 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .form-select:focus, .form-control:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background-color: var(--bg-body);
+            color: var(--text-main);
+        }
+
+        .advanced-filters {
+            margin-top: 1.25rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border-color);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .advanced-filters.show {
+            max-height: 500px;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .btn-apply {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-apply:hover {
+            background-color: var(--accent-secondary);
+            transform: translateY(-2px);
+        }
+
+        .btn-clear {
+            background-color: transparent;
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.15rem;
+        }
+
+        .btn-clear:hover {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        /* Analytics Dashboard */
+        .analytics-section {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.08);
+        }
+
+        .analytics-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .metric-widgets {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .metric-widget {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-secondary) 100%);
+            color: white;
+            padding: 0.7rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transition: all 0.3s ease;
+        }}
+
+        .metric-widget:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+        }
+
+        .metric-icon {
+            font-size: 1.6rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .metric-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 0.1rem;
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        /* Conversation Cards */
+        .conversation-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.35rem 0.55rem;
+            margin-bottom: 0.25rem;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            position: relative;
+            pointer-events: auto;
+            overflow: visible;
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        .conversation-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+            border-color: var(--accent-color);
+        }
+
+        .conversation-card.unread {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.06), rgba(118, 75, 162, 0.03));
+            border-left: 3px solid var(--accent-color);
+            padding-left: calc(0.85rem - 2px);
+        }
+
+        .conversation-card.unread h5 {
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .conversation-checkbox {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            margin-right: 0.4rem;
+            pointer-events: auto;
+            z-index: 10;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .participant-avatar {
+            width: 24px;
+            height: 24px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            transition: all 0.25s ease;
+            pointer-events: auto;
+            flex-shrink: 0;
+        }
+
+        .conversation-card:hover .participant-avatar {
+            border-color: var(--accent-color);
+            transform: scale(1.05);
+        }
+
+        .conversation-header {
             display: flex;
             justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.06rem;
+            gap: 0.1rem;
+            pointer-events: auto;
+        }}
+
+        .conversation-name {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
             align-items: center;
+            gap: 0.1rem;
             flex-wrap: wrap;
-            gap: 1rem;
-            padding: 1.5rem;
-            margin-bottom: 2.5rem;
+            pointer-events: auto;
+        }
+
+        .unread-badge {
+            background-color: var(--danger-color);
+            color: white;
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 0.15rem 0.35rem;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.15rem;
+        }
+
+        .priority-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.2rem 0.45rem;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .priority-high {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
+        }
+
+        .priority-medium {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #d97706;
+        }
+
+        .priority-low {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #059669;
+        }
+
+        .conversation-time {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            white-space: nowrap;
+            pointer-events: auto;
+        }
+
+        .last-message {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-bottom: 0;
+            line-height: 1.1;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            pointer-events: auto;
+        }
+
+        .last-message strong {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .conversation-meta {
+            display: flex;
+            gap: 0.08rem;
+            font-size: 0.62rem;
+            color: var(--text-muted);
+            margin-bottom: 0.02rem;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.08rem;
+        }
+
+        .meta-item i {
+            color: var(--accent-color);
+        }
+
+        .conversation-tags {
+            display: none;
+        }
+
+        .tag {
+            background-color: var(--bg-body);
+            border: 1px solid var(--border-color);
+            color: var(--accent-color);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .sentiment-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 0.5rem;
+        }
+
+        .sentiment-positive {
+            background-color: var(--success-color);
+        }
+
+        .sentiment-neutral {
+            background-color: var(--warning-color);
+        }
+
+        .sentiment-negative {
+            background-color: var(--danger-color);
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 0.2rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            position: absolute;
+            bottom: 0.2rem;
+            right: 0.2rem;
+            transform: none;
+            z-index: 5;
+        }
+
+        .conversation-card:hover .quick-actions {
+            opacity: 1;
+        }
+
+        .quick-action-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.65rem;
+            pointer-events: auto;
+            z-index: 10;
+        }
+
+        .quick-action-btn:hover {
+            background-color: var(--accent-secondary);
+            transform: scale(1.1);
+        }
+
+        .conversation-subject {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .conversation-subject i {
+            color: var(--accent-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+            background-color: var(--bg-surface);
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            margin: 2rem 0;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--accent-color);
+            opacity: 0.5;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h4 {
+            color: var(--text-main);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .btn-clear-filters {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 0.4rem 1rem;
             border-radius: 8px;
-            background-color: #ffffff; /* White background */
-            border-left: 5px solid #323232ff; /* Prominent black left border */
-            border: 1px solid #c7c9cb; /* Subtle border for separation */
-    }
+            border: none;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.15rem;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
 
-    .page-header h1 {
-        font-weight: 600;
-        color: #323232ff; /* Black text for contrast */
-        margin-bottom: 0;
-    }
+        .btn-clear-filters:hover {
+            background-color: var(--accent-secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            color: white;
+        }
 
-    .conversation-list .list-group-item {
-        background-color: #fff;
-        border: 1px solid #f0f2f5;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
-        padding: 1.25rem;
-    }
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-    .conversation-list .list-group-item:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
 
-    .conversation-list .list-group-item.unread {
-        background-color: #f0f2f5;
-        border-left: 4px solid #323232ff;
-    }
+        .conversation-card {
+            animation: fadeInUp 0.4s ease-out;
+        }
 
-    .conversation-list .list-group-item.unread h5 {
-        font-weight: 600;
-    }
+        .conversation-card:nth-child(1) { animation-delay: 0.05s; }
+        .conversation-card:nth-child(2) { animation-delay: 0.1s; }
+        .conversation-card:nth-child(3) { animation-delay: 0.15s; }
+        .conversation-card:nth-child(4) { animation-delay: 0.2s; }
+        .conversation-card:nth-child(5) { animation-delay: 0.25s; }
 
-    .participant-avatar { 
-        width: 50px;
-        height: 50px;
-        object-fit: cover;
-    }
+        .stat-card {
+            animation: slideInRight 0.5s ease-out;
+        }
 
-    .last-message {
-        color: #6c757d;
-    }
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .messages-header {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-secondary) 100%);
+            color: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
 
-    .filter-bar {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 2rem;
-        border: 1px solid #c7c9cb;
-    }
-    .btn-dark {
-        background-color: #474747; border-color: #474747;
-    }
-</style>
+        .messages-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        .messages-header::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -5%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        .messages-header > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .messages-header h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .messages-header p {
+            margin: 0.5rem 0 0 0;
+            opacity: 0.95;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: white;
+            padding: 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-icon {
+            font-size: 1.75rem;
+            opacity: 0.9;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+
+        .filter-bar {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .filter-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-color), var(--accent-secondary), var(--accent-color));
+            opacity: 0.3;
+        }
+
+        .filter-bar form {
+            position: relative;
+            z-index: 1;
+        }
+
+        .input-group .form-control {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            border: 2px solid var(--border-color);
+            border-right: none;
+            padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .input-group .form-control::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        .input-group .form-control:focus {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            border-color: var(--accent-color);
+            border-right: none;
+            box-shadow: inset 0 0 0 1px var(--accent-color);
+        }
+
+        .input-group-text {
+            background-color: var(--bg-body);
+            border: 1px solid var(--border-color);
+            border-left: none;
+            color: var(--text-muted);
+        }
+
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .input-group-text {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+            color: #f0f4ff;
+        }
+
+        [data-theme="dark"] .form-control:focus {
+            background-color: rgba(255, 255, 255, 0.12);
+            border-color: var(--accent-color);
+        }
+
+        .btn-group .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .btn-group .btn i {
+            transition: transform 0.3s ease;
+        }
+
+        .btn-group .btn:hover i {
+            transform: scale(1.1);
+        }
+
+        .btn-filter-active {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-secondary) 100%);
+            color: white;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-filter-active:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-filter-inactive {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            border: 2px solid var(--border-color);
+        }
+
+        .btn-filter-inactive:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        [data-theme="dark"] .btn-filter-inactive {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .conversation-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.15rem 0.3rem;
+            margin-bottom: 0.15rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: var(--text-main);
+            display: block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .conversation-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s ease;
+            z-index: 0;
+        }
+
+        .conversation-card:hover::before {
+            left: 100%;
+        }
+
+        .conversation-card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .conversation-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.18);
+            border-color: var(--accent-color);
+        }
+
+        .conversation-card.unread {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.05));
+            border-left: 3px solid var(--accent-color);
+            padding-left: calc(0.55rem - 2px);
+            box-shadow: 0 3px 12px rgba(102, 126, 234, 0.12);
+        }
+
+        .conversation-card.unread:hover {
+            box-shadow: 0 12px 32px rgba(102, 126, 234, 0.25);
+        }
+
+        .conversation-card.unread h5 {
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .participant-avatar {
+            width: 24px;
+            height: 24px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.08);
+        }
+
+        .conversation-card:hover .participant-avatar {
+            border-color: var(--accent-color);
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.18);
+        }
+
+        .conversation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.15rem;
+            gap: 0.4rem;
+        }
+
+        .conversation-name {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+        }
+
+        .unread-badge {
+            background-color: var(--danger-color);
+            color: white;
+            font-size: 0.55rem;
+            font-weight: 700;
+            padding: 0.15rem 0.35rem;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            box-shadow: 0 1px 4px rgba(239, 68, 68, 0.2);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .conversation-time {
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            white-space: nowrap;
+        }
+
+        .last-message {
+            color: var(--text-muted);
+            font-size: 0.64rem;
+            margin-bottom: 0;
+            line-height: 0.9;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .last-message strong {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .conversation-subject {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.15rem;
+            padding: 0.25rem 0.45rem;
+            background-color: rgba(102, 126, 234, 0.08);
+            border-radius: 6px;
+            width: fit-content;
+            border: 1px solid rgba(102, 126, 234, 0.15);
+        }
+
+        .conversation-subject i {
+            color: var(--accent-color);
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+            background: linear-gradient(135deg, var(--bg-surface) 0%, rgba(102, 126, 234, 0.03) 100%);
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            margin: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .empty-state::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        .empty-state > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--accent-color);
+            opacity: 0.5;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .empty-state h4 {
+            color: var(--text-main);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .btn-clear-filters {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-secondary) 100%);
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.15rem;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-clear-filters:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .btn-clear-filters:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-search {
+            background-color: var(--accent-color);
+            color: white;
+            border: 2px solid var(--accent-color);
+            padding: 0.5rem 0.9rem;
+            border-radius: 0 8px 8px 0;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }}
+
+        .btn-search:hover {
+            background-color: var(--accent-secondary);
+            border-color: var(--accent-secondary);
+            transform: translateX(2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-search:active {
+            transform: translateX(0);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        .conversation-card {
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        .conversation-card:nth-child(1) { animation-delay: 0.05s; }
+        .conversation-card:nth-child(2) { animation-delay: 0.1s; }
+        .conversation-card:nth-child(3) { animation-delay: 0.15s; }
+        .conversation-card:nth-child(4) { animation-delay: 0.2s; }
+        .conversation-card:nth-child(5) { animation-delay: 0.25s; }
+
+        .stat-item {
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        .stat-item:nth-child(1) { animation-delay: 0.1s; }
+        .stat-item:nth-child(2) { animation-delay: 0.2s; }
+
+        /* Compact row overrides */
+        .conversation-card {
+            padding: 0.12rem 0.25rem !important;
+            margin-bottom: 0.1rem !important;
+        }
+
+        .conversation-card.unread {
+            padding-left: calc(0.25rem - 2px) !important;
+        }
+
+        .conversation-checkbox {
+            width: 12px;
+            height: 12px;
+            margin: 0;
+        }
+
+        .participant-avatar {
+            width: 18px !important;
+            height: 18px !important;
+        }
+
+        .conversation-header {
+            margin-bottom: 0.06rem !important;
+        }
+
+        .conversation-name {
+            font-size: 0.7rem !important;
+        }
+
+        .conversation-time {
+            font-size: 0.58rem !important;
+        }
+
+        .last-message {
+            font-size: 0.64rem !important;
+            line-height: 0.9 !important;
+            -webkit-line-clamp: 1 !important;
+        }
+
+        .quick-actions {
+            left: 50% !important;
+            right: auto !important;
+            top: auto !important;
+            bottom: 0.15rem !important;
+            transform: none !important;
+        }
+
+        /* Mobile Responsive Overrides */
+        @media (max-width: 768px) {
+            .conversation-card {
+                padding: 0.1rem 0.2rem !important;
+                margin-bottom: 0.1rem !important;
+            }
+
+            .conversation-card.unread {
+                padding-left: calc(0.2rem - 2px) !important;
+            }
+
+            .conversation-checkbox {
+                width: 11px !important;
+                height: 11px !important;
+                margin-right: 0.2rem !important;
+            }
+
+            .participant-avatar {
+                width: 20px !important;
+                height: 20px !important;
+            }
+
+            .conversation-header {
+                margin-bottom: 0.08rem !important;
+            }
+
+            .conversation-name {
+                font-size: 0.75rem !important;
+            }
+
+            .unread-badge {
+                font-size: 0.45rem !important;
+                padding: 0.05rem 0.18rem !important;
+            }
+
+            .conversation-time {
+                font-size: 0.56rem !important;
+            }
+
+            .last-message {
+                font-size: 0.62rem !important;
+                line-height: 0.9 !important;
+            }
+
+            .quick-action-btn {
+                width: 16px !important;
+                height: 16px !important;
+                font-size: 0.5rem !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .conversation-card {
+                padding: 0.08rem 0.18rem !important;
+                margin-bottom: 0.08rem !important;
+            }
+
+            .participant-avatar {
+                width: 16px !important;
+                height: 16px !important;
+            }
+
+            .conversation-name {
+                font-size: 0.64rem !important;
+            }
+
+            .last-message {
+                font-size: 0.58rem !important;
+                -webkit-line-clamp: 1 !important;
+            }
+
+            .quick-action-btn {
+                width: 14px !important;
+                height: 14px !important;
+                font-size: 0.45rem !important;
+            }
+        }
+
+
+        .quick-action-btn {
+            width: 16px !important;
+            height: 16px !important;
+            font-size: 0.52rem !important;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.08rem;
+            padding: 0.06rem 0.2rem;
+            border-radius: 20px;
+            font-size: 0.48rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-active {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: #16a34a;
+        }
+
+        .status-idle {
+            background-color: rgba(107, 114, 128, 0.15);
+            color: #4b5563;
+        }
+
+        .status-awaiting {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #b45309;
+        }
+
+        .status-resolved {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #1e40af;
+        }
+
+        .status-archived {
+            background-color: rgba(156, 163, 175, 0.15);
+            color: #6b7280;
+        }
+
+        /* Sentiment Indicator */
+        .sentiment-indicator {
+            display: inline-flex;
+            align-items: center;
+            font-size: 1.2rem;
+            cursor: help;
+            transition: transform 0.2s ease;
+        }
+
+        .sentiment-indicator:hover {
+            transform: scale(1.2);
+        }
+
+        /* Urgency Score Bar */
+        .urgency-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+
+        .urgency-dots {
+            display: flex;
+            gap: 0.05rem;
+        }
+
+        .urgency-dot {
+            width: 0.22rem;
+            height: 0.22rem;
+            border-radius: 50%;
+            background-color: #d1d5db;
+        }
+
+        .urgency-dot.active-low {
+            background-color: #10b981;
+        }
+
+        .urgency-dot.active-medium {
+            background-color: #f59e0b;
+        }
+
+        .urgency-dot.active-high {
+            background-color: #ef4444;
+        }
+
+        /* Customer Segment Badge */
+        .segment-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.06rem;
+            padding: 0.05rem 0.2rem;
+            border-radius: 12px;
+            font-size: 0.45rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .segment-vip {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.2), rgba(217, 119, 6, 0.2));
+            color: #b45309;
+            border: 1px solid rgba(217, 119, 6, 0.3);
+        }
+
+        .segment-repeat {
+            background-color: rgba(102, 126, 234, 0.15);
+            color: #4338ca;
+        }
+
+        .segment-high-value {
+            background-color: rgba(124, 58, 202, 0.15);
+            color: #6d28d9;
+        }
+
+        .segment-new {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: #16a34a;
+        }
+
+        .segment-at-risk {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
+        }
+
+        .segment-regular {
+            background-color: rgba(107, 114, 128, 0.15);
+            color: #4b5563;
+        }
+
+        /* Message Count Badge */
+        .message-count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-secondary));
+            color: white;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        /* Response Time SLA Indicator */
+        .sla-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.08rem;
+            padding: 0.06rem 0.2rem;
+            border-radius: 20px;
+            font-size: 0.48rem;
+            font-weight: 600;
+        }
+
+        .sla-on-time {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: #16a34a;
+        }
+
+        .sla-overdue {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Conversation Tags */
+        .conversation-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.15rem;
+            margin-top: 0.15rem;
+        }
+
+        .tag-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.06rem;
+            padding: 0.05rem 0.18rem;
+            background-color: rgba(102, 126, 234, 0.2);
+            color: var(--accent-color);
+            border-radius: 12px;
+            font-size: 0.45rem;
+            font-weight: 600;
+        }
+
+        .tag-pill.auto {
+            opacity: 0.7;
+            font-style: italic;
+        }
+
+        .tag-pill .remove-tag {
+            cursor: pointer;
+            margin-left: 0.2rem;
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
+        }
+
+        .tag-pill .remove-tag:hover {
+            opacity: 1;
+        }
+
+        /* Team Assignment Indicator */
+        .assigned-to-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.08rem;
+            padding: 0.06rem 0.2rem;
+            background-color: rgba(168, 85, 247, 0.15);
+            color: #7c3aed;
+            border-radius: 20px;
+            font-size: 0.48rem;
+            font-weight: 600;
+        }
+
+        .assigned-avatar {
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 50%;
+            border: 1px solid rgba(124, 58, 202, 0.3);
+        }
+
+        /* Follow-up Reminder */
+        .followup-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.08rem;
+            padding: 0.06rem 0.2rem;
+            background-color: rgba(29, 185, 84, 0.15);
+            color: #1d78d9;
+            border-radius: 20px;
+            font-size: 0.48rem;
+            font-weight: 600;
+        }
+
+        /* Category Badge */
+        .category-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.06rem;
+            padding: 0.06rem 0.2rem;
+            background-color: rgba(139, 92, 246, 0.15);
+            color: #7c3aed;
+            border-radius: 12px;
+            font-size: 0.45rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        /* Response Time Display */
+        .response-time-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.06rem;
+            padding: 0.06rem 0.2rem;
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #1e40af;
+            border-radius: 20px;
+            font-size: 0.48rem;
+            font-weight: 600;
+        }
+
+        /* Enhanced Conversation Card with all features */
+        .conversation-card-enhanced {
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+
+        .conversation-top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.1rem;
+        }
+
+        .conversation-badges-row {
+            display: flex;
+            align-items: center;
+            gap: 0.08rem;
+            flex-wrap: wrap;
+            font-size: 0.48rem;
+        }
+
+        .conversation-tags-row {
+            display: flex;
+            gap: 0.06rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* Compact responsive versions */
+        @media (max-width: 768px) {
+            .status-badge {
+                padding: 0.06rem 0.18rem;
+                font-size: 0.45rem;
+            }
+
+            .segment-badge {
+                padding: 0.05rem 0.18rem;
+                font-size: 0.42rem;
+            }
+
+            .message-count-badge {
+                width: 1.1rem;
+                height: 1.1rem;
+                font-size: 0.48rem;
+            }
+
+            .sla-indicator {
+                padding: 0.06rem 0.18rem;
+                font-size: 0.45rem;
+            }
+
+            .tag-pill {
+                padding: 0.04rem 0.14rem;
+                font-size: 0.42rem;
+            }
+
+            .conversation-badges-row {
+                font-size: 0.45rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .status-badge,
+            .sla-indicator,
+            .assigned-to-badge,
+            .followup-indicator {
+                display: none;
+            }
+
+            .segment-badge {
+                padding: 0.04rem 0.15rem;
+                font-size: 0.4rem;
+            }
+
+            .message-count-badge {
+                width: 0.95rem;
+                height: 0.95rem;
+                font-size: 0.42rem;
+            }
+
+            .tag-pill {
+                padding: 0.03rem 0.1rem;
+                font-size: 0.4rem;
+            }
+        }
+    </style>
 {% endblock extra_css %}
 
 {% block content %}
-<div class="container mt-5 mb-5">
-    <div class="list-container">
-        <div class="page-header">
-            <div>
-                <h1 class="h2">{% trans "Messages" %}</h1>
-                <p class="text-muted mb-0">{% trans "Conversations with your customers." %}</p>
-            </div>
-        </div>
+<!-- Notification Container -->
+<div class="notification-container" id="notificationContainer"></div>
 
-        <!-- Filter Bar -->
-        <div class="filter-bar">
-            <form method="get" action="">
-                <div class="row g-2 align-items-center">
-                    <div class="col-md">
-                        <div class="input-group">
-                            <input type="text" name="q" class="form-control" placeholder="{% trans 'Search by name or subject...' %}" value="{{ search_query|default:'' }}">
-                            <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
-                        </div>
-                    </div>
-                    <div class="col-md-auto">
-                        <div class="btn-group" role="group" aria-label="Message status filter">
-                            <a href="?{% query_transform status='' page=1 %}" class="btn {% if not current_status %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "All" %}</a>
-                            <a href="?{% query_transform status='unread' page=1 %}" class="btn {% if current_status == 'unread' %}btn-dark{% else %}btn-outline-secondary{% endif %}">{% trans "Unread" %}</a>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
+<div class="messages-shell">
+    <div class="messages-header">
+        <h1>💬 {% trans "Messages" %}</h1>
+        <p>{% trans "Manage conversations with your customers efficiently." %}</p>
         
-        <div class="list-group conversation-list">
-            {% for conversation in conversations %}
-                <a href="{% url 'core:vendor_message_detail' pk=conversation.pk %}" class="list-group-item list-group-item-action {% if conversation.is_unread_by_user %}unread{% endif %}">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0 me-3">
-                            <img src="{{ conversation.other_participant.userprofile.get_profile_picture_url }}" alt="{{ conversation.other_participant.get_full_name|default:conversation.other_participant.username }}" class="rounded-circle participant-avatar">
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h5 class="mb-1">
-                                    {{ conversation.other_participant.get_full_name|default:conversation.other_participant.username }}
-                                </h5>
-                                {% if conversation.last_message_time %}
-                                <small class="text-nowrap text-muted">{{ conversation.last_message_time|naturaltime }}</small>
-                                {% endif %}
-                            </div>
-                            <p class="mb-1 last-message">
-                                {% if conversation.last_message_sender == request.user %}<strong>{% trans "You:" %}</strong>{% endif %}
-                                {% if conversation.last_message_content %}{{ conversation.last_message_content|truncatechars:80 }}{% else %}{% trans "No messages yet." %}{% endif %}
-                            </p>
-                            <small class="text-muted">{% trans "Subject:" %} {{ conversation.subject }}</small>
-                        </div>
-                    </div>
-                </a>
-            {% empty %}
-                <div class="text-center py-5">
-                    <i class="bi bi-chat-quote" style="font-size: 3rem; color: #6c757d;"></i>
-                    <h4 class="mt-3">{% trans "No Conversations Found" %}</h4>
-                    {% if search_query or current_status %}
-                        <p class="text-muted">{% trans "Try adjusting your search or filter to find what you're looking for." %}</p>
-                        <a href="{% url 'core:vendor_message_list' %}" class="btn btn-secondary btn-sm">{% trans "Clear Filters" %}</a>
-                    {% else %}
-                        <p class="text-muted">{% trans "You have no conversations yet." %}</p>
-                    {% endif %}
+        {% if conversations %}
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-icon">📨</div>
+                    <div class="stat-value">{{ page_obj.paginator.count|default:conversations|length }}</div>
+                    <div class="stat-label">{% trans "Total Conversations" %}</div>
                 </div>
-            {% endfor %}
-        </div>
-        
-        {% if is_paginated %}
-        <div class="mt-4">
-            {% include 'core/partials/pagination.html' with page_obj=page_obj %}
-        </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🔔</div>
+                    <div class="stat-value">{{ unread_count|default:0 }}</div>
+                    <div class="stat-label">{% trans "Unread Messages" %}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-value">{{ avg_response_time|default:"N/A" }}</div>
+                    <div class="stat-label">{% trans "Avg Response Time" %}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value">{{ resolved_count|default:0 }}</div>
+                    <div class="stat-label">{% trans "Resolved" %}</div>
+                </div>
+            </div>
         {% endif %}
     </div>
+
+    <!-- Bulk Actions Bar -->
+    <div class="bulk-actions-bar" id="bulkActionsBar">
+        <input type="checkbox" class="conversation-checkbox" id="selectAll" onchange="toggleSelectAll()"> 
+        <span id="selectedCount">0 {% trans "selected" %}</span>
+        <div style="flex: 1;"></div>
+        <button class="bulk-btn" onclick="bulkAddTag()"><i class="bi bi-tag-fill"></i>{% trans "Add Tag" %}</button>
+        <button class="bulk-btn" onclick="bulkSetPriority()"><i class="bi bi-exclamation-diamond"></i>{% trans "Set Priority" %}</button>
+        <button class="bulk-btn" onclick="bulkArchive()"><i class="bi bi-archive"></i>{% trans "Archive" %}</button>
+        <button class="bulk-btn" onclick="bulkMarkRead()"><i class="bi bi-envelope-open"></i>{% trans "Mark Read" %}</button>
+        <button class="bulk-btn" style="background-color: var(--danger-color);" onclick="cancelBulkAction()"><i class="bi bi-x"></i>{% trans "Cancel" %}</button>
+    </div>
+
+    <!-- Analytics Dashboard -->
+    {% if conversations %}
+    <div class="analytics-section">
+        <h4 class="analytics-title"><i class="bi bi-graph-up"></i>{% trans "Performance Metrics" %}</h4>
+        <div class="metric-widgets">
+            <div class="metric-widget">
+                <div class="metric-icon">💬</div>
+                <div class="metric-value">{{ conversations_this_week|default:"0" }}</div>
+                <div class="metric-label">{% trans "This Week" %}</div>
+            </div>
+            <div class="metric-widget">
+                <div class="metric-icon">📊</div>
+                <div class="metric-value">{{ avg_response_time|default:"0" }}h</div>
+                <div class="metric-label">{% trans "Avg Response" %}</div>
+            </div>
+            <div class="metric-widget">
+                <div class="metric-icon">⭐</div>
+                <div class="metric-value">{{ satisfaction_rating|default:"4.5" }}/5</div>
+                <div class="metric-label">{% trans "Satisfaction" %}</div>
+            </div>
+            <div class="metric-widget">
+                <div class="metric-icon">✅</div>
+                <div class="metric-value">{{ resolution_rate|default:"85" }}%</div>
+                <div class="metric-label">{% trans "Resolution Rate" %}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <form method="get" action="">
+            {% csrf_token %}
+            <div class="row g-3 align-items-center mb-3">
+                <div class="col-md">
+                    <label class="filter-section-title">{% trans "Search" %}</label>
+                    <div class="input-group">
+                        <input type="text" name="q" class="form-control" placeholder="{% trans 'Search conversations...' %}" value="{{ search_query|default:'' }}">
+                        <button class="btn btn-search" type="submit">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-auto">
+                    <label class="filter-section-title">{% trans "Status" %}</label>
+                    <div class="btn-group" role="group" aria-label="{% trans 'Message status filter' %}">
+                        <a href="?{% query_transform status='' priority='' date_from='' page=1 %}" class="btn {% if not current_status %}btn-filter-active{% else %}btn-filter-inactive{% endif %}">
+                            <i class="bi bi-chat-dots me-1"></i>{% trans "All" %}
+                        </a>
+                        <a href="?{% query_transform status='unread' page=1 %}" class="btn {% if current_status == 'unread' %}btn-filter-active{% else %}btn-filter-inactive{% endif %}">
+                            <i class="bi bi-bell-fill me-1"></i>{% trans "Unread" %}
+                        </a>
+                        <a href="?{% query_transform status='starred' page=1 %}" class="btn {% if current_status == 'starred' %}btn-filter-active{% else %}btn-filter-inactive{% endif %}">
+                            <i class="bi bi-star-fill me-1"></i>{% trans "Starred" %}
+                        </a>
+                        <a href="?{% query_transform status='archived' page=1 %}" class="btn {% if current_status == 'archived' %}btn-filter-active{% else %}btn-filter-inactive{% endif %}">
+                            <i class="bi bi-archive me-1"></i>{% trans "Archived" %}
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-auto">
+                    <button type="button" class="btn btn-filter-inactive" onclick="toggleAdvancedFilters()">
+                        <i class="bi bi-funnel me-2"></i>{% trans "Advanced Filters" %}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Advanced Filters -->
+            <div class="advanced-filters" id="advancedFilters">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="filter-section-title">{% trans "Priority" %}</label>
+                        <select name="priority" class="form-select">
+                            <option value="">{% trans "All Priorities" %}</option>
+                            <option value="high" {% if request.GET.priority == 'high' %}selected{% endif %}>🔴 {% trans "High" %}</option>
+                            <option value="medium" {% if request.GET.priority == 'medium' %}selected{% endif %}>🟡 {% trans "Medium" %}</option>
+                            <option value="low" {% if request.GET.priority == 'low' %}selected{% endif %}>🟢 {% trans "Low" %}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="filter-section-title">{% trans "Date From" %}</label>
+                        <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from|default:'' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="filter-section-title">{% trans "Date To" %}</label>
+                        <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to|default:'' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="filter-section-title">{% trans "Sort By" %}</label>
+                        <select name="sort" class="form-select">
+                            <option value="-created" {% if request.GET.sort == '-created' or not request.GET.sort %}selected{% endif %}>📌 {% trans "Newest" %}</option>
+                            <option value="created" {% if request.GET.sort == 'created' %}selected{% endif %}>📄 {% trans "Oldest" %}</option>
+                            <option value="-unread" {% if request.GET.sort == '-unread' %}selected{% endif %}>🔔 {% trans "Unread First" %}</option>
+                            <option value="-response_time" {% if request.GET.sort == '-response_time' %}selected{% endif %}>⏱️ {% trans "Longest Wait" %}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-actions">
+                    <button type="submit" class="btn-apply">
+                        <i class="bi bi-check-circle me-1"></i>{% trans "Apply Filters" %}
+                    </button>
+                    <a href="{% url 'core:vendor_message_list' %}" class="btn-clear">
+                        <i class="bi bi-arrow-clockwise"></i>{% trans "Clear All" %}
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Conversations List -->
+    <div class="conversation-list">
+        {% for conversation in conversations %}
+            {% with starred_tag=conversation.tags.all|dictsort:"name"|first %}
+            <a href="{% url 'core:vendor_message_detail' pk=conversation.pk %}" class="conversation-card {% if conversation.is_unread_by_user %}unread{% endif %}" data-conversation-id="{{ conversation.pk }}" {% if conversation.tags.all|length > 0 %}data-starred-tag-id="{% for tag in conversation.tags.all %}{% if tag.name == 'starred' %}{{ tag.id }}{% endif %}{% endfor %}"{% endif %}>
+                <div style="display: flex; align-items: flex-start; gap: 0.2rem; width: 100%;">
+                    <!-- Checkbox -->
+                    <input type="checkbox" class="conversation-checkbox" data-conversation-id="{{ conversation.pk }}" onchange="updateBulkActions()" onclick="event.stopPropagation()">
+                    
+                    <!-- Avatar -->
+                    <div class="flex-shrink-0">
+                        <img src="{{ conversation.other_participant.userprofile.get_profile_picture_url }}" 
+                             alt="{{ conversation.other_participant.get_full_name|default:conversation.other_participant.username }}" 
+                             class="participant-avatar">
+                    </div>
+                    
+                    <!-- Main Content -->
+                    <div style="flex-grow: 1; min-width: 0;">
+                        <!-- Top Row: Name, Status, and Segment -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.15rem; margin-bottom: 0.08rem;">
+                            <div style="display: flex; align-items: center; gap: 0.08rem; flex-wrap: wrap; min-width: 0;">
+                                <h5 class="conversation-name" style="margin: 0;">
+                                    {{ conversation.other_participant.get_full_name|default:conversation.other_participant.username }}
+                                </h5>
+                                
+                                <!-- Unread Badge -->
+                                {% if conversation.is_unread_by_user %}
+                                    <span class="unread-badge">
+                                        <i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i>
+                                        {% trans "New" %}
+                                    </span>
+                                {% endif %}
+                                
+                                <!-- Message Count Badge -->
+                                {% if conversation.unread_count %}
+                                    <span class="message-count-badge" title="{% trans 'Unread messages' %}">{{ conversation.unread_count }}</span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Time -->
+                            {% if conversation.last_message_time %}
+                                <small class="conversation-time" style="white-space: nowrap;">
+                                    <i class="bi bi-clock me-1"></i>{{ conversation.time_since_update }}
+                                </small>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Badges Row 1: Status, Sentiment, Urgency -->
+                        <div class="conversation-badges-row" style="margin-bottom: 0.2rem;">
+                            <!-- Status Badge -->
+                            <span class="status-badge status-{{ conversation.status|default:'active' }}" title="Status: {{ conversation.get_status_display }}">
+                                {% if conversation.status == 'active' %}<i class="bi bi-play-circle"></i>{% endif %}
+                                {% if conversation.status == 'idle' %}<i class="bi bi-pause-circle"></i>{% endif %}
+                                {% if conversation.status == 'awaiting_response' %}<i class="bi bi-clock"></i>{% endif %}
+                                {% if conversation.status == 'resolved' %}<i class="bi bi-check-circle"></i>{% endif %}
+                                {% if conversation.status == 'archived' %}<i class="bi bi-archive"></i>{% endif %}
+                                {{ conversation.get_status_display }}
+                            </span>
+                            
+                            <!-- Sentiment Indicator -->
+                            <span class="sentiment-indicator" title="Sentiment: {{ conversation.get_sentiment_display }}">{{ conversation.sentiment_emoji }}</span>
+                            
+                            <!-- Urgency Bar -->
+                            <span class="urgency-bar" title="Urgency: {{ conversation.urgency_score }}/10">
+                                <div class="urgency-dots">
+                                    {% for i in "12345678910" %}
+                                        {% if i|stringformat:"d" <= conversation.urgency_score|stringformat:"d" %}
+                                            <span class="urgency-dot {% if conversation.urgency_score <= 3 %}active-low{% elif conversation.urgency_score <= 6 %}active-medium{% else %}active-high{% endif %}"></span>
+                                        {% else %}
+                                            <span class="urgency-dot"></span>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </span>
+                            
+                            <!-- Customer Segment -->
+                            {% if conversation.customer_segment %}
+                                <span class="segment-badge segment-{{ conversation.customer_segment|slugify }}" title="Customer: {{ conversation.get_customer_segment_display }}">
+                                    {% if conversation.customer_segment == 'vip' %}<i class="bi bi-star-fill"></i>{% endif %}
+                                    {% if conversation.customer_segment == 'repeat_buyer' %}<i class="bi bi-repeat"></i>{% endif %}
+                                    {% if conversation.customer_segment == 'high_value' %}<i class="bi bi-gem"></i>{% endif %}
+                                    {% if conversation.customer_segment == 'new_customer' %}<i class="bi bi-person-plus"></i>{% endif %}
+                                    {% if conversation.customer_segment == 'at_risk' %}<i class="bi bi-exclamation-triangle"></i>{% endif %}
+                                    {{ conversation.get_customer_segment_display }}
+                                </span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Badges Row 2: Category, SLA, Response Time -->
+                        <div class="conversation-badges-row" style="margin-bottom: 0.2rem;">
+                            <!-- Category -->
+                            {% if conversation.category %}
+                                <span class="category-badge" title="Category: {{ conversation.get_category_display }}">
+                                    <i class="bi bi-tag"></i>{{ conversation.category|upper }}
+                                </span>
+                            {% endif %}
+                            
+                            <!-- Response Time SLA -->
+                            {% if conversation.is_sla_overdue %}
+                                <span class="sla-indicator sla-overdue" title="SLA Overdue!">
+                                    <i class="bi bi-exclamation-circle-fill"></i>OVERDUE
+                                </span>
+                            {% elif conversation.first_response_time %}
+                                <span class="sla-indicator sla-on-time" title="SLA On Time">
+                                    <i class="bi bi-check-circle"></i>ON TIME
+                                </span>
+                            {% endif %}
+                            
+                            <!-- Response Time -->
+                            {% if conversation.response_time_seconds %}
+                                <span class="response-time-badge" title="First response time">
+                                    <i class="bi bi-hourglass-split"></i>
+                                    {% if conversation.response_time_seconds < 3600 %}
+                                        {{ conversation.response_time_seconds|add:60|divisibleby:60 }}m
+                                    {% elif conversation.response_time_seconds < 86400 %}
+                                        {{ conversation.response_time_seconds|add:3600|divisibleby:3600 }}h
+                                    {% else %}
+                                        {{ conversation.response_time_seconds|add:86400|divisibleby:86400 }}d
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+                            
+                            <!-- Team Assignment -->
+                            {% if conversation.assigned_to %}
+                                <span class="assigned-to-badge" title="Assigned to: {{ conversation.assigned_to.get_full_name }}">
+                                    <img src="{{ conversation.assigned_to.userprofile.get_profile_picture_url }}" class="assigned-avatar" alt="{{ conversation.assigned_to.get_full_name }}">
+                                    <span style="font-size: 0.6rem;">{{ conversation.assigned_to.get_full_name|truncatewords:1 }}</span>
+                                </span>
+                            {% endif %}
+                            
+                            <!-- Follow-up Reminder -->
+                            {% if conversation.follow_up_date %}
+                                <span class="followup-indicator" title="Follow-up: {{ conversation.follow_up_date|date:'SHORT_DATETIME_FORMAT' }}">
+                                    <i class="bi bi-calendar-check"></i>FOLLOW-UP
+                                </span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Message Preview -->
+                        <p class="last-message" style="margin-bottom: 0.15rem;">
+                            {% if conversation.last_message_sender == request.user %}
+                                <strong>{% trans "You:" %}</strong>
+                            {% endif %}
+                            {% if conversation.last_message_content %}
+                                {{ conversation.last_message_content|truncatechars:80 }}
+                            {% else %}
+                                {% trans "No messages yet." %}
+                            {% endif %}
+                        </p>
+                        
+                        <!-- Tags Row -->
+                        {% if conversation.tags.all or conversation.auto_tags %}
+                            <div class="conversation-tags-row">
+                                <!-- Manual Tags -->
+                                {% for tag in conversation.tags.all %}
+                                    <span class="tag-pill">
+                                        <i class="bi bi-label"></i>{{ tag.name }}
+                                        <span class="remove-tag">×</span>
+                                    </span>
+                                {% endfor %}
+                                
+                                <!-- Auto Tags -->
+                                {% if conversation.auto_tags %}
+                                    {% for auto_tag in conversation.auto_tags|split:"," %}
+                                        {% if auto_tag|length %}
+                                            <span class="tag-pill auto">
+                                                <i class="bi bi-lightning"></i>{{ auto_tag|striptags }}
+                                            </span>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Message Count Circle (Right Side) -->
+                    {% if conversation.unread_count > 0 %}
+                        <div style="display: flex; align-items: center; gap: 0.3rem;">
+                            <div class="message-count-badge" style="display: none;" title="Unread: {{ conversation.unread_count }}">
+                                {{ conversation.unread_count }}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions" onclick="event.preventDefault(); event.stopPropagation();">
+                    <button class="quick-action-btn" title="{% trans 'Add Tag' %}" onclick="tagConversation({{ conversation.pk }})">
+                        <i class="bi bi-tag-fill"></i>
+                    </button>
+                    <button class="quick-action-btn" title="{% trans 'Star' %}" onclick="starConversation({{ conversation.pk }})">
+                        <i class="bi {% if conversation.tags.all|length > 0 %}{% for tag in conversation.tags.all %}{% if tag.name == 'starred' %}bi-star-fill{% else %}bi-star{% endif %}{% endfor %}{% else %}bi-star{% endif %}"></i>
+                    </button>
+                    {% if conversation.status == 'archived' %}
+                        <button class="quick-action-btn" title="{% trans 'Unarchive' %}" onclick="unarchiveConversation({{ conversation.pk }})">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                    {% else %}
+                        <button class="quick-action-btn" title="{% trans 'Archive' %}" onclick="archiveConversation({{ conversation.pk }})">
+                            <i class="bi bi-archive"></i>
+                        </button>
+                    {% endif %}
+                </div>
+            </a>
+            {% endwith %}
+        {% empty %}
+            <div class="empty-state">
+                <i class="bi bi-chat-quote"></i>
+                <h4>{% trans "No Conversations Found" %}</h4>
+                {% if search_query or current_status %}
+                    <p>{% trans "Try adjusting your search or filter to find what you're looking for." %}</p>
+                    <a href="{% url 'core:vendor_message_list' %}" class="btn-clear-filters">
+                        <i class="bi bi-arrow-clockwise me-2"></i>{% trans "Clear Filters" %}
+                    </a>
+                {% else %}
+                    <p>{% trans "You have no conversations yet. Customers will appear here when they message you." %}</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+    
+    {% if is_paginated %}
+        <div style="margin-top: 2rem;">
+            {% include 'core/partials/pagination.html' with page_obj=page_obj %}
+        </div>
+    {% endif %}
 </div>
+
+<script>
+    function updateBulkActions() {
+        const selected = document.querySelectorAll('.conversation-checkbox:checked').length;
+        const bar = document.getElementById('bulkActionsBar');
+        const selectAll = document.getElementById('selectAll');
+        
+        if (selected > 0) {
+            bar.classList.add('show');
+            document.getElementById('selectedCount').textContent = `${selected} {% trans "selected" %}`;
+        } else {
+            bar.classList.remove('show');
+            selectAll.checked = false;
+        }
+    }
+
+    function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAll');
+        document.querySelectorAll('.conversation-checkbox:not(#selectAll)').forEach(cb => {
+            cb.checked = selectAll.checked;
+        });
+        updateBulkActions();
+    }
+
+    function cancelBulkAction() {
+        document.querySelectorAll('.conversation-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('bulkActionsBar').classList.remove('show');
+    }
+
+    function bulkAddTag() {
+        const selected = Array.from(document.querySelectorAll('.conversation-checkbox:checked'))
+            .map(cb => cb.dataset.conversationId);
+        
+        if (selected.length === 0) {
+            showNotification('Please select conversations first', 'warning');
+            return;
+        }
+        
+        const tagName = prompt('Enter tag name:');
+        if (!tagName) return;
+        
+        let completed = 0;
+        let failed = 0;
+        
+        selected.forEach(conversationId => {
+            fetch(`/api/conversations/${conversationId}/tags/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ tag_name: tagName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    completed++;
+                    // Remove the checkbox visually
+                    const checkbox = document.querySelector(`.conversation-checkbox[data-conversation-id="${conversationId}"]`);
+                    if (checkbox) checkbox.checked = false;
+                } else {
+                    failed++;
+                }
+                
+                if (completed + failed === selected.length) {
+                    if (failed === 0) {
+                        showNotification(`✓ Tag "${tagName}" added to ${completed} conversations`, 'success');
+                    } else {
+                        showNotification(`✓ Tag added to ${completed}, failed: ${failed}`, 'warning');
+                    }
+                    updateBulkActions();
+                }
+            })
+            .catch(error => {
+                failed++;
+                console.error('Error:', error);
+                if (completed + failed === selected.length) {
+                    showNotification(`Error adding tag to conversations`, 'error');
+                    updateBulkActions();
+                }
+            });
+        });
+    }
+
+    function bulkSetPriority() {
+        const selected = Array.from(document.querySelectorAll('.conversation-checkbox:checked'))
+            .map(cb => cb.dataset.conversationId);
+        
+        if (selected.length === 0) {
+            showNotification('Please select conversations first', 'warning');
+            return;
+        }
+        
+        const priority = prompt('Enter urgency level (1-10):', '7');
+        if (!priority) return;
+        
+        const score = parseInt(priority);
+        if (isNaN(score) || score < 1 || score > 10) {
+            showNotification('Please enter a number between 1 and 10', 'error');
+            return;
+        }
+        
+        let completed = 0;
+        let failed = 0;
+        
+        selected.forEach(conversationId => {
+            fetch(`/api/conversations/${conversationId}/urgency/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ urgency_score: score })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    completed++;
+                    const checkbox = document.querySelector(`.conversation-checkbox[data-conversation-id="${conversationId}"]`);
+                    if (checkbox) checkbox.checked = false;
+                } else {
+                    failed++;
+                }
+                
+                if (completed + failed === selected.length) {
+                    if (failed === 0) {
+                        showNotification(`✓ Urgency set to ${score}/10 for ${completed} conversations`, 'success');
+                    } else {
+                        showNotification(`✓ Updated ${completed}, failed: ${failed}`, 'warning');
+                    }
+                    updateBulkActions();
+                }
+            })
+            .catch(error => {
+                failed++;
+                console.error('Error:', error);
+                if (completed + failed === selected.length) {
+                    showNotification(`Error updating urgency`, 'error');
+                    updateBulkActions();
+                }
+            });
+        });
+    }
+
+    function bulkArchive() {
+        const selected = Array.from(document.querySelectorAll('.conversation-checkbox:checked'))
+            .map(cb => cb.dataset.conversationId);
+        
+        if (selected.length === 0) {
+            showNotification('Please select conversations first', 'warning');
+            return;
+        }
+        
+        if (!confirm(`Archive ${selected.length} conversations?`)) return;
+        
+        let completed = 0;
+        let failed = 0;
+        
+        selected.forEach(conversationId => {
+            fetch(`/api/conversations/${conversationId}/status/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ status: 'archived' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    completed++;
+                    // Remove the card from the DOM
+                    const card = document.querySelector(`.conversation-card[data-conversation-id="${conversationId}"]`);
+                    if (card) {
+                        card.style.animation = 'slideOutRight 0.3s ease-out';
+                        setTimeout(() => card.remove(), 300);
+                    }
+                } else {
+                    failed++;
+                }
+                
+                if (completed + failed === selected.length) {
+                    if (failed === 0) {
+                        showNotification(`✓ ${completed} conversations archived`, 'success');
+                    } else {
+                        showNotification(`✓ Archived ${completed}, failed: ${failed}`, 'warning');
+                    }
+                    updateBulkActions();
+                }
+            })
+            .catch(error => {
+                failed++;
+                console.error('Error:', error);
+                if (completed + failed === selected.length) {
+                    showNotification(`Error archiving conversations`, 'error');
+                    updateBulkActions();
+                }
+            });
+        });
+    }
+
+    function bulkMarkRead() {
+        const selected = Array.from(document.querySelectorAll('.conversation-checkbox:checked'))
+            .map(cb => cb.dataset.conversationId);
+        
+        if (selected.length === 0) {
+            showNotification('Please select conversations first', 'warning');
+            return;
+        }
+        
+        let completed = 0;
+        let failed = 0;
+        
+        selected.forEach(conversationId => {
+            // Since there's no dedicated API endpoint, we'll just mark them as read in the frontend
+            // In a real app, you'd want to add an API endpoint for this
+            const checkbox = document.querySelector(`.conversation-checkbox[data-conversation-id="${conversationId}"]`);
+            if (checkbox) {
+                checkbox.checked = false;
+                completed++;
+            }
+            
+            if (completed + failed === selected.length) {
+                showNotification(`✓ ${completed} conversations marked as read`, 'success');
+                updateBulkActions();
+            }
+        });
+    }
+
+    function toggleAdvancedFilters() {
+        const filters = document.getElementById('advancedFilters');
+        filters.classList.toggle('show');
+    }
+
+    function tagConversation(id) {
+        const tagName = prompt('Enter tag name:');
+        if (!tagName) return;
+        
+        fetch(`/api/conversations/${id}/tags/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ tag_name: tagName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showNotification(`✓ Tag "${tagName}" added successfully`, 'success');
+            } else {
+                showNotification(`Error: ${data.message}`, 'error');
+            }
+        })
+        .catch(error => {
+            showNotification(`Error adding tag`, 'error');
+            console.error('Error:', error);
+        });
+    }
+
+    function starConversation(id) {
+        const card = document.querySelector(`[data-conversation-id="${id}"]`);
+        const starBtn = card.querySelector('[onclick*="starConversation"]');
+        const starredTagId = card.getAttribute('data-starred-tag-id');
+        const isCurrentlyStarred = starredTagId !== null;
+        
+        let endpoint = `/api/conversations/${id}/tags/`;
+        let method = isCurrentlyStarred ? 'DELETE' : 'PATCH';
+        let payload = isCurrentlyStarred 
+            ? { tag_id: parseInt(starredTagId) } 
+            : { tag_name: 'starred' };
+        
+        console.log('Star action:', { method, payload, endpoint });
+        
+        fetch(endpoint, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            console.log('Star response status:', response.status);
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(`API Error: ${response.status} - ${text}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Star response data:', data);
+            if (data.status === 'success') {
+                if (isCurrentlyStarred) {
+                    card.removeAttribute('data-starred-tag-id');
+                    starBtn.innerHTML = '<i class="bi bi-star"></i>';
+                    showNotification('✓ Removed from favorites', 'success');
+                } else {
+                    card.setAttribute('data-starred-tag-id', data.tag_id);
+                    starBtn.innerHTML = '<i class="bi bi-star-fill"></i>';
+                    showNotification('✓ Added to favorites', 'success');
+                }
+            } else {
+                showNotification(`Error: ${data.message}`, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Star error:', error);
+            showNotification(`Error: ${error.message}`, 'error');
+        });
+    }
+
+    function archiveConversation(id) {
+        if (!confirm('Archive this conversation?')) return;
+        
+        console.log('Archiving conversation:', id);
+        
+        fetch(`/api/conversations/${id}/status/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ status: 'archived' })
+        })
+        .then(response => {
+            console.log('Archive response status:', response.status);
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(`API Error: ${response.status} - ${text}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Archive response data:', data);
+            if (data.status === 'success') {
+                const card = document.querySelector(`.conversation-card[data-conversation-id="${id}"]`);
+                if (card) {
+                    card.style.animation = 'slideOutRight 0.3s ease-out';
+                    setTimeout(() => card.remove(), 300);
+                }
+                showNotification('✓ Conversation archived', 'success');
+            } else {
+                showNotification(`Error: ${data.message}`, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Archive error:', error);
+            showNotification(`Error: ${error.message}`, 'error');
+        });
+    }
+
+    function unarchiveConversation(id) {
+        console.log('Unarchiving conversation:', id);
+        
+        fetch(`/api/conversations/${id}/status/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ status: 'active' })
+        })
+        .then(response => {
+            console.log('Unarchive response status:', response.status);
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(`API Error: ${response.status} - ${text}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Unarchive response data:', data);
+            if (data.status === 'success') {
+                // Update the button from unarchive to archive
+                const card = document.querySelector(`.conversation-card[data-conversation-id="${id}"]`);
+                if (card) {
+                    const archiveBtn = card.querySelector('[onclick*="unarchiveConversation"]');
+                    if (archiveBtn) {
+                        archiveBtn.setAttribute('onclick', `archiveConversation(${id})`);
+                        archiveBtn.setAttribute('title', 'Archive');
+                        archiveBtn.innerHTML = '<i class="bi bi-archive"></i>';
+                    }
+                }
+                showNotification('✓ Conversation restored', 'success');
+            } else {
+                showNotification(`Error: ${data.message}`, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Unarchive error:', error);
+            showNotification(`Error: ${error.message}`, 'error');
+        });
+    }
+
+    /* New Enhanced Features Functions */
+    
+    function changeConversationStatus(id, newStatus) {
+        console.log('Changing conversation status to:', newStatus);
+        // AJAX call to update status
+        fetch(`/api/conversations/${id}/status/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ status: newStatus })
+        }).then(response => {
+            if (response.ok) {
+                console.log('Status updated successfully');
+                location.reload(); // Refresh to show updated status
+            }
+        }).catch(error => console.error('Error:', error));
+    }
+
+    function updateUrgencyScore(id, score) {
+        console.log('Updating urgency score to:', score);
+        fetch(`/api/conversations/${id}/urgency/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ urgency_score: score })
+        }).then(response => {
+            if (response.ok) {
+                console.log('Urgency updated');
+                location.reload();
+            }
+        }).catch(error => console.error('Error:', error));
+    }
+
+    function assignConversationTo(id, userId) {
+        console.log('Assigning conversation to user:', userId);
+        fetch(`/api/conversations/${id}/assign/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ assigned_to: userId })
+        }).then(response => {
+            if (response.ok) {
+                console.log('Conversation assigned');
+                location.reload();
+            }
+        }).catch(error => console.error('Error:', error));
+    }
+
+    function scheduleFollowUp(id, dateTime) {
+        console.log('Scheduling follow-up for:', dateTime);
+        fetch(`/api/conversations/${id}/followup/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ follow_up_date: dateTime })
+        }).then(response => {
+            if (response.ok) {
+                console.log('Follow-up scheduled');
+                location.reload();
+            }
+        }).catch(error => console.error('Error:', error));
+    }
+
+    function changeCategory(id, category) {
+        console.log('Changing category to:', category);
+        fetch(`/api/conversations/${id}/category/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ category: category })
+        }).then(response => {
+            if (response.ok) {
+                console.log('Category updated');
+                location.reload();
+            }
+        }).catch(error => console.error('Error:', error));
+    }
+
+    function setSentiment(id, sentiment) {
+        console.log('Setting sentiment to:', sentiment);
+        fetch(`/api/conversations/${id}/sentiment/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ sentiment: sentiment })
+        }).then(response => {
+            if (response.ok) {
+                console.log('Sentiment updated');
+                location.reload();
+            }
+        }).catch(error => console.error('Error:', error));
+    }
+
+    function removeTag(conversationId, tagId, element) {
+        console.log('Removing tag:', tagId);
+        fetch(`/api/conversations/${conversationId}/tags/`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ tag_id: tagId })
+        }).then(response => {
+            if (response.ok) {
+                element.parentElement.remove();
+                console.log('Tag removed');
+            }
+        }).catch(error => console.error('Error:', error));
+    }
+
+    function setCustomerSegment(id, segment) {
+        console.log('Setting customer segment to:', segment);
+        fetch(`/api/conversations/${id}/segment/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ customer_segment: segment })
+        }).then(response => {
+            if (response.ok) {
+                console.log('Segment updated');
+                location.reload();
+            }
+        }).catch(error => console.error('Error:', error));
+    }
+
+    function markAsResolved(id) {
+        console.log('Marking conversation as resolved:', id);
+        fetch(`/api/conversations/${id}/resolve/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({ is_resolved: true })
+        }).then(response => {
+            if (response.ok) {
+                console.log('Marked as resolved');
+                location.reload();
+            }
+        }).catch(error => console.error('Error:', error));
+    }
+
+    /* Notification/Toast Function */
+    function showNotification(message, type = 'info', duration = 3500) {
+        const container = document.getElementById('notificationContainer');
+        
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        
+        // Icon mapping
+        const icons = {
+            success: '<i class="bi bi-check-circle-fill"></i>',
+            error: '<i class="bi bi-exclamation-circle-fill"></i>',
+            warning: '<i class="bi bi-exclamation-triangle-fill"></i>',
+            info: '<i class="bi bi-info-circle-fill"></i>'
+        };
+        
+        notification.innerHTML = `
+            ${icons[type] || icons['info']}
+            <div class="notification-message">${message}</div>
+            <button class="notification-close" onclick="this.parentElement.remove();">&times;</button>
+        `;
+        
+        container.appendChild(notification);
+        
+        // Auto-remove after duration
+        setTimeout(() => {
+            notification.classList.add('remove');
+            setTimeout(() => notification.remove(), 300);
+        }, duration);
+    }
+
+    /* Helper function to get CSRF token from multiple sources */
+    function getCsrfToken() {
+        // Try to get from hidden form input first (most reliable)
+        let token = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (token) {
+            console.log('CSRF token found in form:', token.value.substring(0, 20) + '...');
+            return token.value;
+        }
+        
+        // Try to get from meta tag
+        token = document.querySelector('[name="csrf-token"]');
+        if (token) {
+            console.log('CSRF token found in meta tag:', token.content.substring(0, 20) + '...');
+            return token.content;
+        }
+        
+        // Fall back to cookie approach
+        return getCookie('csrftoken');
+    }
+
+    /* Helper function to get CSRF token from cookies */
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    console.log('CSRF token found in cookie:', cookieValue.substring(0, 20) + '...');
+                    break;
+                }
+            }
+        }
+        if (!cookieValue) {
+            console.warn('CSRF token not found. Cookie string:', document.cookie);
+        }
+        return cookieValue;
+    }
+
+    /* Quick filter functions */
+    function filterByStatus(status) {
+        const url = new URL(window.location);
+        url.searchParams.set('status', status);
+        window.location = url;
+    }
+
+    function filterBySegment(segment) {
+        const url = new URL(window.location);
+        url.searchParams.set('segment', segment);
+        window.location = url;
+    }
+
+    function filterByUrgency(minScore) {
+        const url = new URL(window.location);
+        url.searchParams.set('min_urgency', minScore);
+        window.location = url;
+    }
+
+    function filterByCategory(category) {
+        const url = new URL(window.location);
+        url.searchParams.set('category', category);
+        window.location = url;
+    }
+
+    function clearAllFilters() {
+        window.location = '{% url "core:vendor_message_list" %}';
+    }
+
+    /* Setup tag removal event listeners */
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-tag')) {
+            e.stopPropagation();
+            e.preventDefault();
+            const tagPill = e.target.closest('.tag-pill');
+            const conversationCard = e.target.closest('.conversation-card');
+            const conversationId = conversationCard.dataset.conversationId;
+            const tagText = tagPill.querySelector('i').nextSibling.textContent.trim();
+            
+            if (confirm(`Remove tag "${tagText}"?`)) {
+                // Send request to remove tag
+                console.log('Removing tag from conversation:', conversationId, tagText);
+            }
+        }
+    });
+
+    /* Auto-update unread counts */
+    document.addEventListener('DOMContentLoaded', function() {
+        // Update message counts in real-time
+        const unreadBadges = document.querySelectorAll('.message-count-badge');
+        if (unreadBadges.length > 0) {
+            // Could set up polling or WebSocket here for real-time updates
+            console.log('Ready to sync unread message counts');
+        }
+    });
+</script>
 {% endblock content %}

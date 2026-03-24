@@ -151,6 +151,7 @@ MIDDLEWARE = [
     'core.middleware.SanitizeLanguageMiddleware', # <<< Add your custom middleware AFTER LocaleMiddleware
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.GuestAccessRestrictionMiddleware',
     'django_ratelimit.middleware.RatelimitMiddleware', # <-- Corrected module name
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -682,3 +683,13 @@ DEFAULT_FILE_STORAGE = STORAGES["default"]["BACKEND"]
 
 WHITENOISE_MANIFEST_STRICT = False
 WHITENOISE_KEEP_ONLY_HASHED_FILES = False
+
+# Homepage assistant prompt ranking weights (higher = more relevant priority)
+HOME_ASSISTANT_PROMPT_WEIGHTS = {
+    'recent_views': 100,
+    'buy_again': 90,
+    'preferred_category': 80,
+    'top_country': 70,
+    'verified_sellers': 40,
+    'budget_finds': 30,
+}

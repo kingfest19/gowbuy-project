@@ -10,3 +10,17 @@ def replace_filter(value, args_str):
         return str(value).replace(old, new)
     except ValueError:
         return value # Or handle error differently, e.g., log it or return original value
+
+
+@register.filter(name='split')
+def split_filter(value, separator):
+    """
+    Split a string by separator and return a list
+    Usage: {{ string|split:"," }}
+    """
+    if not value:
+        return []
+    try:
+        return str(value).split(separator)
+    except:
+        return [value]
